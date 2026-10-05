@@ -1,0 +1,14 @@
+# Google Drive MCP credentials and tokens - never commit these.
+# Default locations are outside the repo (~/.config/google-drive-mcp/), but the
+# server also accepts in-repo paths via GOOGLE_DRIVE_OAUTH_CREDENTIALS.
+gcp-oauth.keys.json
+*oauth*.json
+tokens.json
+GOOGLE_APPLICATION_CREDENTIALS*.json
+
+# Environment overrides that may carry secrets.
+.env
+.env.*
+
+# macOS
+.DS_Store

@@ -24,21 +24,20 @@ flowchart TB
     %% ================= LAYER 4 - AGENTS =================
     subgraph L4["LAYER 4 - AGENT TEAM (ADK)"]
         ORCH["Orchestrator<br/>sequences the team A to B to C to D"]
-        subgraph LA["A - Detect"]
+        subgraph LA["A - Detect & Verify"]
             QA["Quality Inspector"]
         end
         subgraph LB["B - Trace and diagnose"]
             TRC["Traceability"]
             ANL["Process Analyst"]
-            KNW["Knowledge"]
-            RCA["Root Cause"]
+            RCA["Root Cause (RAG-enabled)"]
         end
-        subgraph LC["C - Resolve"]
-            RPR["Repair Guide"]
-            DOC["Documentation<br/>8D / work order / SOP"]
+        subgraph LC["C - Resolve & Document"]
+            COP["Technician Copilot"]
+            DOC["Incident Scribe<br/>8D / work order / SOP"]
         end
         subgraph LD["D - Learn"]
-            CAP["Knowledge Capture + Impact"]
+            LRN["Continuous Learning + Impact"]
         end
     end
 
@@ -55,15 +54,18 @@ flowchart TB
     GW -->|"defects only"| PS
     PS --> BQ
     PS --> QA
-    TRC -->|"query"| BQ
-    ANL -->|"query"| BQ
-    KNW -->|"search"| KB
+    TRC -->|"query topology"| BQ
+    ANL -->|"query telemetry"| BQ
+    RCA -->|"search RAG"| KB
+    COP -->|"search SOPs"| KB
     ORCH <-->|"read / write state"| FS
+    QA & TRC & ANL & RCA & COP & DOC & LRN <-->|"shared state"| FS
 
     %% ================= HUMAN LOOP AND FEEDBACK =================
-    RPR <-->|"guidance"| TECH
+    COP <-->|"diagnostic & repair guidance"| TECH
     DOC --> LEAD --> OUT
-    CAP -->|"new knowledge"| KB
+    LRN -->|"new knowledge"| KB
+    LRN --> OUT
 
     %% ================= STYLING =================
     classDef l1 fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20
@@ -75,5 +77,5 @@ flowchart TB
     class CAM,SENS,TAG l1
     class GW l2
     class PS,BQ,FS,KB l3
-    class ORCH,QA,TRC,ANL,KNW,RCA,RPR,DOC,CAP l4
+    class ORCH,QA,TRC,ANL,RCA,COP,DOC,LRN l4
     class TECH,LEAD,OUT l5

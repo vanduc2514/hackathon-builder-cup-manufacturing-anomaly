@@ -28,23 +28,22 @@ flowchart TB
 
     %% ---------- Layer 4: Agent team (ADK) ----------
     subgraph ORCH_LAYER["4. Agent Team - ADK"]
-        ORCH["Orchestrator Agent (ADK)<br/>reads and writes the shared incident state"]
+        ORCH["Orchestrator Agent (ADK)<br/>reads & writes shared incident state"]
 
-        subgraph PHASE_A["Phase A - Detection"]
-            QA["Quality Inspector<br/>defect type / location / severity + SPC"]
+        subgraph PHASE_A["Phase A - Detection & Gatekeeper"]
+            QA["Quality Inspector Agent<br/>defect classification + SPC alarm<br/>& post-repair verification gatekeeper"]
         end
         subgraph PHASE_B["Phase B - Tracing and RCA"]
-            TRA["Traceability<br/>ranked suspect list"]
-            PA["Process Analyst<br/>suspect machine, right time window"]
-            KN["Knowledge<br/>citations only"]
-            RCA["Root Cause Agent<br/>5-Whys + Ishikawa + confidence"]
+            TRA["Traceability Agent<br/>discrete topology & ranked suspects"]
+            PA["Process Analyst Agent<br/>continuous sensor telemetry & window"]
+            RCA["Root Cause Agent<br/>5-Whys + Ishikawa + RAG tool"]
         end
         subgraph PHASE_C["Phase C - Resolution"]
-            RG["Repair Guide<br/>voice + camera, step by step"]
-            ADOC["Action and Documentation<br/>8D / work order / SOP proposal"]
+            COPILOT["Technician Copilot<br/>live voice + camera (diagnostics & repair)"]
+            DOC["Incident Scribe<br/>8D report / work order / SOP proposal"]
         end
         subgraph PHASE_D["Phase D - Learning"]
-            KC["Knowledge Capture and Impact<br/>expert videos to procedures, impact card"]
+            LEARN["Continuous Learning Agent<br/>video-to-procedure RAG & impact card"]
         end
     end
 
@@ -68,54 +67,53 @@ flowchart TB
     %% ---------- Data plane ----------
     PUBSUB --> BQ
     PUBSUB --> QA
-    TRA -->|"query traceability"| BQ
+    TRA -->|"query discrete topology"| BQ
     PA -->|"query sensor window"| BQ
-    KN --> RAG
+    RCA -->|"query knowledge RAG"| RAG
+    COPILOT -->|"query repair SOPs"| RAG
     QA --> GEMINI
     RCA --> GEMINI
-    RG --> GEMINI
-    KC --> GEMINI
-    KC -->|"impact metrics"| BQ
+    COPILOT --> GEMINI
+    LEARN --> GEMINI
+    LEARN -->|"impact metrics"| BQ
 
-    %% ---------- Blackboard: every agent writes findings to the shared state ----------
+    %% ---------- Blackboard: every agent reads and writes the shared state ----------
     ORCH <--> FS
-    QA --> FS
-    TRA --> FS
-    PA --> FS
-    KN --> FS
-    RCA --> FS
-    RG --> FS
-    ADOC --> FS
-    KC --> FS
+    QA <--> FS
+    TRA <--> FS
+    PA <--> FS
+    RCA <--> FS
+    COPILOT <--> FS
+    DOC <--> FS
+    LEARN <--> FS
 
     %% ---------- Orchestration order (matches the incident flow) ----------
     ORCH -->|"1. open incident"| TRA
-    ORCH -->|"2. parallel"| PA
-    ORCH -->|"2. parallel"| KN
-    ORCH -->|"3. synthesize"| RCA
-    ORCH -->|"4. parallel"| RG
-    ORCH -->|"4. parallel"| ADOC
-    ORCH -->|"keep watching"| QA
-    ORCH -->|"5. close + learn"| KC
+    ORCH -->|"2. analyze telemetry"| PA
+    ORCH -->|"3. synthesize root cause"| RCA
+    ORCH -->|"4. parallel"| COPILOT
+    ORCH -->|"4. parallel"| DOC
+    ORCH -->|"verify repair"| QA
+    ORCH -->|"5. close + learn"| LEARN
 
     %% ---------- Evidence-gathering loop ----------
-    RCA -.->|"confidence < 0.7 - ask for more evidence"| ORCH
-    ORCH -.->|"question to technician"| RG
+    RCA -.->|"confidence < 0.7: need field evidence"| ORCH
+    ORCH -.->|"dispatch inspection request"| COPILOT
 
     %% ---------- Product-first closed loop ----------
     QA -.->|"N consecutive good products -> verified"| ORCH
 
     %% ---------- Human interaction ----------
-    RG <-->|"live voice + camera guidance"| TECH
-    TECH -->|"repair done"| RG
+    COPILOT <-->|"diagnostic checks & live repair guidance"| TECH
+    TECH -->|"repair done"| COPILOT
     QA -.->|"verification progress"| DASH
     FS -->|"live incident board"| DASH
-    ADOC -->|"draft for approval"| LEAD
+    DOC -->|"draft for approval"| LEAD
     LEAD -->|"approved"| OUT
 
     %% ---------- Learning feedback loop ----------
-    KC -->|"new knowledge entry"| RAG
-    KC --> OUT
+    LEARN -->|"new knowledge entry"| RAG
+    LEARN --> OUT
 
     %% ---------- Styling ----------
     classDef floor fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20
@@ -128,6 +126,6 @@ flowchart TB
     class MACHINES,CAM,SENS,MIC,TAG floor
     class GEMMA,BRIDGE edge
     class PUBSUB,BQ,FS,RAG,GEMINI cloud
-    class ORCH,QA,TRA,PA,KN,RCA,RG,ADOC,KC agent
+    class ORCH,QA,TRA,PA,RCA,COPILOT,DOC,LEARN agent
     class TECH,DASH,LEAD human
     class OUT out

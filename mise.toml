@@ -1,0 +1,87 @@
+# mise.toml — Kaizen Agent monorepo
+# Run `mise install` once, then `mise run dev` to start the full stack.
+# https://mise.jdx.dev
+
+# =============================================================================
+# Tools
+# =============================================================================
+[tools]
+python = "3.11"   # backend: FastAPI / ADK agents
+node   = "22"     # frontend: Vite / React
+
+# =============================================================================
+# Environment
+# =============================================================================
+[env]
+_.python.venv = { path = ".venv", create = true }
+VIRTUAL_ENV   = "{{config_root}}/.venv"
+
+APP_ENV       = "development"
+API_HOST      = "0.0.0.0"
+API_PORT      = "8000"
+FRONTEND_PORT = "3000"
+
+# GOOGLE_APPLICATION_CREDENTIALS = "{{config_root}}/.gcp/credentials.json"
+
+# =============================================================================
+# Setup
+# =============================================================================
+
+# Install everything — backend pip deps + frontend npm deps
+[tasks.install]
+description = "Install all dependencies (backend + frontend)"
+run = [
+  "python -m pip install -r backend/requirements.txt",
+  "cd frontend && npm install",
+]
+
+# =============================================================================
+# Development
+# =============================================================================
+
+# Run the full stack (backend + frontend) concurrently
+# `mise run dev` fans out to both tasks in parallel via -j2
+[tasks.dev]
+description = "Start the full stack: FastAPI (:8000) + Vite (:3000)"
+depends  = ["backend", "frontend"]
+
+[tasks.backend]
+description = "Start FastAPI dev server with auto-reload (:8000)"
+run = "uvicorn backend.api.main:app --host $API_HOST --port $API_PORT --reload"
+
+[tasks.frontend]
+description = "Start Vite dev server (:3000, /api proxied to backend)"
+run = "cd frontend && npm run dev"
+
+# Production server (no reload)
+[tasks.start]
+description = "Start FastAPI production server"
+run = "uvicorn backend.api.main:app --host $API_HOST --port $API_PORT"
+
+# =============================================================================
+# Utilities
+# =============================================================================
+
+[tasks.demo]
+description = "Inject a defect to trigger the 90-second multi-agent demo"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject | python -m json.tool"
+
+[tasks.test]
+description = "Run the pytest test suite"
+run = "pytest tests/ -v"
+
+[tasks.seed]
+description = "Seed mock BigQuery / Firestore data"
+run = "python -c 'from backend.tools.bigquery_tool import seed_mock_data; seed_mock_data()'"
+
+# =============================================================================
+# Docker
+# =============================================================================
+
+[tasks."docker:up"]
+description = "Start all services via docker compose"
+run = "docker compose up --build"
+
+[tasks."docker:down"]
+description = "Stop all docker compose services"
+run = "docker compose down"

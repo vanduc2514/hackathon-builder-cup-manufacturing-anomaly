@@ -1,0 +1,3 @@
+{
+  "$comment": "JSON schema definition for the Firestore shared incident state (blackboard) and 4-part message contract."
+}

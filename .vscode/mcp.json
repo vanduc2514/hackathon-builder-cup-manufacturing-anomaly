@@ -1,8 +1,0 @@
-{
-    "servers": {
-        "google-drive": {
-            "command": "npx",
-            "args": ["-y", "@piotr-agier/google-drive-mcp"]
-        }
-    }
-}

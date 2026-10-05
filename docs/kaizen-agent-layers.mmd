@@ -1,0 +1,79 @@
+flowchart TB
+    %% ================= LAYER 1 - EDGE =================
+    subgraph L1["LAYER 1 - FACTORY FLOOR (EDGE)"]
+        direction LR
+        CAM["Cameras<br/>product images"]
+        SENS["Sensors + microphones<br/>vibration / temperature / current / sound"]
+        TAG["Traceability code<br/>product to machine, tool, lot, shift"]
+    end
+
+    %% ================= LAYER 2 - ON-PREM GATEWAY =================
+    subgraph L2["LAYER 2 - ON-PREM GATEWAY (Gemma)"]
+        GW["Local pass / fail + anomaly detection<br/>only defects and anomalies leave the factory"]
+    end
+
+    %% ================= LAYER 3 - CLOUD DATA =================
+    subgraph L3["LAYER 3 - GOOGLE CLOUD DATA AND AI"]
+        direction LR
+        PS["Pub/Sub<br/>real-time stream"]
+        BQ[("BigQuery<br/>traceability + sensor history")]
+        FS[("Firestore<br/>shared incident board")]
+        KB[("Vertex AI Search<br/>manuals / 8D / expert videos")]
+    end
+
+    %% ================= LAYER 4 - AGENTS =================
+    subgraph L4["LAYER 4 - AGENT TEAM (ADK)"]
+        ORCH["Orchestrator<br/>sequences the team A to B to C to D"]
+        subgraph LA["A - Detect"]
+            QA["Quality Inspector"]
+        end
+        subgraph LB["B - Trace and diagnose"]
+            TRC["Traceability"]
+            ANL["Process Analyst"]
+            KNW["Knowledge"]
+            RCA["Root Cause"]
+        end
+        subgraph LC["C - Resolve"]
+            RPR["Repair Guide"]
+            DOC["Documentation<br/>8D / work order / SOP"]
+        end
+        subgraph LD["D - Learn"]
+            CAP["Knowledge Capture + Impact"]
+        end
+    end
+
+    %% ================= LAYER 5 - HUMAN =================
+    subgraph L5["LAYER 5 - HUMAN-IN-THE-LOOP AND OUTPUT"]
+        direction LR
+        TECH["Technician<br/>voice + camera"]
+        LEAD["Shift leader<br/>approval"]
+        OUT["8D / work order / SOP / impact card"]
+    end
+
+    %% ================= PRIMARY FLOW =================
+    CAM & SENS & TAG --> GW
+    GW -->|"defects only"| PS
+    PS --> BQ
+    PS --> QA
+    TRC -->|"query"| BQ
+    ANL -->|"query"| BQ
+    KNW -->|"search"| KB
+    ORCH <-->|"read / write state"| FS
+
+    %% ================= HUMAN LOOP AND FEEDBACK =================
+    RPR <-->|"guidance"| TECH
+    DOC --> LEAD --> OUT
+    CAP -->|"new knowledge"| KB
+
+    %% ================= STYLING =================
+    classDef l1 fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20
+    classDef l2 fill:#FFF3E0,stroke:#EF6C00,color:#E65100
+    classDef l3 fill:#E3F2FD,stroke:#1565C0,color:#0D47A1
+    classDef l4 fill:#F3E5F5,stroke:#6A1B9A,color:#4A148C
+    classDef l5 fill:#FCE4EC,stroke:#AD1457,color:#880E4F
+
+    class CAM,SENS,TAG l1
+    class GW l2
+    class PS,BQ,FS,KB l3
+    class ORCH,QA,TRC,ANL,KNW,RCA,RPR,DOC,CAP l4
+    class TECH,LEAD,OUT l5

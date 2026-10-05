@@ -1,0 +1,63 @@
+sequenceDiagram
+    autonumber
+    actor TECH as Technician
+    participant QI as Quality Inspector
+    participant OR as Orchestrator (ADK)
+    participant FS as Firestore incident board
+    participant TRA as Traceability
+    participant PA as Process Analyst
+    participant KN as Knowledge
+    participant RCA as Root Cause Agent
+    participant RG as Repair Guide
+    participant ADOC as Action & Documentation
+    participant KC as Knowledge Capture
+
+    QI->>FS: {event: defect_spike, type: scratch_vertical, rate: 0.077, since: 09:40}
+    FS-->>OR: new signal on the board
+    OR->>FS: {incident: INC-0412, status: tracing}
+
+    Note over OR,TRA: Step 1 - sequential and mandatory
+    OR->>TRA: link defective products to line data
+    TRA->>FS: {suspects: [CNC-02/T07 0.95], excluded: [material_lot]}
+
+    Note over OR,KN: Step 2 - run in parallel
+    par Sensor analysis
+        OR->>PA: pull CNC-02 data, 09:00-10:00
+        PA->>FS: {finding: vibration +35%, current +12%, since: 09:30, confidence: 0.8}
+    and Knowledge lookup
+        OR->>KN: vertical scratch + CNC-02
+        KN->>FS: {finding: tool wear, sources: [manual p.112, maint_log T07, 8D 2026-03-12]}
+    end
+
+    OR->>RCA: synthesize all evidence
+    alt confidence >= 0.7
+        RCA->>FS: {root_cause: T07 worn, over tool life, confidence: 0.87, whys, ishikawa}
+    else confidence < 0.7
+        RCA->>OR: {need: close-up photo of insert}
+        OR->>RG: turn request into a question
+        RG->>TECH: ask for close-up photo
+        TECH-->>RG: photo
+        RG->>FS: new evidence attached
+        FS-->>RCA: re-run analysis
+    end
+
+    Note over OR,ADOC: Step 3 - resolution in parallel
+    par Guide the repair
+        OR->>RG: start voice session
+        TECH->>RG: "What is wrong with this machine?"
+        RG-->>TECH: step-by-step, each step cites the manual (Gemini Live)
+    and Draft the paperwork
+        OR->>ADOC: draft 8D and work order
+        ADOC->>FS: {documents: [8D, work_order, SOP_proposal]}
+    end
+    TECH->>RG: repair done
+    RG->>FS: {repair_done: true, steps_taken: [...]}
+
+    Note over OR,QI: Step 4 - close only when the product confirms
+    OR->>QI: verify 50 consecutive products
+    QI->>FS: {verified: true, good_streak: 50, rate: 0.004}
+    OR->>FS: {status: closed, pending_approval: shift_leader}
+
+    OR->>KC: learn from the closed incident
+    KC->>FS: {impact: {scrap_avoided: 240, downtime_min: 45, kwh: 38, co2_kg: 25}}
+    KC->>KC: add entry to the defect-cause-fix library

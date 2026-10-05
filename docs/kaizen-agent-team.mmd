@@ -1,0 +1,86 @@
+flowchart TB
+    %% ---------- Orchestrator ----------
+    ORCH["ORCHESTRATOR AGENT (ADK)<br/>owns the incident lifecycle<br/>reads the board, decides who runs next"]
+
+    %% ---------- Shared blackboard ----------
+    BOARD[("SHARED INCIDENT STATE - Firestore blackboard<br/>every message = finding | evidence | confidence | citation")]
+
+    %% ---------- Phase A ----------
+    subgraph PHASE_A["Phase A - Detection"]
+        A1["2. QUALITY INSPECTOR<br/>defect type / location / severity<br/>SPC control chart, opens the incident<br/>re-verifies N good products to close it<br/>Gemma edge gateway + Gemini Vision"]
+    end
+
+    %% ---------- Phase B ----------
+    subgraph PHASE_B["Phase B - Tracing and Root Cause"]
+        B1["3. TRACEABILITY<br/>product to machine / tool / mold / lot / operator<br/>ranked suspect list, excludes irrelevant factors<br/>RUNS FIRST - sequential and mandatory<br/>BigQuery + ADK tool"]
+        B2["4. PROCESS ANALYST<br/>suspect machine only, correct time window<br/>compare against that machine's baseline<br/>RUNS IN PARALLEL<br/>BigQuery + Gemini"]
+        B3["5. KNOWLEDGE<br/>manuals / maintenance logs / past 8D / expert videos<br/>citations only, never invents<br/>RUNS IN PARALLEL<br/>Vertex AI Search / RAG"]
+        B4["6. ROOT CAUSE (RCA)<br/>5-Whys + Ishikawa fishbone<br/>ranked hypotheses with confidence<br/>if confidence under 0.7 - requests more evidence<br/>Gemini"]
+    end
+
+    %% ---------- Phase C ----------
+    subgraph PHASE_C["Phase C - Resolution"]
+        C1["7. REPAIR GUIDE<br/>live voice + camera, step by step (Vietnamese)<br/>every instruction cites its source<br/>Gemini Live API"]
+        C2["8. ACTION AND DOCUMENTATION<br/>drafts work order / 8D report / SOP proposal<br/>drafts only - human approves<br/>Gemini + Firestore"]
+    end
+
+    %% ---------- Phase D ----------
+    subgraph PHASE_D["Phase D - Learning"]
+        D1["9. KNOWLEDGE CAPTURE AND IMPACT<br/>expert technician video to procedure<br/>grows the defect-cause-fix library<br/>computes the impact card<br/>Gemini Video + BigQuery"]
+    end
+
+    %% ---------- Humans ----------
+    TECH["TECHNICIAN<br/>phone voice + camera"]
+    LEAD["SHIFT LEADER / MANAGER<br/>final decision maker"]
+
+    %% ---------- Every agent reads and writes the shared board ----------
+    ORCH <--> BOARD
+    A1 <--> BOARD
+    B1 <--> BOARD
+    B2 <--> BOARD
+    B3 <--> BOARD
+    B4 <--> BOARD
+    C1 <--> BOARD
+    C2 <--> BOARD
+    D1 <--> BOARD
+
+    %% ---------- Orchestration order ----------
+    ORCH -->|"step 1 - sequential, mandatory"| B1
+    ORCH -->|"step 2 - parallel"| B2
+    ORCH -->|"step 2 - parallel"| B3
+    ORCH -->|"step 3 - synthesize all evidence"| B4
+    ORCH -->|"step 4 - parallel"| C1
+    ORCH -->|"step 4 - parallel"| C2
+    ORCH -->|"keeps watching until verified"| A1
+    ORCH -->|"step 5 - close and learn"| D1
+
+    %% ---------- Evidence-gathering loop ----------
+    B4 -.->|"confidence under 0.7 - need more evidence"| ORCH
+    ORCH -.->|"turns the request into a question"| C1
+
+    %% ---------- Product-first closed loop ----------
+    A1 -.->|"verified: N consecutive good products"| ORCH
+
+    %% ---------- Human-in-the-loop ----------
+    C1 <-->|"live voice + camera guidance"| TECH
+    C2 -->|"draft awaiting approval"| LEAD
+
+    %% ---------- Learning feedback loop ----------
+    D1 -->|"new knowledge entry"| B3
+
+    %% ---------- Styling ----------
+    classDef orch fill:#4A148C,stroke:#311B92,color:#FFFFFF
+    classDef board fill:#0D47A1,stroke:#0B3D91,color:#FFFFFF
+    classDef phaseA fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20
+    classDef phaseB fill:#E3F2FD,stroke:#1565C0,color:#0D47A1
+    classDef phaseC fill:#FFF3E0,stroke:#EF6C00,color:#E65100
+    classDef phaseD fill:#F3E5F5,stroke:#6A1B9A,color:#4A148C
+    classDef human fill:#FCE4EC,stroke:#AD1457,color:#880E4F
+
+    class ORCH orch
+    class BOARD board
+    class A1 phaseA
+    class B1,B2,B3,B4 phaseB
+    class C1,C2 phaseC
+    class D1 phaseD
+    class TECH,LEAD human

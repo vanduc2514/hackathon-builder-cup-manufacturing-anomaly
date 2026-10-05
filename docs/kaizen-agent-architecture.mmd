@@ -1,0 +1,133 @@
+flowchart TB
+    %% ---------- Layer 1: Factory floor (edge data sources) ----------
+    subgraph FLOOR["1. Factory Floor - Edge Data Sources"]
+        direction LR
+        MACHINES["CNC / Injection / PLC machines<br/>process settings"]
+        CAM["End-of-line cameras<br/>product images"]
+        SENS["Sensors<br/>temperature / vibration / current / pressure"]
+        MIC["Microphones<br/>machine sound"]
+        TAG["Traceability code<br/>QR / laser / timestamp + conveyor position"]
+    end
+
+    %% ---------- Layer 2: On-premises gateway ----------
+    subgraph EDGE_GW["2. On-premises Gateway - Gemma (private, low bandwidth)"]
+        direction LR
+        GEMMA["Gemma local inference<br/>pass / fail image pre-classification<br/>sensor + audio anomaly detection"]
+        BRIDGE["OPC-UA / MQTT bridge"]
+    end
+
+    %% ---------- Layer 3: Google Cloud data plane ----------
+    subgraph GCP["3. Google Cloud - Data and AI Platform"]
+        direction TB
+        PUBSUB["Pub/Sub<br/>real-time conveyor"]
+        BQ[("BigQuery<br/>traceability table / sensor time-series / SPC")]
+        FS[("Firestore<br/>shared incident state - blackboard")]
+        RAG[("Vertex AI Search / RAG<br/>manuals / maint. logs / 8D reports<br/>expert videos / defect-cause-fix library")]
+        GEMINI["Gemini on Vertex AI<br/>Vision / Live API / Video"]
+    end
+
+    %% ---------- Layer 4: Agent team (ADK) ----------
+    subgraph ORCH_LAYER["4. Agent Team - ADK"]
+        ORCH["Orchestrator Agent (ADK)<br/>reads and writes the shared incident state"]
+
+        subgraph PHASE_A["Phase A - Detection"]
+            QA["Quality Inspector<br/>defect type / location / severity + SPC"]
+        end
+        subgraph PHASE_B["Phase B - Tracing and RCA"]
+            TRA["Traceability<br/>ranked suspect list"]
+            PA["Process Analyst<br/>suspect machine, right time window"]
+            KN["Knowledge<br/>citations only"]
+            RCA["Root Cause Agent<br/>5-Whys + Ishikawa + confidence"]
+        end
+        subgraph PHASE_C["Phase C - Resolution"]
+            RG["Repair Guide<br/>voice + camera, step by step"]
+            ADOC["Action and Documentation<br/>8D / work order / SOP proposal"]
+        end
+        subgraph PHASE_D["Phase D - Learning"]
+            KC["Knowledge Capture and Impact<br/>expert videos to procedures, impact card"]
+        end
+    end
+
+    %% ---------- Layer 5: Humans and outputs ----------
+    subgraph HUMAN["5. Human-in-the-loop"]
+        TECH["Technician<br/>phone voice + camera (Vietnamese)"]
+        DASH["Incident board dashboard"]
+        LEAD["Shift leader / manager<br/>final approval"]
+    end
+    OUT["Documents<br/>work order / 8D report / SOP update / impact card"]
+
+    %% ---------- Physical acquisition ----------
+    CAM --> GEMMA
+    SENS --> GEMMA
+    MIC --> GEMMA
+    MACHINES --> BRIDGE
+    BRIDGE --> GEMMA
+    GEMMA -->|"only defective images + anomalous signals"| PUBSUB
+    TAG --> PUBSUB
+
+    %% ---------- Data plane ----------
+    PUBSUB --> BQ
+    PUBSUB --> QA
+    TRA -->|"query traceability"| BQ
+    PA -->|"query sensor window"| BQ
+    KN --> RAG
+    QA --> GEMINI
+    RCA --> GEMINI
+    RG --> GEMINI
+    KC --> GEMINI
+    KC -->|"impact metrics"| BQ
+
+    %% ---------- Blackboard: every agent writes findings to the shared state ----------
+    ORCH <--> FS
+    QA --> FS
+    TRA --> FS
+    PA --> FS
+    KN --> FS
+    RCA --> FS
+    RG --> FS
+    ADOC --> FS
+    KC --> FS
+
+    %% ---------- Orchestration order (matches the incident flow) ----------
+    ORCH -->|"1. open incident"| TRA
+    ORCH -->|"2. parallel"| PA
+    ORCH -->|"2. parallel"| KN
+    ORCH -->|"3. synthesize"| RCA
+    ORCH -->|"4. parallel"| RG
+    ORCH -->|"4. parallel"| ADOC
+    ORCH -->|"keep watching"| QA
+    ORCH -->|"5. close + learn"| KC
+
+    %% ---------- Evidence-gathering loop ----------
+    RCA -.->|"confidence < 0.7 - ask for more evidence"| ORCH
+    ORCH -.->|"question to technician"| RG
+
+    %% ---------- Product-first closed loop ----------
+    QA -.->|"N consecutive good products -> verified"| ORCH
+
+    %% ---------- Human interaction ----------
+    RG <-->|"live voice + camera guidance"| TECH
+    TECH -->|"repair done"| RG
+    QA -.->|"verification progress"| DASH
+    FS -->|"live incident board"| DASH
+    ADOC -->|"draft for approval"| LEAD
+    LEAD -->|"approved"| OUT
+
+    %% ---------- Learning feedback loop ----------
+    KC -->|"new knowledge entry"| RAG
+    KC --> OUT
+
+    %% ---------- Styling ----------
+    classDef floor fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20
+    classDef edge fill:#FFF3E0,stroke:#EF6C00,color:#E65100
+    classDef cloud fill:#E3F2FD,stroke:#1565C0,color:#0D47A1
+    classDef agent fill:#F3E5F5,stroke:#6A1B9A,color:#4A148C
+    classDef human fill:#FCE4EC,stroke:#AD1457,color:#880E4F
+    classDef out fill:#ECEFF1,stroke:#455A64,color:#263238
+
+    class MACHINES,CAM,SENS,MIC,TAG floor
+    class GEMMA,BRIDGE edge
+    class PUBSUB,BQ,FS,RAG,GEMINI cloud
+    class ORCH,QA,TRA,PA,KN,RCA,RG,ADOC,KC agent
+    class TECH,DASH,LEAD human
+    class OUT out

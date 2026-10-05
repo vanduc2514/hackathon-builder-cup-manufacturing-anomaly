@@ -1,0 +1,1 @@
+-- BigQuery DDL schemas for traceability table, sensor time-series telemetry, and sustainability impact logs.

@@ -6,58 +6,55 @@ sequenceDiagram
     participant FS as Firestore incident board
     participant TRA as Traceability
     participant PA as Process Analyst
-    participant KN as Knowledge
     participant RCA as Root Cause Agent
-    participant RG as Repair Guide
-    participant ADOC as Action & Documentation
-    participant KC as Knowledge Capture
+    participant COP as Technician Copilot
+    participant DOC as Incident Scribe
+    participant LRN as Continuous Learning
 
     QI->>FS: {event: defect_spike, type: scratch_vertical, rate: 0.077, since: 09:40}
     FS-->>OR: new signal on the board
     OR->>FS: {incident: INC-0412, status: tracing}
 
     Note over OR,TRA: Step 1 - sequential and mandatory
-    OR->>TRA: link defective products to line data
+    OR->>TRA: link defective products to discrete topology
     TRA->>FS: {suspects: [CNC-02/T07 0.95], excluded: [material_lot]}
 
-    Note over OR,KN: Step 2 - run in parallel
-    par Sensor analysis
-        OR->>PA: pull CNC-02 data, 09:00-10:00
-        PA->>FS: {finding: vibration +35%, current +12%, since: 09:30, confidence: 0.8}
-    and Knowledge lookup
-        OR->>KN: vertical scratch + CNC-02
-        KN->>FS: {finding: tool wear, sources: [manual p.112, maint_log T07, 8D 2026-03-12]}
-    end
+    Note over OR,PA: Step 2 - sensor telemetry analysis
+    OR->>PA: pull CNC-02 sensor telemetry, 09:00-10:00
+    PA->>FS: {finding: vibration +35%, current +12%, since: 09:30, confidence: 0.8}
 
-    OR->>RCA: synthesize all evidence
+    Note over OR,RCA: Step 3 - root cause synthesis & RAG lookup
+    OR->>RCA: synthesize all evidence (5-Whys + Ishikawa)
+    Note over RCA: RCA queries RAG tool (manuals, maint logs, 8D)
     alt confidence >= 0.7
         RCA->>FS: {root_cause: T07 worn, over tool life, confidence: 0.87, whys, ishikawa}
     else confidence < 0.7
         RCA->>OR: {need: close-up photo of insert}
-        OR->>RG: turn request into a question
-        RG->>TECH: ask for close-up photo
-        TECH-->>RG: photo
-        RG->>FS: new evidence attached
-        FS-->>RCA: re-run analysis
+        OR->>COP: dispatch diagnostic inspection request
+        COP->>TECH: ask for close-up photo (voice + camera)
+        TECH-->>COP: diagnostic photo
+        COP->>FS: attach diagnostic evidence
+        FS-->>RCA: re-evaluate hypothesis
     end
 
-    Note over OR,ADOC: Step 3 - resolution in parallel
+    Note over OR,DOC: Step 4 - resolution & documentation in parallel
     par Guide the repair
-        OR->>RG: start voice session
-        TECH->>RG: "What is wrong with this machine?"
-        RG-->>TECH: step-by-step, each step cites the manual (Gemini Live)
+        OR->>COP: start repair guidance session
+        TECH->>COP: "What is wrong with this machine?"
+        COP-->>TECH: step-by-step guidance, each step cites manual (Gemini Live)
     and Draft the paperwork
-        OR->>ADOC: draft 8D and work order
-        ADOC->>FS: {documents: [8D, work_order, SOP_proposal]}
+        OR->>DOC: draft 8D, work order, SOP proposal
+        DOC->>FS: {documents: [8D, work_order, SOP_proposal]}
     end
-    TECH->>RG: repair done
-    RG->>FS: {repair_done: true, steps_taken: [...]}
+    TECH->>COP: repair done
+    COP->>FS: {repair_done: true, steps_taken: [...]}
 
-    Note over OR,QI: Step 4 - close only when the product confirms
-    OR->>QI: verify 50 consecutive products
+    Note over OR,QI: Step 5 - close only when the product confirms
+    OR->>QI: verify 50 consecutive good products
     QI->>FS: {verified: true, good_streak: 50, rate: 0.004}
     OR->>FS: {status: closed, pending_approval: shift_leader}
 
-    OR->>KC: learn from the closed incident
-    KC->>FS: {impact: {scrap_avoided: 240, downtime_min: 45, kwh: 38, co2_kg: 25}}
-    KC->>KC: add entry to the defect-cause-fix library
+    Note over OR,LRN: Step 6 - continuous learning & impact
+    OR->>LRN: learn from closed incident & compute impact
+    LRN->>FS: {impact: {scrap_avoided: 240, downtime_min: 45, kwh: 38, co2_kg: 25}}
+    LRN->>LRN: add entry to defect-cause-fix library

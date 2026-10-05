@@ -6,27 +6,26 @@ flowchart TB
     BOARD[("SHARED INCIDENT STATE - Firestore blackboard<br/>every message = finding | evidence | confidence | citation")]
 
     %% ---------- Phase A ----------
-    subgraph PHASE_A["Phase A - Detection"]
-        A1["2. QUALITY INSPECTOR<br/>defect type / location / severity<br/>SPC control chart, opens the incident<br/>re-verifies N good products to close it<br/>Gemma edge gateway + Gemini Vision"]
+    subgraph PHASE_A["Phase A - Detection & Gatekeeper"]
+        A1["1. QUALITY INSPECTOR<br/>defect type / location / severity + SPC<br/>opens incident & re-verifies N good products<br/>Gemma edge gateway + Gemini Vision"]
     end
 
     %% ---------- Phase B ----------
     subgraph PHASE_B["Phase B - Tracing and Root Cause"]
-        B1["3. TRACEABILITY<br/>product to machine / tool / mold / lot / operator<br/>ranked suspect list, excludes irrelevant factors<br/>RUNS FIRST - sequential and mandatory<br/>BigQuery + ADK tool"]
-        B2["4. PROCESS ANALYST<br/>suspect machine only, correct time window<br/>compare against that machine's baseline<br/>RUNS IN PARALLEL<br/>BigQuery + Gemini"]
-        B3["5. KNOWLEDGE<br/>manuals / maintenance logs / past 8D / expert videos<br/>citations only, never invents<br/>RUNS IN PARALLEL<br/>Vertex AI Search / RAG"]
-        B4["6. ROOT CAUSE (RCA)<br/>5-Whys + Ishikawa fishbone<br/>ranked hypotheses with confidence<br/>if confidence under 0.7 - requests more evidence<br/>Gemini"]
+        B1["2. TRACEABILITY<br/>discrete topology & ranked suspects<br/>product to machine / tool / mold / lot / operator<br/>RUNS FIRST - sequential and mandatory<br/>BigQuery + ADK tool"]
+        B2["3. PROCESS ANALYST<br/>continuous sensor telemetry & window<br/>vibration / temperature / current vs baseline<br/>BigQuery + Gemini"]
+        B3["4. ROOT CAUSE (RCA)<br/>5-Whys + Ishikawa fishbone<br/>synthesizes evidence & queries RAG tool<br/>ranked hypotheses with confidence<br/>Gemini + Vertex AI Search"]
     end
 
     %% ---------- Phase C ----------
     subgraph PHASE_C["Phase C - Resolution"]
-        C1["7. REPAIR GUIDE<br/>live voice + camera, step by step (Vietnamese)<br/>every instruction cites its source<br/>Gemini Live API"]
-        C2["8. ACTION AND DOCUMENTATION<br/>drafts work order / 8D report / SOP proposal<br/>drafts only - human approves<br/>Gemini + Firestore"]
+        C1["5. TECHNICIAN COPILOT<br/>live voice + camera, step by step (Vietnamese)<br/>Phase B diagnostic check & Phase C repair<br/>Gemini Live API"]
+        C2["6. INCIDENT SCRIBE<br/>drafts work order / 8D report / SOP proposal<br/>drafts only - human approves<br/>Gemini + Firestore"]
     end
 
     %% ---------- Phase D ----------
     subgraph PHASE_D["Phase D - Learning"]
-        D1["9. KNOWLEDGE CAPTURE AND IMPACT<br/>expert technician video to procedure<br/>grows the defect-cause-fix library<br/>computes the impact card<br/>Gemini Video + BigQuery"]
+        D1["7. CONTINUOUS LEARNING<br/>expert technician video to procedure<br/>grows defect-cause-fix library & impact card<br/>Gemini Video + BigQuery"]
     end
 
     %% ---------- Humans ----------
@@ -39,30 +38,28 @@ flowchart TB
     B1 <--> BOARD
     B2 <--> BOARD
     B3 <--> BOARD
-    B4 <--> BOARD
     C1 <--> BOARD
     C2 <--> BOARD
     D1 <--> BOARD
 
     %% ---------- Orchestration order ----------
     ORCH -->|"step 1 - sequential, mandatory"| B1
-    ORCH -->|"step 2 - parallel"| B2
-    ORCH -->|"step 2 - parallel"| B3
-    ORCH -->|"step 3 - synthesize all evidence"| B4
+    ORCH -->|"step 2 - analyze telemetry window"| B2
+    ORCH -->|"step 3 - synthesize root cause"| B3
     ORCH -->|"step 4 - parallel"| C1
     ORCH -->|"step 4 - parallel"| C2
     ORCH -->|"keeps watching until verified"| A1
-    ORCH -->|"step 5 - close and learn"| D1
+    ORCH -->|"step 5 - close, learn & impact"| D1
 
     %% ---------- Evidence-gathering loop ----------
-    B4 -.->|"confidence under 0.7 - need more evidence"| ORCH
-    ORCH -.->|"turns the request into a question"| C1
+    B3 -.->|"confidence under 0.7 - need field evidence"| ORCH
+    ORCH -.->|"dispatches inspection request"| C1
 
     %% ---------- Product-first closed loop ----------
     A1 -.->|"verified: N consecutive good products"| ORCH
 
     %% ---------- Human-in-the-loop ----------
-    C1 <-->|"live voice + camera guidance"| TECH
+    C1 <-->|"diagnostic checks & live repair guidance"| TECH
     C2 -->|"draft awaiting approval"| LEAD
 
     %% ---------- Learning feedback loop ----------
@@ -80,7 +77,7 @@ flowchart TB
     class ORCH orch
     class BOARD board
     class A1 phaseA
-    class B1,B2,B3,B4 phaseB
+    class B1,B2,B3 phaseB
     class C1,C2 phaseC
     class D1 phaseD
     class TECH,LEAD human

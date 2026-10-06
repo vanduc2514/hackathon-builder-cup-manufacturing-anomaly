@@ -124,6 +124,28 @@ export default function SpcChart({ bars, ucl }: SpcChartProps): React.ReactEleme
 - **Test coverage:** Any new function in `backend/tools/` or `backend/core/` must have a corresponding test in `tests/`.
 - **Environment parity:** Code must work with mock data when `GCP_PROJECT_ID` is unset. Never assume live GCP services in local dev paths.
 
+## Google Drive Source
+
+The team's competition documents are stored in Google Drive:
+
+- **Folder:** `💻 Competition | AI Builder Cup`
+- **Remote:** `gdrive` (configured via `mise run drive:auth`)
+- **Local Mirror:** `data/knowledge_base/drive/AI Builder Cup/`
+
+### Retrieving Content
+
+Fetch content from the default folder using the mise task:
+
+```bash
+mise run drive:pull "💻 Competition | AI Builder Cup"
+```
+
+Or using `rclone` directly:
+
+```bash
+mise exec -- rclone copy gdrive:"💻 Competition | AI Builder Cup" "data/knowledge_base/drive/AI Builder Cup" --drive-shared-with-me
+```
+
 ---
 
 ## Commit Convention

@@ -9,7 +9,7 @@ rclone is pinned in `mise.toml` (`rclone = "1.75.1"`). The OAuth config is **pro
 
 Always run rclone through mise so the env is applied: `mise exec -- rclone ...` or the `mise run drive:*` tasks.
 
-> **Default folder:** If no folder is specified, use `💻 Competition | AI Builder Cup` with `--drive-shared-with-me`. See `data/knowledge_base/README.md`.
+> **Default folder:** If no folder is specified, use `💻 Competition | AI Builder Cup` with `--drive-shared-with-me`. See `AGENTS.md`.
 
 ## 1. Check setup first
 

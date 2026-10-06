@@ -60,22 +60,21 @@ mise run install      # pip install backend deps + npm install frontend deps
 
 ### 2. Configure environment
 
-Create a `mise.local.toml` at the repo root to set machine-local overrides (this file is gitignored):
+Copy the provided template to create your local overrides file (`mise.local.toml` is gitignored):
 
-```toml
-# mise.local.toml — local secrets and overrides, never committed
-[env]
-GCP_PROJECT_ID                 = "your-gcp-project"
-GOOGLE_APPLICATION_CREDENTIALS = "/absolute/path/to/service-account.json"
-APP_ENV                        = "development"
+```bash
+cp .example.mise.local.toml mise.local.toml
+```
 
-# Optional: target local BigQuery emulator for dev parity without GCP
-# BIGQUERY_EMULATOR_HOST       = "http://localhost:9050"
+Start the emulators (BigQuery, Firestore, Pub/Sub, Mosquitto MQTT) via Docker Compose:
+
+```bash
+mise run docker:up     # starts all dependency emulators in background
 ```
 
 mise automatically merges `mise.local.toml` on top of `mise.toml` when you `cd` into the directory, so any task run via `mise run` will pick up these variables without extra shell exports.
 
-Local development works without GCP credentials — start the local BigQuery emulator (`mise run emulator`) or leave it unset to automatically fall back to mock data.
+Local development also works completely offline without Docker — if emulators or GCP credentials are absent, the system automatically falls back to in-memory mock data.
 
 ### 3. Run the full stack
 

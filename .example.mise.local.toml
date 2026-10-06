@@ -1,0 +1,34 @@
+# .example.mise.local.toml — Local development environment template
+# Copy this file to `mise.local.toml` (which is gitignored) and customize:
+#   cp .example.mise.local.toml mise.local.toml
+
+[env]
+APP_ENV = "development"
+
+# =============================================================================
+# Emulated Infrastructure (via docker-compose.yml)
+# Start emulators with: docker compose up -d (or `mise run docker:up`)
+# =============================================================================
+GCP_PROJECT_ID          = "kaizen-local"
+GCP_REGION              = "asia-southeast1"
+
+# BigQuery Emulator (goccy/bigquery-emulator on :9050)
+BIGQUERY_EMULATOR_HOST  = "http://localhost:9050"
+BIGQUERY_DATASET        = "manufacturing"
+
+# Firestore Emulator (Google Cloud CLI on :8086)
+FIRESTORE_EMULATOR_HOST = "localhost:8086"
+
+# Pub/Sub Emulator (Google Cloud CLI on :8085)
+PUBSUB_EMULATOR_HOST    = "localhost:8085"
+
+# Edge MQTT Broker (Eclipse Mosquitto on :1883)
+MQTT_BROKER_HOST        = "localhost"
+MQTT_BROKER_PORT        = "1883"
+
+# =============================================================================
+# Production / Live GCP Cloud (Optional — uncomment when testing live cloud)
+# =============================================================================
+# GCP_PROJECT_ID                 = "your-actual-gcp-project-id"
+# GOOGLE_APPLICATION_CREDENTIALS = "/absolute/path/to/service-account-key.json"
+# GEMINI_API_KEY                 = "your-gemini-api-key"

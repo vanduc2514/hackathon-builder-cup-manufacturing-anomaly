@@ -1,9 +1,5 @@
 {
   "mcpServers": {
-    "google-drive": {
-      "command": "npx",
-      "args": ["-y", "@piotr-agier/google-drive-mcp"]
-    },
     "github": {
       "serverUrl": "https://api.githubcopilot.com/mcp/",
       "headers": {

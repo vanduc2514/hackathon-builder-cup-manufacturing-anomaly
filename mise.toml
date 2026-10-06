@@ -12,6 +12,7 @@ gcloud   = "580.0.0" # Google Cloud SDK (gcloud & BigQuery bq CLI)
 firebase = "15.32.1" # Firebase CLI (hosting & emulators)
 ruff     = "0.16.10" # PEP 8 fast linter & code formatter (per AGENTS.md)
 jq       = "1.8.2"   # JSON query utility for scripts & simulation payloads
+rclone   = "1.75.1"  # Google Drive fetch/update CLI (see .agents/skills/google-drive-rclone)
 
 # =============================================================================
 # Environment
@@ -25,6 +26,7 @@ APP_ENV       = "development"
 API_HOST      = "0.0.0.0"
 API_PORT      = "8000"
 FRONTEND_PORT = "3000"
+RCLONE_CONFIG = "{{config_root}}/.rclone/rclone.conf"
 
 # GOOGLE_APPLICATION_CREDENTIALS = "{{config_root}}/.gcp/credentials.json"
 
@@ -112,3 +114,27 @@ run = "docker compose up -d bigquery-emulator"
 description = "Stop BigQuery emulator container"
 run = "docker compose stop bigquery-emulator"
 
+# =============================================================================
+# Google Drive (rclone) — see .agents/skills/google-drive-rclone/SKILL.md
+# Remote name: gdrive. Config lives in .rclone/rclone.conf (gitignored).
+# =============================================================================
+
+[tasks."drive:auth"]
+description = "One-time interactive Google sign-in: create the 'gdrive' rclone remote"
+run = "mkdir -p .rclone && rclone config create gdrive drive scope=drive"
+
+[tasks."drive:ls"]
+description = "List a Drive folder: mise run drive:ls <Folder>"
+run = 'rclone lsf gdrive:{{arg(name="folder")}} --drive-shared-with-me'
+
+[tasks."drive:pull"]
+description = "Download a Drive folder to data/knowledge_base/drive/: mise run drive:pull <Folder>"
+run = 'rclone copy gdrive:{{arg(name="folder")}} data/knowledge_base/drive/ --drive-shared-with-me --drive-export-formats md,csv --progress'
+
+[tasks."drive:push:dry"]
+description = "Preview upload of local changes (no writes): mise run drive:push:dry <Folder>"
+run = 'rclone copy data/knowledge_base/drive/ gdrive:{{arg(name="folder")}} --drive-shared-with-me --dry-run -v'
+
+[tasks."drive:push"]
+description = "Upload local changes to a Drive folder (copy only, never deletes): mise run drive:push <Folder>"
+run = 'rclone copy data/knowledge_base/drive/ gdrive:{{arg(name="folder")}} --drive-shared-with-me -v'

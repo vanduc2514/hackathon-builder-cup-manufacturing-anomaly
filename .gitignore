@@ -152,3 +152,7 @@ temp/
 .cache/
 
 mise.local.toml
+
+# rclone Google Drive config (OAuth tokens) and local mirror
+.rclone/
+data/knowledge_base/drive/

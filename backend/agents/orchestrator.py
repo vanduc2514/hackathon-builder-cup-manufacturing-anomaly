@@ -39,14 +39,14 @@ class Orchestrator:
                 "next_state": "investigating",
                 "agent_name": "ProcessAnalystAgent",
                 "agent": process_analyst,
-                "model_name": "gemini-1.5-flash",
+                "model_name": "fast_reasoning",
                 "kwargs": {"suspect_machine": "CNC-02", "suspect_tool": "T07"}
             },
             "investigating": {
                 "next_state": "analyzing",
                 "agent_name": "RootCauseAgent",
                 "agent": root_cause,
-                "model_name": "gemini-1.5-pro",
+                "model_name": "complex_reasoning",
                 "kwargs": {}
             }
         }
@@ -145,8 +145,8 @@ class Orchestrator:
             blackboard.update_status("repairing", root_cause="Tool T07 worn past 2,000 part limit")
             
             # Run parallel tasks with safe wrapper
-            t1 = self._safe_run_agent("TechnicianCopilot", technician_copilot.run(state, "gemini-2.0-flash-exp", self._delay), state)
-            t2 = self._safe_run_agent("IncidentScribe", incident_scribe.run(state, "gemini-1.5-pro", self._delay), state)
+            t1 = self._safe_run_agent("TechnicianCopilot", technician_copilot.run(state, "live", self._delay), state)
+            t2 = self._safe_run_agent("IncidentScribe", incident_scribe.run(state, "complex_reasoning", self._delay), state)
             
             findings = await asyncio.gather(t1, t2)
             
@@ -178,7 +178,7 @@ class Orchestrator:
                 # Quality inspector's final gatekeeper finding
                 qa_finding = await self._safe_run_agent(
                     "QualityInspector(Gatekeeper)", 
-                    quality_inspector.run_verification(state, "gemma-2b", self._delay), 
+                    quality_inspector.run_verification(state, "vision", self._delay), 
                     state
                 )
                 if qa_finding:
@@ -195,7 +195,7 @@ class Orchestrator:
                 
                 learn_finding = await self._safe_run_agent(
                     "ContinuousLearningAgent", 
-                    continuous_learning.run(state, "gemini-1.5-pro-video", self._delay), 
+                    continuous_learning.run(state, "video", self._delay), 
                     state
                 )
                 if learn_finding:

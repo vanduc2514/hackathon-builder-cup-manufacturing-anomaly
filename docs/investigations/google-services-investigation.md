@@ -13,7 +13,7 @@ It covers:
 ---
 
 > [!TIP]
-> **Operational Agent Skills Available**: All procedural instructions, local setup commands, and troubleshooting runbooks have been transformed into modular Agent Skills in [`.agents/skills/`](../../.agents/skills/README.md). For step-by-step agent instructions, activate the respective skill package.
+> **Operational Agent Skills Available**: All procedural instructions, local setup commands, and troubleshooting runbooks have been transformed into modular Agent Skills in [`.agents/skills/`](../../.agents/skills/). For step-by-step agent instructions, activate the respective skill package.
 
 ---
 

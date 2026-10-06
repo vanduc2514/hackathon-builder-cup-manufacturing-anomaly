@@ -155,15 +155,10 @@ class Orchestrator:
                 if finding:
                     blackboard.add_finding(finding)
                     
-            docs = {
-                "work_order": "WO-8821: Replace T07 insert & recalibrate spindle offset (Completed)",
-                "report_8d": "8D Report INC-0412: Root cause verified as insert wear; preventive action defined.",
-                "sop_proposal": "SOP-CNC-04 Revision: Add automated M-code piece counter alarm at 1,900 parts."
-            }
-            # Update status to verifying and attach documents from scribe
+            # Update status to verifying (documents are attached by the scribe agent)
             self._processed_states.add("verifying")
             logger.info("Transitioning to VERIFYING")
-            blackboard.update_status("verifying", documents=docs)
+            blackboard.update_status("verifying")
             
             # Start the verification gatekeeper
             asyncio.create_task(self._run_verification_loop())

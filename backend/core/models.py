@@ -28,7 +28,8 @@ class ImpactMetrics(BaseModel):
 
 class IncidentState(BaseModel):
     incident_id: str = "INC-0412"
-    status: str = "normal"  # normal, detecting, tracing, investigating, analyzing, repairing, verifying, closed
+    status: str = "normal"  # normal, detecting, tracing, investigating, analyzing, repairing, verifying, closed, error
+    error_message: Optional[str] = None
     defect_type: Optional[str] = None
     defect_rate: float = 0.005
     spc_ucl: float = 0.030

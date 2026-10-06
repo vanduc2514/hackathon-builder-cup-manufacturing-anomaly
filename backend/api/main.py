@@ -1,16 +1,24 @@
 """API Entrypoint: FastAPI backend server serving incident board APIs and WebSocket/SSE streams."""
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
-
+from backend.core.config import settings
 from backend.api.routes_incidents import router as incidents_router
 from backend.api.routes_simulation import router as simulation_router
-from backend.core.config import settings
+from backend.agents.orchestrator import orchestrator
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await orchestrator.start()
+    yield
+    await orchestrator.stop()
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.version,
     description="Kaizen Agent: Product-first AI Team for Manufacturing Anomaly Detection and Root-Cause Tracing",
+    lifespan=lifespan
 )
 
 app.include_router(incidents_router)
@@ -23,7 +31,7 @@ async def health_check():
         "status": "healthy",
         "app": settings.app_name,
         "version": settings.version,
-        "gcp_project": settings.gcp_project_id,
+        "gcp_project": settings.gcp_project_id
     }
 
 

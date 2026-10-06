@@ -1,158 +1,211 @@
-"""Orchestrator Agent (ADK): Coordinates phases A -> B -> C -> D and manages the incident lifecycle state machine."""
+"""Orchestrator Agent (ADK): State machine that coordinates all agents via the Blackboard."""
 
 import asyncio
-
+import logging
+import time
+import json
+from datetime import datetime
 from backend.core.blackboard import blackboard
-from backend.core.models import AgentFinding, ImpactMetrics
+from backend.core.models import IncidentState, ImpactMetrics
 
+from backend.agents.sub_agent_quality_inspector import quality_inspector
+from backend.agents.sub_agent_traceability import traceability
+from backend.agents.sub_agent_process_analyst import process_analyst
+from backend.agents.sub_agent_root_cause import root_cause
+from backend.agents.sub_agent_technician_copilot import technician_copilot
+from backend.agents.sub_agent_incident_scribe import incident_scribe
+from backend.agents.sub_agent_continuous_learning import continuous_learning
+
+logger = logging.getLogger(__name__)
 
 class Orchestrator:
     """Coordinates the Kaizen Agent team through the 4-phase incident lifecycle."""
 
-    async def run_incident_simulation(self, delay: float = 1.2):
-        """Executes the full closed-loop incident investigation and recovery flow."""
-        # 1. Phase A: Detection by Quality Inspector
-        blackboard.update_status(
-            "detecting", defect_type="scratch_vertical", defect_rate=0.077, verification_count=0
-        )
-        await asyncio.sleep(delay)
+    def __init__(self):
+        self._task = None
+        self._processed_states = set()
+        self._delay = 1.2
+        
+        # Agent Registry for linear transitions
+        self._linear_workflow = {
+            "detecting": {
+                "next_state": "tracing",
+                "agent_name": "TraceabilityAgent",
+                "agent": traceability,
+                "model_name": "bigquery-emulator",
+                "kwargs": {"incident_id": "INC-0412"}
+            },
+            "tracing": {
+                "next_state": "investigating",
+                "agent_name": "ProcessAnalystAgent",
+                "agent": process_analyst,
+                "model_name": "gemini-1.5-flash",
+                "kwargs": {"suspect_machine": "CNC-02", "suspect_tool": "T07"}
+            },
+            "investigating": {
+                "next_state": "analyzing",
+                "agent_name": "RootCauseAgent",
+                "agent": root_cause,
+                "model_name": "gemini-1.5-pro",
+                "kwargs": {}
+            }
+        }
 
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="QA",
-                agent_name="Quality Inspector",
-                phase="Phase A - Detection",
-                finding="Vertical scratch 2–3 mm on face A detected on conveyor station.",
-                evidence="23/300 products defective (7.7% defect rate), exceeding SPC UCL of 3.0%. Started at 09:40.",
-                confidence=0.96,
-                citation="Gemma Edge Gateway Frame #8412 + Gemini Vision Metrology",
-            )
-        )
-        await asyncio.sleep(delay)
+    async def start(self):
+        """Starts the background state machine loop."""
+        if not self._task:
+            self._task = asyncio.create_task(self._process_loop())
+            logger.info("Orchestrator state machine started.")
 
-        # 2. Phase B: Traceability Agent (discrete topology)
-        blackboard.update_status("tracing", incident_id="INC-0412")
-        await asyncio.sleep(delay)
+    async def stop(self):
+        """Stops the background state machine loop."""
+        if self._task:
+            self._task.cancel()
+            self._task = None
+            logger.info("Orchestrator state machine stopped.")
+            
+    def _reset_tracking(self):
+        """Reset internal tracking for a new incident."""
+        self._processed_states.clear()
 
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="TRA",
-                agent_name="Traceability Agent",
-                phase="Phase B - Tracing",
-                finding="Defects isolated to CNC-02 with Cutting Tool T07. Raw materials excluded.",
-                evidence="100% of defective parts routed through CNC-02/T07. CNC-01 and CNC-03 used blank lot AL-5083-B4 with 0 defects.",
-                confidence=0.95,
-                citation="BigQuery `traceability_discrete_events` cross-lot correlation",
-            )
-        )
-        await asyncio.sleep(delay)
+    async def _safe_run_agent(self, agent_name: str, agent_coro, state: IncidentState):
+        """Wrapper for Safe Runner: Tracing, Monitoring, Reproducibility."""
+        start_time = time.time()
+        try:
+            finding = await agent_coro
+            duration = time.time() - start_time
+            logger.info(f"[Monitor] {agent_name} completed in {duration:.2f}s")
+            return finding
+        except Exception as e:
+            logger.error(f"[Trace] {agent_name} failed: {e}", exc_info=True)
+            
+            # Dump state for reproducibility
+            dump_data = {
+                "failed_agent": agent_name,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+                "state_at_crash": state.model_dump()
+            }
+            dump_file = f"crash_{state.incident_id}_{agent_name}.json"
+            try:
+                with open(dump_file, "w") as f:
+                    json.dump(dump_data, f, indent=2)
+                logger.error(f"Crash dump saved to {dump_file}")
+            except Exception as dump_err:
+                logger.error(f"Failed to save crash dump: {dump_err}")
+                
+            # Alert the system via blackboard
+            blackboard.update_status("error", error_message=str(e))
+            return None
 
-        # 3. Phase B: Process Analyst Agent (continuous telemetry)
-        blackboard.update_status("investigating", suspect_machine="CNC-02", suspect_tool="T07")
-        await asyncio.sleep(delay)
+    async def _process_loop(self):
+        """Main event-driven loop listening to Blackboard state changes."""
+        try:
+            async for state_json in blackboard.subscribe():
+                state = IncidentState.model_validate_json(state_json)
+                await self._handle_state(state)
+        except asyncio.CancelledError:
+            pass
 
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="PA",
-                agent_name="Process Analyst Agent",
-                phase="Phase B - Sensor Analysis",
-                finding="Spindle vibration spike (+35%) and motor current rise (+12%) preceding defects.",
-                evidence="Vibration increased at 09:30 (10 min prior to defect spike). Bearing temperature normal at 42°C.",
-                confidence=0.89,
-                citation="BigQuery `machine_telemetry_5s` time-window query (09:00-10:00)",
-            )
-        )
-        await asyncio.sleep(delay)
+    async def _handle_state(self, state: IncidentState):
+        """Transition logic for the incident lifecycle."""
+        
+        if state.status == "error":
+            return
+            
+        if state.status == "normal":
+            self._reset_tracking()
+            
+        # 1. Linear Registry-driven Transitions
+        elif state.status in self._linear_workflow:
+            config = self._linear_workflow[state.status]
+            next_state = config["next_state"]
+            
+            if next_state not in self._processed_states:
+                self._processed_states.add(next_state)
+                logger.info(f"Transitioning to {next_state.upper()}")
+                
+                await asyncio.sleep(self._delay)
+                blackboard.update_status(next_state, **config["kwargs"])
+                
+                # Execute safely
+                model_to_use = config.get("model_name", "mock")
+                finding = await self._safe_run_agent(
+                    config["agent_name"], 
+                    config["agent"].run(state, model_to_use, self._delay), 
+                    state
+                )
+                if finding:
+                    blackboard.add_finding(finding)
 
-        # 4. Phase B: Root Cause Agent with RAG Tool
-        blackboard.update_status("analyzing")
-        await asyncio.sleep(delay)
+        # 2. Complex Parallel Transition (Analyzing -> Repairing)
+        elif state.status == "analyzing" and "repairing" not in self._processed_states:
+            self._processed_states.add("repairing")
+            logger.info("Transitioning to REPAIRING (Parallel Copilot & Scribe)")
+            blackboard.update_status("repairing", root_cause="Tool T07 worn past 2,000 part limit")
+            
+            # Run parallel tasks with safe wrapper
+            t1 = self._safe_run_agent("TechnicianCopilot", technician_copilot.run(state, "gemini-2.0-flash-exp", self._delay), state)
+            t2 = self._safe_run_agent("IncidentScribe", incident_scribe.run(state, "gemini-1.5-pro", self._delay), state)
+            
+            findings = await asyncio.gather(t1, t2)
+            
+            # Post successful findings
+            for finding in findings:
+                if finding:
+                    blackboard.add_finding(finding)
+                    
+            docs = {
+                "work_order": "WO-8821: Replace T07 insert & recalibrate spindle offset (Completed)",
+                "report_8d": "8D Report INC-0412: Root cause verified as insert wear; preventive action defined.",
+                "sop_proposal": "SOP-CNC-04 Revision: Add automated M-code piece counter alarm at 1,900 parts."
+            }
+            # Update status to verifying and attach documents from scribe
+            self._processed_states.add("verifying")
+            logger.info("Transitioning to VERIFYING")
+            blackboard.update_status("verifying", documents=docs)
+            
+            # Start the verification gatekeeper
+            asyncio.create_task(self._run_verification_loop())
 
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="RCA",
-                agent_name="Root Cause Agent",
-                phase="Phase B - Root Cause",
-                finding="Tool wear on insert T07 past maximum rated cutting life. SOP lacks piece-counter.",
-                evidence="5-Whys & Ishikawa synthesis: Tool T07 cut 2,400 parts (limit: 2,000). Tool replacement SOP is calendar-based, not usage-based.",
-                confidence=0.87,
-                citation="Vertex AI Search: CNC Manual p.112 + Maintenance Log T07 + 8D-2026-03-12",
-            )
-        )
-        await asyncio.sleep(delay)
-
-        # 5. Phase C: Technician Copilot (multimodal resolution)
-        blackboard.update_status("repairing", root_cause="Tool T07 worn past 2,000 part limit")
-        await asyncio.sleep(delay)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="COPILOT",
-                agent_name="Technician Copilot",
-                phase="Phase C - Resolution",
-                finding="Interactive repair completed in Vietnamese with verified tool runout.",
-                evidence="Guided technician through cover removal, insert swap, and runout calibration (< 0.005 mm) citing CNC manual p.112.",
-                confidence=0.94,
-                citation="Gemini Live API multimodal voice session (Session #VN-902)",
-            )
-        )
-        await asyncio.sleep(delay)
-
-        # 6. Phase C: Quality Inspector Post-Repair Verification Gatekeeper
-        blackboard.update_status("verifying")
+        # 3. Complex Loop Transition (Verifying -> Closed)
+        elif state.status == "verifying":
+            # The invariant: we only transition to closed after target is met
+            if state.verification_count >= state.verification_target and "closed" not in self._processed_states:
+                self._processed_states.add("closed")
+                logger.info("Transitioning to CLOSED")
+                
+                # Quality inspector's final gatekeeper finding
+                qa_finding = await self._safe_run_agent(
+                    "QualityInspector(Gatekeeper)", 
+                    quality_inspector.run_verification(state, "gemma-2b", self._delay), 
+                    state
+                )
+                if qa_finding:
+                    blackboard.add_finding(qa_finding)
+                
+                # Continuous Learning impact
+                impact = ImpactMetrics(
+                    scrap_avoided=240,
+                    downtime_minutes=45,
+                    energy_kwh=38.0,
+                    co2_kg=25.0
+                )
+                blackboard.update_status("closed", impact=impact, defect_rate=0.004)
+                
+                learn_finding = await self._safe_run_agent(
+                    "ContinuousLearningAgent", 
+                    continuous_learning.run(state, "gemini-1.5-pro-video", self._delay), 
+                    state
+                )
+                if learn_finding:
+                    blackboard.add_finding(learn_finding)
+                
+    async def _run_verification_loop(self):
+        """Simulates the verification process over time."""
         for count in [10, 25, 40, 50]:
             blackboard.update_status("verifying", verification_count=count)
-            await asyncio.sleep(delay * 0.4)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="QA",
-                agent_name="Quality Inspector (Gatekeeper)",
-                phase="Phase C - Verification",
-                finding="Physical recovery verified: 50 consecutive defect-free products passed on conveyor.",
-                evidence="Defect rate dropped from 7.7% back to baseline 0.4% (below SPC UCL 3.0%). Zero surface scratches detected.",
-                confidence=0.99,
-                citation="End-of-line Camera Station #1 inspection buffer (50/50 pass streak)",
-            )
-        )
-        await asyncio.sleep(delay)
-
-        # 7. Phase C: Incident Scribe (8D & SOP documentation)
-        docs = {
-            "work_order": "WO-8821: Replace T07 insert & recalibrate spindle offset (Completed)",
-            "report_8d": "8D Report INC-0412: Root cause verified as insert wear; preventive action defined.",
-            "sop_proposal": "SOP-CNC-04 Revision: Add automated M-code piece counter alarm at 1,900 parts.",
-        }
-        blackboard.update_status("verifying", documents=docs)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="DOC",
-                agent_name="Incident Scribe",
-                phase="Phase C - Documentation",
-                finding="Generated formal 8D Incident Report, Work Order WO-8821, and SOP countermeasure.",
-                evidence="Drafted 8-step resolution dossier and preventative countermeasure ready for Shift Leader sign-off.",
-                confidence=0.95,
-                citation="Firestore incident board state compiler",
-            )
-        )
-        await asyncio.sleep(delay)
-
-        # 8. Phase D: Continuous Learning & Impact Card
-        impact = ImpactMetrics(scrap_avoided=240, downtime_minutes=45, energy_kwh=38.0, co2_kg=25.0)
-        blackboard.update_status("closed", impact=impact, defect_rate=0.004)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="LEARN",
-                agent_name="Continuous Learning",
-                phase="Phase D - Learning",
-                finding="Resolution indexed into defect-cause-fix library; Impact Card calculated.",
-                evidence="Avoided 240 scrap housings (~$3,600), saved 45 min downtime, reduced 38 kWh power and 25 kg CO2.",
-                confidence=0.99,
-                citation="Vertex AI Search Vector Index + BigQuery Sustainability Accounting",
-            )
-        )
+            await asyncio.sleep(self._delay * 0.4)
 
 
 orchestrator = Orchestrator()

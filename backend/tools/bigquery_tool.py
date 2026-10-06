@@ -168,3 +168,72 @@ def query_traceability_topology(time_window: str = "09:30-10:00") -> Dict[str, A
         ],
         "excluded_factors": ["lot_id: AL-5083-B4 (normal on CNC-01/03)"],
     }
+
+
+def query_sensor_telemetry(machine_id: str, time_window: str = "30 MINUTE") -> Dict[str, Any]:
+    """Queries high-frequency sensor streams from BigQuery / Emulator, with mock fallback."""
+    client = get_bigquery_client()
+
+    if client:
+        try:
+            dataset_id = f"{client.project}.{settings.bigquery_dataset}"
+            query = f"""
+                SELECT
+                    AVG(vibration_mm_s) as avg_vibration,
+                    MAX(vibration_mm_s) as max_vibration,
+                    AVG(temperature_c) as avg_temperature,
+                    AVG(current_a) as avg_current
+                FROM `{dataset_id}.sensor_telemetry`
+                WHERE machine_id = @machine_id
+                # Note: simplified for emulator/mock compatibility, real query would use timestamp
+            """
+            job_config = client.query_job_config.__class__(
+                query_parameters=[
+                    client.query_job_config.__class__.module.ScalarQueryParameter("machine_id", "STRING", machine_id)
+                ]
+            ) if hasattr(client, "query_job_config") else None
+            # Doing a simpler string format to avoid SDK issues across mock/emulator
+            query = f"""
+                SELECT
+                    AVG(vibration_mm_s) as avg_vibration,
+                    MAX(vibration_mm_s) as max_vibration,
+                    AVG(temperature_c) as avg_temperature,
+                    AVG(current_a) as avg_current
+                FROM `{dataset_id}.sensor_telemetry`
+                WHERE machine_id = '{machine_id}'
+            """
+            
+            results = client.query(query).result()
+            row = next(iter(results), None)
+            
+            if row and row.avg_vibration is not None:
+                return {
+                    "source": "bigquery_emulator" if settings.bigquery_emulator_host else "bigquery_live",
+                    "machine_id": machine_id,
+                    "metrics": {
+                        "avg_vibration": float(row.avg_vibration),
+                        "max_vibration": float(row.max_vibration),
+                        "avg_temperature": float(row.avg_temperature),
+                        "avg_current": float(row.avg_current)
+                    }
+                }
+        except Exception as exc:
+            logger.warning("BigQuery telemetry query failed (%s); falling back to mock", exc)
+
+    # In-memory mock fallback
+    return {
+        "source": "mock_fallback",
+        "machine_id": machine_id,
+        "metrics": {
+            "avg_vibration": 2.1,
+            "max_vibration": 35.5,  # Indicates a spike (+35% from baseline)
+            "avg_temperature": 42.0,
+            "avg_current": 18.2
+        },
+        "baseline": {
+            "vibration": 1.5,
+            "temperature": 40.0,
+            "current": 16.0
+        }
+    }
+

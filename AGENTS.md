@@ -124,32 +124,6 @@ export default function SpcChart({ bars, ucl }: SpcChartProps): React.ReactEleme
 - **Test coverage:** Any new function in `backend/tools/` or `backend/core/` must have a corresponding test in `tests/`.
 - **Environment parity:** Code must work with mock data when `GCP_PROJECT_ID` is unset. Never assume live GCP services in local dev paths.
 
-## Project Knowledge Source (Google Drive)
-
-The team's competition documents (rules, solution design, timeline, sensor simulator spec) live in one Drive folder. When the user asks to fetch/read/update Drive content **without naming a folder, use this one**. Follow the `google-drive-rclone` skill (`.agents/skills/google-drive-rclone/SKILL.md`).
-
-| Setting | Value |
-|---|---|
-| Default folder | `💻 Competition | AI Builder Cup` |
-| rclone remote | `gdrive` (config: `.rclone/rclone.conf`, gitignored; sign in with `mise run drive:auth`) |
-| Local mirror | `data/knowledge_base/drive/AI Builder Cup/` (gitignored) |
-
-**Gotchas**
-
-- **The folder is "Shared with me", not in My Drive.** Without `--drive-shared-with-me`, rclone fails with `directory not found` and the folder does not appear in `rclone lsf gdrive: --dirs-only`. Always add the flag:
-
-  ```bash
-  mise exec -- rclone lsl gdrive:"💻 Competition | AI Builder Cup" --drive-shared-with-me
-  mise exec -- rclone copy gdrive:"💻 Competition | AI Builder Cup" "data/knowledge_base/drive/AI Builder Cup" \
-    --drive-shared-with-me --drive-export-formats md,csv
-  ```
-
-- **Mixed file types.** Native Google Docs/Sheets export via `--drive-export-formats md,csv` (Sheets → CSV exports the first tab only). Files uploaded as `.docx` stay Word files; read them with `textutil -convert txt <file>.docx` on macOS.
-- **Quoting.** The folder name contains an emoji, spaces and a `|`. Always quote the path. In `mise.toml` tasks, do not add extra quotes around `{{arg(name="folder")}}` (mise quotes it already).
-- **Writes.** Follow the skill's safety protocol: `--dry-run` first, then confirm with the user; never `sync` or delete.
-- **Content language.** Most documents are in Vietnamese.
-- **Shared OAuth client.** rclone's built-in client ID is being retired during 2026. If auth or rate-limit errors appear, create your own client ID (see the skill's troubleshooting table).
-
 ---
 
 ## Commit Convention

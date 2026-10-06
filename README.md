@@ -37,7 +37,7 @@ The **Quality Inspector** holds the incident open until *N* consecutive products
 
 **Shared state** flows through a **Blackboard** (Firestore-backed) that all agents read from and write to, exposed to the dashboard via Server-Sent Events (SSE).
 
-**Tech stack:** Python 3.11 · FastAPI · Google ADK · Gemini 2.0 · Gemma 3 Edge · Vertex AI Search · BigQuery · Firestore · Pub/Sub · React + Vite
+**Tech stack:** Python 3.11 · FastAPI · Google ADK · Gemini 2.0 · Gemma 3 Edge · Vertex AI Search · BigQuery / bigquery-emulator · Firestore · Pub/Sub · React + Vite + TypeScript
 
 ---
 
@@ -45,6 +45,7 @@ The **Quality Inspector** holds the incident open until *N* consecutive products
 
 ### Prerequisites
 - [mise](https://mise.jdx.dev) — manages Python 3.11 and Node 22 automatically
+- Docker (optional, for running `goccy/bigquery-emulator` locally)
 - Google Cloud project with BigQuery, Firestore, and Vertex AI enabled (for production; mock data works locally without credentials)
 
 ### 1. Clone and install
@@ -67,11 +68,14 @@ Create a `mise.local.toml` at the repo root to set machine-local overrides (this
 GCP_PROJECT_ID                 = "your-gcp-project"
 GOOGLE_APPLICATION_CREDENTIALS = "/absolute/path/to/service-account.json"
 APP_ENV                        = "development"
+
+# Optional: target local BigQuery emulator for dev parity without GCP
+# BIGQUERY_EMULATOR_HOST       = "http://localhost:9050"
 ```
 
 mise automatically merges `mise.local.toml` on top of `mise.toml` when you `cd` into the directory, so any task run via `mise run` will pick up these variables without extra shell exports.
 
-Local development works without GCP credentials — the backend falls back to in-memory mock data automatically when `GCP_PROJECT_ID` is unset.
+Local development works without GCP credentials — start the local BigQuery emulator (`mise run emulator`) or leave it unset to automatically fall back to mock data.
 
 ### 3. Run the full stack
 
@@ -95,14 +99,16 @@ With the backend running, inject a synthetic defect to see the full 90-second mu
 mise run demo
 ```
 
-Then open `http://localhost:8000` to watch the live dashboard.
+Then open `http://localhost:3000` (frontend) or `http://localhost:8000` (FastAPI backend) to watch the live dashboard.
 
 ### Other useful commands
 
 ```bash
-mise run test        # run pytest
-mise run seed        # seed mock BigQuery / Firestore data
-mise run docker:up   # start via docker compose
+mise run test           # run pytest
+mise run seed           # seed mock BigQuery / Firestore data
+mise run emulator       # start local BigQuery emulator (:9050)
+mise run emulator:down  # stop BigQuery emulator
+mise run docker:up      # start full stack via docker compose
 ```
 
 ---

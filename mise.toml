@@ -85,3 +85,13 @@ run = "docker compose up --build"
 [tasks."docker:down"]
 description = "Stop all docker compose services"
 run = "docker compose down"
+
+# BigQuery emulator (goccy/bigquery-emulator)
+[tasks.emulator]
+description = "Start BigQuery emulator container on :9050 (goccy/bigquery-emulator)"
+run = "docker compose up -d bigquery-emulator"
+
+[tasks."emulator:down"]
+description = "Stop BigQuery emulator container"
+run = "docker compose stop bigquery-emulator"
+

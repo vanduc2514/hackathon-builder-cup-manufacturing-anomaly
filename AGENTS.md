@@ -37,15 +37,19 @@ This file is the authoritative reference for AI coding agents and human contribu
 │   │   └── rag_search_tool.py
 │   └── requirements.txt
 │
-├── frontend/                   # React + Vite dashboard
+├── frontend/                   # React + Vite + TypeScript dashboard
 │   ├── src/
-│   │   ├── main.jsx            # Entry point
-│   │   ├── App.jsx             # Root component / router
-│   │   ├── components/         # Reusable UI components
-│   │   └── pages/              # Route-level page components
+│   │   ├── main.tsx            # Entry point
+│   │   ├── App.tsx             # Root component
+│   │   ├── types/              # TypeScript interfaces mirroring backend models
+│   │   │   └── index.ts
+│   │   ├── components/         # Reusable UI components (.tsx)
+│   │   └── pages/              # Route-level page components (.tsx)
 │   ├── public/
 │   ├── index.html
-│   ├── vite.config.js          # Dev proxy: /api → localhost:8000
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   ├── vite.config.ts          # Dev proxy: /api → localhost:8000
 │   └── package.json
 │
 ├── data/
@@ -56,7 +60,7 @@ This file is the authoritative reference for AI coding agents and human contribu
 ├── docs/                       # Architecture diagrams (.mmd + rendered .svg)
 ├── tests/                      # pytest test suite (mirrors backend/ structure)
 ├── mise.toml                   # Tool versions + all dev tasks (canonical runner)
-├── docker-compose.yml          # Local multi-service compose
+├── docker-compose.yml          # Local multi-service compose (incl. bigquery-emulator)
 ├── .gitignore
 ├── README.md
 └── AGENTS.md                   # ← this file
@@ -91,17 +95,25 @@ async def inspect(defect_rate: float) -> AgentFinding:
     ...
 ```
 
-### JavaScript / React (frontend/)
+### TypeScript / React (frontend/)
 
-- **Style:** ESLint + Prettier (2-space indent, single quotes, no semicolons).
+- **Language:** TypeScript (`.ts`, `.tsx`) with strict type checking enabled (`strict: true`). Avoid `any`; define domain types in `frontend/src/types/` mirroring backend Pydantic models.
+- **Style:** ESLint + Prettier (2-space indent, single quotes, semicolons allowed).
 - **Components:** Functional components only — no class components. One component per file. File name matches the exported component name.
-- **State:** Local `useState` / `useReducer` for UI-only state. Global incident state comes via the SSE hook — do not duplicate it in Redux/Zustand unless the app grows to need it.
+- **Props:** Strongly typed via interfaces. Destructure props in the function signature.
+- **State:** Local `useState<T>` / `useReducer` for UI-only state. Global incident state comes via the SSE hook — do not duplicate it in Redux/Zustand unless the app grows to need it.
 - **API calls:** All `/api/*` calls are proxied by Vite in dev and by the server in prod. Never hardcode `localhost:8000` in component code — use relative paths.
-- **Props:** Always destructure props in the function signature. Use PropTypes or JSDoc for public components.
 
-```jsx
+```tsx
 // Good
-export default function SpcChart({ bars, ucl }) {
+import React from 'react';
+
+interface SpcChartProps {
+  bars: number[];
+  ucl: number;
+}
+
+export default function SpcChart({ bars, ucl }: SpcChartProps): React.ReactElement {
   return <canvas aria-label="SPC defect rate chart" />;
 }
 ```
@@ -191,5 +203,5 @@ Agents should never violate these:
 1. **`backend/core/models.py` is the single schema source of truth.** All Pydantic models live here. Never define a competing schema elsewhere.
 2. **The Blackboard is the only shared state bus.** Agents communicate exclusively by reading from and writing to `backend/core/blackboard.py`. No direct agent-to-agent calls.
 3. **Incidents close on product evidence only.** The orchestrator transitions to `closed` only after `verification_count >= verification_target`. Do not shortcut this.
-4. **Mock data must always work.** The `bigquery_tool.py` mock path must remain functional without any GCP credentials so local development never requires a live project.
+4. **Development parity & mock fallback.** `backend/tools/bigquery_tool.py` connects to `goccy/bigquery-emulator` (via `BIGQUERY_EMULATOR_HOST`) for high-fidelity SQL testing in dev, or falls back to local mock data when no emulator or GCP credentials are present. Neither local dev nor automated CI should ever fail due to missing cloud credentials.
 5. **Frontend never calls backend directly by hostname.** All API calls use relative URLs (`/api/...`) so the Vite proxy (dev) and server (prod) handle routing transparently.

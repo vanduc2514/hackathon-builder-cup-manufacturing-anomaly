@@ -14,6 +14,9 @@ Inspired by the AWS Agent Toolkit architecture and built upon Google's official 
 | **Cloud Foundation** | [`cloud-run`](./cloud-run/SKILL.md) | Official Google | Packaging, deploying, and configuring the FastAPI backend container on Cloud Run | Backend Container Deployment |
 | **Cloud Foundation** | [`firebase`](./firebase/SKILL.md) | Official Google | Firebase CLI auth, hosting deployment (`firebase deploy --only hosting`), API proxy rewrites | Frontend Web Hosting & Proxy |
 | **Cloud Foundation** | [`bigquery`](./bigquery/SKILL.md) | Official Google + Local Parity | BigQuery SQL queries, dataset schemas, `goccy/bigquery-emulator` on port 9050, troubleshooting | Analytics & Traceability Warehouse |
+| **Cloud Foundation** | [`google-cloud-storage`](./google-cloud-storage/SKILL.md) | Official Google | Provisioning buckets, uploading video SOPs/defect frames, signed URLs, CORS | Object Storage & Media Assets |
+| **Cloud Observability** | [`cloud-logging`](./cloud-logging/SKILL.md) | Official Google | LQL query generation, Cloud Run container logs, incident tracing, SPC alerts | Observability & Diagnostics |
+| **Security & IAM** | [`iam-troubleshooting`](./iam-troubleshooting/SKILL.md) | Official Google | Resolving 403 PERMISSION_DENIED, discovering least-privilege roles for Cloud Run / BQ / Vertex AI | Identity, Security & Access |
 | **Generative AI** | [`gemini-api`](./gemini-api/SKILL.md) | Official Google | `google-genai` SDK usage, multimodal vision defect inspection, structured Pydantic outputs, tools | Multimodal Vision & Reasoning |
 | **Generative AI** | [`gemini-live-api`](./gemini-live-api/SKILL.md) | Official Google | Realtime bidirectional streaming (Audio + Video) WebSockets for Technician Copilot | Live Voice & Camera Streaming |
 | **Generative AI** | [`vertex-rag-search`](./vertex-rag-search/SKILL.md) | Kaizen Fallback | Vertex AI Search / Discovery Engine, citation contracts, local mock retrieval over manuals & 8Ds | Knowledge Base RAG & Citations |
@@ -48,10 +51,11 @@ Antigravity and compatible coding agents discover skills through a three-stage p
 
 Skills map directly to the 4 phases of the Kaizen industrial incident lifecycle:
 
-- **Phase A (Detection)**: [`gemma-edge`](./gemma-edge/SKILL.md) pre-filters camera frames; [`gemini-api`](./gemini-api/SKILL.md) & [`google-adk`](./google-adk/SKILL.md) classify defects and evaluate SPC breaches.
+- **Phase A (Detection)**: [`gemma-edge`](./gemma-edge/SKILL.md) pre-filters camera frames; [`gemini-api`](./gemini-api/SKILL.md) & [`google-adk`](./google-adk/SKILL.md) classify defects and evaluate SPC breaches; [`cloud-logging`](./cloud-logging/SKILL.md) monitors alert events.
 - **Phase B (Tracing & RCA)**: [`bigquery`](./bigquery/SKILL.md) traces suspect lots and machines; [`vertex-rag-search`](./vertex-rag-search/SKILL.md) pulls cited manual pages; [`firestore-blackboard`](./firestore-blackboard/SKILL.md) records findings.
 - **Phase C (Resolution)**: [`gemini-live-api`](./gemini-live-api/SKILL.md) guides physical repairs with the technician; [`google-adk`](./google-adk/SKILL.md) enforces the 50 consecutive good parts gate.
-- **Phase D (Learning & Continuous Improvement)**: [`gemini-api`](./gemini-api/SKILL.md) ingests video repair SOPs; [`bigquery`](./bigquery/SKILL.md) persists avoided scrap and carbon emissions.
+- **Phase D (Learning & Continuous Improvement)**: [`gemini-api`](./gemini-api/SKILL.md) ingests video repair SOPs; [`google-cloud-storage`](./google-cloud-storage/SKILL.md) stores persistent video clips and defect images; [`bigquery`](./bigquery/SKILL.md) persists avoided scrap and carbon emissions.
+- **Cross-Cutting Operations**: [`cloud-run`](./cloud-run/SKILL.md) & [`firebase`](./firebase/SKILL.md) host the full stack; [`iam-troubleshooting`](./iam-troubleshooting/SKILL.md) diagnoses ADC permissions; [`cloud-logging`](./cloud-logging/SKILL.md) traces distributed agent actions.
 
 ---
 

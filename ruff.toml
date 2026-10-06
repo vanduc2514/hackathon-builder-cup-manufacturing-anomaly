@@ -1,0 +1,7 @@
+# ruff.toml — PEP 8 configuration per AGENTS.md
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]

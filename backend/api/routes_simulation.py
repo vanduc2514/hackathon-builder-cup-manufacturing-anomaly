@@ -1,10 +1,12 @@
 """API Routes: Simulation controls and defect injection trigger."""
 
 import asyncio
+
 from fastapi import APIRouter
+
+from backend.agents.orchestrator import orchestrator
 from backend.core.blackboard import blackboard
 from backend.core.models import DefectInjectionRequest
-from backend.agents.orchestrator import orchestrator
 
 router = APIRouter(prefix="/api/simulation", tags=["simulation"])
 
@@ -19,7 +21,7 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()):
         "defect_type": req.defect_type,
         "target_machine": req.machine_id,
         "target_tool": req.tool_id,
-        "message": "Defect burst injected: Camera station detecting rising scratches. Orchestrator workflow started."
+        "message": "Defect burst injected: Camera station detecting rising scratches. Orchestrator workflow started.",
     }
 
 

@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 from sse_starlette.sse import EventSourceResponse
+
 from backend.core.blackboard import blackboard
 from backend.core.models import IncidentState
 
@@ -17,6 +18,7 @@ async def get_current_incident():
 @router.get("/events")
 async def incident_events():
     """Server-Sent Events (SSE) stream of blackboard updates in real time."""
+
     async def event_generator():
         async for state_json in blackboard.subscribe():
             yield {"event": "incident_update", "data": state_json}

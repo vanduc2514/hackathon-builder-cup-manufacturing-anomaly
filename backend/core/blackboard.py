@@ -2,7 +2,8 @@
 
 import asyncio
 from typing import AsyncGenerator
-from backend.core.models import IncidentState, AgentFinding, ImpactMetrics
+
+from backend.core.models import AgentFinding, IncidentState
 
 
 class Blackboard:

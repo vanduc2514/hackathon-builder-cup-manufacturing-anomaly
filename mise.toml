@@ -6,8 +6,12 @@
 # Tools
 # =============================================================================
 [tools]
-python = "3.11"   # backend: FastAPI / ADK agents
-node   = "22"     # frontend: Vite / React
+python   = "3.11"    # backend: FastAPI / ADK agents
+node     = "22"      # frontend: Vite / React
+gcloud   = "580.0.0" # Google Cloud SDK (gcloud & BigQuery bq CLI)
+firebase = "15.32.1" # Firebase CLI (hosting & emulators)
+ruff     = "0.16.10" # PEP 8 fast linter & code formatter (per AGENTS.md)
+jq       = "1.8.2"   # JSON query utility for scripts & simulation payloads
 
 # =============================================================================
 # Environment
@@ -15,6 +19,7 @@ node   = "22"     # frontend: Vite / React
 [env]
 _.python.venv = { path = ".venv", create = true }
 VIRTUAL_ENV   = "{{config_root}}/.venv"
+PYTHONPATH    = "{{config_root}}"
 
 APP_ENV       = "development"
 API_HOST      = "0.0.0.0"
@@ -69,6 +74,18 @@ run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject | python
 [tasks.test]
 description = "Run the pytest test suite"
 run = "pytest tests/ -v"
+
+[tasks."test:health"]
+description = "Verify server health check endpoint (:8000/health)"
+run = "curl -f -s http://localhost:$API_PORT/health | jq ."
+
+[tasks.lint]
+description = "Run ruff linter on backend code"
+run = "ruff check backend"
+
+[tasks.format]
+description = "Format backend code with ruff"
+run = "ruff format backend"
 
 [tasks.seed]
 description = "Seed mock BigQuery / Firestore data"

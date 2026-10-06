@@ -2,11 +2,13 @@
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
 class AgentFinding(BaseModel):
     """Four-part contract: finding, evidence, confidence, citation."""
+
     agent_id: str
     agent_name: str
     phase: str

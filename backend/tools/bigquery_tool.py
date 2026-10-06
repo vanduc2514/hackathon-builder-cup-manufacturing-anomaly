@@ -106,7 +106,11 @@ def _sync_seed_to_bigquery(client: Any) -> None:
     if errors:
         logger.warning("Errors inserting seed rows into BigQuery: %s", errors)
     else:
-        logger.info("Successfully seeded %d rows into BigQuery/Emulator table %s", len(rows_to_insert), table_ref)
+        logger.info(
+            "Successfully seeded %d rows into BigQuery/Emulator table %s",
+            len(rows_to_insert),
+            table_ref,
+        )
 
 
 def query_traceability_topology(time_window: str = "09:30-10:00") -> Dict[str, Any]:
@@ -131,19 +135,25 @@ def query_traceability_topology(time_window: str = "09:30-10:00") -> Dict[str, A
             suspects: List[Dict[str, Any]] = []
             for row in results:
                 ratio = float(row.defect_ratio or 0.0)
-                suspects.append({
-                    "machine_id": row.machine_id,
-                    "tool_id": row.tool_id,
-                    "correlation_score": round(ratio, 2),
-                    "defect_count": row.defect_count,
-                    "total_parts": row.total_parts,
-                })
+                suspects.append(
+                    {
+                        "machine_id": row.machine_id,
+                        "tool_id": row.tool_id,
+                        "correlation_score": round(ratio, 2),
+                        "defect_count": row.defect_count,
+                        "total_parts": row.total_parts,
+                    }
+                )
 
             if suspects:
                 return {
-                    "source": "bigquery_emulator" if settings.bigquery_emulator_host else "bigquery_live",
+                    "source": "bigquery_emulator"
+                    if settings.bigquery_emulator_host
+                    else "bigquery_live",
                     "suspects": suspects,
-                    "excluded_factors": ["lot_id: AL-5083-B4 (normal defect distribution across lots)"],
+                    "excluded_factors": [
+                        "lot_id: AL-5083-B4 (normal defect distribution across lots)"
+                    ],
                 }
         except Exception as exc:
             logger.warning("BigQuery query failed (%s); falling back to mock topology", exc)

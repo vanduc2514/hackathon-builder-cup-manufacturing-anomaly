@@ -10,15 +10,13 @@ from backend.agents.orchestrator import orchestrator
 from backend.api.routes_incidents import router as incidents_router
 from backend.api.routes_simulation import router as simulation_router
 from backend.core.config import settings
-from backend.core.llm import configure_default_model
 
 logging.basicConfig(level=settings.log_level)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Configures the LLM provider at startup (fail-fast) and stops any running incident on shutdown."""
-    configure_default_model()
+    """Stops any running incident on shutdown."""
     yield
     await orchestrator.cancel()
 

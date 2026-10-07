@@ -28,7 +28,7 @@ This file is the authoritative reference for AI coding agents and human contribu
 │   ├── core/                   # Shared primitives (import freely)
 │   │   ├── models.py           # Pydantic schemas — single source of truth
 │   │   ├── blackboard.py       # Reactive shared state (asyncio + SSE)
-│   │   └── config.py           # Settings via pydantic-settings / .env
+│   │   └── config.py           # Settings read from env vars (provided by mise)
 │   ├── edge/                   # Edge device code (Gemma classifier, MQTT bridge)
 │   │   ├── gateway/
 │   │   └── simulator/          # Local mock of edge hardware for dev

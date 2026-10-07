@@ -3,7 +3,8 @@
 import asyncio
 
 from backend.core.blackboard import blackboard
-from backend.core.models import AgentFinding, ImpactMetrics
+from backend.core.models import AgentFinding
+from backend.tools.impact_calculator import calculate_sustainability_impact
 
 
 class Orchestrator:
@@ -139,7 +140,7 @@ class Orchestrator:
         await asyncio.sleep(delay)
 
         # 8. Phase D: Continuous Learning & Impact Card
-        impact = ImpactMetrics(scrap_avoided=240, downtime_minutes=45, energy_kwh=38.0, co2_kg=25.0)
+        impact = calculate_sustainability_impact(factory_type="aluminum_cnc")
         blackboard.update_status("closed", impact=impact, defect_rate=0.004)
 
         blackboard.add_finding(

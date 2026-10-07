@@ -82,16 +82,36 @@ description = "Verify server health check endpoint (:8000/health)"
 run = "curl -f -s http://localhost:$API_PORT/health | jq ."
 
 [tasks.lint]
-description = "Run ruff linter on backend code"
-run = "ruff check backend"
+description = "Run ruff linter on backend, simulator, and test code"
+run = "ruff check backend simulator tests"
 
 [tasks.format]
-description = "Format backend code with ruff"
-run = "ruff format backend"
+description = "Format code with ruff"
+run = "ruff format backend simulator tests"
 
 [tasks.seed]
 description = "Seed mock BigQuery / Firestore data"
 run = "python -c 'from backend.tools.bigquery_tool import seed_mock_data; seed_mock_data()'"
+
+# =============================================================================
+# Factory Simulator Service (Edge Telemetry & Conveyor)
+# =============================================================================
+
+[tasks.sim]
+description = "Start the standalone factory floor & conveyor simulator (1x real-time)"
+run = "python -m simulator.main"
+
+[tasks."sim:fast"]
+description = "Run factory simulator at 5x accelerated speed for testing"
+run = "python -m simulator.main --speed 5"
+
+[tasks."sim:dry"]
+description = "Run factory simulator in offline dry-run mode (no network MQTT calls)"
+run = "python -m simulator.main --dry-run"
+
+[tasks."sim:inject"]
+description = "Start factory simulator with CNC-02 mechanical defect pre-injected"
+run = "python -m simulator.main --inject"
 
 # =============================================================================
 # Docker

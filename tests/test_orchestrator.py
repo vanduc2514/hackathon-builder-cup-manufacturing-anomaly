@@ -15,7 +15,7 @@ from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 
 from backend.agents import agent_quality_inspector
-from backend.agents.agent_orchestrator import Orchestrator
+from backend.agents.orchestrator import Orchestrator
 from backend.core.blackboard import blackboard
 from backend.core.models import DefectInjectionRequest, IncidentState, VerificationResult
 

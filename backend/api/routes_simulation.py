@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException
 
-from backend.agents.agent_orchestrator import orchestrator
+from backend.agents.orchestrator import orchestrator
 from backend.core.blackboard import blackboard
 from backend.core.models import DefectInjectionRequest
 

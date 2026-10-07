@@ -97,7 +97,7 @@ incident_workflow = Workflow(
 
 
 class Orchestrator:
-    """Runs one incident workflow at a time in the background and supports cancellation."""
+    """Single input/output boundary: starts, approves and resets incidents; one at a time."""
 
     def __init__(self, step_delay: float | None = None) -> None:
         self._step_delay = step_delay
@@ -153,6 +153,18 @@ class Orchestrator:
         finally:
             self._task = None
             self._abort = None
+
+    def approve(self) -> IncidentState | None:
+        """Records shift-leader approval; only a verified-closed, not-yet-approved incident qualifies."""
+        state = blackboard.get_state()
+        if state.status != "closed" or state.approved:
+            return None
+        return blackboard.update_status("closed", approved=True)
+
+    async def reset(self) -> IncidentState:
+        """Cancels any running workflow and restores the baseline Blackboard."""
+        await self.cancel()
+        return blackboard.reset()
 
 
 orchestrator = Orchestrator()

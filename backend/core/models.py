@@ -64,6 +64,7 @@ class IncidentState(BaseModel):
     root_cause: Optional[str] = None
     verification_count: int = 0
     verification_target: int = 50
+    approved: bool = False  # shift-leader sign-off, recorded by the Orchestrator after close
     findings: List[AgentFinding] = Field(default_factory=list)
     impact: Optional[ImpactMetrics] = None
     documents: Dict[str, Any] = Field(default_factory=dict)
@@ -71,7 +72,10 @@ class IncidentState(BaseModel):
 
 
 class DefectInjectionRequest(BaseModel):
+    """Defect signal the Orchestrator receives to open an incident (demo inject; edge/SPC later)."""
+
     defect_type: str = "scratch_vertical"
     severity: str = "medium"
+    defect_rate: float = 0.077
     machine_id: str = "CNC-02"
     tool_id: str = "T07"

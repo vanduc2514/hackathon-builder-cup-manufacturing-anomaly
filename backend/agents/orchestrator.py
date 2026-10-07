@@ -1,395 +1,336 @@
-"""Orchestrator Agent (ADK): Coordinates phases A -> B -> C -> D and manages the incident lifecycle state machine."""
+"""Orchestrator Agent (ADK Workflow): drives the incident lifecycle graph and writes every transition to the Blackboard."""
 
 from __future__ import annotations
 
 import asyncio
-import time
-from typing import Optional
+import logging
+from uuid import uuid4
 
+from google.adk import Context, Event, Workflow
+from google.adk.runners import InMemoryRunner
+from google.adk.workflow import JoinNode
+from google.genai import types
+
+from backend.agents import (
+    continuous_learning,
+    incident_scribe,
+    process_analyst,
+    quality_inspector,
+    root_cause,
+    technician_copilot,
+    traceability,
+)
 from backend.core.blackboard import blackboard
-from backend.core.models import AgentFinding, DefectInjectionRequest, ImpactMetrics
+from backend.core.config import settings
+from backend.core.models import (
+    AgentFinding,
+    DefectInjectionRequest,
+    FindingDraft,
+    ImpactMetrics,
+    IncidentState,
+    ScribeDraft,
+    VerificationResult,
+)
+
+logger = logging.getLogger(__name__)
+
+RCA_CONFIDENCE_THRESHOLD = 0.7
+MAX_EVIDENCE_ROUNDS = 2
+MAX_REOPENS = 1
+APP_NAME = "kaizen_orchestrator"
+WORKFLOW_NAME = "kaizen_incident"
+
+
+def _record(agent_id: str, agent_name: str, phase: str, draft: FindingDraft) -> None:
+    """Writes an LLM draft to the Blackboard as an AgentFinding (confidence clamped to [0, 1])."""
+    blackboard.add_finding(
+        AgentFinding(
+            agent_id=agent_id,
+            agent_name=agent_name,
+            phase=phase,
+            finding=draft.finding,
+            evidence=draft.evidence,
+            confidence=min(1.0, max(0.0, draft.confidence)),
+            citation=draft.citation,
+        )
+    )
+
+
+async def open_incident(ctx: Context, node_input: DefectInjectionRequest) -> IncidentState:
+    """Initialises workflow state and opens a fresh incident on the Blackboard."""
+    ctx.state["trigger"] = node_input.model_dump()
+    ctx.state["evidence_rounds"] = 0
+    ctx.state["reopen_count"] = 0
+    ctx.state["step_delay"] = ctx.state.get("step_delay", settings.simulation_step_delay)
+    blackboard.reset()
+    blackboard.update_status(
+        "detecting",
+        incident_id=f"INC-{uuid4().hex[:6].upper()}",
+        defect_type=node_input.defect_type,
+        defect_rate=quality_inspector.INJECTED_DEFECT_RATE,
+        verification_count=0,
+    )
+    return blackboard.get_state()
+
+
+async def record_detection(node_input: FindingDraft) -> IncidentState:
+    _record(
+        quality_inspector.AGENT_ID,
+        quality_inspector.AGENT_NAME,
+        quality_inspector.PHASE,
+        node_input,
+    )
+    blackboard.update_status("tracing")
+    return blackboard.get_state()
+
+
+async def record_traceability(ctx: Context, node_input: FindingDraft) -> IncidentState:
+    _record(traceability.AGENT_ID, traceability.AGENT_NAME, traceability.PHASE, node_input)
+    trigger = ctx.state["trigger"]
+    blackboard.update_status(
+        "investigating", suspect_machine=trigger["machine_id"], suspect_tool=trigger["tool_id"]
+    )
+    return blackboard.get_state()
+
+
+async def record_process_analysis(node_input: FindingDraft) -> IncidentState:
+    _record(process_analyst.AGENT_ID, process_analyst.AGENT_NAME, process_analyst.PHASE, node_input)
+    blackboard.update_status("analyzing")
+    return blackboard.get_state()
+
+
+async def rca_gate(ctx: Context, node_input: FindingDraft) -> Event:
+    """Routes on root-cause confidence: repair, gather field evidence, or escalate."""
+    _record(root_cause.AGENT_ID, root_cause.AGENT_NAME, root_cause.PHASE, node_input)
+    confidence = node_input.confidence
+    if confidence >= RCA_CONFIDENCE_THRESHOLD:
+        blackboard.update_status("repairing", root_cause=node_input.finding)
+        return Event(route="CONFIDENT", output=blackboard.get_state().model_dump())
+    if ctx.state["evidence_rounds"] < MAX_EVIDENCE_ROUNDS:
+        ctx.state["evidence_rounds"] += 1
+        blackboard.update_status("awaiting_evidence")
+        return Event(route="NEED_EVIDENCE", output=blackboard.get_state().model_dump())
+    return Event(
+        route="ESCALATE",
+        output=(
+            f"Root cause confidence {confidence:.2f} still below {RCA_CONFIDENCE_THRESHOLD} "
+            f"after {MAX_EVIDENCE_ROUNDS} evidence rounds"
+        ),
+    )
+
+
+async def record_field_evidence(node_input: FindingDraft) -> IncidentState:
+    _record(
+        technician_copilot.AGENT_ID,
+        technician_copilot.AGENT_NAME,
+        technician_copilot.DIAGNOSTIC_PHASE,
+        node_input,
+    )
+    blackboard.update_status("analyzing")
+    return blackboard.get_state()
+
+
+async def record_resolution(node_input: dict) -> IncidentState:
+    """Records the parallel copilot and scribe outputs in a fixed order."""
+    copilot = FindingDraft.model_validate(node_input[technician_copilot.agent.name])
+    scribe = ScribeDraft.model_validate(node_input[incident_scribe.agent.name])
+    _record(
+        technician_copilot.AGENT_ID,
+        technician_copilot.AGENT_NAME,
+        technician_copilot.PHASE,
+        copilot,
+    )
+    _record(incident_scribe.AGENT_ID, incident_scribe.AGENT_NAME, incident_scribe.PHASE, scribe)
+    blackboard.update_status(
+        "verifying",
+        documents={
+            "work_order": scribe.work_order,
+            "report_8d": scribe.report_8d,
+            "sop_proposal": scribe.sop_proposal,
+        },
+    )
+    return blackboard.get_state()
+
+
+async def verify_repair(ctx: Context, node_input: dict) -> VerificationResult:
+    return await quality_inspector.run_post_repair_verification(ctx.state["step_delay"])
+
+
+async def verification_gate(ctx: Context, node_input: VerificationResult) -> Event:
+    """Closes only on Blackboard product evidence (Key Invariant 3); else reopens or escalates."""
+    state = blackboard.get_state()
+    count, target = state.verification_count, state.verification_target
+    if count >= target:
+        blackboard.add_finding(
+            AgentFinding(
+                agent_id=quality_inspector.AGENT_ID,
+                agent_name=quality_inspector.VERIFICATION_AGENT_NAME,
+                phase=quality_inspector.VERIFICATION_PHASE,
+                finding=(
+                    f"Physical recovery verified: {count} consecutive defect-free products passed."
+                ),
+                evidence=(
+                    f"Defect rate dropped to {node_input.defect_rate:.1%}, "
+                    f"below SPC UCL {state.spc_ucl:.1%}."
+                ),
+                confidence=0.99,
+                citation="End-of-line Camera Station #1 inspection buffer",
+            )
+        )
+        return Event(route="VERIFIED", output=node_input.model_dump())
+    if ctx.state["reopen_count"] < MAX_REOPENS:
+        ctx.state["reopen_count"] += 1
+        blackboard.add_finding(
+            AgentFinding(
+                agent_id=quality_inspector.AGENT_ID,
+                agent_name=quality_inspector.VERIFICATION_AGENT_NAME,
+                phase=quality_inspector.VERIFICATION_PHASE,
+                finding="Defects persist after repair; reopening Phase B",
+                evidence=(
+                    f"Only {count}/{target} consecutive good parts; "
+                    f"defect rate {node_input.defect_rate:.1%}."
+                ),
+                confidence=0.9,
+                citation="End-of-line Camera Station #1 inspection buffer",
+            )
+        )
+        return Event(route="NOT_VERIFIED", output=blackboard.get_state().model_dump())
+    return Event(
+        route="ESCALATE",
+        output=f"Verification failed: {count}/{target} good parts after {MAX_REOPENS} reopen(s)",
+    )
+
+
+async def reopen_investigation(node_input: dict) -> IncidentState:
+    blackboard.update_status("tracing", verification_count=0, root_cause=None)
+    return blackboard.get_state()
+
+
+async def close_incident(node_input: VerificationResult) -> IncidentState:
+    blackboard.update_status("closed", defect_rate=node_input.defect_rate)
+    return blackboard.get_state()
+
+
+async def record_learning(node_input: FindingDraft) -> None:
+    _record(
+        continuous_learning.AGENT_ID,
+        continuous_learning.AGENT_NAME,
+        continuous_learning.PHASE,
+        node_input,
+    )
+    # Placeholder: default impact numbers until the impact calculator is wired in.
+    blackboard.update_status("closed", impact=ImpactMetrics())
+
+
+async def escalate_incident(node_input: str) -> None:
+    blackboard.update_status("escalated", status_reason=node_input)
+    logger.warning("Incident %s escalated: %s", blackboard.get_state().incident_id, node_input)
+
+
+resolution_join = JoinNode(name="resolution_join")
+
+incident_workflow = Workflow(
+    name=WORKFLOW_NAME,
+    edges=[
+        (
+            "START",
+            open_incident,
+            quality_inspector.agent,
+            record_detection,
+            traceability.agent,
+            record_traceability,
+            process_analyst.agent,
+            record_process_analysis,
+            root_cause.agent,
+            rca_gate,
+        ),
+        (
+            rca_gate,
+            {
+                "CONFIDENT": (technician_copilot.agent, incident_scribe.agent),
+                "NEED_EVIDENCE": technician_copilot.diagnostic_agent,
+                "ESCALATE": escalate_incident,
+            },
+        ),
+        (technician_copilot.diagnostic_agent, record_field_evidence, root_cause.agent),
+        (
+            (technician_copilot.agent, incident_scribe.agent),
+            resolution_join,
+            record_resolution,
+            verify_repair,
+            verification_gate,
+        ),
+        (
+            verification_gate,
+            {
+                "VERIFIED": close_incident,
+                "NOT_VERIFIED": reopen_investigation,
+                "ESCALATE": escalate_incident,
+            },
+        ),
+        (reopen_investigation, traceability.agent),
+        (close_incident, continuous_learning.agent, record_learning),
+    ],
+)
 
 
 class Orchestrator:
-    """Coordinates the Kaizen Agent team through the 4-phase incident lifecycle."""
+    """Runs one incident workflow at a time in the background and supports cancellation."""
 
-    def __init__(self) -> None:
-        self.is_running: bool = False
-        self.current_scenario: Optional[str] = None
-        self.current_mode: Optional[str] = None
-        self.target_machine: Optional[str] = None
-        self.target_tool: Optional[str] = None
-        self.start_time: Optional[float] = None
-        self.total_duration: Optional[float] = None
-        self._current_task: Optional[asyncio.Task] = None
+    def __init__(self, step_delay: float | None = None) -> None:
+        self._step_delay = step_delay
+        self._task: asyncio.Task | None = None
+        self._abort: asyncio.Event | None = None
 
-    def stop_simulation(self) -> None:
-        """Stops and cancels any running incident simulation."""
-        self.is_running = False
-        if self._current_task and not self._current_task.done():
-            self._current_task.cancel()
-            self._current_task = None
+    @property
+    def is_running(self) -> bool:
+        return self._task is not None and not self._task.done()
 
-    async def run_incident_simulation(
-        self,
-        delay: Optional[float] = None,
-        req: Optional[DefectInjectionRequest] = None,
-    ) -> None:
-        """Executes the full closed-loop incident investigation and recovery flow."""
-        self._current_task = asyncio.current_task()
-        self.is_running = True
-        self.start_time = time.time()
+    def start_incident(self, trigger: DefectInjectionRequest) -> bool:
+        """Starts the workflow in the background; returns False if one is already running."""
+        if self.is_running:
+            return False
+        self._abort = asyncio.Event()
+        self._task = asyncio.create_task(self.run_incident(trigger, self._abort))
+        return True
 
-        if req is None:
-            req = DefectInjectionRequest()
-
-        scenario = req.scenario or "cnc_tool_wear"
-        mode = req.mode or "demo"
-        self.current_scenario = scenario
-        self.current_mode = mode
-
-        # Determine timing envelope
-        if req.duration_seconds is not None:
-            total_duration = max(1.0, req.duration_seconds)
-        elif delay is not None:
-            # Backward-compatible explicit delay parameter
-            total_duration = delay * 10.0
-        elif mode == "fast":
-            total_duration = 8.0
-        else:
-            total_duration = 90.0  # Deterministic 90-second demo envelope
-
-        self.total_duration = total_duration
-        step_delay = total_duration / 9.0
-
+    async def run_incident(
+        self, trigger: DefectInjectionRequest, abort: asyncio.Event | None = None
+    ) -> IncidentState:
+        """Runs the incident workflow to completion; failures land on the Blackboard as `error`."""
+        runner = InMemoryRunner(node=incident_workflow, app_name=APP_NAME)
         try:
-            if scenario == "im_damp_material":
-                await self._run_scenario_im_damp_material(step_delay, req)
-            else:
-                await self._run_scenario_cnc_tool_wear(step_delay, req)
-        except asyncio.CancelledError:
-            self.is_running = False
-            raise
+            session_kwargs = {}
+            if self._step_delay is not None:
+                session_kwargs["state"] = {"step_delay": self._step_delay}
+            session = await runner.session_service.create_session(
+                app_name=APP_NAME, user_id="orchestrator", **session_kwargs
+            )
+            logger.info("incident workflow started: %s", trigger.model_dump_json())
+            async for _ in runner.run_async(
+                user_id="orchestrator",
+                session_id=session.id,
+                new_message=types.Content(
+                    role="user", parts=[types.Part(text=trigger.model_dump_json())]
+                ),
+                abort_signal=abort,
+            ):
+                pass
+            logger.info("incident workflow finished: status=%s", blackboard.get_state().status)
+        except Exception as exc:
+            logger.exception("incident workflow failed")
+            blackboard.update_status("error", status_reason=f"{type(exc).__name__}: {exc}")
+        return blackboard.get_state()
+
+    async def cancel(self) -> None:
+        """Aborts the running workflow (ADK abort_signal) and waits for it to stop."""
+        try:
+            if self.is_running:
+                self._abort.set()
+                await self._task
         finally:
-            self.is_running = False
-
-    async def _run_scenario_cnc_tool_wear(
-        self, step_delay: float, req: DefectInjectionRequest
-    ) -> None:
-        """Executes Scenario 1: CNC-02 Cutting Tool T07 mechanical onset, wear, and resolution."""
-        machine_id = req.machine_id or "CNC-02"
-        tool_id = req.tool_id or "T07"
-        self.target_machine = machine_id
-        self.target_tool = tool_id
-
-        # 1. Phase A: Detection by Quality Inspector
-        blackboard.update_status(
-            "detecting",
-            defect_type="scratch_vertical",
-            defect_rate=0.077,
-            verification_count=0,
-            suspect_machine=machine_id,
-        )
-        await asyncio.sleep(step_delay)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="QA",
-                agent_name="Quality Inspector",
-                phase="Phase A - Detection",
-                finding="Vertical scratch 2–3 mm on face A detected on conveyor station.",
-                evidence="23/300 products defective (7.7% defect rate), exceeding SPC UCL of 3.0%. Started at 09:40.",
-                confidence=0.96,
-                citation="Gemma Edge Gateway Frame #8412 + Gemini Vision Metrology",
-            )
-        )
-        await asyncio.sleep(step_delay)
-
-        # 2. Phase B: Traceability Agent (discrete topology)
-        blackboard.update_status("tracing", incident_id="INC-0412")
-        await asyncio.sleep(step_delay)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="TRA",
-                agent_name="Traceability Agent",
-                phase="Phase B - Tracing",
-                finding=f"Defects isolated to {machine_id} with Cutting Tool {tool_id}. Raw materials excluded.",
-                evidence=f"100% of defective parts routed through {machine_id}/{tool_id}. CNC-01 and CNC-03 used blank lot AL-5083-B4 with 0 defects.",
-                confidence=0.95,
-                citation="BigQuery `traceability_discrete_events` cross-lot correlation",
-            )
-        )
-        await asyncio.sleep(step_delay)
-
-        # 3. Phase B: Process Analyst Agent (continuous telemetry)
-        blackboard.update_status("investigating", suspect_machine=machine_id, suspect_tool=tool_id)
-        await asyncio.sleep(step_delay)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="PA",
-                agent_name="Process Analyst Agent",
-                phase="Phase B - Sensor Analysis",
-                finding="Spindle vibration spike (+35% to 2.7 mm/s) and motor current rise (+12% to 13.5 A) preceding defects.",
-                evidence="Vibration increased at 09:30 (10 min prior to defect spike). Bearing temperature normal at 42°C.",
-                confidence=0.89,
-                citation="BigQuery `machine_telemetry_5s` time-window query (09:00-10:00)",
-            )
-        )
-        await asyncio.sleep(step_delay)
-
-        # 4. Phase B: Root Cause Agent with RAG Tool
-        blackboard.update_status("analyzing")
-        await asyncio.sleep(step_delay)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="RCA",
-                agent_name="Root Cause Agent",
-                phase="Phase B - Root Cause",
-                finding=f"Tool wear on insert {tool_id} past maximum rated cutting life. SOP lacks piece-counter.",
-                evidence=f"5-Whys & Ishikawa synthesis: Tool {tool_id} cut 2,400 parts (limit: 2,000). Tool replacement SOP is calendar-based, not usage-based.",
-                confidence=0.87,
-                citation=f"Vertex AI Search: CNC Manual p.112 + Maintenance Log {tool_id} + 8D-2026-03-12",
-            )
-        )
-        await asyncio.sleep(step_delay)
-
-        # 5. Phase C: Technician Copilot (multimodal resolution)
-        blackboard.update_status(
-            "repairing", root_cause=f"Tool {tool_id} worn past 2,000 part limit"
-        )
-        await asyncio.sleep(step_delay)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="COPILOT",
-                agent_name="Technician Copilot",
-                phase="Phase C - Resolution",
-                finding="Interactive repair completed in Vietnamese with verified tool runout.",
-                evidence="Guided technician through cover removal, insert swap, and runout calibration (< 0.005 mm) citing CNC manual p.112.",
-                confidence=0.94,
-                citation="Gemini Live API multimodal voice session (Session #VN-902)",
-            )
-        )
-        await asyncio.sleep(step_delay)
-
-        # 6. Phase C: Quality Inspector Post-Repair Verification Gatekeeper
-        blackboard.update_status("verifying")
-        sub_delay = step_delay * 0.25
-        for count in [10, 25, 40, 50]:
-            blackboard.update_status("verifying", verification_count=count)
-            await asyncio.sleep(sub_delay)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="QA",
-                agent_name="Quality Inspector (Gatekeeper)",
-                phase="Phase C - Verification",
-                finding="Physical recovery verified: 50 consecutive defect-free products passed on conveyor.",
-                evidence="Defect rate dropped from 7.7% back to baseline 0.4% (below SPC UCL 3.0%). Zero surface scratches detected.",
-                confidence=0.99,
-                citation="End-of-line Camera Station #1 inspection buffer (50/50 pass streak)",
-            )
-        )
-        await asyncio.sleep(step_delay)
-
-        # 7. Phase C: Incident Scribe (8D & SOP documentation)
-        docs = {
-            "work_order": f"WO-8821: Replace {tool_id} insert & recalibrate spindle offset (Completed)",
-            "report_8d": "8D Report INC-0412: Root cause verified as insert wear; preventive action defined.",
-            "sop_proposal": "SOP-CNC-04 Revision: Add automated M-code piece counter alarm at 1,900 parts.",
-        }
-        blackboard.update_status("verifying", documents=docs)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="DOC",
-                agent_name="Incident Scribe",
-                phase="Phase C - Documentation",
-                finding="Generated formal 8D Incident Report, Work Order WO-8821, and SOP countermeasure.",
-                evidence="Drafted 8-step resolution dossier and preventative countermeasure ready for Shift Leader sign-off.",
-                confidence=0.95,
-                citation="Firestore incident board state compiler",
-            )
-        )
-        await asyncio.sleep(step_delay)
-
-        # 8. Phase D: Continuous Learning & Impact Card
-        impact = ImpactMetrics(scrap_avoided=240, downtime_minutes=45, energy_kwh=38.0, co2_kg=25.0)
-        blackboard.update_status("closed", impact=impact, defect_rate=0.004)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="LEARN",
-                agent_name="Continuous Learning",
-                phase="Phase D - Learning",
-                finding="Resolution indexed into defect-cause-fix library; Impact Card calculated.",
-                evidence="Avoided 240 scrap housings (~$3,600), saved 45 min downtime, reduced 38 kWh power and 25 kg CO2.",
-                confidence=0.99,
-                citation="Vertex AI Search Vector Index + BigQuery Sustainability Accounting",
-            )
-        )
-
-    async def _run_scenario_im_damp_material(
-        self, step_delay: float, req: DefectInjectionRequest
-    ) -> None:
-        """Executes Scenario 2: IM-05 Injection Molding damp material and cavity #3 defect resolution."""
-        machine_id = req.machine_id if req.machine_id != "CNC-02" else "IM-05"
-        tool_id = req.tool_id if req.tool_id != "T07" else "MOLD-03"
-        self.target_machine = machine_id
-        self.target_tool = tool_id
-
-        # 1. Phase A: Detection by Quality Inspector
-        blackboard.update_status(
-            "detecting",
-            defect_type="short_fill",
-            defect_rate=0.081,
-            verification_count=0,
-            suspect_machine=machine_id,
-        )
-        await asyncio.sleep(step_delay)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="QA",
-                agent_name="Quality Inspector",
-                phase="Phase A - Detection",
-                finding="Short fill and sink marks detected on mold cavity #3 at camera station.",
-                evidence="26/320 parts defective (8.1% defect rate), exceeding SPC UCL of 3.0%. Started at 09:20.",
-                confidence=0.97,
-                citation="Gemma Edge Gateway Frame #9104 + Optical Profilometry Station",
-            )
-        )
-        await asyncio.sleep(step_delay)
-
-        # 2. Phase B: Traceability Agent (discrete topology)
-        blackboard.update_status("tracing", incident_id="INC-0413")
-        await asyncio.sleep(step_delay)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="TRA",
-                agent_name="Traceability Agent",
-                phase="Phase B - Tracing",
-                finding=f"Defects isolated to {machine_id} mold cavity #3. Raw resin lot PA66-GF30-L12.",
-                evidence=f"100% of defective housings produced on {machine_id} using {tool_id} Cavity #3. Cavities #1, #2, #4 show 0 defects.",
-                confidence=0.96,
-                citation="BigQuery `traceability_discrete_events` cavity cross-tabulation",
-            )
-        )
-        await asyncio.sleep(step_delay)
-
-        # 3. Phase B: Process Analyst Agent (continuous telemetry)
-        blackboard.update_status("investigating", suspect_machine=machine_id, suspect_tool=tool_id)
-        await asyncio.sleep(step_delay)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="PA",
-                agent_name="Process Analyst Agent",
-                phase="Phase B - Sensor Analysis",
-                finding="Machine parameters normal, but material dryer dew point rose from -40°C to -18°C.",
-                evidence="Dryer dew point spiked at 09:10 (-18°C vs specification -40°C). Melt temperature (210°C) and injection pressure remain normal.",
-                confidence=0.92,
-                citation="BigQuery `machine_telemetry_5s` dehumidifier channel dew_point_c",
-            )
-        )
-        await asyncio.sleep(step_delay)
-
-        # 4. Phase B: Root Cause Agent with RAG Tool
-        blackboard.update_status("analyzing")
-        await asyncio.sleep(step_delay)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="RCA",
-                agent_name="Root Cause Agent",
-                phase="Phase B - Root Cause",
-                finding="Hygroscopic moisture saturation in PA66 resin caused by saturated desiccant bed.",
-                evidence="5-Whys synthesis: Dryer regeneration valve failed to seal, leading to resin moisture 0.28% (spec < 0.05%) and melt viscosity drop.",
-                confidence=0.88,
-                citation="Vertex AI Search: Dryer Manual p.54 + PA66 Processing Guide + 8D-2025-11-04",
-            )
-        )
-        await asyncio.sleep(step_delay)
-
-        # 5. Phase C: Technician Copilot (multimodal resolution)
-        blackboard.update_status(
-            "repairing", root_cause="Dryer desiccant bed saturated; resin moisture 0.28%"
-        )
-        await asyncio.sleep(step_delay)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="COPILOT",
-                agent_name="Technician Copilot",
-                phase="Phase C - Resolution",
-                finding="Interactive hopper purge and desiccant cartridge regeneration completed.",
-                evidence="Guided technician through desiccant bed replacement, hopper drain purge, and dew point calibration (-42°C verified).",
-                confidence=0.95,
-                citation="Gemini Live API multimodal voice session (Session #VN-908)",
-            )
-        )
-        await asyncio.sleep(step_delay)
-
-        # 6. Phase C: Quality Inspector Post-Repair Verification Gatekeeper
-        blackboard.update_status("verifying")
-        sub_delay = step_delay * 0.25
-        for count in [10, 25, 40, 50]:
-            blackboard.update_status("verifying", verification_count=count)
-            await asyncio.sleep(sub_delay)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="QA",
-                agent_name="Quality Inspector (Gatekeeper)",
-                phase="Phase C - Verification",
-                finding="Physical recovery verified: 50 consecutive defect-free molded parts passed on conveyor.",
-                evidence="Defect rate dropped from 8.1% to baseline 0.3% (below SPC UCL 3.0%). Cavity #3 surface finish nominal.",
-                confidence=0.99,
-                citation="Optical Inspection Station #2 buffer (50/50 pass streak)",
-            )
-        )
-        await asyncio.sleep(step_delay)
-
-        # 7. Phase C: Incident Scribe (8D & SOP documentation)
-        docs = {
-            "work_order": "WO-9042: Regenerate desiccant bed, purge hopper, and inspect cavity #3 gate (Completed)",
-            "report_8d": "8D Report INC-0413: Root cause verified as resin moisture; dryer maintenance preventive countermeasure implemented.",
-            "sop_proposal": "SOP-IM-08 Revision: Add automated dew point alarm interlock cutoff at -30°C.",
-        }
-        blackboard.update_status("verifying", documents=docs)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="DOC",
-                agent_name="Incident Scribe",
-                phase="Phase C - Documentation",
-                finding="Generated formal 8D Incident Report, Work Order WO-9042, and SOP-IM-08 update.",
-                evidence="Drafted 8-step resolution dossier and preventive interlock countermeasure ready for Shift Leader sign-off.",
-                confidence=0.96,
-                citation="Firestore incident board state compiler",
-            )
-        )
-        await asyncio.sleep(step_delay)
-
-        # 8. Phase D: Continuous Learning & Impact Card
-        impact = ImpactMetrics(scrap_avoided=320, downtime_minutes=60, energy_kwh=42.0, co2_kg=28.0)
-        blackboard.update_status("closed", impact=impact, defect_rate=0.003)
-
-        blackboard.add_finding(
-            AgentFinding(
-                agent_id="LEARN",
-                agent_name="Continuous Learning",
-                phase="Phase D - Learning",
-                finding="Moisture-induced short fill signature indexed into vector knowledge base.",
-                evidence="Avoided 320 scrap housings (~$4,800), saved 60 min downtime, reduced 42 kWh power and 28 kg CO2.",
-                confidence=0.99,
-                citation="Vertex AI Search Vector Index + BigQuery Sustainability Accounting",
-            )
-        )
+            self._task = None
+            self._abort = None
 
 
 orchestrator = Orchestrator()

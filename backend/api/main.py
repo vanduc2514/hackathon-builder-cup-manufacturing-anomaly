@@ -1,18 +1,35 @@
 """API Entrypoint: FastAPI backend server serving incident board APIs and WebSocket/SSE streams."""
 
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
+from backend.agents.orchestrator import orchestrator
 from backend.api.routes_gemini_live import router as gemini_live_router
 from backend.api.routes_impact import router as impact_router
 from backend.api.routes_incidents import router as incidents_router
 from backend.api.routes_simulation import router as simulation_router
 from backend.core.config import settings
+from backend.core.llm import configure_default_model
+
+logging.basicConfig(level=settings.log_level)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Configures the LLM provider at startup (fail-fast) and stops any running incident on shutdown."""
+    configure_default_model()
+    yield
+    await orchestrator.cancel()
+
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.version,
     description="Kaizen Agent: Product-first AI Team for Manufacturing Anomaly Detection and Root-Cause Tracing",
+    lifespan=lifespan,
 )
 
 app.include_router(incidents_router)

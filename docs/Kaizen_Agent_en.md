@@ -62,13 +62,13 @@ Instead of a single chatbot, Kaizen Agent is a team of multiple AI agents, each 
 
 | Phase | Agent | What it does | Core technology |
 |---|---|---|---|
-| A. Detection | **Quality Inspector** | Scans each product's image, classifies defect type, location, and severity; monitors SPC control charts; opens an incident when thresholds are exceeded | Gemma at the gateway + Gemini Vision |
+| A. Detection | **Quality Inspector** | Scans each product's image, classifies defect type, location, and severity; monitors SPC control charts; called by the Orchestrator, it returns the classification (the Orchestrator opens the incident when thresholds are exceeded) | Gemma at the gateway + Gemini Vision |
 | B. Tracing | **Traceability** | Links the defective product to machine, process step, tool/mold, material lot, operator, and parameters; produces a ranked suspect list | BigQuery + ADK tool |
 | B. Tracing | **Process Analyst** | Pulls sensor data for the suspected machine only, in the right time window, and compares with baseline | BigQuery + Gemini |
 | B. Tracing | **Knowledge** | Searches manuals, maintenance logs, past 8D reports, and expert technician videos; a "defect → cause" library; always cites sources | Vertex AI Search / RAG |
 | B. Tracing | **RCA (Root Cause)** | Synthesizes evidence, runs 5-Whys and Ishikawa, produces ranked hypotheses with confidence; requests more evidence if insufficient | Gemini |
 | C. Resolution | **Repair Guide** | Real-time voice + camera conversation in Vietnamese, step by step, with citations | Gemini Live API |
-| C. Resolution | **Action & Documentation** | Drafts work orders, 8D reports, and SOP change proposals; routes them to the shift leader for approval | Gemini + Firestore |
+| C. Resolution | **Action & Documentation** | Drafts work orders, 8D reports, and SOP change proposals; returns them to the Orchestrator, which routes them to the shift leader for approval | Gemini |
 | D. Learning | **Knowledge Capture & Impact** | Turns expert technician videos and just-resolved incidents into new knowledge-base entries; computes impact cards | Gemini Video + BigQuery |
 
 ### Phase A: Detecting anomalies from the product
@@ -77,7 +77,7 @@ Instead of a single chatbot, Kaizen Agent is a team of multiple AI agents, each 
 
 **On-premises gateway.** A small computer running Gemma, Google's lightweight open-source model, does two things locally: fast classification of product images as pass/fail, and anomaly detection in sensor/audio signals. Only defective images and anomalous signals are sent to the cloud. Benefits: fast, bandwidth-efficient, and sensitive raw data never has to leave the factory. Factories care a lot about this point for security.
 
-**Quality Inspector Agent.** Receives defect images from the gateway and uses Gemini for detailed classification: defect type (scratch, burr, short fill, misalignment, etc.), location on the product, severity. Monitors the defect rate on an SPC control chart. When the defect rate exceeds control limits or a new defect type appears, the agent opens an incident.
+**Quality Inspector Agent.** The defect / SPC event from the gateway goes to the Orchestrator, not to the agents. The Orchestrator calls the Quality Inspector, which takes the defect images and uses Gemini for detailed classification: defect type (scratch, burr, short fill, misalignment, etc.), location on the product, severity. Monitors the defect rate on an SPC control chart. When the defect rate exceeds control limits or a new defect type appears, the Orchestrator opens an incident and records the Quality Inspector's classification on the board.
 
 > Example output: *"Vertical scratch 2–3 mm on face A, started at 09:40, 23/300 products (7.7%), rising. Baseline rate was 0.5% before."*
 
@@ -138,16 +138,24 @@ This is the sustainability proof and the basis for competing for the Most Impact
 
 ## 4. How the agents communicate
 
-The agents **do not chat freely with each other**. The system uses a **shared incident state** model (a "blackboard" style) stored in Firestore, controlled by the Orchestrator Agent (ADK). Each agent reads the board, does its work, then writes structured findings to the board. The Orchestrator Agent reads the board and decides who to call next.
+The agents **do not chat freely with each other**. The system uses a **shared incident state** model (a "blackboard" style) stored in Firestore, controlled by the Orchestrator Agent (ADK). The Orchestrator is the single entry and exit point: it receives every input (defect/SPC events, technician reports, shift-leader approvals), passes the board to the agent it calls, records the agent's returned finding on the board (it is the sole writer), decides who to call next, and publishes every output (dashboard, documents for approval, knowledge-base entries, impact card). Agents never receive external events, never write the board, and never talk to each other or to humans directly.
+
+Documented exceptions:
+
+- **Read-only dashboard:** the dashboard reads the board (current incident + live event stream); only the Orchestrator writes it.
+- **Agent tool lookups:** Traceability/Process Analyst query BigQuery, Root Cause/Copilot query RAG, agents call Gemini. These are data queries, not incident input/output.
+- **Data-plane ingestion:** Pub/Sub → BigQuery storage of raw telemetry and traceability data.
+- **Technician Copilot live session:** the live voice + camera stream with the technician (Gemini Live) cannot be relayed; the Orchestrator starts and ends the session and receives its outcomes (diagnostic evidence, repair done).
+- **ADK dev UI:** `adk web` / `adk run` run the workflow graph directly, without the Orchestrator runner (dev only, separate process, in-memory board).
 
 Every message has 4 mandatory parts: **finding – evidence – confidence – source citation**. This makes every conclusion verifiable, and the demo screen only needs to display this incident board for judges to clearly see what each agent is doing.
 
 ### Flow of a typical incident
 
-| # | Who | Does what | Writes to the incident board |
+| # | Who | Does what | Result (recorded on the board by the Orchestrator) |
 |---|---|---|---|
-| 1 | Quality Inspector | Detects defect rate exceeding threshold | `{event: "defect_spike", type: "scratch_vertical", rate: 0.077, since: "09:40"}` |
-| 2 | Orchestrator | Opens incident INC-0412, calls Traceability (sequential, mandatory) | `{incident: "INC-0412", status: "tracing"}` |
+| 1 | Orchestrator | Receives the `defect_spike` event from the edge gateway / SPC, opens incident INC-0412, calls Quality Inspector to classify | `{event: "defect_spike", type: "scratch_vertical", rate: 0.077, since: "09:40"}` |
+| 2 | Orchestrator | Records the Quality Inspector's classification, calls Traceability (sequential, mandatory) | `{incident: "INC-0412", status: "tracing"}` |
 | 3 | Traceability | Narrows down suspects | `{suspects: [{machine: "CNC-02", tool: "T07", score: 0.95}], excluded: ["material_lot"]}` |
 | 4 | Orchestrator | Calls **in parallel** Process Analyst (CNC-02, 09:00–10:00) and Knowledge (vertical scratch + CNC-02) | `{status: "investigating"}` |
 | 5 | Process Analyst | Returns result | `{finding: "vibration +35%, current +12%", since: "09:30", confidence: 0.8}` |
@@ -156,11 +164,11 @@ Every message has 4 mandatory parts: **finding – evidence – confidence – s
 | 7 | RCA | Concludes or requests more evidence | `{root_cause: "T07 worn, over tool life", confidence: 0.87, whys: [...], ishikawa: {Machine: ..., Method: ...}}` |
 | 7b | RCA (if confidence < 0.7) | Requests evidence | `{need: "close-up photo of insert"}` → Orchestrator turns it into a question for the technician via Gemini Live → photo arrives → back to step 7 |
 | 8 | Orchestrator | Calls **in parallel** Repair Guide (for the technician) and Action (draft 8D) | `{status: "repairing"}` |
-| 9 | Repair Guide | Technician reports done | `{repair_done: true, steps_taken: [...]}` |
+| 9 | Repair Guide | Technician reports done; returns the outcome to the Orchestrator | `{repair_done: true, steps_taken: [...]}` |
 | 10 | Orchestrator | Has Quality Inspector verify 50 consecutive good products | `{status: "verifying"}` |
 | 11 | Quality Inspector | Confirms | `{verified: true, good_streak: 50, rate: 0.004}` |
-| 12 | Orchestrator | Closes the incident; calls Action to finalize 8D/SOP; calls Knowledge Capture | `{status: "closed", pending_approval: "shift_leader"}` |
-| 13 | Knowledge Capture | Adds an entry to the defect → cause library; computes the impact card | `{impact: {scrap_avoided: 240, downtime_min: 45, kwh: 38, co2_kg: 25}}` |
+| 12 | Orchestrator | Closes the incident; calls Action to finalize 8D/SOP and sends it to the shift leader; the shift leader's approval comes back to the Orchestrator; calls Knowledge Capture | `{status: "closed", pending_approval: "shift_leader"}` |
+| 13 | Knowledge Capture | Returns a defect → cause library entry and the impact card; the Orchestrator adds the entry and publishes the card | `{impact: {scrap_avoided: 240, downtime_min: 45, kwh: 38, co2_kg: 25}}` |
 
 Three notable points in this communication style:
 
@@ -180,7 +188,7 @@ Three notable points in this communication style:
 
 **Sequence of events.**
 
-1. 09:40, the end-of-line camera sees vertical scratches on face A. Within 20 minutes, the defect rate rises from 0.5% to 8%. The Quality Inspector Agent opens an incident.
+1. 09:40, the end-of-line camera sees vertical scratches on face A. Within 20 minutes, the defect rate rises from 0.5% to 8%. The Orchestrator opens an incident from the edge/SPC signal (the Quality Inspector Agent classifies the defect).
 2. Traceability Agent: 100% of defective products passed through CNC-02, tool T07. CNC-01 and CNC-03 used the same aluminum lot but had no defects → rule out material. Suspect: CNC-02 / T07.
 3. Process Analyst Agent: CNC-02 spindle vibration up 35% from 09:30, 10 minutes before the product defects; current up 12%; temperature normal.
 4. Knowledge Agent: manual page 112 (vertical scratches + rising vibration = tool wear); maintenance log shows T07 has cut 2,400 parts, exceeding its 2,000 life; the tool-change schedule is currently by day.
@@ -199,7 +207,7 @@ Three notable points in this communication style:
 
 **Sequence of events.**
 
-1. 14:20, the camera sees sink marks and short fill, but **only on products from cavity #3**. The Quality Inspector Agent opens an incident.
+1. 14:20, the camera sees sink marks and short fill, but **only on products from cavity #3**. The Orchestrator opens an incident from the edge/SPC signal (the Quality Inspector Agent classifies the defect).
 2. Traceability Agent: defects start exactly 20 minutes after the material lot change. The neighboring machine IM-06 still uses the old lot, with no defects. Suspect #1: the new material lot; suspect #2: cavity 3.
 3. Process Analyst Agent: injection pressure, melt temperature, and cycle time of IM-05 are all normal. But the dryer's dew point rose from −40 °C to −18 °C at 13:50.
 4. Knowledge Agent: ABS material manual (pellet moisture > 0.02% causes sink marks and short fill); an 8D report from 12/3 had a similar incident resolved by replacing the dryer filter; the mold drawing shows cavity 3 has the longest runner, so it is the most sensitive to poorly flowing material.

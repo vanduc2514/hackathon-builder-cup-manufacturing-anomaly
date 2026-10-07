@@ -28,7 +28,7 @@ flowchart TB
 
     %% ---------- Layer 4: Agent team (ADK) ----------
     subgraph ORCH_LAYER["4. Agent Team - ADK"]
-        ORCH["Orchestrator Agent (ADK)<br/>reads & writes shared incident state"]
+        ORCH["Orchestrator Agent (ADK)<br/>single entry & exit: receives every input, opens incidents<br/>sole writer of the incident board, publishes every output"]
 
         subgraph PHASE_A["Phase A - Detection & Gatekeeper"]
             QA["Quality Inspector Agent<br/>defect classification + SPC alarm<br/>& post-repair verification gatekeeper"]
@@ -66,7 +66,7 @@ flowchart TB
 
     %% ---------- Data plane ----------
     PUBSUB --> BQ
-    PUBSUB --> QA
+    PUBSUB -->|"defect / SPC event"| ORCH
     TRA -->|"query discrete topology"| BQ
     PA -->|"query sensor window"| BQ
     RCA -->|"query knowledge RAG"| RAG
@@ -77,24 +77,18 @@ flowchart TB
     LEARN --> GEMINI
     LEARN -->|"impact metrics"| BQ
 
-    %% ---------- Blackboard: every agent reads and writes the shared state ----------
-    ORCH <--> FS
-    QA <--> FS
-    TRA <--> FS
-    PA <--> FS
-    RCA <--> FS
-    COPILOT <--> FS
-    DOC <--> FS
-    LEARN <--> FS
+    %% ---------- Blackboard: only the Orchestrator writes; agents get a snapshot and return drafts ----------
+    ORCH <-->|"sole writer"| FS
 
     %% ---------- Orchestration order (matches the incident flow) ----------
-    ORCH -->|"1. open incident"| TRA
-    ORCH -->|"2. analyze telemetry"| PA
-    ORCH -->|"3. synthesize root cause"| RCA
-    ORCH -->|"4. parallel"| COPILOT
-    ORCH -->|"4. parallel"| DOC
+    ORCH -->|"0. classify defect / draft"| QA
+    ORCH -->|"1. trace suspects / draft"| TRA
+    ORCH -->|"2. analyze telemetry / draft"| PA
+    ORCH -->|"3. synthesize root cause / draft"| RCA
+    ORCH -->|"4. parallel / outcome"| COPILOT
+    ORCH -->|"4. parallel / draft"| DOC
     ORCH -->|"verify repair"| QA
-    ORCH -->|"5. close + learn"| LEARN
+    ORCH -->|"5. close + learn / draft"| LEARN
 
     %% ---------- Evidence-gathering loop ----------
     RCA -.->|"confidence < 0.7: need field evidence"| ORCH
@@ -104,16 +98,15 @@ flowchart TB
     QA -.->|"N consecutive good products -> verified"| ORCH
 
     %% ---------- Human interaction ----------
-    COPILOT <-->|"diagnostic checks & live repair guidance"| TECH
-    TECH -->|"repair done"| COPILOT
-    QA -.->|"verification progress"| DASH
-    FS -->|"live incident board"| DASH
-    DOC -->|"draft for approval"| LEAD
-    LEAD -->|"approved"| OUT
+    COPILOT <-->|"live voice + camera stream (only direct human channel)"| TECH
+    COPILOT -.->|"repair done / diagnostic evidence"| ORCH
+    FS -->|"live incident board (read-only)"| DASH
+    ORCH -->|"draft for approval"| LEAD
+    LEAD -->|"approval"| ORCH
+    ORCH -->|"approved documents"| OUT
 
     %% ---------- Learning feedback loop ----------
-    LEARN -->|"new knowledge entry"| RAG
-    LEARN --> OUT
+    ORCH -->|"new knowledge entry"| RAG
 
     %% ---------- Styling ----------
     classDef floor fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20

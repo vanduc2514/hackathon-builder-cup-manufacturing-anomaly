@@ -62,13 +62,13 @@ Thay vì một chatbot đơn lẻ, Kaizen Agent là một đội nhiều AI agen
 
 | Pha | Agent | Việc làm | Công nghệ chính |
 |---|---|---|---|
-| A. Phát hiện | **Kiểm tra sản phẩm** (Quality Inspector) | Soi ảnh từng sản phẩm, phân loại kiểu lỗi, vị trí, mức độ; theo dõi biểu đồ kiểm soát SPC; mở sự cố khi vượt ngưỡng | Gemma tại gateway + Gemini Vision |
+| A. Phát hiện | **Kiểm tra sản phẩm** (Quality Inspector) | Soi ảnh từng sản phẩm, phân loại kiểu lỗi, vị trí, mức độ; theo dõi biểu đồ kiểm soát SPC; được Điều phối gọi và trả kết quả phân loại (Điều phối mở sự cố khi vượt ngưỡng) | Gemma tại gateway + Gemini Vision |
 | B. Truy ngược | **Truy vết** (Traceability) | Nối sản phẩm lỗi với máy, công đoạn, dao/khuôn, lô vật liệu, người vận hành, thông số; đưa ra danh sách nghi phạm xếp hạng | BigQuery + ADK tool |
 | B. Truy ngược | **Phân tích cảm biến** (Process Analyst) | Kéo dữ liệu cảm biến của đúng máy bị nghi, đúng khung giờ, so với baseline | BigQuery + Gemini |
 | B. Truy ngược | **Tra cứu tri thức** (Knowledge) | Tìm trong sổ tay, nhật ký bảo trì, báo cáo 8D cũ, video thợ giỏi; thư viện "lỗi → nguyên nhân"; luôn trích dẫn nguồn | Vertex AI Search / RAG |
 | B. Truy ngược | **Nguyên nhân gốc** (RCA) | Tổng hợp bằng chứng, chạy 5-Whys và Ishikawa, đưa giả thuyết xếp hạng kèm độ tin cậy; yêu cầu thêm bằng chứng nếu chưa đủ | Gemini |
 | C. Xử lý | **Hướng dẫn sửa** (Repair Guide) | Hội thoại giọng nói + camera thời gian thực bằng tiếng Việt, từng bước, có trích nguồn | Gemini Live API |
-| C. Xử lý | **Hành động & Tài liệu** (Action) | Soạn phiếu công việc, báo cáo 8D, đề xuất sửa SOP; chuyển cho trưởng ca duyệt | Gemini + Firestore |
+| C. Xử lý | **Hành động & Tài liệu** (Action) | Soạn phiếu công việc, báo cáo 8D, đề xuất sửa SOP; trả về Điều phối để chuyển cho trưởng ca duyệt | Gemini |
 | D. Học hỏi | **Lưu tri thức & Tác động** (Knowledge Capture) | Biến video thợ giỏi và sự cố vừa xử lý thành mục mới trong kho tri thức; tính thẻ tác động | Gemini Video + BigQuery |
 
 ### Pha A: Phát hiện bất thường từ sản phẩm
@@ -77,7 +77,7 @@ Thay vì một chatbot đơn lẻ, Kaizen Agent là một đội nhiều AI agen
 
 **Gateway tại nhà máy.** Một máy tính nhỏ chạy Gemma, mô hình mã nguồn mở và nhẹ của Google, làm hai việc ngay tại chỗ: phân loại nhanh ảnh sản phẩm đạt/lỗi, và phát hiện bất thường trong tín hiệu cảm biến/âm thanh máy. Chỉ ảnh lỗi và tín hiệu bất thường mới được gửi lên cloud. Lợi ích: nhanh, tiết kiệm băng thông, và dữ liệu thô nhạy cảm không phải rời nhà máy. Nhà máy rất quan tâm điểm này về bảo mật.
 
-**Agent Kiểm tra sản phẩm.** Nhận ảnh lỗi từ gateway, dùng Gemini phân loại chi tiết: kiểu lỗi (xước, bavia, thiếu liệu, lệch, rỗ…), vị trí trên sản phẩm, mức độ. Theo dõi tỷ lệ lỗi theo biểu đồ kiểm soát SPC. Khi tỷ lệ lỗi vượt giới hạn kiểm soát hoặc xuất hiện kiểu lỗi mới, agent mở sự cố.
+**Agent Kiểm tra sản phẩm.** Sự kiện lỗi / SPC từ gateway đi vào Agent Điều phối, không đi thẳng tới các agent. Điều phối gọi Kiểm tra sản phẩm, agent này lấy ảnh lỗi và dùng Gemini phân loại chi tiết: kiểu lỗi (xước, bavia, thiếu liệu, lệch, rỗ…), vị trí trên sản phẩm, mức độ. Theo dõi tỷ lệ lỗi theo biểu đồ kiểm soát SPC. Khi tỷ lệ lỗi vượt giới hạn kiểm soát hoặc xuất hiện kiểu lỗi mới, Agent Điều phối mở sự cố và ghi kết quả phân loại của Kiểm tra sản phẩm vào bảng.
 
 > Ví dụ đầu ra: *"Lỗi xước dọc 2–3 mm trên mặt A, bắt đầu lúc 09:40, 23/300 sản phẩm (7,7%), đang tăng. Trước đó tỷ lệ nền 0,5%."*
 
@@ -138,16 +138,24 @@ Quản lý hoặc trưởng ca duyệt rồi mới chính thức áp dụng. Con
 
 ## 4. Các agent giao tiếp với nhau như thế nào
 
-Các agent **không chat tự do với nhau**. Hệ thống dùng mô hình **bảng sự cố chung** (shared incident state, kiểu "blackboard") lưu trên Firestore, do Agent Điều phối (ADK) điều khiển. Mỗi agent đọc bảng, làm việc của mình, rồi ghi phát hiện có cấu trúc vào bảng. Agent Điều phối đọc bảng và quyết định gọi ai tiếp theo.
+Các agent **không chat tự do với nhau**. Hệ thống dùng mô hình **bảng sự cố chung** (shared incident state, kiểu "blackboard") lưu trên Firestore, do Agent Điều phối (ADK) điều khiển. Điều phối là cửa vào và cửa ra duy nhất: nhận mọi đầu vào (sự kiện lỗi/SPC, báo cáo của thợ, phê duyệt của trưởng ca), đưa bảng cho agent được gọi, ghi phát hiện mà agent trả về vào bảng (là bên duy nhất ghi bảng), quyết định gọi ai tiếp theo, và phát hành mọi đầu ra (dashboard, tài liệu chờ duyệt, mục mới trong kho tri thức, thẻ tác động). Các agent không nhận sự kiện từ bên ngoài, không ghi bảng, và không trao đổi trực tiếp với nhau hay với con người.
+
+Các ngoại lệ đã ghi nhận:
+
+- **Dashboard chỉ đọc:** dashboard đọc bảng (sự cố hiện tại + luồng sự kiện trực tiếp); chỉ Điều phối ghi bảng.
+- **Agent tra cứu bằng công cụ:** Truy vết/Phân tích cảm biến truy vấn BigQuery, RCA/Copilot tra RAG, các agent gọi Gemini. Đây là truy vấn dữ liệu, không phải đầu vào/đầu ra của sự cố.
+- **Nạp dữ liệu (data plane):** Pub/Sub → BigQuery lưu telemetry thô và dữ liệu truy vết.
+- **Phiên trực tiếp của Technician Copilot:** luồng giọng nói + camera trực tiếp với thợ (Gemini Live) không thể chuyển tiếp qua Điều phối; Điều phối mở và kết thúc phiên, nhận kết quả (bằng chứng chẩn đoán, sửa xong).
+- **Giao diện dev của ADK:** `adk web` / `adk run` chạy thẳng đồ thị workflow, không qua lớp Orchestrator runner (chỉ dùng khi phát triển, tiến trình riêng, bảng trong bộ nhớ).
 
 Mọi thông điệp đều có 4 phần bắt buộc: **phát hiện – bằng chứng – độ tin cậy – nguồn trích dẫn**. Nhờ vậy, mọi kết luận đều kiểm chứng được, và màn hình demo chỉ cần hiển thị bảng sự cố này là giám khảo thấy rõ từng agent đang làm gì.
 
 ### Luồng một sự cố điển hình
 
-| # | Ai | Làm gì | Ghi vào bảng sự cố |
+| # | Ai | Làm gì | Kết quả (Điều phối ghi vào bảng sự cố) |
 |---|---|---|---|
-| 1 | Kiểm tra sản phẩm | Phát hiện tỷ lệ lỗi vượt ngưỡng | `{event: "defect_spike", type: "scratch_vertical", rate: 0.077, since: "09:40"}` |
-| 2 | Điều phối | Mở sự cố INC-0412, gọi Truy vết (tuần tự, bắt buộc) | `{incident: "INC-0412", status: "tracing"}` |
+| 1 | Điều phối | Nhận sự kiện `defect_spike` từ gateway / SPC, mở sự cố INC-0412, gọi Kiểm tra sản phẩm phân loại lỗi | `{event: "defect_spike", type: "scratch_vertical", rate: 0.077, since: "09:40"}` |
+| 2 | Điều phối | Ghi kết quả phân loại của Kiểm tra sản phẩm, gọi Truy vết (tuần tự, bắt buộc) | `{incident: "INC-0412", status: "tracing"}` |
 | 3 | Truy vết | Khoanh vùng nghi phạm | `{suspects: [{machine: "CNC-02", tool: "T07", score: 0.95}], excluded: ["material_lot"]}` |
 | 4 | Điều phối | Gọi **song song** Phân tích cảm biến (CNC-02, 09:00–10:00) và Tra cứu tri thức (xước dọc + CNC-02) | `{status: "investigating"}` |
 | 5 | Phân tích cảm biến | Trả kết quả | `{finding: "vibration +35%, current +12%", since: "09:30", confidence: 0.8}` |
@@ -156,11 +164,11 @@ Mọi thông điệp đều có 4 phần bắt buộc: **phát hiện – bằng
 | 7 | RCA | Kết luận hoặc yêu cầu thêm bằng chứng | `{root_cause: "T07 worn, over tool life", confidence: 0.87, whys: [...], ishikawa: {Machine: ..., Method: ...}}` |
 | 7b | RCA (nếu confidence < 0.7) | Yêu cầu bằng chứng | `{need: "close-up photo of insert"}` → Điều phối chuyển thành câu hỏi cho thợ qua Gemini Live → ảnh về → quay lại bước 7 |
 | 8 | Điều phối | Gọi **song song** Hướng dẫn sửa (cho thợ) và Hành động (soạn 8D nháp) | `{status: "repairing"}` |
-| 9 | Hướng dẫn sửa | Thợ báo xong | `{repair_done: true, steps_taken: [...]}` |
+| 9 | Hướng dẫn sửa | Thợ báo xong; trả kết quả về Điều phối | `{repair_done: true, steps_taken: [...]}` |
 | 10 | Điều phối | Yêu cầu Kiểm tra sản phẩm xác nhận 50 sản phẩm liên tiếp đạt | `{status: "verifying"}` |
 | 11 | Kiểm tra sản phẩm | Xác nhận | `{verified: true, good_streak: 50, rate: 0.004}` |
-| 12 | Điều phối | Đóng sự cố; gọi Hành động hoàn thiện 8D/SOP; gọi Lưu tri thức | `{status: "closed", pending_approval: "shift_leader"}` |
-| 13 | Lưu tri thức | Thêm mục vào thư viện lỗi → nguyên nhân; tính thẻ tác động | `{impact: {scrap_avoided: 240, downtime_min: 45, kwh: 38, co2_kg: 25}}` |
+| 12 | Điều phối | Đóng sự cố; gọi Hành động hoàn thiện 8D/SOP rồi gửi trưởng ca duyệt; phê duyệt của trưởng ca quay về Điều phối; gọi Lưu tri thức | `{status: "closed", pending_approval: "shift_leader"}` |
+| 13 | Lưu tri thức | Trả về mục mới cho thư viện lỗi → nguyên nhân và thẻ tác động; Điều phối thêm mục và công bố thẻ | `{impact: {scrap_avoided: 240, downtime_min: 45, kwh: 38, co2_kg: 25}}` |
 
 Ba điểm đáng chú ý trong cách giao tiếp này:
 
@@ -180,7 +188,7 @@ Ba điểm đáng chú ý trong cách giao tiếp này:
 
 **Diễn biến.**
 
-1. 09:40, camera cuối chuyền thấy xước dọc trên mặt A. Trong 20 phút, tỷ lệ lỗi tăng từ 0,5% lên 8%. Agent Kiểm tra sản phẩm mở sự cố.
+1. 09:40, camera cuối chuyền thấy xước dọc trên mặt A. Trong 20 phút, tỷ lệ lỗi tăng từ 0,5% lên 8%. Agent Điều phối mở sự cố từ tín hiệu gateway/SPC (Agent Kiểm tra sản phẩm phân loại lỗi).
 2. Agent Truy vết: 100% sản phẩm lỗi đi qua CNC-02, dao T07. CNC-01 và CNC-03 dùng cùng lô nhôm nhưng không lỗi → loại trừ vật liệu. Nghi phạm: CNC-02 / T07.
 3. Agent Phân tích cảm biến: rung trục chính CNC-02 tăng 35% từ 09:30, sớm hơn lỗi sản phẩm 10 phút; dòng điện tăng 12%; nhiệt độ bình thường.
 4. Agent Tra cứu tri thức: sổ tay trang 112 (xước dọc + rung tăng = dao mòn); nhật ký bảo trì cho thấy T07 đã cắt 2.400 chi tiết, vượt tuổi thọ 2.000; lịch thay dao hiện tính theo ngày.
@@ -199,7 +207,7 @@ Ba điểm đáng chú ý trong cách giao tiếp này:
 
 **Diễn biến.**
 
-1. 14:20, camera thấy vết lõm (sink mark) và thiếu liệu, nhưng **chỉ ở sản phẩm từ lòng khuôn số 3**. Agent Kiểm tra sản phẩm mở sự cố.
+1. 14:20, camera thấy vết lõm (sink mark) và thiếu liệu, nhưng **chỉ ở sản phẩm từ lòng khuôn số 3**. Agent Điều phối mở sự cố từ tín hiệu gateway/SPC (Agent Kiểm tra sản phẩm phân loại lỗi).
 2. Agent Truy vết: lỗi bắt đầu đúng 20 phút sau khi đổi lô liệu. Máy IM-06 bên cạnh vẫn dùng lô cũ, không lỗi. Nghi phạm số 1: lô liệu mới; nghi phạm số 2: lòng khuôn 3.
 3. Agent Phân tích cảm biến: áp suất phun, nhiệt chảy, thời gian chu kỳ của IM-05 đều bình thường. Nhưng điểm sương của máy sấy liệu tăng từ −40 °C lên −18 °C từ 13:50.
 4. Agent Tra cứu tri thức: sổ tay vật liệu ABS (độ ẩm hạt > 0,02% gây sink mark và thiếu liệu); báo cáo 8D ngày 12/3 có sự cố tương tự, xử lý bằng thay lọc máy sấy; bản vẽ khuôn cho thấy lòng 3 có đường dẫn dài nhất nên nhạy nhất với liệu kém chảy.

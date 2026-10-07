@@ -9,14 +9,14 @@ export default function App(): React.ReactElement {
   useEffect(() => {
     const eventSource = new EventSource('/api/incidents/events');
 
-    eventSource.onmessage = (event) => {
+    eventSource.addEventListener('incident_update', (event: MessageEvent<string>) => {
       try {
         const data: IncidentState = JSON.parse(event.data);
         setIncident(data);
       } catch (err) {
         console.error('Failed to parse incident SSE event:', err);
       }
-    };
+    });
 
     eventSource.onerror = (err) => {
       console.warn('SSE connection error:', err);

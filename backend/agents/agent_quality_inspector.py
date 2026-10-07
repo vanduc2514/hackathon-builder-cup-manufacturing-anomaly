@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator
 
 from google.adk import Agent
 
-from backend.core.blackboard import blackboard
 from backend.core.models import FindingDraft, VerificationResult
 
 AGENT_ID = "QA"
@@ -14,7 +14,6 @@ AGENT_NAME = "Quality Inspector"
 PHASE = "Phase A - Detection"
 VERIFICATION_PHASE = "Phase C - Verification"
 VERIFICATION_AGENT_NAME = "Quality Inspector (Gatekeeper)"
-INJECTED_DEFECT_RATE = 0.077
 
 INSTRUCTION = (
     "You are the Quality Inspector of the Kaizen Agent manufacturing incident team. "
@@ -26,17 +25,17 @@ INSTRUCTION = (
 
 agent = Agent(
     name="quality_inspector",
-    description="Detects the SPC breach on the camera station and opens the incident.",
+    description="Classifies the defect and SPC breach behind the incident the Orchestrator opened.",
     instruction=INSTRUCTION,
     output_schema=FindingDraft,
 )
 
 
-async def run_post_repair_verification(step_delay: float) -> VerificationResult:
-    """Simulates the end-of-line conveyor streaming defect-free parts after the repair."""
-    target = blackboard.get_state().verification_target
+async def inspect_post_repair_products(
+    target: int, step_delay: float
+) -> AsyncIterator[VerificationResult]:
+    """Simulates the post-repair conveyor; yields the running tally to the Orchestrator."""
     step = max(1, target // 5)
-    for count in range(step, target + 1, step):
-        blackboard.update_status("verifying", verification_count=count)
+    for count in [*range(step, target, step), target]:
+        yield VerificationResult(good_streak=count, defect_rate=0.004)
         await asyncio.sleep(step_delay)
-    return VerificationResult(good_streak=target, defect_rate=0.004)

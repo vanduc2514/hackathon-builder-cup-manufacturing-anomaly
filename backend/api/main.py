@@ -425,7 +425,9 @@ async def dashboard_view():
         copilotMsg.innerText = 'Đang lắng nghe từ trạm máy... Dây chuyền hoạt động bình thường.';
       } else if (state.status === 'closed') {
         statusPill.className = 'status-pill status-normal';
-        statusPill.innerHTML = '✔ Status: Incident Resolved & Verified';
+        statusPill.innerHTML = state.approved
+          ? '✔ Status: Incident Closed & Approved'
+          : '✔ Status: Verified, Awaiting Shift Leader Approval';
         boxCnc02.classList.remove('defective');
         camRate.innerText = 'Defect: 0.4%';
         spcLabel.innerText = '0.4% (Verified Pass)';

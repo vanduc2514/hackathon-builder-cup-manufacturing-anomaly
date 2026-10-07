@@ -153,6 +153,7 @@ class IncidentState(BaseModel):
     verification_count: int = 0
     verification_target: int = 50
     repair_done: bool = False
+    approved: bool = False  # shift-leader sign-off, recorded by the Orchestrator after close
     findings: List[AgentFinding] = Field(default_factory=list)
     impact: Optional[ImpactMetrics] = None
     documents: Dict[str, Any] = Field(default_factory=dict)
@@ -162,6 +163,8 @@ class IncidentState(BaseModel):
 
 
 class DefectInjectionRequest(BaseModel):
+    """Defect signal the Orchestrator receives to open an incident (demo inject; edge/SPC later)."""
+
     scenario: str = Field(
         default="cnc_tool_wear",
         description="Anomaly scenario: 'cnc_tool_wear' or 'im_damp_material'",
@@ -182,6 +185,7 @@ class DefectInjectionRequest(BaseModel):
         default="medium",
         description="Severity level: low, medium, high",
     )
+    defect_rate: float = 0.077
     machine_id: str = Field(
         default="CNC-02",
         description="Target machine identifier",

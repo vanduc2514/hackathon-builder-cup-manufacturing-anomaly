@@ -78,7 +78,7 @@ async def open_incident(ctx: Context, node_input: DefectInjectionRequest) -> Inc
         "detecting",
         incident_id=f"INC-{uuid4().hex[:6].upper()}",
         defect_type=node_input.defect_type,
-        defect_rate=agent_quality_inspector.INJECTED_DEFECT_RATE,
+        defect_rate=node_input.defect_rate,
         verification_count=0,
     )
     return blackboard.get_state()
@@ -149,7 +149,13 @@ async def record_resolution(node_input: dict) -> IncidentState:
 
 
 async def verify_repair(ctx: Context, node_input: dict) -> VerificationResult:
-    return await agent_quality_inspector.run_post_repair_verification(ctx.state["step_delay"])
+    """Records the Quality Inspector's post-repair tally on the Blackboard as it streams in."""
+    result = VerificationResult(good_streak=0, defect_rate=blackboard.get_state().defect_rate)
+    async for result in agent_quality_inspector.inspect_post_repair_products(
+        blackboard.get_state().verification_target, ctx.state["step_delay"]
+    ):
+        blackboard.update_status("verifying", verification_count=result.good_streak)
+    return result
 
 
 async def verification_gate(ctx: Context, node_input: VerificationResult) -> Event:

@@ -107,19 +107,36 @@ def test_failed_verification_reopens_once_then_escalates_never_closes(
         statuses.append(status)
         return original_update(status, **kwargs)
 
-    async def failing_verification(step_delay: float) -> VerificationResult:
-        blackboard.update_status("verifying", verification_count=10)
-        return VerificationResult(good_streak=10, defect_rate=0.05)
+    async def failing_verification(target: int, step_delay: float):
+        yield VerificationResult(good_streak=10, defect_rate=0.05)
 
     monkeypatch.setattr(blackboard, "update_status", tracking_update)
     monkeypatch.setattr(
-        agent_quality_inspector, "run_post_repair_verification", failing_verification
+        agent_quality_inspector, "inspect_post_repair_products", failing_verification
     )
 
     state = _run(FakeLlm())
     assert state.status == "escalated"
     assert _ids(state).count("TRA") == 2
     assert "closed" not in statuses
+
+
+def test_approval_accepted_only_once_after_verified_close():
+    orch = Orchestrator(step_delay=0)
+    assert orch.approve() is None  # nothing to approve on a baseline board
+
+    LlmAgent.set_default_model(FakeLlm(rca_confidences=[0.87]))
+    asyncio.run(orch.run_incident(DefectInjectionRequest()))
+    assert blackboard.get_state().approved is False
+
+    assert orch.approve().approved is True
+    assert orch.approve() is None
+
+
+def test_approval_rejected_on_escalated_incident():
+    _run(FakeLlm(rca_confidences=[0.3]))
+    assert Orchestrator().approve() is None
+    assert blackboard.get_state().status == "escalated"
 
 
 def test_agent_failure_surfaces_as_error_status():

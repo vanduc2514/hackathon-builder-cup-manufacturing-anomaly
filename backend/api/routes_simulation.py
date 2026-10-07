@@ -3,7 +3,6 @@
 from fastapi import APIRouter, HTTPException
 
 from backend.agents.orchestrator import orchestrator
-from backend.core.blackboard import blackboard
 from backend.core.models import DefectInjectionRequest
 
 router = APIRouter(prefix="/api/simulation", tags=["simulation"])
@@ -26,6 +25,5 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()):
 @router.post("/reset")
 async def reset_simulation():
     """Cancels any running incident workflow and resets the blackboard to normal baseline."""
-    await orchestrator.cancel()
-    state = blackboard.reset()
+    state = await orchestrator.reset()
     return {"status": "reset", "message": "Simulation reset to normal baseline", "state": state}

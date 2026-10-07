@@ -91,7 +91,7 @@ run = "ruff format backend"
 
 [tasks.seed]
 description = "Seed mock BigQuery / Firestore data"
-run = "python -c 'from backend.tools.bigquery_tool import seed_mock_data; seed_mock_data()'"
+run = "python scripts/seed_bigquery.py"
 
 # =============================================================================
 # Docker

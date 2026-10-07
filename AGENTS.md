@@ -31,7 +31,7 @@ This file is the authoritative reference for AI coding agents and human contribu
 │   │   ├── gateway/
 │   │   └── simulator/          # Local mock of edge hardware for dev
 │   ├── tools/                  # Stateless ADK tool functions
-│   │   ├── bigquery_tool.py    # Traceability + telemetry queries (+ mock seed)
+│   │   ├── bigquery_tool.py    # Traceability + telemetry queries
 │   │   ├── spc_calculator.py
 │   │   ├── impact_calculator.py
 │   │   └── rag_search_tool.py

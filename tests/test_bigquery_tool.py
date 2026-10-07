@@ -14,7 +14,6 @@ from backend.tools.bigquery_tool import (
     get_bigquery_client,
     query_sensor_telemetry_window,
     query_traceability_topology,
-    seed_mock_data,
 )
 
 
@@ -259,20 +258,3 @@ def test_query_sensor_telemetry_window_failure_raises_runtime_error():
     with patch("backend.tools.bigquery_tool.get_bigquery_client", return_value=mock_client):
         with pytest.raises(RuntimeError, match="BigQuery query failed"):
             query_sensor_telemetry_window(machine_id="CNC-02")
-
-
-def test_sync_seed_to_bigquery():
-    """Test seeding records into BigQuery dataset creates tables and inserts rows."""
-    mock_client = MagicMock()
-    mock_client.project = "kaizen-local"
-    mock_client.insert_rows_json.return_value = []  # No errors
-
-    with (
-        patch("os.path.exists", return_value=True),
-        patch("builtins.open", MagicMock()),
-        patch("backend.tools.bigquery_tool.get_bigquery_client", return_value=mock_client),
-    ):
-        seed_mock_data()
-
-        mock_client.create_dataset.assert_called_once()
-        assert mock_client.insert_rows_json.call_count == 2

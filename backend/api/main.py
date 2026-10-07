@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
-from backend.agents.orchestrator import orchestrator
+from backend.agents.agent_orchestrator import orchestrator
 from backend.api.routes_gemini_live import router as gemini_live_router
 from backend.api.routes_impact import router as impact_router
 from backend.api.routes_incidents import router as incidents_router

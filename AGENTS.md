@@ -9,15 +9,16 @@ This file is the authoritative reference for AI coding agents and human contribu
 ```
 .
 ├── backend/                    # Python — FastAPI server, AI agents, tools
-│   ├── agents/                 # One file per ADK agent
-│   │   ├── orchestrator.py     # State machine; coordinates all agents
-│   │   ├── quality_inspector.py
-│   │   ├── traceability.py
-│   │   ├── process_analyst.py
-│   │   ├── root_cause.py
-│   │   ├── technician_copilot.py
-│   │   ├── incident_scribe.py
-│   │   └── continuous_learning.py
+│   ├── agents/                 # One agent_<name>.py file per ADK agent
+│   │   ├── agent.py            # ADK CLI entry (root_agent) for `mise run adk-web` / `adk run`
+│   │   ├── agent_orchestrator.py # ADK graph Workflow; coordinates all agents
+│   │   ├── agent_quality_inspector.py
+│   │   ├── agent_traceability.py
+│   │   ├── agent_process_analyst.py
+│   │   ├── agent_root_cause.py
+│   │   ├── agent_technician_copilot.py
+│   │   ├── agent_incident_scribe.py
+│   │   └── agent_continuous_learning.py
 │   ├── api/                    # FastAPI routers
 │   │   ├── main.py             # App factory, mounts routers
 │   │   ├── routes_incidents.py # SSE stream + incident read endpoints

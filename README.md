@@ -89,8 +89,8 @@ Local development works without GCP credentials — start the local BigQuery emu
 ### 3. Run the full stack
 
 ```bash
-# Backend (FastAPI on :8000) + Frontend (Vite on :3000) in parallel
-mise run dev -j2
+# Backend (FastAPI :8000) + Frontend (Vite :3000) + ADK dev UI (:8001) in parallel
+mise run dev -j3
 ```
 
 Or run each side independently:
@@ -98,6 +98,7 @@ Or run each side independently:
 ```bash
 mise run backend    # FastAPI with auto-reload
 mise run frontend   # Vite dev server
+mise run adk-web    # ADK dev UI: incident workflow graph + per-node events (app "agents")
 ```
 
 ### 4. Trigger the demo
@@ -118,8 +119,7 @@ mise run seed           # seed mock BigQuery / Firestore data
 mise run emulator       # start local BigQuery emulator (:9050)
 mise run emulator:down  # stop BigQuery emulator
 mise run docker:up      # start full stack via docker compose
-adk web backend/adk_apps                       # ADK dev UI: incident workflow graph + events
-adk run backend/adk_apps/kaizen_incident '{}'  # run one incident workflow in the terminal
+adk run backend/agents '{}'  # run one incident workflow in the terminal
 ```
 
 ---

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from backend.agents.technician_copilot import (
+from backend.agents.agent_technician_copilot import (
     OEM_REPAIR_MANUALS,
     REFUSAL_MESSAGE_VI,
     VIETNAMESE_MANUFACTURING_VOCABULARY,

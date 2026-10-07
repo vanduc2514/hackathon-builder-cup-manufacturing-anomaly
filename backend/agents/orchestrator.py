@@ -6,6 +6,7 @@ import asyncio
 import logging
 
 from google.adk import Workflow
+from google.adk.agents import LlmAgent
 from google.adk.runners import InMemoryRunner
 from google.adk.workflow import JoinNode
 from google.genai import types
@@ -35,9 +36,14 @@ from backend.agents.workflow_nodes import (
     verify_repair,
 )
 from backend.core.blackboard import blackboard
+from backend.core.config import settings
 from backend.core.models import DefectInjectionRequest, IncidentState
 
 logger = logging.getLogger(__name__)
+
+# Every agent_* node is model-less and resolves to this default at call time.
+LlmAgent.set_default_model(settings.llm_model)
+logger.info("LLM provider=%s model=%s", settings.ai_provider, settings.llm_model)
 
 APP_NAME = "kaizen_orchestrator"
 WORKFLOW_NAME = "kaizen_incident"

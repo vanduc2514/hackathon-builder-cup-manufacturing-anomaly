@@ -74,7 +74,7 @@ APP_ENV                        = "development"
 
 # LLM provider for the ADK agents: "ollama" (local, default) or "gemini" (deploy)
 AI_PROVIDER                    = "ollama"
-OLLAMA_HOST                    = "http://localhost:11434"
+OLLAMA_API_BASE                = "http://localhost:11434"  # read by LiteLLM
 # OLLAMA_MODEL                 = "gemma2:2b"            # default; must be pulled via `ollama pull`
 # GOOGLE_API_KEY               = "..."                  # required when AI_PROVIDER = "gemini"
 # GEMINI_MODEL                 = "gemini-flash-latest"  # default

@@ -9,9 +9,12 @@ export type IncidentStatus =
   | 'tracing'
   | 'investigating'
   | 'analyzing'
+  | 'awaiting_evidence'
   | 'repairing'
   | 'verifying'
-  | 'closed';
+  | 'closed'
+  | 'escalated'
+  | 'error';
 
 export interface AgentFinding {
   agent_id: string;
@@ -34,6 +37,7 @@ export interface ImpactMetrics {
 export interface IncidentState {
   incident_id: string;
   status: IncidentStatus;
+  status_reason: string | null;
   defect_type: string | null;
   defect_rate: number;
   spc_ucl: number;

@@ -1,3 +1,8 @@
+---
+config:
+  layout: elk
+  look: neo
+---
 flowchart TB
     %% ---------- Layer 1: Factory floor (edge data sources) ----------
     subgraph FLOOR["1. Factory Floor - Edge Data Sources"]
@@ -67,18 +72,18 @@ flowchart TB
     %% ---------- Data plane ----------
     PUBSUB --> BQ
     PUBSUB -->|"defect / SPC event"| ORCH
-    TRA -->|"query discrete topology"| BQ
-    PA -->|"query sensor window"| BQ
-    RCA -->|"query knowledge RAG"| RAG
-    COPILOT -->|"query repair SOPs"| RAG
-    QA --> GEMINI
-    RCA --> GEMINI
-    COPILOT --> GEMINI
-    LEARN --> GEMINI
+    BQ <-->|"query discrete topology"| TRA
+    BQ <-->|"query sensor window"| PA
+    RAG <-->|"query knowledge RAG"| RCA
+    RAG <-->|"query repair SOPs"| COPILOT
+    GEMINI <--> QA
+    GEMINI <--> RCA
+    GEMINI <--> COPILOT
+    GEMINI <--> LEARN
     LEARN -->|"impact metrics"| BQ
 
     %% ---------- Blackboard: only the Orchestrator writes; agents get a snapshot and return drafts ----------
-    ORCH <-->|"sole writer"| FS
+    FS <-->|"sole writer"| ORCH
 
     %% ---------- Orchestration order (matches the incident flow) ----------
     ORCH -->|"0. classify defect / draft"| QA

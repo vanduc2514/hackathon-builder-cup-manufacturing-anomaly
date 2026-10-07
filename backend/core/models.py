@@ -1,9 +1,35 @@
 """Core Models: Pydantic schemas for findings, evidence, confidence, citations, and incident state."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
+
+
+class CitationReference(BaseModel):
+    """Citation contract for RAG search findings and copilot grounding."""
+
+    document_id: str
+    title: str
+    page_number: Optional[int] = None
+    section: Optional[str] = None
+    snippet: str
+    relevance_score: float = Field(default=1.0, ge=0.0, le=1.0)
+
+
+class KnowledgeDocumentMeta(BaseModel):
+    """Metadata schema for curated domain documents in the knowledge base."""
+
+    document_id: str
+    title: str
+    category: str  # manual, maint_log, 8d_report, spec
+    machine_id: Optional[str] = None
+    component: Optional[str] = None
+    version: str = "1.0"
+    pages: int = 1
+    tags: List[str] = Field(default_factory=list)
 
 
 class AgentFinding(BaseModel):

@@ -1,7 +1,7 @@
-from __future__ import annotations
 """Unit tests for the reactive blackboard and state transitions."""
 
-import pytest
+from __future__ import annotations
+
 from backend.core.blackboard import Blackboard
 from backend.core.models import AgentFinding
 
@@ -36,3 +36,10 @@ def test_blackboard_status_transition():
     assert state.status == "investigating"
     assert state.suspect_machine == "CNC-02"
     assert state.suspect_tool == "T07"
+
+
+def test_blackboard_set_repair_done():
+    bb = Blackboard()
+    assert bb.get_state().repair_done is False
+    bb.set_repair_done(True)
+    assert bb.get_state().repair_done is True

@@ -1,5 +1,7 @@
 """Core Blackboard: Shared incident state reader/writer implementing the blackboard pattern."""
 
+from __future__ import annotations
+
 import asyncio
 from typing import AsyncGenerator
 
@@ -25,6 +27,13 @@ class Blackboard:
         update_dict = self._state.model_dump()
         update_dict["status"] = status
         update_dict.update(kwargs)
+        self._state = IncidentState(**update_dict)
+        self._notify()
+        return self._state
+
+    def set_repair_done(self, repair_done: bool = True) -> IncidentState:
+        update_dict = self._state.model_dump()
+        update_dict["repair_done"] = repair_done
         self._state = IncidentState(**update_dict)
         self._notify()
         return self._state

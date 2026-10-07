@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class AgentFinding(BaseModel):
@@ -68,6 +68,51 @@ class ImpactCalculationRequest(BaseModel):
     downtime_cost_per_hour_usd: Optional[float] = None
 
 
+class MachineTelemetryPayload(BaseModel):
+    """Real-time machine sensor packet ingested from edge MQTT broker."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    machine_id: str
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    tool_id: Optional[str] = None
+    operating_status: str = Field(default="NORMAL")  # NORMAL, WARNING, ALARM
+    spindle_vibration: float = Field(
+        default=0.0,
+        validation_alias=AliasChoices("spindle_vibration", "vibration_mm_s"),
+        description="Spindle vibration in mm/s",
+    )
+    spindle_temp: float = Field(
+        default=0.0,
+        validation_alias=AliasChoices("spindle_temp", "temperature_c"),
+        description="Spindle bearing temperature in Celsius",
+    )
+    motor_current: float = Field(
+        default=0.0,
+        validation_alias=AliasChoices("motor_current", "current_a"),
+        description="Motor current in Amperes",
+    )
+    rpm: int = Field(
+        default=0,
+        validation_alias=AliasChoices("rpm", "spindle_speed_rpm"),
+        description="Spindle rotational speed",
+    )
+    anomaly_score: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+class TelemetryAlert(BaseModel):
+    """Alert record created when incoming telemetry exceeds anomaly thresholds."""
+
+    machine_id: str
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    anomaly_score: float
+    operating_status: str
+    metric_name: str
+    metric_value: float
+    threshold: float
+    message: str
+
+
 class IncidentState(BaseModel):
     incident_id: str = "INC-0412"
     status: str = "normal"  # normal, detecting, tracing, investigating, analyzing, repairing, verifying, closed
@@ -82,6 +127,8 @@ class IncidentState(BaseModel):
     findings: List[AgentFinding] = Field(default_factory=list)
     impact: Optional[ImpactMetrics] = None
     documents: Dict[str, Any] = Field(default_factory=dict)
+    latest_telemetry: Optional[MachineTelemetryPayload] = None
+    telemetry_alerts: List[TelemetryAlert] = Field(default_factory=list)
     updated_at: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
 
 

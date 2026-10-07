@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from backend.core.config import settings
 from backend.core.models import (
     FactorDistribution,
+    MachineTelemetryPayload,
     SensorBaseline,
     SensorMetrics,
     SensorTelemetryWindowResponse,
@@ -17,6 +18,8 @@ from backend.core.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+MOCK_SENSOR_TELEMETRY: List[Dict[str, Any]] = []
 
 
 def get_bigquery_client() -> Any:
@@ -271,6 +274,7 @@ def query_sensor_telemetry_window(
 
 def reset_buffers() -> Dict[str, Any]:
     """Restores BigQuery mock data, in-memory buffers, and resets emulator tables if connected."""
+    clear_mock_sensor_telemetry()
     try:
         from scripts.seed_bigquery import seed_bigquery
 
@@ -279,3 +283,42 @@ def reset_buffers() -> Dict[str, Any]:
         logger.warning("Could not re-seed BigQuery tables during buffer reset: %s", exc)
     logger.info("Reset BigQuery buffers and mock datasets to pristine baseline")
     return {"status": "reset", "message": "BigQuery buffers and mock datasets restored to baseline"}
+
+
+def stream_sensor_telemetry(telemetry: MachineTelemetryPayload) -> bool:
+    """Streams a normalized sensor telemetry record to BigQuery or in-memory mock buffer."""
+    row = {
+        "timestamp": telemetry.timestamp,
+        "machine_id": telemetry.machine_id,
+        "vibration_mm_s": float(telemetry.spindle_vibration),
+        "temperature_c": float(telemetry.spindle_temp),
+        "current_a": float(telemetry.motor_current),
+        "spindle_speed_rpm": int(telemetry.rpm),
+    }
+
+    try:
+        client = get_bigquery_client()
+        dataset_id = f"{client.project}.{settings.bigquery_dataset}"
+        table_ref = f"{dataset_id}.sensor_telemetry"
+        errors = client.insert_rows_json(table_ref, [row])
+        if not errors:
+            return True
+        logger.warning("BigQuery sensor_telemetry insert error: %s", errors)
+    except Exception as exc:
+        logger.warning("BigQuery streaming insert failed (%s); buffering locally", exc)
+
+    # In-memory buffer fallback
+    MOCK_SENSOR_TELEMETRY.append(row)
+    if len(MOCK_SENSOR_TELEMETRY) > 500:
+        del MOCK_SENSOR_TELEMETRY[:-500]
+    return True
+
+
+def get_mock_sensor_telemetry() -> List[Dict[str, Any]]:
+    """Returns buffered in-memory sensor telemetry records."""
+    return list(MOCK_SENSOR_TELEMETRY)
+
+
+def clear_mock_sensor_telemetry() -> None:
+    """Clears buffered in-memory sensor telemetry records."""
+    MOCK_SENSOR_TELEMETRY.clear()

@@ -228,8 +228,71 @@ main                  — production-ready; protected; merge via PR only
 - Delete the branch after merging.
 - `main` only receives merges from `dev` via a reviewed PR. Direct pushes to `main` are blocked.
 
+---
+
+## Git Worktree Protocol (Mandatory for Implementations)
+
+All feature development, bug fixes, refactoring, and code implementations **must be executed inside a dedicated Git worktree** rather than directly switching branches in the primary repository checkout. This isolates dependencies, builds, and working trees, preventing accidental contamination across tasks.
+
+### Worktree Directory Root Structure
+
+To keep all active worktrees isolated and organized under one single root across tasks:
+
+- **Worktree Root Path:** `~/.gemini/antigravity/worktrees/hackathon-builder-cup-manufacturing-anomaly/` (or expanded: `$HOME/.gemini/antigravity/worktrees/hackathon-builder-cup-manufacturing-anomaly/`)
+- **Naming Pattern:** `<worktree-root>/<branch-name>` (the worktree folder name **must match the branch name**, e.g. `feat/spc-ucl-rules` or `feat/factory-simulator`)
+
+*(Note: Always use `$HOME` or `~` so paths dynamically resolve across different teammates' workstations without hardcoding specific usernames).*
+
+Example directory structure:
+```
+$HOME/.gemini/antigravity/worktrees/hackathon-builder-cup-manufacturing-anomaly/
+├── feat/spc-ucl-rules/                               # Worktree for branch feat/spc-ucl-rules
+└── feat/factory-simulator/                           # Worktree for branch feat/factory-simulator
+```
+
+### Worktree Lifecycle Workflow
+
+1. **Set Root & Fetch Remote:**
+   ```bash
+   WORKTREE_ROOT="$HOME/.gemini/antigravity/worktrees/hackathon-builder-cup-manufacturing-anomaly"
+   mkdir -p "$WORKTREE_ROOT"
+
+   git fetch origin dev
+   ```
+
+2. **Create Worktree & Track Remote Branch:**
+   Ensure the directory name matches the branch name and explicitly tracks `origin/dev`:
+   ```bash
+   BRANCH_NAME="feat/<feature-name>"
+
+   # When creating a new branch tracking origin/dev:
+   git worktree add --track -b "$BRANCH_NAME" "$WORKTREE_ROOT/$BRANCH_NAME" origin/dev
+
+   # Or if the branch already exists on remote origin:
+   git fetch origin "$BRANCH_NAME"
+   git worktree add --track -b "$BRANCH_NAME" "$WORKTREE_ROOT/$BRANCH_NAME" "origin/$BRANCH_NAME"
+   ```
+
+3. **Navigate and Setup Environment:**
+   ```bash
+   cd "$WORKTREE_ROOT/$BRANCH_NAME"
+   mise install
+   ```
+
+4. **Develop, Commit & Push:**
+   Follow Conventional Commits. Push and set upstream if needed (`git push -u origin "$BRANCH_NAME"`).
+
+5. **Clean Up After Merge:**
+   Once the PR is merged to `dev`, remove the worktree and clean up the local tracking branch:
+   ```bash
+   git worktree remove "$WORKTREE_ROOT/$BRANCH_NAME"
+   git branch -d "$BRANCH_NAME"
+   git worktree prune
+   ```
+
 ### PR checklist (before merging to dev)
 
+- [ ] Implemented and verified in an isolated worktree
 - [ ] `mise run test` passes
 - [ ] `mise run test:health` passes against a local server
 - [ ] No secrets or hardcoded credentials

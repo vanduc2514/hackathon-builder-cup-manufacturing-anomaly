@@ -1,6 +1,8 @@
 sequenceDiagram
     autonumber
+    participant EDGE as Edge gateway / SPC
     actor TECH as Technician
+    actor LEAD as Shift leader
     participant QI as Quality Inspector
     participant OR as Orchestrator (ADK)
     participant FS as Firestore incident board
@@ -11,30 +13,37 @@ sequenceDiagram
     participant DOC as Incident Scribe
     participant LRN as Continuous Learning
 
-    QI->>FS: {event: defect_spike, type: scratch_vertical, rate: 0.077, since: 09:40}
-    FS-->>OR: new signal on the board
-    OR->>FS: {incident: INC-0412, status: tracing}
+    Note over OR,FS: Orchestrator = single entry & exit, sole writer of the board
+    EDGE->>OR: {event: defect_spike, rate: 0.077, since: 09:40}
+    OR->>FS: {incident: INC-0412, status: detecting}
+    OR->>QI: classify defect (board snapshot)
+    QI-->>OR: {type: scratch_vertical, location, severity}
+    OR->>FS: record finding, status: tracing
 
     Note over OR,TRA: Step 1 - sequential and mandatory
     OR->>TRA: link defective products to discrete topology
-    TRA->>FS: {suspects: [CNC-02/T07 0.95], excluded: [material_lot]}
+    TRA-->>OR: {suspects: [CNC-02/T07 0.95], excluded: [material_lot]}
+    OR->>FS: record finding
 
     Note over OR,PA: Step 2 - sensor telemetry analysis
     OR->>PA: pull CNC-02 sensor telemetry, 09:00-10:00
-    PA->>FS: {finding: vibration +35%, current +12%, since: 09:30, confidence: 0.8}
+    PA-->>OR: {finding: vibration +35%, current +12%, since: 09:30, confidence: 0.8}
+    OR->>FS: record finding
 
     Note over OR,RCA: Step 3 - root cause synthesis & RAG lookup
     OR->>RCA: synthesize all evidence (5-Whys + Ishikawa)
     Note over RCA: RCA queries RAG tool (manuals, maint logs, 8D)
     alt confidence >= 0.7
-        RCA->>FS: {root_cause: T07 worn, over tool life, confidence: 0.87, whys, ishikawa}
+        RCA-->>OR: {root_cause: T07 worn, over tool life, confidence: 0.87, whys, ishikawa}
+        OR->>FS: record root cause
     else confidence < 0.7
-        RCA->>OR: {need: close-up photo of insert}
+        RCA-->>OR: {need: close-up photo of insert}
         OR->>COP: dispatch diagnostic inspection request
         COP->>TECH: ask for close-up photo (voice + camera)
         TECH-->>COP: diagnostic photo
-        COP->>FS: attach diagnostic evidence
-        FS-->>RCA: re-evaluate hypothesis
+        COP-->>OR: diagnostic evidence
+        OR->>FS: attach diagnostic evidence
+        OR->>RCA: re-evaluate hypothesis with new evidence
     end
 
     Note over OR,DOC: Step 4 - resolution & documentation in parallel
@@ -44,17 +53,25 @@ sequenceDiagram
         COP-->>TECH: step-by-step guidance, each step cites manual (Gemini Live)
     and Draft the paperwork
         OR->>DOC: draft 8D, work order, SOP proposal
-        DOC->>FS: {documents: [8D, work_order, SOP_proposal]}
+        DOC-->>OR: {documents: [8D, work_order, SOP_proposal]}
+        OR->>FS: record documents
     end
+    Note over TECH,COP: Live voice/camera stream is the only direct human channel
     TECH->>COP: repair done
-    COP->>FS: {repair_done: true, steps_taken: [...]}
+    COP-->>OR: {repair_done: true, steps_taken: [...]}
+    OR->>FS: record repair outcome, end session
 
     Note over OR,QI: Step 5 - close only when the product confirms
     OR->>QI: verify 50 consecutive good products
-    QI->>FS: {verified: true, good_streak: 50, rate: 0.004}
+    QI-->>OR: {verified: true, good_streak: 50, rate: 0.004}
+    OR->>FS: verification progress
     OR->>FS: {status: closed, pending_approval: shift_leader}
+    OR->>LEAD: documents for approval
+    LEAD->>OR: approve
+    OR->>FS: {approved: true}
 
     Note over OR,LRN: Step 6 - continuous learning & impact
     OR->>LRN: learn from closed incident & compute impact
-    LRN->>FS: {impact: {scrap_avoided: 240, downtime_min: 45, kwh: 38, co2_kg: 25}}
-    LRN->>LRN: add entry to defect-cause-fix library
+    LRN-->>OR: {impact: {scrap_avoided: 240, downtime_min: 45, kwh: 38, co2_kg: 25}, knowledge_entry}
+    OR->>FS: record impact card
+    OR->>OR: add entry to defect-cause-fix library

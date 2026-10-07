@@ -33,9 +33,9 @@ Three agents work in parallel:
 The **Technician Copilot** opens a Gemini Live multimodal session — voice plus camera — guiding the technician through the repair procedure in Vietnamese (or any configured language). The **Incident Scribe** simultaneously generates a draft 8D report and corrective work order for human review.
 
 **Phase D — Verification & Learning**
-The **Quality Inspector** holds the incident open until *N* consecutive products pass the inspection gate. On closure, the **Continuous Learning Agent** indexes the resolution into the vector knowledge base and publishes a sustainability impact card (scrap avoided, downtime saved, energy and CO₂ reduction).
+The Orchestrator has the **Quality Inspector** count post-repair products and holds the incident open until *N* consecutive products pass the inspection gate. On closure, the **Continuous Learning Agent** returns a knowledge entry and a sustainability impact card (scrap avoided, downtime saved, energy and CO₂ reduction), which the Orchestrator indexes into the vector knowledge base and publishes; the shift leader's approval goes back to the Orchestrator.
 
-**Shared state** flows through a **Blackboard** (Firestore-backed) that all agents read from and write to, exposed to the dashboard via Server-Sent Events (SSE).
+**Shared state** flows through a **Blackboard** (Firestore-backed) exposed to the dashboard via Server-Sent Events (SSE). The Orchestrator is the single entry and exit point: it receives every input (defect events, technician input, shift-leader approval), hands the board to the agent it calls, records the finding the agent returns, and is the only writer of the Blackboard.
 
 **Tech stack:** Python 3.11 · FastAPI · Google ADK · Gemini 2.0 · Gemma 3 Edge · Vertex AI Search · BigQuery / bigquery-emulator · Firestore · Pub/Sub · React + Vite + TypeScript
 

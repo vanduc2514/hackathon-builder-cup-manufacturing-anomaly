@@ -155,7 +155,6 @@ Project backlog, epics, issues, and sprint planning are tracked on GitHub Projec
 - **Project Name:** `@vanduc2514's hackathon-builder-cup-manufacturing-anomaly`
 - **Project Number:** `3`
 - **Project URL:** [https://github.com/users/vanduc2514/projects/3](https://github.com/users/vanduc2514/projects/3)
-- **Repository Projects View:** [vanduc2514/hackathon-builder-cup-manufacturing-anomaly/projects](https://github.com/vanduc2514/hackathon-builder-cup-manufacturing-anomaly/projects)
 
 ### CLI Operations
 

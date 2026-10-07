@@ -71,7 +71,16 @@ APP_ENV                        = "development"
 
 # Optional: target local BigQuery emulator for dev parity without GCP
 # BIGQUERY_EMULATOR_HOST       = "http://localhost:9050"
+
+# LLM provider for the ADK agents: "ollama" (local, default) or "gemini" (deploy)
+AI_PROVIDER                    = "ollama"
+OLLAMA_HOST                    = "http://localhost:11434"
+# OLLAMA_MODEL                 = "gemma2:2b"            # default; must be pulled via `ollama pull`
+# GOOGLE_API_KEY               = "..."                  # required when AI_PROVIDER = "gemini"
+# GEMINI_MODEL                 = "gemini-flash-latest"  # default
 ```
+
+With `AI_PROVIDER=gemini` and no `GOOGLE_API_KEY`/`GEMINI_API_KEY`, the backend refuses to start.
 
 mise automatically merges `mise.local.toml` on top of `mise.toml` when you `cd` into the directory, so any task run via `mise run` will pick up these variables without extra shell exports.
 
@@ -109,6 +118,8 @@ mise run seed           # seed mock BigQuery / Firestore data
 mise run emulator       # start local BigQuery emulator (:9050)
 mise run emulator:down  # stop BigQuery emulator
 mise run docker:up      # start full stack via docker compose
+adk web backend/adk_apps                       # ADK dev UI: incident workflow graph + events
+adk run backend/adk_apps/kaizen_incident '{}'  # run one incident workflow in the terminal
 ```
 
 ---

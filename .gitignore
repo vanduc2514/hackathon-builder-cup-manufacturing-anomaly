@@ -160,3 +160,6 @@ data/knowledge_base/drive/
 # Git worktrees
 .worktrees/
 worktrees/
+
+# ADK CLI (adk run / adk web) session DB and artifacts
+.adk/

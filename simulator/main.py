@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import logging
 import signal
+from typing import Optional
 
 from simulator.config import settings
 from simulator.conveyor_simulator import ConveyorSimulator
@@ -28,24 +29,36 @@ class FactorySimulatorService:
         speed: float = 1.0,
         dry_run: bool = False,
         inject_on_start: bool = False,
+        scenario: str = "cnc_tool_wear",
     ) -> None:
         self.speed = max(0.1, speed)
         self.interval = settings.tick_interval_sec / self.speed
         self.running = False
         self.tick_count = 0
 
-        self.machine_sim = MachineSimulator()
-        self.conveyor_sim = ConveyorSimulator()
+        include_im = scenario == "im_damp_material"
+        self.machine_sim = MachineSimulator(include_im=include_im)
+        self.conveyor_sim = ConveyorSimulator(include_im=include_im)
         self.publisher = MqttPublisher(dry_run=dry_run)
 
         if inject_on_start:
-            self.machine_sim.inject_anomaly("CNC-02")
-            self.conveyor_sim.set_anomaly("CNC-02", active=True)
+            self.trigger_anomaly(scenario=scenario)
 
-    def trigger_anomaly(self, machine_id: str = "CNC-02") -> None:
-        """Injects tool wear defect into target machine."""
-        self.machine_sim.inject_anomaly(machine_id)
-        self.conveyor_sim.set_anomaly(machine_id, active=True)
+    def trigger_anomaly(
+        self,
+        machine_id: Optional[str] = None,
+        scenario: str = "cnc_tool_wear",
+        severity: float = 1.0,
+    ) -> None:
+        """Injects defect burst into target machine according to specified scenario."""
+        if scenario == "im_damp_material" or machine_id == "IM-05":
+            target = machine_id or "IM-05"
+            self.machine_sim.inject_anomaly(target, severity=severity, scenario="im_damp_material")
+            self.conveyor_sim.set_anomaly(target, active=True, scenario="im_damp_material")
+        else:
+            target = machine_id or "CNC-02"
+            self.machine_sim.inject_anomaly(target, severity=severity, scenario="cnc_tool_wear")
+            self.conveyor_sim.set_anomaly(target, active=True, scenario="cnc_tool_wear")
 
     def reset_baseline(self) -> None:
         """Restores all machinery to normal baseline."""
@@ -130,7 +143,14 @@ def main() -> None:
     parser.add_argument(
         "--inject",
         action="store_true",
-        help="Start with CNC-02 mechanical defect pre-injected",
+        help="Start with defect burst pre-injected",
+    )
+    parser.add_argument(
+        "--scenario",
+        type=str,
+        default="cnc_tool_wear",
+        choices=["cnc_tool_wear", "im_damp_material"],
+        help="Simulation anomaly scenario (cnc_tool_wear or im_damp_material)",
     )
     parser.add_argument(
         "--ticks",
@@ -144,6 +164,7 @@ def main() -> None:
         speed=args.speed,
         dry_run=args.dry_run,
         inject_on_start=args.inject,
+        scenario=args.scenario,
     )
 
     loop = asyncio.new_event_loop()

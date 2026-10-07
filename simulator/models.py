@@ -20,6 +20,10 @@ class MachineTelemetry(BaseModel):
     rpm: int = Field(description="Spindle rotational speed")
     operating_status: str = Field(default="NORMAL")  # NORMAL, WARNING, ALARM
     anomaly_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    dryer_dew_point: Optional[float] = Field(
+        default=None,
+        description="Material dryer dew point in Celsius (e.g. -40 C normal, -18 C damp)",
+    )
 
 
 class ConveyorPart(BaseModel):
@@ -30,10 +34,13 @@ class ConveyorPart(BaseModel):
     machine_id: str
     tool_id: str
     lot_id: str = "AL-5083-B4"
-    status: str = "PASS"  # PASS, DEFECT_SCRATCH
+    status: str = "PASS"  # PASS, DEFECT_SCRATCH, DEFECT_SHORT_FILL, DEFECT_SINK_MARK
     defect_type: Optional[str] = None
     confidence: float = Field(default=0.98, ge=0.0, le=1.0)
     image_token: Optional[str] = None
+    cavity_id: Optional[int] = Field(
+        default=None, description="Mold cavity identifier for multi-cavity injection molds"
+    )
 
 
 class SimulatorTickSummary(BaseModel):

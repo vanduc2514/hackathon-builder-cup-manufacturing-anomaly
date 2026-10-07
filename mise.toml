@@ -70,8 +70,28 @@ run = "uvicorn backend.api.main:app --host $API_HOST --port $API_PORT"
 # =============================================================================
 
 [tasks.demo]
-description = "Inject a defect to trigger the 90-second multi-agent demo"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject | python -m json.tool"
+description = "Inject Scenario 1 (CNC-02 Tool Wear) for deterministic 90-second multi-agent demo"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H 'Content-Type: application/json' -d '{\"scenario\":\"cnc_tool_wear\",\"mode\":\"demo\"}' | python -m json.tool"
+
+[tasks."demo:fast"]
+description = "Fast-forward injection of Scenario 1 (~8 seconds)"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H 'Content-Type: application/json' -d '{\"scenario\":\"cnc_tool_wear\",\"mode\":\"fast\"}' | python -m json.tool"
+
+[tasks."demo:scenario2"]
+description = "Inject Scenario 2 (IM-05 Damp Material) for 90-second demo"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H 'Content-Type: application/json' -d '{\"scenario\":\"im_damp_material\",\"mode\":\"demo\"}' | python -m json.tool"
+
+[tasks."demo:scenario2:fast"]
+description = "Fast-forward injection of Scenario 2 (~8 seconds)"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H 'Content-Type: application/json' -d '{\"scenario\":\"im_damp_material\",\"mode\":\"fast\"}' | python -m json.tool"
+
+[tasks."sim:reset"]
+description = "Reset simulation state, blackboard, and BigQuery buffers to baseline"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/reset | python -m json.tool"
+
+[tasks."sim:status"]
+description = "Get current simulation running status"
+run = "curl -s http://localhost:$API_PORT/api/simulation/status | python -m json.tool"
 
 [tasks.test]
 description = "Run the pytest test suite"
@@ -112,6 +132,10 @@ run = "python -m simulator.main --dry-run"
 [tasks."sim:inject"]
 description = "Start factory simulator with CNC-02 mechanical defect pre-injected"
 run = "python -m simulator.main --inject"
+
+[tasks."sim:inject:scenario2"]
+description = "Start factory simulator with IM-05 damp material defect pre-injected"
+run = "python -m simulator.main --inject --scenario im_damp_material"
 
 # =============================================================================
 # Docker

@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
-from backend.agents.agent_orchestrator import orchestrator
+from backend.agents.orchestrator import orchestrator
 from backend.api.routes_incidents import router as incidents_router
 from backend.api.routes_simulation import router as simulation_router
 from backend.core.config import settings

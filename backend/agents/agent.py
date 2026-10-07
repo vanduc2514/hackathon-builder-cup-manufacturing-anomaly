@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from backend.agents.agent_orchestrator import incident_workflow
+from backend.agents.orchestrator import incident_workflow
 from backend.core.llm import configure_default_model
 
 configure_default_model()

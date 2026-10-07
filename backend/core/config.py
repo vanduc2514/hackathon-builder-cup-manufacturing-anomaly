@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     debug: bool = True
     port: int = 8000
     host: str = "0.0.0.0"
+    log_level: str = "INFO"
     gcp_project_id: str = os.getenv("GCP_PROJECT_ID", "kaizen-local")
     gcp_region: str = os.getenv("GCP_REGION", "asia-southeast1")
 
@@ -42,6 +43,15 @@ class Settings(BaseSettings):
     mqtt_reconnect_min_delay: float = float(os.getenv("MQTT_RECONNECT_MIN_DELAY", "1.0"))
     mqtt_reconnect_max_delay: float = float(os.getenv("MQTT_RECONNECT_MAX_DELAY", "60.0"))
     mqtt_anomaly_threshold: float = float(os.getenv("MQTT_ANOMALY_THRESHOLD", "0.70"))
+
+    # LLM provider switch (ollama for local tests, gemini for deploy)
+    ai_provider: Literal["ollama", "gemini"] = "ollama"
+    ollama_host: str = "http://localhost:11434"
+    ollama_model: str = "gemma2:2b"
+    gemini_model: str = "gemini-flash-latest"
+
+    # Pause between simulated conveyor verification batches (seconds)
+    simulation_step_delay: float = 0.4
 
 
 settings = Settings()

@@ -148,8 +148,28 @@ mise exec -- rclone copy gdrive:"💻 Competition | AI Builder Cup" "data/knowle
 
 ---
 
-## Commit Convention
+## GitHub Project
 
+Project backlog, epics, issues, and sprint planning are tracked on GitHub Projects (v2):
+
+- **Project Name:** `@vanduc2514's hackathon-builder-cup-manufacturing-anomaly`
+- **Project Number:** `3`
+- **Project URL:** [https://github.com/users/vanduc2514/projects/3](https://github.com/users/vanduc2514/projects/3)
+- **Repository Projects View:** [vanduc2514/hackathon-builder-cup-manufacturing-anomaly/projects](https://github.com/vanduc2514/hackathon-builder-cup-manufacturing-anomaly/projects)
+
+### CLI Operations
+
+```bash
+# View project details
+gh project view 3 --owner vanduc2514
+
+# List all items on the board
+gh project item-list 3 --owner vanduc2514
+```
+
+---
+
+## Commit Convention
 
 Follow **Conventional Commits** (`<type>(<scope>): <subject>`).
 

@@ -20,14 +20,11 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()):
         verification_count=0
     )
     
-    finding = AgentFinding(
-        agent_id="QA",
-        agent_name="Quality Inspector",
-        phase="Phase A - Detection",
-        finding="Vertical scratch 2–3 mm on face A detected on conveyor station.",
-        evidence="23/300 products defective (7.7% defect rate), exceeding SPC UCL of 3.0%. Started at 09:40.",
-        confidence=0.96,
-        citation="Gemma Edge Gateway Frame #8412 + Gemini Vision Metrology"
+    from backend.agents.sub_agent_quality_inspector import quality_inspector
+    finding = await quality_inspector.run_detection(
+        defect_type=req.defect_type,
+        current_defect_rate=0.077,
+        model_name="vision"
     )
     blackboard.add_finding(finding)
     return {

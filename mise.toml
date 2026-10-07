@@ -46,11 +46,11 @@ run = [
 # Development
 # =============================================================================
 
-# Run the full stack (backend + frontend) concurrently
-# `mise run dev` fans out to both tasks in parallel via -j2
+# Run the full stack (backend + frontend + ADK dev UI) concurrently
+# `mise run dev` fans out to all three tasks in parallel
 [tasks.dev]
-description = "Start the full stack: FastAPI (:8000) + Vite (:3000)"
-depends  = ["backend", "frontend"]
+description = "Start the full stack: FastAPI (:8000) + Vite (:3000) + ADK dev UI (:8001)"
+depends  = ["backend", "frontend", "adk-web"]
 
 [tasks.backend]
 description = "Start FastAPI dev server with auto-reload (:8000)"
@@ -59,6 +59,10 @@ run = "uvicorn backend.api.main:app --host $API_HOST --port $API_PORT --reload"
 [tasks.frontend]
 description = "Start Vite dev server (:3000, /api proxied to backend)"
 run = "cd frontend && npm run dev"
+
+[tasks.adk-web]
+description = "Start ADK dev UI for the incident workflow (:8001, backend/agents/agent.py)"
+run = "adk web backend/agents --port 8001 --reload"
 
 # Production server (no reload)
 [tasks.start]

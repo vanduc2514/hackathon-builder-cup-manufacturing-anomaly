@@ -14,8 +14,8 @@ from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 
-from backend.agents import quality_inspector
-from backend.agents.orchestrator import Orchestrator
+from backend.agents import agent_quality_inspector
+from backend.agents.agent_orchestrator import Orchestrator
 from backend.core.blackboard import blackboard
 from backend.core.models import DefectInjectionRequest, IncidentState, VerificationResult
 
@@ -112,7 +112,9 @@ def test_failed_verification_reopens_once_then_escalates_never_closes(
         return VerificationResult(good_streak=10, defect_rate=0.05)
 
     monkeypatch.setattr(blackboard, "update_status", tracking_update)
-    monkeypatch.setattr(quality_inspector, "run_post_repair_verification", failing_verification)
+    monkeypatch.setattr(
+        agent_quality_inspector, "run_post_repair_verification", failing_verification
+    )
 
     state = _run(FakeLlm())
     assert state.status == "escalated"

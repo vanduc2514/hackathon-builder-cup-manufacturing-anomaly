@@ -12,13 +12,13 @@ from google.adk.workflow import JoinNode
 from google.genai import types
 
 from backend.agents import (
-    continuous_learning,
-    incident_scribe,
-    process_analyst,
-    quality_inspector,
-    root_cause,
-    technician_copilot,
-    traceability,
+    agent_continuous_learning,
+    agent_incident_scribe,
+    agent_process_analyst,
+    agent_quality_inspector,
+    agent_root_cause,
+    agent_technician_copilot,
+    agent_traceability,
 )
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
@@ -67,7 +67,7 @@ async def open_incident(ctx: Context, node_input: DefectInjectionRequest) -> Inc
         "detecting",
         incident_id=f"INC-{uuid4().hex[:6].upper()}",
         defect_type=node_input.defect_type,
-        defect_rate=quality_inspector.INJECTED_DEFECT_RATE,
+        defect_rate=agent_quality_inspector.INJECTED_DEFECT_RATE,
         verification_count=0,
     )
     return blackboard.get_state()
@@ -75,9 +75,9 @@ async def open_incident(ctx: Context, node_input: DefectInjectionRequest) -> Inc
 
 async def record_detection(node_input: FindingDraft) -> IncidentState:
     _record(
-        quality_inspector.AGENT_ID,
-        quality_inspector.AGENT_NAME,
-        quality_inspector.PHASE,
+        agent_quality_inspector.AGENT_ID,
+        agent_quality_inspector.AGENT_NAME,
+        agent_quality_inspector.PHASE,
         node_input,
     )
     blackboard.update_status("tracing")
@@ -85,7 +85,12 @@ async def record_detection(node_input: FindingDraft) -> IncidentState:
 
 
 async def record_traceability(ctx: Context, node_input: FindingDraft) -> IncidentState:
-    _record(traceability.AGENT_ID, traceability.AGENT_NAME, traceability.PHASE, node_input)
+    _record(
+        agent_traceability.AGENT_ID,
+        agent_traceability.AGENT_NAME,
+        agent_traceability.PHASE,
+        node_input,
+    )
     trigger = ctx.state["trigger"]
     blackboard.update_status(
         "investigating", suspect_machine=trigger["machine_id"], suspect_tool=trigger["tool_id"]
@@ -94,14 +99,21 @@ async def record_traceability(ctx: Context, node_input: FindingDraft) -> Inciden
 
 
 async def record_process_analysis(node_input: FindingDraft) -> IncidentState:
-    _record(process_analyst.AGENT_ID, process_analyst.AGENT_NAME, process_analyst.PHASE, node_input)
+    _record(
+        agent_process_analyst.AGENT_ID,
+        agent_process_analyst.AGENT_NAME,
+        agent_process_analyst.PHASE,
+        node_input,
+    )
     blackboard.update_status("analyzing")
     return blackboard.get_state()
 
 
 async def rca_gate(ctx: Context, node_input: FindingDraft) -> Event:
     """Routes on root-cause confidence: repair, gather field evidence, or escalate."""
-    _record(root_cause.AGENT_ID, root_cause.AGENT_NAME, root_cause.PHASE, node_input)
+    _record(
+        agent_root_cause.AGENT_ID, agent_root_cause.AGENT_NAME, agent_root_cause.PHASE, node_input
+    )
     confidence = node_input.confidence
     if confidence >= RCA_CONFIDENCE_THRESHOLD:
         blackboard.update_status("repairing", root_cause=node_input.finding)
@@ -121,9 +133,9 @@ async def rca_gate(ctx: Context, node_input: FindingDraft) -> Event:
 
 async def record_field_evidence(node_input: FindingDraft) -> IncidentState:
     _record(
-        technician_copilot.AGENT_ID,
-        technician_copilot.AGENT_NAME,
-        technician_copilot.DIAGNOSTIC_PHASE,
+        agent_technician_copilot.AGENT_ID,
+        agent_technician_copilot.AGENT_NAME,
+        agent_technician_copilot.DIAGNOSTIC_PHASE,
         node_input,
     )
     blackboard.update_status("analyzing")
@@ -132,15 +144,20 @@ async def record_field_evidence(node_input: FindingDraft) -> IncidentState:
 
 async def record_resolution(node_input: dict) -> IncidentState:
     """Records the parallel copilot and scribe outputs in a fixed order."""
-    copilot = FindingDraft.model_validate(node_input[technician_copilot.agent.name])
-    scribe = ScribeDraft.model_validate(node_input[incident_scribe.agent.name])
+    copilot = FindingDraft.model_validate(node_input[agent_technician_copilot.agent.name])
+    scribe = ScribeDraft.model_validate(node_input[agent_incident_scribe.agent.name])
     _record(
-        technician_copilot.AGENT_ID,
-        technician_copilot.AGENT_NAME,
-        technician_copilot.PHASE,
+        agent_technician_copilot.AGENT_ID,
+        agent_technician_copilot.AGENT_NAME,
+        agent_technician_copilot.PHASE,
         copilot,
     )
-    _record(incident_scribe.AGENT_ID, incident_scribe.AGENT_NAME, incident_scribe.PHASE, scribe)
+    _record(
+        agent_incident_scribe.AGENT_ID,
+        agent_incident_scribe.AGENT_NAME,
+        agent_incident_scribe.PHASE,
+        scribe,
+    )
     blackboard.update_status(
         "verifying",
         documents={
@@ -153,7 +170,7 @@ async def record_resolution(node_input: dict) -> IncidentState:
 
 
 async def verify_repair(ctx: Context, node_input: dict) -> VerificationResult:
-    return await quality_inspector.run_post_repair_verification(ctx.state["step_delay"])
+    return await agent_quality_inspector.run_post_repair_verification(ctx.state["step_delay"])
 
 
 async def verification_gate(ctx: Context, node_input: VerificationResult) -> Event:
@@ -163,9 +180,9 @@ async def verification_gate(ctx: Context, node_input: VerificationResult) -> Eve
     if count >= target:
         blackboard.add_finding(
             AgentFinding(
-                agent_id=quality_inspector.AGENT_ID,
-                agent_name=quality_inspector.VERIFICATION_AGENT_NAME,
-                phase=quality_inspector.VERIFICATION_PHASE,
+                agent_id=agent_quality_inspector.AGENT_ID,
+                agent_name=agent_quality_inspector.VERIFICATION_AGENT_NAME,
+                phase=agent_quality_inspector.VERIFICATION_PHASE,
                 finding=(
                     f"Physical recovery verified: {count} consecutive defect-free products passed."
                 ),
@@ -182,9 +199,9 @@ async def verification_gate(ctx: Context, node_input: VerificationResult) -> Eve
         ctx.state["reopen_count"] += 1
         blackboard.add_finding(
             AgentFinding(
-                agent_id=quality_inspector.AGENT_ID,
-                agent_name=quality_inspector.VERIFICATION_AGENT_NAME,
-                phase=quality_inspector.VERIFICATION_PHASE,
+                agent_id=agent_quality_inspector.AGENT_ID,
+                agent_name=agent_quality_inspector.VERIFICATION_AGENT_NAME,
+                phase=agent_quality_inspector.VERIFICATION_PHASE,
                 finding="Defects persist after repair; reopening Phase B",
                 evidence=(
                     f"Only {count}/{target} consecutive good parts; "
@@ -213,9 +230,9 @@ async def close_incident(node_input: VerificationResult) -> IncidentState:
 
 async def record_learning(node_input: FindingDraft) -> None:
     _record(
-        continuous_learning.AGENT_ID,
-        continuous_learning.AGENT_NAME,
-        continuous_learning.PHASE,
+        agent_continuous_learning.AGENT_ID,
+        agent_continuous_learning.AGENT_NAME,
+        agent_continuous_learning.PHASE,
         node_input,
     )
     # Placeholder: default impact numbers until the impact calculator is wired in.
@@ -235,26 +252,26 @@ incident_workflow = Workflow(
         (
             "START",
             open_incident,
-            quality_inspector.agent,
+            agent_quality_inspector.agent,
             record_detection,
-            traceability.agent,
+            agent_traceability.agent,
             record_traceability,
-            process_analyst.agent,
+            agent_process_analyst.agent,
             record_process_analysis,
-            root_cause.agent,
+            agent_root_cause.agent,
             rca_gate,
         ),
         (
             rca_gate,
             {
-                "CONFIDENT": (technician_copilot.agent, incident_scribe.agent),
-                "NEED_EVIDENCE": technician_copilot.diagnostic_agent,
+                "CONFIDENT": (agent_technician_copilot.agent, agent_incident_scribe.agent),
+                "NEED_EVIDENCE": agent_technician_copilot.diagnostic_agent,
                 "ESCALATE": escalate_incident,
             },
         ),
-        (technician_copilot.diagnostic_agent, record_field_evidence, root_cause.agent),
+        (agent_technician_copilot.diagnostic_agent, record_field_evidence, agent_root_cause.agent),
         (
-            (technician_copilot.agent, incident_scribe.agent),
+            (agent_technician_copilot.agent, agent_incident_scribe.agent),
             resolution_join,
             record_resolution,
             verify_repair,
@@ -268,8 +285,8 @@ incident_workflow = Workflow(
                 "ESCALATE": escalate_incident,
             },
         ),
-        (reopen_investigation, traceability.agent),
-        (close_incident, continuous_learning.agent, record_learning),
+        (reopen_investigation, agent_traceability.agent),
+        (close_incident, agent_continuous_learning.agent, record_learning),
     ],
 )
 

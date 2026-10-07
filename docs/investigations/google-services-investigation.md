@@ -80,7 +80,7 @@ It covers:
     * `edge_filter.py`: Drops ~95%–99% of normal product frames so sensitive factory images never leave the on-premise network.
     * `mqtt_bridge.py`: Dispatches defect frames and telemetry anomalies over MQTT/PubSub.
 * **How to run locally?**
-  * **Option 1 (Simulated)**: Run the built-in edge simulator [`backend/edge/simulator/`](../../backend/edge/simulator) (zero installation required).
+  * **Option 1 (Simulated)**: Run the standalone factory simulator [`simulator/`](../../simulator) (`mise run sim` or `mise run sim:dry`).
   * **Option 2 (Real Model)**: Run locally via Ollama:
     ```bash
     ollama run gemma:2b

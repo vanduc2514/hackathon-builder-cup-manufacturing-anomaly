@@ -10,6 +10,8 @@ from backend.core.models import IncidentState
 router = APIRouter(prefix="/api/incidents", tags=["incidents"])
 
 
+@router.get("", response_model=IncidentState)
+@router.get("/", response_model=IncidentState)
 @router.get("/current", response_model=IncidentState)
 async def get_current_incident():
     """Returns the current snapshot of the incident blackboard."""
@@ -17,6 +19,7 @@ async def get_current_incident():
 
 
 @router.get("/events")
+@router.get("/stream")
 async def incident_events():
     """Server-Sent Events (SSE) stream of blackboard updates in real time."""
 

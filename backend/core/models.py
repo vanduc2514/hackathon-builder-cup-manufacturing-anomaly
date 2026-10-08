@@ -225,3 +225,53 @@ class SensorTelemetryWindowResponse(BaseModel):
 
     def get(self, item: str, default: Any = None) -> Any:
         return getattr(self, item, default)
+
+
+class ControlLimits(BaseModel):
+    """Shewhart p-chart statistical control limits."""
+
+    centerline: float = Field(ge=0.0, le=1.0, description="Centerline proportion p_bar")
+    ucl: float = Field(ge=0.0, le=1.0, description="Upper control limit")
+    lcl: float = Field(ge=0.0, le=1.0, description="Lower control limit")
+    sample_size: int = Field(gt=0, description="Subgroup sample size n")
+    sigma: float = Field(ge=0.0, description="Standard error of proportion sqrt(p(1-p)/n)")
+
+
+class NelsonRuleViolation(BaseModel):
+    """Details of a single Nelson control rule violation."""
+
+    rule_id: int = Field(ge=1, le=8, description="Nelson rule number (1-8)")
+    rule_name: str = Field(description="Name or title of the rule")
+    description: str = Field(description="Detailed explanation of the breach")
+    violation_indices: List[int] = Field(
+        default_factory=list, description="0-indexed sample indices that triggered the violation"
+    )
+
+
+class SpcEvaluationResult(BaseModel):
+    """SPC defect rate window evaluation and anomaly breach result."""
+
+    sample_size: int = Field(gt=0)
+    defect_count: int = Field(ge=0)
+    defect_rate: float = Field(ge=0.0, le=1.0)
+    limits: ControlLimits
+    is_breached: bool = Field(
+        default=False, description="True if defect_rate exceeds UCL or falls below LCL"
+    )
+    breach_direction: Optional[str] = Field(default=None, description="'upper', 'lower', or None")
+    violations: List[NelsonRuleViolation] = Field(default_factory=list)
+
+
+class StreakVerificationResult(BaseModel):
+    """Result emitted by the post-repair physical confirmation gatekeeper."""
+
+    good_streak: int = Field(ge=0, description="Current count of consecutive defect-free parts")
+    target: int = Field(gt=0, description="Required target streak (e.g. 50)")
+    verified: bool = Field(default=False, description="True when good_streak >= target")
+    last_was_defect: bool = Field(
+        default=False, description="True if the last evaluated part was defective"
+    )
+    recurrence_detected: bool = Field(
+        default=False, description="True if a defect occurred during verification, resetting streak"
+    )
+    message: str = Field(description="Status description")

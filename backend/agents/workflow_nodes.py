@@ -125,11 +125,41 @@ async def record_detection(ctx: Context, node_input: FindingDraft) -> IncidentSt
     return blackboard.get_state()
 
 
+async def trace_topology(ctx: Context, node_input: IncidentState | dict) -> dict:
+    """Traceability Agent queries discrete topology and passes the evidence report to the reasoner."""
+    qi_report_data = ctx.state.get("qi_report")
+    product_ids = None
+    if qi_report_data:
+        frames = qi_report_data.get("defect_frames", [])
+        product_ids = [f["product_id"] for f in frames if f.get("product_id")]
+
+    trigger = ctx.state.get("trigger", {})
+    time_window = trigger.get("time_window", "09:30-10:00")
+
+    report = await agent_traceability.trace_line_topology(
+        time_window=time_window,
+        product_ids=product_ids,
+    )
+    ctx.state["traceability_report"] = report.model_dump()
+    return {
+        "board": blackboard.get_state().model_dump(),
+        "traceability": report.model_dump(),
+    }
+
+
 async def record_traceability(ctx: Context, node_input: FindingDraft) -> IncidentState:
     _record(agent_traceability, node_input)
-    trigger = ctx.state["trigger"]
+    report_data = ctx.state.get("traceability_report")
+    if report_data and report_data.get("suspects"):
+        top = report_data["suspects"][0]
+        suspect_machine = top.get("machine_id")
+        suspect_tool = top.get("tool_id")
+    else:
+        trigger = ctx.state.get("trigger", {})
+        suspect_machine = trigger.get("machine_id", "CNC-02")
+        suspect_tool = trigger.get("tool_id", "T07")
     blackboard.update_status(
-        "investigating", suspect_machine=trigger["machine_id"], suspect_tool=trigger["tool_id"]
+        "investigating", suspect_machine=suspect_machine, suspect_tool=suspect_tool
     )
     return blackboard.get_state()
 

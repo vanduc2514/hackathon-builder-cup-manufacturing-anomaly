@@ -9,6 +9,94 @@ from typing import Any, Dict, List, Optional
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
+class CitationReference(BaseModel):
+    """Auditable citation metadata compliant with strict RAG contract."""
+
+    document_id: str = Field(
+        description="Document ID or relative path e.g. manuals/cnc_operating_manual.md"
+    )
+    title: str = Field(description="Human-readable document title")
+    page_number: Optional[int] = Field(default=None, description="Page number anchor if applicable")
+    section: Optional[str] = Field(default=None, description="Document section or header")
+    snippet: str = Field(description="Verbatim excerpt from document")
+    relevance_score: float = Field(
+        default=1.0, ge=0.0, le=1.0, description="Relevance score 0.0 - 1.0"
+    )
+    last_revised: Optional[str] = Field(
+        default=None, description="Document last revision date (YYYY-MM-DD)"
+    )
+    citation: Optional[str] = Field(default=None, description="Formatted auditable citation string")
+
+    def formatted_citation(self) -> str:
+        """Auditable citation string e.g. 'CNC Manual p.112, Section 4.5 (revised 2026-03-12)'."""
+        parts = [self.title]
+        if self.page_number is not None:
+            parts.append(f"p.{self.page_number}")
+        if self.section:
+            parts.append(self.section)
+        if self.last_revised:
+            parts.append(f"revised {self.last_revised}")
+        return ", ".join(parts)
+
+
+class KnowledgeDocumentMeta(BaseModel):
+    """Metadata schema for curated domain documents in the knowledge base."""
+
+    document_id: str
+    title: str
+    category: str  # manual, maint_log, 8d_report, spec, etc.
+    machine_id: Optional[str] = None
+    component: Optional[str] = None
+    version: str = "1.0"
+    pages: int = 1
+    last_revised: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+
+
+class RAGSearchRequest(BaseModel):
+    """Query parameters for knowledge base search with dual keys."""
+
+    defect_symptom: str = Field(
+        ...,
+        description="Mandatory defect symptom key, e.g. 'scratch_vertical', 'short_fill', 'spindle_vibration'",
+    )
+    suspect_asset: str = Field(
+        ...,
+        description="Mandatory suspect machine/asset key, e.g. 'CNC-02', 'IM-05'",
+    )
+    query: Optional[str] = Field(
+        default=None,
+        description="Optional additional free-text query or symptom detail",
+    )
+    max_results: int = Field(default=5, ge=1, le=20)
+    min_relevance: float = Field(default=0.35, ge=0.0, le=1.0)
+
+
+class RAGSearchResult(BaseModel):
+    """Structured result set from RAG knowledge base search."""
+
+    defect_symptom: str
+    suspect_asset: str
+    query: str
+    citations: List[CitationReference] = Field(default_factory=list)
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    summary: Optional[str] = None
+    engine: str = Field(default="local_bm25", description="'vertex_ai_search' or 'local_bm25'")
+    total_found: int = 0
+
+    def __iter__(self):
+        return iter(self.citations)
+
+    def __len__(self) -> int:
+        return len(self.citations)
+
+    def __getitem__(self, index: int) -> CitationReference:
+        return self.citations[index]
+
+    def __bool__(self) -> bool:
+        return len(self.citations) > 0
+
+
 class AgentFinding(BaseModel):
     """Four-part contract: finding, evidence, confidence, citation."""
 

@@ -141,8 +141,8 @@ class GemmaEdgeClassifier:
 
         elapsed_ms = (time.perf_counter() - start_time) * 1000.0
         # Simulated edge inference sub-50ms constraint
-        if elapsed_ms == 0.0:
-            elapsed_ms = 12.5
+        if round(elapsed_ms, 2) <= 0.0:
+            elapsed_ms = 0.05
 
         uncertainty = max(0.0, min(1.0, 1.0 - confidence))
         # Pneumatic scrap diverter actuates immediately when defect or high uncertainty is flagged

@@ -97,6 +97,31 @@ class RAGSearchResult(BaseModel):
         return len(self.citations) > 0
 
 
+class FiveWhysStep(BaseModel):
+    """One step in a 5-Whys causal deduction chain."""
+
+    level: int = Field(ge=1, le=5, description="Step number 1 to 5")
+    why: str = Field(description="Why question / cause inquiry")
+    answer: str = Field(description="Deduction or causal explanation")
+    evidence: Optional[str] = Field(default=None, description="Supporting evidence or metric")
+    citation: Optional[str] = Field(default=None, description="Document or telemetry citation")
+
+
+class IshikawaFactor(BaseModel):
+    """An analyzed factor within the 6M Ishikawa (fishbone) classification."""
+
+    category: str = Field(
+        description="6M category: Machine, Method, Material, Man, Measurement, or Milieu"
+    )
+    factor: str = Field(description="Factor description")
+    is_causal: bool = Field(
+        default=False, description="True if causal factor, False if ruled out / normal"
+    )
+    detail: Optional[str] = Field(
+        default=None, description="Detailed explanation or exclusion rationale"
+    )
+
+
 class AgentFinding(BaseModel):
     """Four-part contract: finding, evidence, confidence, citation."""
 
@@ -108,6 +133,8 @@ class AgentFinding(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     citation: str
     timestamp: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
+    five_whys: Optional[List[FiveWhysStep]] = None
+    ishikawa: Optional[Dict[str, List[str]]] = None
 
 
 class ManufacturingBenchmark(BaseModel):
@@ -134,6 +161,22 @@ class FindingDraft(BaseModel):
     evidence: str = Field(description="Concrete evidence supporting the finding.")
     confidence: float = Field(description="0.0-1.0")
     citation: str = Field(description="Source of the evidence.")
+
+
+class RootCauseFindingDraft(FindingDraft):
+    """Root Cause Agent output: finding, evidence, 5-Whys, Ishikawa 6M classification, and optional diagnostic probe."""
+
+    five_whys: List[FiveWhysStep] = Field(
+        default_factory=list, description="5-Whys sequential causal deduction chain"
+    )
+    ishikawa: Dict[str, List[str]] = Field(
+        default_factory=dict,
+        description="Ishikawa 6M categories (Machine, Method, Material, Man, Measurement, Milieu)",
+    )
+    diagnostic_request: Optional[str] = Field(
+        default=None,
+        description="Diagnostic evidence request for technician if confidence < 0.70",
+    )
 
 
 class ScribeDraft(FindingDraft):

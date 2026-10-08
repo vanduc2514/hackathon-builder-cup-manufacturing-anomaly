@@ -322,3 +322,88 @@ class StreakVerificationResult(BaseModel):
         default=False, description="True if a defect occurred during verification, resetting streak"
     )
     message: str = Field(description="Status description")
+
+
+class BoundingBox(BaseModel):
+    """Normalized bounding box coordinates [ymin, xmin, ymax, xmax] between 0.0 and 1.0."""
+
+    ymin: float = Field(ge=0.0, le=1.0, description="Top edge normalized coordinate")
+    xmin: float = Field(ge=0.0, le=1.0, description="Left edge normalized coordinate")
+    ymax: float = Field(ge=0.0, le=1.0, description="Bottom edge normalized coordinate")
+    xmax: float = Field(ge=0.0, le=1.0, description="Right edge normalized coordinate")
+
+    def to_list(self) -> List[float]:
+        return [self.ymin, self.xmin, self.ymax, self.xmax]
+
+    @property
+    def area(self) -> float:
+        return max(0.0, self.ymax - self.ymin) * max(0.0, self.xmax - self.xmin)
+
+
+class InspectionFrame(BaseModel):
+    """Raw visual inspection snapshot event from conveyor optical station."""
+
+    product_id: str
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    machine_id: str
+    tool_id: str
+    lot_id: str = "AL-5083-B4"
+    camera_id: str = "CAM-LINE01-EOL"
+    status: Optional[str] = None
+    defect_type: Optional[str] = None
+    image_token: Optional[str] = None
+    image_bytes_b64: Optional[str] = None
+    cavity_id: Optional[int] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class EdgeClassificationResult(BaseModel):
+    """High-speed pass/fail classification and bounding box from Gemma 3 edge model."""
+
+    is_defect: bool
+    defect_type: Optional[str] = None
+    confidence: float = Field(default=0.98, ge=0.0, le=1.0)
+    uncertainty: float = Field(default=0.02, ge=0.0, le=1.0)
+    bounding_box: Optional[BoundingBox] = None
+    inference_time_ms: float = Field(default=0.0, ge=0.0)
+    model_name: str = "gemma-3-2b-edge"
+    operating_mode: str = "heuristic"  # heuristic, ollama, dataset_playback
+    diverter_actuated: bool = False
+    raw_explanation: Optional[str] = None
+
+
+class FilteredFramePacket(BaseModel):
+    """Edge metrology packet forwarded to cloud Quality Inspector when defect or uncertain."""
+
+    frame_hash: str = Field(description="SHA-256 hash of frame attributes for audit provenance")
+    camera_id: str
+    product_id: str
+    machine_id: str
+    tool_id: str
+    lot_id: str
+    conveyor_timestamp: str
+    classification: str = Field(description="PASS, DEFECT, or UNCERTAIN")
+    is_defect: bool
+    defect_type: Optional[str] = None
+    confidence: float = Field(ge=0.0, le=1.0)
+    uncertainty: float = Field(ge=0.0, le=1.0)
+    bounding_box: Optional[BoundingBox] = None
+    filter_decision: str = Field(description="FORWARD or DROP")
+    diverter_actuated: bool = False
+    image_token: Optional[str] = None
+    cavity_id: Optional[int] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class EdgeFilterStatistics(BaseModel):
+    """Performance and bandwidth reduction telemetry from edge noise filtering."""
+
+    total_frames_evaluated: int = 0
+    pass_frames_dropped: int = 0
+    defect_frames_forwarded: int = 0
+    uncertain_frames_forwarded: int = 0
+    audit_sampled_forwarded: int = 0
+    total_frames_forwarded: int = 0
+    drop_ratio: float = 0.0
+    cloud_bandwidth_reduction_pct: float = 0.0
+    estimated_bandwidth_saved_mb: float = 0.0

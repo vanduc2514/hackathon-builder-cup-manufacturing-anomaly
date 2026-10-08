@@ -18,9 +18,10 @@ class DefectInjectionEngine:
         self,
         machine_sim: Optional[MachineSimulator] = None,
         conveyor_sim: Optional[ConveyorSimulator] = None,
+        seed: Optional[int] = None,
     ) -> None:
-        self.machine_sim = machine_sim or MachineSimulator()
-        self.conveyor_sim = conveyor_sim or ConveyorSimulator()
+        self.machine_sim = machine_sim or MachineSimulator(seed=seed)
+        self.conveyor_sim = conveyor_sim or ConveyorSimulator(seed=seed)
         self.active_scenario: Optional[str] = None
         self.active_machine: Optional[str] = None
         self.active_severity: float = 1.0

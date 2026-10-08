@@ -30,15 +30,17 @@ class FactorySimulatorService:
         dry_run: bool = False,
         inject_on_start: bool = False,
         scenario: str = "cnc_tool_wear",
+        seed: Optional[int] = None,
     ) -> None:
         self.speed = max(0.1, speed)
         self.interval = settings.tick_interval_sec / self.speed
         self.running = False
         self.tick_count = 0
+        self._stopped = False
 
         include_im = scenario == "im_damp_material"
-        self.machine_sim = MachineSimulator(include_im=include_im)
-        self.conveyor_sim = ConveyorSimulator(include_im=include_im)
+        self.machine_sim = MachineSimulator(include_im=include_im, seed=seed)
+        self.conveyor_sim = ConveyorSimulator(include_im=include_im, seed=seed)
         self.publisher = MqttPublisher(dry_run=dry_run)
 
         if inject_on_start:
@@ -121,6 +123,9 @@ class FactorySimulatorService:
 
     def stop(self) -> None:
         """Gracefully stops the simulator and cleans up resources."""
+        if self._stopped:
+            return
+        self._stopped = True
         self.running = False
         self.publisher.close()
         logger.info("Factory Simulator stopped.")
@@ -158,6 +163,12 @@ def main() -> None:
         default=0,
         help="Number of ticks to run before exiting (0 for continuous)",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Optional random seed for deterministic simulation runs",
+    )
     args = parser.parse_args()
 
     service = FactorySimulatorService(
@@ -165,6 +176,7 @@ def main() -> None:
         dry_run=args.dry_run,
         inject_on_start=args.inject,
         scenario=args.scenario,
+        seed=args.seed,
     )
 
     loop = asyncio.new_event_loop()

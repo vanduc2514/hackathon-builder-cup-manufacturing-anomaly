@@ -23,6 +23,7 @@ class MqttPublisher:
         self.dry_run = dry_run
         self.client: Optional[Any] = None
         self.connected = False
+        self._closed = False
 
         if not self.dry_run and mqtt is not None:
             self._init_client()
@@ -102,12 +103,21 @@ class MqttPublisher:
             else:
                 logger.debug("[DISCONNECTED] Topic: %s | Payload: %s", topic, payload)
 
+    @property
+    def is_connected(self) -> bool:
+        """Returns True if the publisher is currently connected to an active broker."""
+        return self.connected
+
     def close(self) -> None:
         """Stops the network loop and disconnects the MQTT client."""
+        if self._closed:
+            return
+        self._closed = True
+        self.connected = False
         if self.client:
             try:
                 self.client.loop_stop()
                 self.client.disconnect()
             except Exception as exc:
                 logger.debug("Error while stopping MQTT client: %s", exc)
-        self.connected = False
+            self.client = None

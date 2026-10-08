@@ -40,6 +40,13 @@ class Blackboard:
         self._notify()
         return self._state
 
+    def set_repair_done(self, repair_done: bool = True) -> IncidentState:
+        update_dict = self._state.model_dump()
+        update_dict["repair_done"] = repair_done
+        self._state = IncidentState(**update_dict)
+        self._notify()
+        return self._state
+
     def add_finding(self, finding: AgentFinding) -> IncidentState:
         self._state.findings.append(finding)
         self._notify()

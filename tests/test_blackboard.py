@@ -36,3 +36,10 @@ def test_blackboard_status_transition():
     assert state.status == "investigating"
     assert state.suspect_machine == "CNC-02"
     assert state.suspect_tool == "T07"
+
+
+def test_blackboard_set_repair_done():
+    bb = Blackboard()
+    assert bb.get_state().repair_done is False
+    bb.set_repair_done(True)
+    assert bb.get_state().repair_done is True

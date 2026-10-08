@@ -42,3 +42,51 @@ def test_impact_metrics():
     )
     assert impact.scrap_avoided == 120
     assert impact.co2_kg == 15.0
+
+
+def test_incident_state_repair_done_default():
+    state = IncidentState()
+    assert state.repair_done is False
+
+
+def test_repair_checkpoint_schema():
+    from backend.core.models import RepairCheckpoint
+
+    cp = RepairCheckpoint(
+        step_number=4,
+        title_vi="Đo độ đảo",
+        instruction_vi="Dùng đồng hồ so rà độ đảo",
+        citation="Sổ tay CNC trang 112",
+        metric_name="Độ đảo",
+        target_threshold=0.005,
+        comparator="<=",
+        unit="mm",
+        is_verified=False,
+    )
+    assert cp.step_number == 4
+    assert cp.target_threshold == 0.005
+    assert cp.comparator == "<="
+    assert cp.is_verified is False
+
+
+def test_copilot_session_telemetry_schema():
+    from backend.core.models import CopilotSessionTelemetry, CopilotTurn
+
+    turn = CopilotTurn(
+        turn_id=1,
+        speaker="copilot",
+        message_vi="Xin chào kỹ thuật viên",
+        citation="OEM",
+    )
+    telemetry = CopilotSessionTelemetry(
+        session_id="VN-TEST-01",
+        incident_id="INC-0412",
+        machine_id="CNC-02",
+        checkpoints_total=5,
+        checkpoints_passed=1,
+        transcript=[turn],
+    )
+    assert telemetry.session_id == "VN-TEST-01"
+    assert telemetry.checkpoints_total == 5
+    assert len(telemetry.transcript) == 1
+    assert telemetry.repair_done is False

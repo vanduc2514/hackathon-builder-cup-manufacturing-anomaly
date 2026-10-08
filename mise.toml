@@ -137,6 +137,11 @@ run = "python -m simulator.main --inject"
 description = "Start factory simulator with IM-05 damp material defect pre-injected"
 run = "python -m simulator.main --inject --scenario im_damp_material"
 
+# Edge Gateway & Gemma Classifier Simulator
+[tasks."edge:sim"]
+description = "Run Gemma 3 on-prem edge frame classifier & noise filter simulator"
+run = "python -m backend.edge.simulator.run_sim --ticks 10"
+
 # =============================================================================
 # Docker
 # =============================================================================

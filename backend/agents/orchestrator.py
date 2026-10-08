@@ -23,7 +23,9 @@ from backend.agents import (
 )
 from backend.agents.workflow_nodes import (
     close_incident,
+    dismiss_incident,
     escalate_incident,
+    inspect_production,
     open_incident,
     rca_gate,
     record_detection,
@@ -55,9 +57,12 @@ resolution_join = JoinNode(name="resolution_join")
 incident_workflow = Workflow(
     name=WORKFLOW_NAME,
     edges=[
+        ("START", open_incident, inspect_production),
         (
-            "START",
-            open_incident,
+            inspect_production,
+            {"BREACH": agent_quality_inspector.agent, "NO_BREACH": dismiss_incident},
+        ),
+        (
             agent_quality_inspector.agent,
             record_detection,
             agent_traceability.agent,

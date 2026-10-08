@@ -13,6 +13,7 @@ export type IncidentStatus =
   | 'repairing'
   | 'verifying'
   | 'closed'
+  | 'dismissed'
   | 'escalated'
   | 'error';
 

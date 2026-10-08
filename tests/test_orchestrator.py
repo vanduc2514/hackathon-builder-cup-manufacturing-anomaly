@@ -18,6 +18,7 @@ from backend.agents import agent_quality_inspector
 from backend.agents.orchestrator import Orchestrator
 from backend.core.blackboard import blackboard
 from backend.core.models import DefectInjectionRequest, IncidentState, VerificationResult
+from simulator.injection_engine import injection_engine
 
 
 class FakeLlm(BaseLlm):
@@ -57,9 +58,12 @@ class FakeLlm(BaseLlm):
 @pytest.fixture(autouse=True)
 def clean_state():
     blackboard.reset()
+    injection_engine.reset()
+    injection_engine.inject_scenario_1_cnc_tool_wear()
     saved = LlmAgent._default_model
     yield
     LlmAgent._default_model = saved
+    injection_engine.reset()
     blackboard.reset()
 
 
@@ -95,6 +99,14 @@ def test_persistently_low_confidence_escalates_without_repair():
     assert _ids(state).count("RCA") == 3
     assert state.verification_count == 0
     assert "below" in state.status_reason
+
+
+def test_no_spc_breach_dismisses_without_investigation():
+    injection_engine.reset()
+    state = _run(FakeLlm())
+    assert state.status == "dismissed"
+    assert state.findings == []
+    assert "No SPC breach" in state.status_reason
 
 
 def test_failed_verification_reopens_once_then_escalates_never_closes(

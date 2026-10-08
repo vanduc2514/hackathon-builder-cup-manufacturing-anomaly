@@ -80,11 +80,29 @@ export interface IncidentState {
   root_cause: string | null;
   verification_count: number;
   verification_target: number;
+  repair_done?: boolean;
   approved: boolean;
   findings: AgentFinding[];
   impact: ImpactMetrics | null;
   documents: Record<string, unknown>;
   updated_at: string;
+}
+
+export type AndonPhaseKey = 'A' | 'B' | 'C' | 'D';
+export type AndonPhaseStatus = 'pending' | 'active' | 'completed' | 'escalated';
+
+export interface AndonPhaseDetails {
+  key: AndonPhaseKey;
+  letter: string;
+  name: string;
+  vietnameseName: string;
+  lampColor: 'red' | 'yellow' | 'blue' | 'green';
+  lampHex: string;
+  description: string;
+  activities: string[];
+  inputs: string[];
+  outputs: string[];
+  statuses: IncidentStatus[];
 }
 
 export interface DefectInjectionRequest {

@@ -1,3 +1,8 @@
+---
+config:
+  layout: elk
+  look: neo
+---
 flowchart TB
     %% ================= LAYER 1 - EDGE =================
     subgraph L1["LAYER 1 - FACTORY FLOOR (EDGE)"]
@@ -23,7 +28,7 @@ flowchart TB
 
     %% ================= LAYER 4 - AGENTS =================
     subgraph L4["LAYER 4 - AGENT TEAM (ADK)"]
-        ORCH["Orchestrator<br/>sequences the team A to B to C to D"]
+        ORCH["Orchestrator<br/>sequences the team A to B to C to D<br/>single entry & exit, sole board writer"]
         subgraph LA["A - Detect & Verify"]
             QA["Quality Inspector"]
         end
@@ -53,19 +58,20 @@ flowchart TB
     CAM & SENS & TAG --> GW
     GW -->|"defects only"| PS
     PS --> BQ
-    PS --> QA
-    TRC -->|"query topology"| BQ
-    ANL -->|"query telemetry"| BQ
-    RCA -->|"search RAG"| KB
-    COP -->|"search SOPs"| KB
-    ORCH <-->|"read / write state"| FS
-    QA & TRC & ANL & RCA & COP & DOC & LRN <-->|"shared state"| FS
+    PS -->|"defect / SPC event"| ORCH
+    BQ <-->|"query topology"| TRC
+    BQ <-->|"query telemetry"| ANL
+    KB <-->|"search RAG"| RCA
+    KB <-->|"search SOPs"| COP
+    FS <-->|"sole writer"| ORCH
+    ORCH -->|"board snapshot / returned draft"| QA & TRC & ANL & RCA & COP & DOC & LRN
 
     %% ================= HUMAN LOOP AND FEEDBACK =================
-    COP <-->|"diagnostic & repair guidance"| TECH
-    DOC --> LEAD --> OUT
-    LRN -->|"new knowledge"| KB
-    LRN --> OUT
+    COP <-->|"live voice + camera (only direct human channel)"| TECH
+    ORCH -->|"draft for approval"| LEAD
+    LEAD -->|"approval"| ORCH
+    ORCH --> OUT
+    ORCH -->|"new knowledge"| KB
 
     %% ================= STYLING =================
     classDef l1 fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20

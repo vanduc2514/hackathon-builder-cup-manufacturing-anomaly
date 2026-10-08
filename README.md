@@ -33,9 +33,9 @@ Three agents work in parallel:
 The **Technician Copilot** opens a Gemini Live multimodal session — voice plus camera — guiding the technician through the repair procedure in Vietnamese (or any configured language). The **Incident Scribe** simultaneously generates a draft 8D report and corrective work order for human review.
 
 **Phase D — Verification & Learning**
-The **Quality Inspector** holds the incident open until *N* consecutive products pass the inspection gate. On closure, the **Continuous Learning Agent** indexes the resolution into the vector knowledge base and publishes a sustainability impact card (scrap avoided, downtime saved, energy and CO₂ reduction).
+The Orchestrator has the **Quality Inspector** count post-repair products and holds the incident open until *N* consecutive products pass the inspection gate. On closure, the **Continuous Learning Agent** returns a knowledge entry and a sustainability impact card (scrap avoided, downtime saved, energy and CO₂ reduction), which the Orchestrator indexes into the vector knowledge base and publishes; the shift leader's approval goes back to the Orchestrator.
 
-**Shared state** flows through a **Blackboard** (Firestore-backed) that all agents read from and write to, exposed to the dashboard via Server-Sent Events (SSE).
+**Shared state** flows through a **Blackboard** (Firestore-backed) exposed to the dashboard via Server-Sent Events (SSE). The Orchestrator is the single entry and exit point: it receives every input (defect events, technician input, shift-leader approval), hands the board to the agent it calls, records the finding the agent returns, and is the only writer of the Blackboard.
 
 **Tech stack:** Python 3.11 · FastAPI · Google ADK · Gemini 2.0 · Gemma 3 Edge · Vertex AI Search · BigQuery / bigquery-emulator · Firestore · Pub/Sub · React + Vite + TypeScript
 
@@ -71,7 +71,16 @@ APP_ENV                        = "development"
 
 # Optional: target local BigQuery emulator for dev parity without GCP
 # BIGQUERY_EMULATOR_HOST       = "http://localhost:9050"
+
+# LLM provider for the ADK agents: "ollama" (local, default) or "gemini" (deploy)
+AI_PROVIDER                    = "ollama"
+OLLAMA_API_BASE                = "http://localhost:11434"  # read by LiteLLM
+# OLLAMA_MODEL                 = "gemma2:2b"            # default; must be pulled via `ollama pull`
+# GOOGLE_API_KEY               = "..."                  # required when AI_PROVIDER = "gemini"
+# GEMINI_MODEL                 = "gemini-flash-latest"  # default
 ```
+
+With `AI_PROVIDER=gemini` and no `GOOGLE_API_KEY`/`GEMINI_API_KEY`, the backend refuses to start.
 
 mise automatically merges `mise.local.toml` on top of `mise.toml` when you `cd` into the directory, so any task run via `mise run` will pick up these variables without extra shell exports.
 
@@ -80,8 +89,8 @@ Local development works without GCP credentials — start the local BigQuery emu
 ### 3. Run the full stack
 
 ```bash
-# Backend (FastAPI on :8000) + Frontend (Vite on :3000) in parallel
-mise run dev -j2
+# Backend (FastAPI :8000) + Frontend (Vite :3000) + ADK dev UI (:8001) in parallel
+mise run dev -j3
 ```
 
 Or run each side independently:
@@ -89,6 +98,7 @@ Or run each side independently:
 ```bash
 mise run backend    # FastAPI with auto-reload
 mise run frontend   # Vite dev server
+mise run adk-web    # ADK dev UI: incident workflow graph + per-node events (app "agents")
 ```
 
 ### 4. Trigger the demo
@@ -109,6 +119,7 @@ mise run seed           # seed mock BigQuery / Firestore data
 mise run emulator       # start local BigQuery emulator (:9050)
 mise run emulator:down  # stop BigQuery emulator
 mise run docker:up      # start full stack via docker compose
+adk run backend/agents '{}'  # run one incident workflow in the terminal
 ```
 
 ---

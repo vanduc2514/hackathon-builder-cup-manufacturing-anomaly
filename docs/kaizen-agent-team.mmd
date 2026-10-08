@@ -1,13 +1,18 @@
+---
+config:
+  layout: elk
+  look: neo
+---
 flowchart TB
     %% ---------- Orchestrator ----------
-    ORCH["ORCHESTRATOR AGENT (ADK)<br/>owns the incident lifecycle<br/>reads the board, decides who runs next"]
+    ORCH["ORCHESTRATOR AGENT (ADK)<br/>receives every input, opens the incident<br/>sole writer of the board, decides who runs next<br/>publishes every output"]
 
     %% ---------- Shared blackboard ----------
     BOARD[("SHARED INCIDENT STATE - Firestore blackboard<br/>every message = finding | evidence | confidence | citation")]
 
     %% ---------- Phase A ----------
     subgraph PHASE_A["Phase A - Detection & Gatekeeper"]
-        A1["1. QUALITY INSPECTOR<br/>defect type / location / severity + SPC<br/>opens incident & re-verifies N good products<br/>Gemma edge gateway + Gemini Vision"]
+        A1["1. QUALITY INSPECTOR<br/>defect type / location / severity + SPC<br/>classifies defect for the Orchestrator & re-verifies N good products<br/>Gemma edge gateway + Gemini Vision"]
     end
 
     %% ---------- Phase B ----------
@@ -20,7 +25,7 @@ flowchart TB
     %% ---------- Phase C ----------
     subgraph PHASE_C["Phase C - Resolution"]
         C1["5. TECHNICIAN COPILOT<br/>live voice + camera, step by step (Vietnamese)<br/>Phase B diagnostic check & Phase C repair<br/>Gemini Live API"]
-        C2["6. INCIDENT SCRIBE<br/>drafts work order / 8D report / SOP proposal<br/>drafts only - human approves<br/>Gemini + Firestore"]
+        C2["6. INCIDENT SCRIBE<br/>drafts work order / 8D report / SOP proposal<br/>drafts only - human approves<br/>Gemini"]
     end
 
     %% ---------- Phase D ----------
@@ -32,17 +37,11 @@ flowchart TB
     TECH["TECHNICIAN<br/>phone voice + camera"]
     LEAD["SHIFT LEADER / MANAGER<br/>final decision maker"]
 
-    %% ---------- Every agent reads and writes the shared board ----------
-    ORCH <--> BOARD
-    A1 <--> BOARD
-    B1 <--> BOARD
-    B2 <--> BOARD
-    B3 <--> BOARD
-    C1 <--> BOARD
-    C2 <--> BOARD
-    D1 <--> BOARD
+    %% ---------- Only the Orchestrator writes the board; agents return drafts ----------
+    ORCH <-->|"sole writer"| BOARD
 
     %% ---------- Orchestration order ----------
+    ORCH -->|"step 0 - classify defect / finding"| A1
     ORCH -->|"step 1 - sequential, mandatory"| B1
     ORCH -->|"step 2 - analyze telemetry window"| B2
     ORCH -->|"step 3 - synthesize root cause"| B3
@@ -59,11 +58,15 @@ flowchart TB
     A1 -.->|"verified: N consecutive good products"| ORCH
 
     %% ---------- Human-in-the-loop ----------
-    C1 <-->|"diagnostic checks & live repair guidance"| TECH
-    C2 -->|"draft awaiting approval"| LEAD
+    C1 <-->|"live voice + camera stream (only direct human channel)"| TECH
+    C1 -.->|"repair done / diagnostic evidence"| ORCH
+    C2 -.->|"draft"| ORCH
+    ORCH -->|"draft awaiting approval"| LEAD
+    LEAD -->|"approval"| ORCH
 
     %% ---------- Learning feedback loop ----------
-    D1 -->|"new knowledge entry"| B3
+    D1 -.->|"knowledge entry + impact draft"| ORCH
+    ORCH -->|"new knowledge entry for RCA"| B3
 
     %% ---------- Styling ----------
     classDef orch fill:#4A148C,stroke:#311B92,color:#FFFFFF

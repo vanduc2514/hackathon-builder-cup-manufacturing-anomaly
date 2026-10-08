@@ -39,6 +39,30 @@ class ManufacturingBenchmark(BaseModel):
     downtime_cost_per_hour_usd: float = 0.0
 
 
+class FindingDraft(BaseModel):
+    """LLM output contract for one agent finding (confidence clamped by the orchestrator)."""
+
+    finding: str = Field(description="One-sentence finding.")
+    evidence: str = Field(description="Concrete evidence supporting the finding.")
+    confidence: float = Field(description="0.0-1.0")
+    citation: str = Field(description="Source of the evidence.")
+
+
+class ScribeDraft(FindingDraft):
+    """Incident Scribe output: a finding plus the generated documents."""
+
+    work_order: str = Field(description="Work order text.")
+    report_8d: str = Field(description="8D report summary.")
+    sop_proposal: str = Field(description="SOP revision proposal.")
+
+
+class VerificationResult(BaseModel):
+    """Post-repair conveyor verification outcome."""
+
+    good_streak: int
+    defect_rate: float
+
+
 class ImpactMetrics(BaseModel):
     """Environmental, operational, and financial savings per incident."""
 
@@ -116,7 +140,10 @@ class TelemetryAlert(BaseModel):
 
 class IncidentState(BaseModel):
     incident_id: str = "INC-0412"
-    status: str = "normal"  # normal, detecting, tracing, investigating, analyzing, repairing, verifying, closed
+    # normal, detecting, tracing, investigating, analyzing, awaiting_evidence, repairing,
+    # verifying, closed, escalated, error
+    status: str = "normal"
+    status_reason: Optional[str] = None  # escalation or error reason
     defect_type: Optional[str] = None
     defect_rate: float = 0.005
     spc_ucl: float = 0.030
@@ -126,6 +153,7 @@ class IncidentState(BaseModel):
     verification_count: int = 0
     verification_target: int = 50
     repair_done: bool = False
+    approved: bool = False  # shift-leader sign-off, recorded by the Orchestrator after close
     findings: List[AgentFinding] = Field(default_factory=list)
     impact: Optional[ImpactMetrics] = None
     documents: Dict[str, Any] = Field(default_factory=dict)
@@ -135,6 +163,8 @@ class IncidentState(BaseModel):
 
 
 class DefectInjectionRequest(BaseModel):
+    """Defect signal the Orchestrator receives to open an incident (demo inject; edge/SPC later)."""
+
     scenario: str = Field(
         default="cnc_tool_wear",
         description="Anomaly scenario: 'cnc_tool_wear' or 'im_damp_material'",
@@ -155,6 +185,7 @@ class DefectInjectionRequest(BaseModel):
         default="medium",
         description="Severity level: low, medium, high",
     )
+    defect_rate: float = 0.077
     machine_id: str = Field(
         default="CNC-02",
         description="Target machine identifier",

@@ -9,9 +9,12 @@ export type IncidentStatus =
   | 'tracing'
   | 'investigating'
   | 'analyzing'
+  | 'awaiting_evidence'
   | 'repairing'
   | 'verifying'
-  | 'closed';
+  | 'closed'
+  | 'escalated'
+  | 'error';
 
 export interface AgentFinding {
   agent_id: string;
@@ -68,6 +71,7 @@ export interface ImpactCalculationRequest {
 export interface IncidentState {
   incident_id: string;
   status: IncidentStatus;
+  status_reason: string | null;
   defect_type: string | null;
   defect_rate: number;
   spc_ucl: number;
@@ -76,6 +80,7 @@ export interface IncidentState {
   root_cause: string | null;
   verification_count: number;
   verification_target: number;
+  approved: boolean;
   findings: AgentFinding[];
   impact: ImpactMetrics | null;
   documents: Record<string, unknown>;
@@ -85,6 +90,7 @@ export interface IncidentState {
 export interface DefectInjectionRequest {
   defect_type: string;
   severity: 'low' | 'medium' | 'high';
+  defect_rate: number;
   machine_id: string;
   tool_id: string;
 }

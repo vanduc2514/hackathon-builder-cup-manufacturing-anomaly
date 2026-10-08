@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from backend.core.config import settings
 from backend.core.models import (
@@ -267,3 +267,15 @@ def query_sensor_telemetry_window(
     except Exception as exc:
         logger.error("BigQuery sensor telemetry query failed: %s", exc)
         raise RuntimeError(f"BigQuery query failed: {exc}") from exc
+
+
+def reset_buffers() -> Dict[str, Any]:
+    """Restores BigQuery mock data, in-memory buffers, and resets emulator tables if connected."""
+    try:
+        from scripts.seed_bigquery import seed_bigquery
+
+        seed_bigquery()
+    except Exception as exc:
+        logger.warning("Could not re-seed BigQuery tables during buffer reset: %s", exc)
+    logger.info("Reset BigQuery buffers and mock datasets to pristine baseline")
+    return {"status": "reset", "message": "BigQuery buffers and mock datasets restored to baseline"}

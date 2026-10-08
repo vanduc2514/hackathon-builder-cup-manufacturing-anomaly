@@ -86,10 +86,44 @@ class IncidentState(BaseModel):
 
 
 class DefectInjectionRequest(BaseModel):
-    defect_type: str = "scratch_vertical"
-    severity: str = "medium"
-    machine_id: str = "CNC-02"
-    tool_id: str = "T07"
+    scenario: str = Field(
+        default="cnc_tool_wear",
+        description="Anomaly scenario: 'cnc_tool_wear' or 'im_damp_material'",
+    )
+    mode: str = Field(
+        default="demo",
+        description="Timing mode: 'demo' (90s deterministic envelope) or 'fast' (~8s fast-forward)",
+    )
+    duration_seconds: Optional[float] = Field(
+        default=None,
+        description="Explicit duration override in seconds",
+    )
+    defect_type: Optional[str] = Field(
+        default="scratch_vertical",
+        description="Defect classification type",
+    )
+    severity: str = Field(
+        default="medium",
+        description="Severity level: low, medium, high",
+    )
+    machine_id: str = Field(
+        default="CNC-02",
+        description="Target machine identifier",
+    )
+    tool_id: str = Field(
+        default="T07",
+        description="Target cutting tool or mold cavity identifier",
+    )
+
+
+class SimulationStatusResponse(BaseModel):
+    status: str
+    active_scenario: Optional[str] = None
+    mode: Optional[str] = None
+    target_machine: Optional[str] = None
+    target_tool: Optional[str] = None
+    elapsed_seconds: Optional[float] = None
+    total_seconds: Optional[float] = None
 
 
 class SuspectCorrelation(BaseModel):

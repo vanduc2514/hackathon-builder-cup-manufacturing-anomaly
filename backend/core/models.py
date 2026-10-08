@@ -1,11 +1,12 @@
-"""Core Models: Pydantic schemas for findings, evidence, confidence, citations, and incident state."""
+"""Core Models: Pydantic schemas for findings, evidence, confidence, citations, incident state, and Gemini Live streaming."""
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class AgentFinding(BaseModel):
@@ -68,6 +69,51 @@ class ImpactCalculationRequest(BaseModel):
     downtime_cost_per_hour_usd: Optional[float] = None
 
 
+class MachineTelemetryPayload(BaseModel):
+    """Real-time machine sensor packet ingested from edge MQTT broker."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    machine_id: str
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    tool_id: Optional[str] = None
+    operating_status: str = Field(default="NORMAL")  # NORMAL, WARNING, ALARM
+    spindle_vibration: float = Field(
+        default=0.0,
+        validation_alias=AliasChoices("spindle_vibration", "vibration_mm_s"),
+        description="Spindle vibration in mm/s",
+    )
+    spindle_temp: float = Field(
+        default=0.0,
+        validation_alias=AliasChoices("spindle_temp", "temperature_c"),
+        description="Spindle bearing temperature in Celsius",
+    )
+    motor_current: float = Field(
+        default=0.0,
+        validation_alias=AliasChoices("motor_current", "current_a"),
+        description="Motor current in Amperes",
+    )
+    rpm: int = Field(
+        default=0,
+        validation_alias=AliasChoices("rpm", "spindle_speed_rpm"),
+        description="Spindle rotational speed",
+    )
+    anomaly_score: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+class TelemetryAlert(BaseModel):
+    """Alert record created when incoming telemetry exceeds anomaly thresholds."""
+
+    machine_id: str
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    anomaly_score: float
+    operating_status: str
+    metric_name: str
+    metric_value: float
+    threshold: float
+    message: str
+
+
 class IncidentState(BaseModel):
     incident_id: str = "INC-0412"
     status: str = "normal"  # normal, detecting, tracing, investigating, analyzing, repairing, verifying, closed
@@ -83,6 +129,8 @@ class IncidentState(BaseModel):
     findings: List[AgentFinding] = Field(default_factory=list)
     impact: Optional[ImpactMetrics] = None
     documents: Dict[str, Any] = Field(default_factory=dict)
+    latest_telemetry: Optional[MachineTelemetryPayload] = None
+    telemetry_alerts: List[TelemetryAlert] = Field(default_factory=list)
     updated_at: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
 
 
@@ -276,6 +324,158 @@ class StreakVerificationResult(BaseModel):
         default=False, description="True if a defect occurred during verification, resetting streak"
     )
     message: str = Field(description="Status description")
+
+
+class BoundingBox(BaseModel):
+    """Normalized bounding box coordinates [ymin, xmin, ymax, xmax] between 0.0 and 1.0."""
+
+    ymin: float = Field(ge=0.0, le=1.0, description="Top edge normalized coordinate")
+    xmin: float = Field(ge=0.0, le=1.0, description="Left edge normalized coordinate")
+    ymax: float = Field(ge=0.0, le=1.0, description="Bottom edge normalized coordinate")
+    xmax: float = Field(ge=0.0, le=1.0, description="Right edge normalized coordinate")
+
+    def to_list(self) -> List[float]:
+        return [self.ymin, self.xmin, self.ymax, self.xmax]
+
+    @property
+    def area(self) -> float:
+        return max(0.0, self.ymax - self.ymin) * max(0.0, self.xmax - self.xmin)
+
+
+class InspectionFrame(BaseModel):
+    """Raw visual inspection snapshot event from conveyor optical station."""
+
+    product_id: str
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    machine_id: str
+    tool_id: str
+    lot_id: str = "AL-5083-B4"
+    camera_id: str = "CAM-LINE01-EOL"
+    status: Optional[str] = None
+    defect_type: Optional[str] = None
+    image_token: Optional[str] = None
+    image_bytes_b64: Optional[str] = None
+    cavity_id: Optional[int] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class EdgeClassificationResult(BaseModel):
+    """High-speed pass/fail classification and bounding box from Gemma 3 edge model."""
+
+    is_defect: bool
+    defect_type: Optional[str] = None
+    confidence: float = Field(default=0.98, ge=0.0, le=1.0)
+    uncertainty: float = Field(default=0.02, ge=0.0, le=1.0)
+    bounding_box: Optional[BoundingBox] = None
+    inference_time_ms: float = Field(default=0.0, ge=0.0)
+    model_name: str = "gemma-3-2b-edge"
+    operating_mode: str = "heuristic"  # heuristic, ollama, dataset_playback
+    diverter_actuated: bool = False
+    raw_explanation: Optional[str] = None
+
+
+class FilteredFramePacket(BaseModel):
+    """Edge metrology packet forwarded to cloud Quality Inspector when defect or uncertain."""
+
+    frame_hash: str = Field(description="SHA-256 hash of frame attributes for audit provenance")
+    camera_id: str
+    product_id: str
+    machine_id: str
+    tool_id: str
+    lot_id: str
+    conveyor_timestamp: str
+    classification: str = Field(description="PASS, DEFECT, or UNCERTAIN")
+    is_defect: bool
+    defect_type: Optional[str] = None
+    confidence: float = Field(ge=0.0, le=1.0)
+    uncertainty: float = Field(ge=0.0, le=1.0)
+    bounding_box: Optional[BoundingBox] = None
+    filter_decision: str = Field(description="FORWARD or DROP")
+    diverter_actuated: bool = False
+    image_token: Optional[str] = None
+    cavity_id: Optional[int] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class EdgeFilterStatistics(BaseModel):
+    """Performance and bandwidth reduction telemetry from edge noise filtering."""
+
+    total_frames_evaluated: int = 0
+    pass_frames_dropped: int = 0
+    defect_frames_forwarded: int = 0
+    uncertain_frames_forwarded: int = 0
+    audit_sampled_forwarded: int = 0
+    total_frames_forwarded: int = 0
+    drop_ratio: float = 0.0
+    cloud_bandwidth_reduction_pct: float = 0.0
+    estimated_bandwidth_saved_mb: float = 0.0
+
+
+class GeminiLiveModality(str, Enum):
+    AUDIO = "AUDIO"
+    TEXT = "TEXT"
+
+
+class GeminiLiveBlob(BaseModel):
+    mime_type: str = "audio/pcm;rate=16000"
+    data: str  # Base64 encoded payload
+
+
+class GeminiLiveRealtimeInput(BaseModel):
+    media_chunks: List[GeminiLiveBlob] = Field(default_factory=list)
+
+
+class GeminiLiveClientContent(BaseModel):
+    text: Optional[str] = None
+    end_of_turn: bool = True
+
+
+class GeminiLiveSetup(BaseModel):
+    model: str = "gemini-2.0-flash-exp"
+    voice_name: str = "Aoede"
+    language_code: str = "vi-VN"
+    system_instruction: Optional[str] = None
+    session_id: Optional[str] = None
+    mode: str = "live"  # "live" or "simulation"
+    session_resumption_handle: Optional[str] = None
+
+
+class GeminiLiveClientMessage(BaseModel):
+    setup: Optional[GeminiLiveSetup] = None
+    realtime_input: Optional[GeminiLiveRealtimeInput] = None
+    client_content: Optional[GeminiLiveClientContent] = None
+    interrupt: bool = False
+    message_index: Optional[int] = None
+
+
+class GeminiLiveServerContent(BaseModel):
+    text: Optional[str] = None
+    audio_pcm_base64: Optional[str] = None
+    input_transcription: Optional[str] = None
+    output_transcription: Optional[str] = None
+    interrupted: bool = False
+    turn_complete: bool = False
+    generation_complete: bool = False
+
+
+class GeminiLiveServerMessage(BaseModel):
+    type: str  # "setup_complete", "server_content", "session_resumption_update", "go_away", "error", "pong"
+    session_id: Optional[str] = None
+    server_content: Optional[GeminiLiveServerContent] = None
+    resumption_handle: Optional[str] = None
+    last_consumed_client_message_index: Optional[int] = None
+    error_message: Optional[str] = None
+    timestamp: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
+
+
+class GeminiLiveSessionStatus(BaseModel):
+    session_id: str
+    status: str  # "active", "resumed", "closed", "simulated"
+    mode: str  # "live", "simulation"
+    client_messages_received: int = 0
+    server_messages_sent: int = 0
+    created_at: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
+    last_active_at: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
 
 
 class RepairCheckpoint(BaseModel):

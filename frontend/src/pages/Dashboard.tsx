@@ -5,6 +5,9 @@ import AndonPhaseTracker from '../components/AndonPhaseTracker';
 import ProductionLine from '../components/ProductionLine';
 import SpcChart from '../components/SpcChart';
 import TelemetryChart from '../components/TelemetryChart';
+import RootCauseCard from '../components/RootCauseCard';
+import Report8DCard from '../components/Report8DCard';
+import ImpactCard from '../components/ImpactCard';
 import IncidentStream from '../components/IncidentStream';
 import DemoController from '../components/DemoController';
 
@@ -62,6 +65,27 @@ export default function Dashboard({ incident }: DashboardProps): React.ReactElem
         suspectMachine={incident?.suspect_machine ?? null}
       />
       <SpcChart defectRate={incident?.defect_rate ?? 0.005} ucl={incident?.spc_ucl ?? 0.03} />
+
+      {/* 5-Whys Root Cause Deduction & Knowledge Base Citations */}
+      <RootCauseCard
+        rootCause={incident?.root_cause ?? null}
+        suspectMachine={incident?.suspect_machine ?? null}
+        suspectTool={incident?.suspect_tool ?? null}
+        findings={incident?.findings ?? []}
+      />
+
+      {/* 8D Incident Report & Shift Leader Approval Sign-off */}
+      <Report8DCard
+        incidentId={incident?.incident_id ?? 'INC-0412'}
+        status={incident?.status ?? 'normal'}
+        approved={incident?.approved ?? false}
+        documents={incident?.documents}
+        findings={incident?.findings ?? []}
+      />
+
+      {/* Sustainability & Avoided Scrap Impact */}
+      <ImpactCard impact={incident?.impact ?? null} />
+
       <IncidentStream findings={incident?.findings ?? []} />
     </div>
   );

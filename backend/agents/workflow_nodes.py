@@ -207,14 +207,15 @@ async def record_resolution(node_input: dict) -> IncidentState:
     _record(agent_incident_scribe, scribe)
     # Simulated plant: the completed repair restores the line before post-repair inspection.
     injection_engine.set_verification_recovery()
+    blackboard.set_repair_done(True)
     blackboard.update_status(
         "verifying",
+        repair_done=True,
         documents={
             "work_order": scribe.work_order,
             "report_8d": scribe.report_8d,
             "sop_proposal": scribe.sop_proposal,
         },
-        repair_done=True,
     )
     return blackboard.get_state()
 

@@ -25,6 +25,14 @@ class MockRow:
             setattr(self, k, v)
 
 
+def _query_params(call) -> dict:
+    """Maps query parameter names to values from a recorded client.query call."""
+    return {
+        p.name: p.values if hasattr(p, "values") else p.value
+        for p in call.kwargs["job_config"].query_parameters
+    }
+
+
 def test_get_bigquery_client_emulator():
     """Test BigQuery client creation with emulator endpoint and AnonymousCredentials."""
     with (
@@ -160,9 +168,14 @@ def test_query_traceability_topology_with_product_ids_and_timestamps():
         )
 
         executed_sql = mock_client.query.call_args_list[0][0][0]
-        assert "product_id IN ('PRD-1004', 'PRD-1005')" in executed_sql
-        assert "timestamp >= TIMESTAMP('2026-10-05T09:30:00Z')" in executed_sql
-        assert "timestamp <= TIMESTAMP('2026-10-05T10:00:00Z')" in executed_sql
+        assert "product_id IN UNNEST(@product_ids)" in executed_sql
+        assert "timestamp >= @start_time" in executed_sql
+        assert "timestamp <= @end_time" in executed_sql
+        assert "PRD-1004" not in executed_sql
+        params = _query_params(mock_client.query.call_args_list[0])
+        assert params["product_ids"] == ["PRD-1004", "PRD-1005"]
+        assert params["start_time"].isoformat() == "2026-10-05T09:30:00+00:00"
+        assert params["end_time"].isoformat() == "2026-10-05T10:00:00+00:00"
 
 
 def test_query_traceability_topology_failure_raises_runtime_error():
@@ -244,9 +257,63 @@ def test_query_sensor_telemetry_window_anomaly_spike():
 
         # Verify executed query contains timestamp boundaries
         executed_sql = mock_client.query.call_args[0][0]
-        assert "machine_id = 'CNC-02'" in executed_sql
-        assert "timestamp >= TIMESTAMP('2026-10-05T09:30:00Z')" in executed_sql
-        assert "timestamp <= TIMESTAMP('2026-10-05T10:00:00Z')" in executed_sql
+        assert "machine_id = @machine_id" in executed_sql
+        assert "timestamp >= @start_time" in executed_sql
+        assert "timestamp <= @end_time" in executed_sql
+        params = _query_params(mock_client.query.call_args)
+        assert params["machine_id"] == "CNC-02"
+        assert params["start_time"].isoformat() == "2026-10-05T09:30:00+00:00"
+
+
+def test_query_sensor_telemetry_window_clock_bounds():
+    """HH:MM start/end (as LLMs often pass) filter by time of day instead of invalid TIMESTAMP()."""
+    mock_client = MagicMock()
+    mock_client.project = "kaizen-local"
+    mock_client.query.return_value.result.return_value = []
+
+    with patch("backend.tools.bigquery_tool.get_bigquery_client", return_value=mock_client):
+        query_sensor_telemetry_window(machine_id="CNC-02", start_time="09:00", end_time="10:00")
+
+    executed_sql = mock_client.query.call_args[0][0]
+    assert "FORMAT_TIMESTAMP('%H:%M', timestamp) >= @start_time" in executed_sql
+    assert "FORMAT_TIMESTAMP('%H:%M', timestamp) <= @end_time" in executed_sql
+    assert _query_params(mock_client.query.call_args)["start_time"] == "09:00"
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"start_time": "9h"},
+        {"end_time": "2026-10-05T10:00:00Z' OR '1'='1"},
+        {"time_window": "30 MINUTE); DROP TABLE sensor_telemetry; --"},
+        {"time_window": "09:00-10:00' OR '1'='1"},
+    ],
+)
+def test_query_sensor_telemetry_window_rejects_malformed_time(kwargs):
+    """Malformed time arguments raise ValueError before any query is sent."""
+    mock_client = MagicMock()
+    with patch("backend.tools.bigquery_tool.get_bigquery_client", return_value=mock_client):
+        with pytest.raises(ValueError):
+            query_sensor_telemetry_window(machine_id="CNC-02", **kwargs)
+    mock_client.query.assert_not_called()
+
+
+def test_query_sensor_telemetry_window_machine_id_is_bound_parameter():
+    """machine_id never reaches the SQL text, so quotes cannot alter the query."""
+    mock_client = MagicMock()
+    mock_client.project = "kaizen-local"
+    mock_client.query.return_value.result.return_value = []
+    hostile = "CNC-02' OR '1'='1"
+
+    with patch("backend.tools.bigquery_tool.get_bigquery_client", return_value=mock_client):
+        query_sensor_telemetry_window(machine_id=hostile, time_window="30 MINUTE")
+
+    executed_sql = mock_client.query.call_args[0][0]
+    assert hostile not in executed_sql
+    params = _query_params(mock_client.query.call_args)
+    assert params["machine_id"] == hostile
+    assert params["window_count"] == 30
+    assert "INTERVAL @window_count MINUTE" in executed_sql
 
 
 def test_query_sensor_telemetry_window_failure_raises_runtime_error():

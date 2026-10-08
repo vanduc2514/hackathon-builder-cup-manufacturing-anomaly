@@ -4,14 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Optional
 
 from google.adk import Agent
 
 from backend.core.models import (
     FindingDraft,
-    SensorBaseline,
-    SensorMetrics,
     SensorTelemetryWindowResponse,
 )
 from backend.tools.bigquery_tool import query_sensor_telemetry_window
@@ -24,53 +21,22 @@ PHASE = "Phase B - Sensor Analysis"
 
 CITATION = "BigQuery machine_telemetry_5s 09:00-10:00"
 
-def load_mock_sensor_telemetry(machine_id: str, time_window: Optional[str] = None) -> SensorTelemetryWindowResponse:
-    """Returns mock sensor telemetry showing a 35% vibration and 12% current rise."""
-    # Baseline: vibration=1.5, temperature=40.0, current=12.0
-    # +35% vibration = 1.5 * 1.35 = 2.025 (~2.03)
-    # +12% current = 12.0 * 1.12 = 13.44 (~13.4)
-    # temp steady at 42C
-    metrics = SensorMetrics(
-        min_vibration=1.80,
-        max_vibration=2.50,
-        avg_vibration=2.03,
-        std_vibration=0.15,
-        avg_temperature=42.0,
-        avg_current=13.4,
-        sample_count=120,
-    )
-    baseline = SensorBaseline(vibration=1.5, temperature=40.0, current=12.0)
-
-    return SensorTelemetryWindowResponse(
-        source="mock_telemetry",
-        machine_id=machine_id,
-        time_window=time_window or "09:00-10:00",
-        metrics=metrics,
-        baseline=baseline,
-        anomaly_detected=True,
-    )
 
 async def analyze_machine_telemetry(
     machine_id: str,
-    time_window: Optional[str] = "09:00-10:00",
-    start_time: Optional[str] = None,
-    end_time: Optional[str] = None,
+    time_window: str | None = "09:00-10:00",
+    start_time: str | None = None,
+    end_time: str | None = None,
 ) -> SensorTelemetryWindowResponse:
-    """Queries continuous sensor telemetry; seamlessly falls back to mock dataset when BigQuery is offline."""
-    try:
-        return await asyncio.to_thread(
-            query_sensor_telemetry_window,
-            machine_id=machine_id,
-            start_time=start_time,
-            end_time=end_time,
-            time_window=time_window,
-        )
-    except Exception as exc:
-        logger.warning(
-            "BigQuery telemetry query unavailable (%s); falling back to mock dataset",
-            exc,
-        )
-        return load_mock_sensor_telemetry(machine_id=machine_id, time_window=time_window)
+    """Queries continuous sensor telemetry directly from BigQuery."""
+    return await asyncio.to_thread(
+        query_sensor_telemetry_window,
+        machine_id=machine_id,
+        start_time=start_time,
+        end_time=end_time,
+        time_window=time_window,
+    )
+
 
 INSTRUCTION = (
     "You are the Process Analyst Agent of the Kaizen Agent manufacturing incident team. "

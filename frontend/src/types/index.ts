@@ -17,6 +17,21 @@ export type IncidentStatus =
   | 'escalated'
   | 'error';
 
+export interface FiveWhysStep {
+  level: number;
+  why: string;
+  answer: string;
+  evidence?: string;
+  citation?: string;
+}
+
+export interface IshikawaFactor {
+  category: string;
+  factor: string;
+  is_causal: boolean;
+  detail?: string;
+}
+
 export interface AgentFinding {
   agent_id: string;
   agent_name: string;
@@ -26,6 +41,18 @@ export interface AgentFinding {
   confidence: number;
   citation: string;
   timestamp: string;
+  five_whys?: FiveWhysStep[];
+  ishikawa?: Record<string, string[]>;
+}
+
+export interface RootCauseFindingDraft {
+  finding: string;
+  evidence: string;
+  confidence: number;
+  citation: string;
+  five_whys?: FiveWhysStep[];
+  ishikawa?: Record<string, string[]>;
+  diagnostic_request?: string;
 }
 
 export interface CitationReference {

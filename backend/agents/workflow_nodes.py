@@ -26,6 +26,7 @@ from backend.core.models import (
     ImpactMetrics,
     IncidentState,
     QualityInspectionReport,
+    RootCauseFindingDraft,
     ScribeDraft,
     VerificationResult,
 )
@@ -50,6 +51,8 @@ def _record(agent: ModuleType, draft: FindingDraft, phase: str | None = None) ->
             evidence=draft.evidence,
             confidence=min(1.0, max(0.0, draft.confidence)),
             citation=draft.citation,
+            five_whys=getattr(draft, "five_whys", None),
+            ishikawa=getattr(draft, "ishikawa", None),
         )
     )
 
@@ -170,7 +173,7 @@ async def record_process_analysis(node_input: FindingDraft) -> IncidentState:
     return blackboard.get_state()
 
 
-async def rca_gate(ctx: Context, node_input: FindingDraft) -> Event:
+async def rca_gate(ctx: Context, node_input: RootCauseFindingDraft) -> Event:
     """Routes on root-cause confidence: repair, gather field evidence, or escalate."""
     _record(agent_root_cause, node_input)
     confidence = node_input.confidence

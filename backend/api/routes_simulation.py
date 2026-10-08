@@ -1,29 +1,87 @@
 """API Routes: Simulation controls and defect injection trigger."""
 
+from __future__ import annotations
+
+from typing import Any, Dict
+
 from fastapi import APIRouter, HTTPException
 
 from backend.agents.orchestrator import orchestrator
-from backend.core.models import DefectInjectionRequest
+from backend.core.models import DefectInjectionRequest, SimulationStatusResponse
+from backend.tools.bigquery_tool import reset_buffers
+from simulator.injection_engine import injection_engine
 
 router = APIRouter(prefix="/api/simulation", tags=["simulation"])
 
+# Scenario 2 trigger values used when the caller leaves the CNC defaults untouched.
+_IM_DAMP_MATERIAL_DEFAULTS: Dict[str, Any] = {
+    "machine_id": "IM-05",
+    "tool_id": "MOLD-03",
+    "defect_type": "short_fill",
+    "defect_rate": 0.081,
+}
+
+
+def _resolve_trigger(req: DefectInjectionRequest) -> DefectInjectionRequest:
+    """Fills scenario-specific machine/tool/defect values the caller did not set."""
+    if req.scenario != "im_damp_material":
+        return req
+    unset = {k: v for k, v in _IM_DAMP_MATERIAL_DEFAULTS.items() if k not in req.model_fields_set}
+    return req.model_copy(update=unset)
+
 
 @router.post("/inject")
-async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()):
-    """Triggers defect injection and starts the ADK orchestrator incident workflow."""
-    if not orchestrator.start_incident(req):
+async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) -> Dict[str, Any]:
+    """Injects the scenario's defect burst into the simulator and starts the incident workflow."""
+    if orchestrator.is_running:
         raise HTTPException(status_code=409, detail="An incident workflow is already running")
+
+    trigger = _resolve_trigger(req)
+    if trigger.scenario == "im_damp_material":
+        burst = injection_engine.inject_scenario_2_im_damp_material(
+            machine_id=trigger.machine_id, tool_id=trigger.tool_id
+        )
+        message = (
+            f"Scenario 2 defect burst injected: {trigger.machine_id} mold cavity #3 short fill "
+            "& sink marks, dryer dew point rising to -18°C. ADK orchestrator workflow started."
+        )
+    else:
+        burst = injection_engine.inject_scenario_1_cnc_tool_wear(
+            machine_id=trigger.machine_id, tool_id=trigger.tool_id
+        )
+        message = (
+            f"Scenario 1 defect burst injected: {trigger.machine_id}/{trigger.tool_id} spindle "
+            "vibration spike (+35%) and vertical scratches. ADK orchestrator workflow started."
+        )
+
+    orchestrator.start_incident(trigger)
     return {
         "status": "triggered",
-        "defect_type": req.defect_type,
-        "target_machine": req.machine_id,
-        "target_tool": req.tool_id,
-        "message": "Defect injected. ADK orchestrator workflow started.",
+        "scenario": trigger.scenario,
+        "mode": trigger.mode,
+        "defect_type": trigger.defect_type,
+        "target_machine": trigger.machine_id,
+        "target_tool": trigger.tool_id,
+        "burst_telemetry": burst,
+        "message": message,
     }
 
 
 @router.post("/reset")
-async def reset_simulation():
-    """Cancels any running incident workflow and resets the blackboard to normal baseline."""
+async def reset_simulation() -> Dict[str, Any]:
+    """Cancels the running workflow, then restores the Blackboard, simulator and BigQuery buffers."""
     state = await orchestrator.reset()
-    return {"status": "reset", "message": "Simulation reset to normal baseline", "state": state}
+    injection_engine.reset()
+    bq_reset = reset_buffers()
+    return {
+        "status": "reset",
+        "message": "Simulation reset to pristine baseline (Blackboard, Simulator, and BigQuery buffers restored)",
+        "state": state,
+        "bigquery": bq_reset,
+    }
+
+
+@router.get("/status", response_model=SimulationStatusResponse)
+async def get_simulation_status() -> SimulationStatusResponse:
+    """Returns the running incident trigger and elapsed time."""
+    return orchestrator.status()

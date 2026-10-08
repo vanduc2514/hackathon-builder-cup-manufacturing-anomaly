@@ -66,4 +66,5 @@ class Settings(BaseSettings):
             raise ValueError("AI_PROVIDER=gemini requires GOOGLE_API_KEY")
         return self
 
+
 settings = Settings()

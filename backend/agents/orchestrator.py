@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
 from google.adk import Workflow
 from google.adk.agents import LlmAgent
@@ -37,7 +38,7 @@ from backend.agents.workflow_nodes import (
 )
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
-from backend.core.models import DefectInjectionRequest, IncidentState
+from backend.core.models import DefectInjectionRequest, IncidentState, SimulationStatusResponse
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,8 @@ class Orchestrator:
         self._step_delay = step_delay
         self._task: asyncio.Task | None = None
         self._abort: asyncio.Event | None = None
+        self._trigger: DefectInjectionRequest | None = None
+        self._started_at: float | None = None
 
     @property
     def is_running(self) -> bool:
@@ -113,6 +116,8 @@ class Orchestrator:
         if self.is_running:
             return False
         self._abort = asyncio.Event()
+        self._trigger = trigger
+        self._started_at = time.monotonic()
         self._task = asyncio.create_task(self.run_incident(trigger, self._abort))
         return True
 
@@ -153,6 +158,25 @@ class Orchestrator:
         finally:
             self._task = None
             self._abort = None
+            self._trigger = None
+            self._started_at = None
+
+    def status(self) -> SimulationStatusResponse:
+        """Reports the last started trigger; elapsed time only while the workflow runs."""
+        trigger = self._trigger
+        running = self.is_running
+        return SimulationStatusResponse(
+            status="running" if running else "idle",
+            active_scenario=trigger.scenario if trigger else None,
+            mode=trigger.mode if trigger else None,
+            target_machine=trigger.machine_id if trigger else None,
+            target_tool=trigger.tool_id if trigger else None,
+            elapsed_seconds=(
+                round(time.monotonic() - self._started_at, 2)
+                if running and self._started_at is not None
+                else None
+            ),
+        )
 
     def approve(self) -> IncidentState | None:
         """Records shift-leader approval; only a verified-closed, not-yet-approved incident qualifies."""

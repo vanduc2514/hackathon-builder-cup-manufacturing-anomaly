@@ -136,24 +136,29 @@ export default function SpcChart({ bars, ucl }: SpcChartProps): React.ReactEleme
 
 ## Google Drive Source
 
-The team's competition documents are stored in Google Drive:
+The team's competition documents are stored in external Google Drive and accessed directly via the `backend/tools/gdrive_tool.py` connector:
 
 - **Folder:** `💻 Competition | AI Builder Cup`
 - **Remote:** `gdrive` (configured via `mise run drive:auth`)
-- **Local Mirror:** `data/knowledge_base/drive/AI Builder Cup/`
+- **Local Cache:** `.cache/gdrive/` (gitignored; no checked-in repository copies)
 
-### Retrieving Content
+### Retrieving and Streaming Content
 
-Fetch content from the default folder using the mise task:
+Kaizen connects to Google Drive directly without committing knowledge base files to git.
 
+Stream a remote file directly:
 ```bash
-mise run drive:pull "💻 Competition | AI Builder Cup"
+mise run drive:stream "knowledge base/MDS-EEH Series Instruction Manual.pdf"
 ```
 
-Or using `rclone` directly:
-
+Sync external knowledge base docs to local cache for indexing:
 ```bash
-mise exec -- rclone copy gdrive:"💻 Competition | AI Builder Cup" "data/knowledge_base/drive/AI Builder Cup" --drive-shared-with-me
+mise run drive:sync-kb
+```
+
+Or download a folder to `.cache/gdrive/` using rclone:
+```bash
+mise run drive:pull "💻 Competition | AI Builder Cup"
 ```
 
 ---

@@ -16,7 +16,6 @@ from typing import Generator
 
 import pytest
 from fastapi.testclient import TestClient
-
 from google.adk.agents import LlmAgent
 
 from backend.agents.orchestrator import Orchestrator, orchestrator

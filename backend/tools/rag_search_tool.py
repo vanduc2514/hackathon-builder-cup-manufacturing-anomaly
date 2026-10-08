@@ -12,6 +12,7 @@ from backend.core.models import (
     CitationReference,
     RAGSearchResult,
 )
+from backend.tools.gdrive_tool import GoogleDriveConnector, gdrive_connector
 
 logger = logging.getLogger(__name__)
 
@@ -318,6 +319,120 @@ def _resolve_dual_keys(
     return symptom, asset, resolved_query
 
 
+def search_gdrive_knowledge(
+    defect_symptom: Optional[str] = None,
+    suspect_asset: Optional[str] = None,
+    query: Optional[str] = None,
+    filter_machine: Optional[str] = None,
+    max_results: int = 5,
+    min_relevance: float = 0.35,
+    connector: Optional[GoogleDriveConnector] = None,
+) -> RAGSearchResult:
+    """RAG search querying external Google Drive knowledge base documents directly via rclone.
+
+    Allows streaming and indexing documents directly from the remote shared drive
+    without requiring checked-in files in git.
+    """
+    symptom, asset, clean_query = _resolve_dual_keys(
+        defect_symptom=defect_symptom,
+        suspect_asset=suspect_asset,
+        query=query,
+        filter_machine=filter_machine,
+    )
+
+    conn = connector or gdrive_connector
+    citations: List[CitationReference] = []
+
+    # Check remote documents
+    files = conn.list_documents("knowledge base")
+    if not files:
+        files = conn.list_documents()
+
+    doc_files = [f for f in files if not f.is_dir]
+
+    query_tokens = set(re.findall(r"\w+", clean_query.lower()))
+    asset_tokens = {asset.lower(), asset.lower().replace("-", ""), asset.lower().replace("_", "")}
+    for _, members in MACHINE_FAMILIES.items():
+        if asset.lower() in members:
+            asset_tokens.update(members)
+            asset_tokens.update(m.replace("-", "") for m in members)
+            break
+    symptom_tokens = SYMPTOM_SYNONYMS.get(symptom, {symptom.lower()})
+
+    for doc in doc_files:
+        name_lower = doc.name.lower()
+        score = 0.40  # Base score for domain documents
+
+        if any(tok in name_lower for tok in asset_tokens):
+            score += 0.30
+        if any(tok in name_lower for tok in symptom_tokens):
+            score += 0.25
+
+        snippet_text = f"Google Drive document: {doc.name}"
+        if score >= min_relevance:
+            try:
+                content_preview = conn.stream_document_text(doc.path)
+                preview_lower = content_preview.lower()
+                matches = sum(1 for tok in query_tokens if tok in preview_lower)
+                if matches > 0:
+                    score = min(0.95, score + (matches * 0.05))
+                    for tok in query_tokens:
+                        idx = preview_lower.find(tok)
+                        if idx != -1:
+                            start = max(0, idx - 60)
+                            end = min(len(content_preview), idx + 140)
+                            snippet_text = content_preview[start:end].strip().replace("\n", " ")
+                            break
+            except Exception as exc:
+                logger.debug("Could not stream document text preview for %s: %s", doc.name, exc)
+
+            if score >= min_relevance:
+                ref = CitationReference(
+                    document_id=f"gdrive://{doc.path}",
+                    title=doc.name,
+                    page_number=1,
+                    section="External Drive Reference",
+                    snippet=snippet_text,
+                    relevance_score=round(score, 2),
+                    last_revised=doc.mod_time[:10] if doc.mod_time else None,
+                )
+                ref.citation = ref.formatted_citation()
+                citations.append(ref)
+
+    citations.sort(key=lambda c: c.relevance_score, reverse=True)
+    citations = citations[:max_results]
+
+    if not citations:
+        return RAGSearchResult(
+            defect_symptom=symptom,
+            suspect_asset=asset,
+            query=clean_query,
+            citations=[],
+            confidence=0.0,
+            summary=(
+                f"No verified Google Drive documents exceeded relevance threshold {min_relevance} "
+                f"for symptom '{symptom}' on asset '{asset}'."
+            ),
+            engine="google_drive",
+            total_found=0,
+        )
+
+    top_score = max(c.relevance_score for c in citations)
+    avg_score = sum(c.relevance_score for c in citations) / len(citations)
+    confidence = round(min(1.0, (0.7 * top_score) + (0.3 * avg_score)), 2)
+
+    return RAGSearchResult(
+        defect_symptom=symptom,
+        suspect_asset=asset,
+        query=clean_query,
+        citations=citations,
+        confidence=confidence,
+        summary=f"Retrieved {len(citations)} verified document citations from Google Drive.",
+        engine="google_drive",
+        total_found=len(citations),
+    )
+
+
 def search_knowledge_base_sync(
     defect_symptom: Optional[str] = None,
     suspect_asset: Optional[str] = None,
@@ -325,15 +440,26 @@ def search_knowledge_base_sync(
     filter_machine: Optional[str] = None,
     max_results: int = 5,
     min_relevance: float = 0.35,
+    source: str = "vertex_ai_search",
 ) -> RAGSearchResult:
-    """Synchronous RAG search directly querying Vertex AI Search (Google Cloud Discovery Engine).
+    """Synchronous RAG search querying Vertex AI Search or Google Drive directly.
 
     Enforces:
     1. Dual Query Keys: defect_symptom and suspect_asset mandatory parameters.
-    2. Direct Google Infrastructure: Queries Vertex AI Search directly with zero local fallback.
+    2. Direct Google Infrastructure: Queries Vertex AI Search or Google Drive directly.
     3. Strict Citation Contract: Formatted citations with page, section, and last revised date.
     4. Anti-Hallucination Guardrail: Returns confidence 0.0 and empty citations when below threshold.
     """
+    if source in ("google_drive", "gdrive"):
+        return search_gdrive_knowledge(
+            defect_symptom=defect_symptom,
+            suspect_asset=suspect_asset,
+            query=query,
+            filter_machine=filter_machine,
+            max_results=max_results,
+            min_relevance=min_relevance,
+        )
+
     symptom, asset, clean_query = _resolve_dual_keys(
         defect_symptom=defect_symptom,
         suspect_asset=suspect_asset,
@@ -389,10 +515,32 @@ async def search_knowledge_base(
     filter_machine: Optional[str] = None,
     max_results: int = 5,
     min_relevance: float = 0.35,
+    source: str = "vertex_ai_search",
 ) -> RAGSearchResult:
-    """Asynchronous ADK Tool: Executes RAG search directly against Vertex AI Search."""
+    """Asynchronous ADK Tool: Executes RAG search against Vertex AI Search or Google Drive."""
     return await asyncio.to_thread(
         search_knowledge_base_sync,
+        defect_symptom=defect_symptom,
+        suspect_asset=suspect_asset,
+        query=query,
+        filter_machine=filter_machine,
+        max_results=max_results,
+        min_relevance=min_relevance,
+        source=source,
+    )
+
+
+async def search_gdrive_knowledge_base(
+    defect_symptom: Optional[str] = None,
+    suspect_asset: Optional[str] = None,
+    query: Optional[str] = None,
+    filter_machine: Optional[str] = None,
+    max_results: int = 5,
+    min_relevance: float = 0.35,
+) -> RAGSearchResult:
+    """Asynchronous ADK Tool: Searches Google Drive knowledge base directly."""
+    return await asyncio.to_thread(
+        search_gdrive_knowledge,
         defect_symptom=defect_symptom,
         suspect_asset=suspect_asset,
         query=query,

@@ -5,7 +5,7 @@ description: Fetches and updates content in a Google Drive folder using the rclo
 
 # Google Drive via rclone
 
-rclone is pinned in `mise.toml` (`rclone = "1.75.1"`). The OAuth config is **project-local** at `.rclone/rclone.conf` (`RCLONE_CONFIG` is set by mise) and is gitignored. The remote is named `gdrive`. The local mirror is `data/knowledge_base/drive/` (gitignored).
+rclone is pinned in `mise.toml` (`rclone = "1.75.1"`). The OAuth config is **project-local** at `.rclone/rclone.conf` (`RCLONE_CONFIG` is set by mise) and is gitignored. The remote is named `gdrive`. The local cache is `.cache/gdrive/` (gitignored).
 
 Always run rclone through mise so the env is applied: `mise exec -- rclone ...` or the `mise run drive:*` tasks.
 
@@ -36,20 +36,20 @@ Verify afterwards: `mise run drive:ls "<Folder>"`.
 | Download the whole folder | `mise run drive:pull "<Folder>"` |
 | Find folder IDs | `mise exec -- rclone lsjson "gdrive:" --dirs-only --max-depth 1` |
 
-After `drive:pull`, read files with normal file tools from `data/knowledge_base/drive/`.
+After `drive:pull`, read files from the cache `.cache/gdrive/`.
 
 Native Google files are not regular files. rclone exports them: Docs → `.docx`, Sheets → `.xlsx`, Slides → `.pptx`. To get text-friendly output instead, add `--drive-export-formats md` (Docs only) or `csv` (Sheets), or `pdf`.
 
 ## 3. Update (writes — follow the safety protocol)
 
-1. Edit the file in `data/knowledge_base/drive/`.
+1. Edit the file in `.cache/gdrive/`.
 2. **Dry run** and show the output to the user: `mise run drive:push:dry "<Folder>"`
 3. Only after the user confirms: `mise run drive:push "<Folder>"`
 
 Single-file update:
 
 ```bash
-mise exec -- rclone copyto data/knowledge_base/drive/notes.md "gdrive:<Folder>/notes.md" --dry-run -v
+mise exec -- rclone copyto .cache/gdrive/notes.md "gdrive:<Folder>/notes.md" --dry-run -v
 ```
 
 Notes:

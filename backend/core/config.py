@@ -23,6 +23,16 @@ class Settings(BaseSettings):
     bigquery_emulator_host: Optional[str] = os.getenv("BIGQUERY_EMULATOR_HOST", None)
     bigquery_dataset: str = os.getenv("BIGQUERY_DATASET", "manufacturing")
 
+    # Gemini Live settings
+    gemini_live_model: str = os.getenv("GEMINI_LIVE_MODEL", "gemini-2.0-flash-exp")
+    gemini_live_endpoint: Optional[str] = os.getenv("GEMINI_LIVE_ENDPOINT", None)
+    gemini_api_key: Optional[str] = os.getenv("GEMINI_API_KEY", None)
+    gemini_live_voice: str = os.getenv("GEMINI_LIVE_VOICE", "Aoede")
+    gemini_live_language: str = os.getenv("GEMINI_LIVE_LANGUAGE", "vi-VN")
+    gemini_live_simulation_mode: bool = os.getenv(
+        "GEMINI_LIVE_SIMULATION_MODE", "true"
+    ).lower() in ("true", "1", "yes")
+
     # EMQX MQTT Settings
     mqtt_broker_host: str = os.getenv("MQTT_BROKER_HOST", "broker.emqx.io")
     mqtt_broker_port: int = int(os.getenv("MQTT_BROKER_PORT", "1883"))

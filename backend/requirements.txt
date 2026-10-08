@@ -17,3 +17,4 @@ google-cloud-pubsub>=2.21.0
 # Optional Testing & Code Quality
 pytest>=8.0.0
 requests>=2.31.0
+paho-mqtt>=2.0.0

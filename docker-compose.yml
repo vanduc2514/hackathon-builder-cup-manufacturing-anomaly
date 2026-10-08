@@ -53,3 +53,21 @@ services:
       - "3000:3000"
     depends_on:
       - backend
+
+  factory-simulator:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        WORKDIR /app
+        COPY backend/requirements.txt requirements.txt
+        RUN pip install --no-cache-dir -r requirements.txt
+        COPY simulator/ simulator/
+        CMD ["python", "-m", "simulator.main"]
+    container_name: kaizen-factory-simulator
+    environment:
+      - MQTT_BROKER_HOST=broker.emqx.io
+      - MQTT_BROKER_PORT=1883
+      - SIMULATOR_TICK_SEC=2.0
+      - SIMULATOR_SPEED=1.0
+    restart: unless-stopped

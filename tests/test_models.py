@@ -1,8 +1,8 @@
-from __future__ import annotations
 """Unit tests for core Pydantic models."""
 
-import pytest
-from backend.core.models import AgentFinding, IncidentState, ImpactMetrics
+from __future__ import annotations
+
+from backend.core.models import AgentFinding, ImpactMetrics, IncidentState
 
 
 def test_agent_finding_schema():

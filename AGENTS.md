@@ -27,15 +27,22 @@ This file is the authoritative reference for AI coding agents and human contribu
 │   │   ├── models.py           # Pydantic schemas — single source of truth
 │   │   ├── blackboard.py       # Reactive shared state (asyncio + SSE)
 │   │   └── config.py           # Settings via pydantic-settings / .env
-│   ├── edge/                   # Edge device code (Gemma classifier, MQTT bridge)
-│   │   ├── gateway/
-│   │   └── simulator/          # Local mock of edge hardware for dev
+│   ├── edge/                   # Edge gateway code (Gemma classifier, MQTT bridge)
+│   │   └── gateway/
 │   ├── tools/                  # Stateless ADK tool functions
 │   │   ├── bigquery_tool.py    # Traceability + telemetry queries
 │   │   ├── spc_calculator.py
 │   │   ├── impact_calculator.py
 │   │   └── rag_search_tool.py
 │   └── requirements.txt
+│
+├── simulator/                  # Standalone Factory & Conveyor Simulator Service
+│   ├── config.py               # Settings (broker host, port, tick speed)
+│   ├── models.py               # Pydantic schemas for machine & conveyor packets
+│   ├── machine_simulator.py    # Multi-CNC telemetry generator (vibration, current)
+│   ├── conveyor_simulator.py   # Discrete serialization & optical inspection
+│   ├── mqtt_publisher.py       # Async EMQX MQTT publisher
+│   └── main.py                 # Service runner & CLI entrypoint
 │
 ├── frontend/                   # React + Vite + TypeScript dashboard
 │   ├── src/

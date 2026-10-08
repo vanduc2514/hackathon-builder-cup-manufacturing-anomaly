@@ -28,6 +28,28 @@ export interface AgentFinding {
   timestamp: string;
 }
 
+export interface CitationReference {
+  document_id: string;
+  title: string;
+  page_number?: number;
+  section?: string;
+  snippet: string;
+  relevance_score: number;
+  last_revised?: string;
+  citation?: string;
+}
+
+export interface RAGSearchResult {
+  defect_symptom: string;
+  suspect_asset: string;
+  query: string;
+  citations: CitationReference[];
+  confidence: number;
+  summary?: string;
+  engine: string;
+  total_found: number;
+}
+
 export interface ImpactMetrics {
   scrap_avoided: number;
   downtime_minutes: number;

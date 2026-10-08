@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     bigquery_emulator_host: str | None = None
     bigquery_dataset: str = "manufacturing"
 
+    # Vertex AI Search / Discovery Engine settings
+    vertex_search_datastore_id: str = "kaizen-knowledge-store"
+    vertex_search_location: str = "global"
+    vertex_search_collection: str = "default_collection"
+    vertex_search_serving_config: str = "default_search"
+
     # Gemini Live settings
     gemini_live_model: str = "gemini-2.0-flash-exp"
     gemini_live_endpoint: str | None = None

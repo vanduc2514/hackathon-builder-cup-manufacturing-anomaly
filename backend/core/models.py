@@ -81,7 +81,7 @@ class RAGSearchResult(BaseModel):
     citations: List[CitationReference] = Field(default_factory=list)
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     summary: Optional[str] = None
-    engine: str = Field(default="local_bm25", description="'vertex_ai_search' or 'local_bm25'")
+    engine: str = Field(default="vertex_ai_search", description="'vertex_ai_search'")
     total_found: int = 0
 
     def __iter__(self):

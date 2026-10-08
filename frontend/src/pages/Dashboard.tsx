@@ -1,8 +1,10 @@
 // Dashboard page: renders the real-time incident board via SSE from the backend.
 import React from 'react';
 import type { IncidentState } from '../types';
+import AndonPhaseTracker from '../components/AndonPhaseTracker';
 import ProductionLine from '../components/ProductionLine';
 import SpcChart from '../components/SpcChart';
+import TelemetryChart from '../components/TelemetryChart';
 import IncidentStream from '../components/IncidentStream';
 import DemoController from '../components/DemoController';
 
@@ -52,7 +54,13 @@ export default function Dashboard({ incident }: DashboardProps): React.ReactElem
         </div>
       </section>
 
+      <AndonPhaseTracker incident={incident} />
+
       <ProductionLine suspectMachine={incident?.suspect_machine ?? null} />
+      <TelemetryChart
+        latestTelemetry={incident?.latest_telemetry ?? null}
+        suspectMachine={incident?.suspect_machine ?? null}
+      />
       <SpcChart defectRate={incident?.defect_rate ?? 0.005} ucl={incident?.spc_ucl ?? 0.03} />
       <IncidentStream findings={incident?.findings ?? []} />
     </div>

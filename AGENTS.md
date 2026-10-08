@@ -9,15 +9,17 @@ This file is the authoritative reference for AI coding agents and human contribu
 ```
 .
 ├── backend/                    # Python — FastAPI server, AI agents, tools
-│   ├── agents/                 # One file per ADK agent
-│   │   ├── orchestrator.py     # State machine; coordinates all agents
-│   │   ├── quality_inspector.py
-│   │   ├── traceability.py
-│   │   ├── process_analyst.py
-│   │   ├── root_cause.py
-│   │   ├── technician_copilot.py
-│   │   ├── incident_scribe.py
-│   │   └── continuous_learning.py
+│   ├── agents/                 # orchestrator.py + one agent_<name>.py per LLM agent node
+│   │   ├── agent.py            # ADK CLI entry (root_agent) for `mise run adk-web` / `adk run`
+│   │   ├── orchestrator.py     # ADK graph Workflow (no LLM) + Orchestrator runner; routes the agent_* nodes
+│   │   ├── workflow_nodes.py   # Workflow function nodes: Blackboard writes + routing gates
+│   │   ├── agent_quality_inspector.py
+│   │   ├── agent_traceability.py
+│   │   ├── agent_process_analyst.py
+│   │   ├── agent_root_cause.py
+│   │   ├── agent_technician_copilot.py
+│   │   ├── agent_incident_scribe.py
+│   │   └── agent_continuous_learning.py
 │   ├── api/                    # FastAPI routers
 │   │   ├── main.py             # App factory, mounts routers
 │   │   ├── routes_incidents.py # SSE stream + incident read endpoints
@@ -26,9 +28,10 @@ This file is the authoritative reference for AI coding agents and human contribu
 │   ├── core/                   # Shared primitives (import freely)
 │   │   ├── models.py           # Pydantic schemas — single source of truth
 │   │   ├── blackboard.py       # Reactive shared state (asyncio + SSE)
-│   │   └── config.py           # Settings via pydantic-settings / .env
-│   ├── edge/                   # Edge gateway code (Gemma classifier, MQTT bridge)
-│   │   └── gateway/
+│   │   └── config.py           # Settings read from env vars (provided by mise)
+│   ├── edge/                   # Edge device code (Gemma classifier, MQTT bridge)
+│   │   ├── gateway/
+│   │   └── simulator/          # Local mock of edge hardware for dev
 │   ├── tools/                  # Stateless ADK tool functions
 │   │   ├── bigquery_tool.py    # Traceability + telemetry queries
 │   │   ├── spc_calculator.py
@@ -313,7 +316,12 @@ $HOME/.gemini/antigravity/worktrees/hackathon-builder-cup-manufacturing-anomaly/
 Agents should never violate these:
 
 1. **`backend/core/models.py` is the single schema source of truth.** All Pydantic models live here. Never define a competing schema elsewhere.
-2. **The Blackboard is the only shared state bus.** Agents communicate exclusively by reading from and writing to `backend/core/blackboard.py`. No direct agent-to-agent calls.
-3. **Incidents close on product evidence only.** The orchestrator transitions to `closed` only after `verification_count >= verification_target`. Do not shortcut this.
+2. **All incident input and output goes through the Orchestrator.** External events (defect/SPC signal), technician input and shift-leader approval enter via `backend/agents/orchestrator.py` (`Orchestrator.start_incident` / `approve` / `reset`); API routes never write `backend/core/blackboard.py`. Agents receive the board snapshot from the workflow, return a draft (`FindingDraft`, `VerificationResult`, …) and never touch the Blackboard or call each other; workflow nodes in `workflow_nodes.py` are the only Blackboard writers. Exceptions:
+   - Read-only output transport: `GET /api/incidents/current` and the SSE stream read the Blackboard directly.
+   - Read-only agent tool lookups (BigQuery, RAG, Gemini) are data queries, not incident I/O.
+   - Data-plane ingestion: Pub/Sub → BigQuery raw telemetry/traceability storage.
+   - Technician Copilot ↔ technician live voice/camera stream (Gemini Live); the Orchestrator starts/ends the session and receives its outcome.
+   - `adk web` / `adk run` run `incident_workflow` without the `Orchestrator` runner (no single-flight/cancel); dev only, separate process and Blackboard.
+3. **Incidents close on product evidence only.** The orchestrator transitions to `closed` only after `verification_count >= verification_target`. Shift-leader approval (`approved`) is accepted only on a `closed` incident. Do not shortcut this.
 4. **Development parity & mock fallback.** `backend/tools/bigquery_tool.py` connects to `goccy/bigquery-emulator` (via `BIGQUERY_EMULATOR_HOST`) for high-fidelity SQL testing in dev, or falls back to local mock data when no emulator or GCP credentials are present. Neither local dev nor automated CI should ever fail due to missing cloud credentials.
 5. **Frontend never calls backend directly by hostname.** All API calls use relative URLs (`/api/...`) so the Vite proxy (dev) and server (prod) handle routing transparently.

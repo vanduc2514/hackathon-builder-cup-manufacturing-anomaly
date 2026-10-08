@@ -9,6 +9,94 @@ from typing import Any, Dict, List, Optional
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
+class CitationReference(BaseModel):
+    """Auditable citation metadata compliant with strict RAG contract."""
+
+    document_id: str = Field(
+        description="Document ID or relative path e.g. manuals/cnc_operating_manual.md"
+    )
+    title: str = Field(description="Human-readable document title")
+    page_number: Optional[int] = Field(default=None, description="Page number anchor if applicable")
+    section: Optional[str] = Field(default=None, description="Document section or header")
+    snippet: str = Field(description="Verbatim excerpt from document")
+    relevance_score: float = Field(
+        default=1.0, ge=0.0, le=1.0, description="Relevance score 0.0 - 1.0"
+    )
+    last_revised: Optional[str] = Field(
+        default=None, description="Document last revision date (YYYY-MM-DD)"
+    )
+    citation: Optional[str] = Field(default=None, description="Formatted auditable citation string")
+
+    def formatted_citation(self) -> str:
+        """Auditable citation string e.g. 'CNC Manual p.112, Section 4.5 (revised 2026-03-12)'."""
+        parts = [self.title]
+        if self.page_number is not None:
+            parts.append(f"p.{self.page_number}")
+        if self.section:
+            parts.append(self.section)
+        if self.last_revised:
+            parts.append(f"revised {self.last_revised}")
+        return ", ".join(parts)
+
+
+class KnowledgeDocumentMeta(BaseModel):
+    """Metadata schema for curated domain documents in the knowledge base."""
+
+    document_id: str
+    title: str
+    category: str  # manual, maint_log, 8d_report, spec, etc.
+    machine_id: Optional[str] = None
+    component: Optional[str] = None
+    version: str = "1.0"
+    pages: int = 1
+    last_revised: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+
+
+class RAGSearchRequest(BaseModel):
+    """Query parameters for knowledge base search with dual keys."""
+
+    defect_symptom: str = Field(
+        ...,
+        description="Mandatory defect symptom key, e.g. 'scratch_vertical', 'short_fill', 'spindle_vibration'",
+    )
+    suspect_asset: str = Field(
+        ...,
+        description="Mandatory suspect machine/asset key, e.g. 'CNC-02', 'IM-05'",
+    )
+    query: Optional[str] = Field(
+        default=None,
+        description="Optional additional free-text query or symptom detail",
+    )
+    max_results: int = Field(default=5, ge=1, le=20)
+    min_relevance: float = Field(default=0.35, ge=0.0, le=1.0)
+
+
+class RAGSearchResult(BaseModel):
+    """Structured result set from RAG knowledge base search."""
+
+    defect_symptom: str
+    suspect_asset: str
+    query: str
+    citations: List[CitationReference] = Field(default_factory=list)
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    summary: Optional[str] = None
+    engine: str = Field(default="vertex_ai_search", description="'vertex_ai_search'")
+    total_found: int = 0
+
+    def __iter__(self):
+        return iter(self.citations)
+
+    def __len__(self) -> int:
+        return len(self.citations)
+
+    def __getitem__(self, index: int) -> CitationReference:
+        return self.citations[index]
+
+    def __bool__(self) -> bool:
+        return len(self.citations) > 0
+
+
 class AgentFinding(BaseModel):
     """Four-part contract: finding, evidence, confidence, citation."""
 
@@ -37,6 +125,30 @@ class ManufacturingBenchmark(BaseModel):
     material_emission_factor_kg_per_kg: float = 0.11666666666666667  # Material GHG factor
     part_cost_usd: float = 15.0
     downtime_cost_per_hour_usd: float = 0.0
+
+
+class FindingDraft(BaseModel):
+    """LLM output contract for one agent finding (confidence clamped by the orchestrator)."""
+
+    finding: str = Field(description="One-sentence finding.")
+    evidence: str = Field(description="Concrete evidence supporting the finding.")
+    confidence: float = Field(description="0.0-1.0")
+    citation: str = Field(description="Source of the evidence.")
+
+
+class ScribeDraft(FindingDraft):
+    """Incident Scribe output: a finding plus the generated documents."""
+
+    work_order: str = Field(description="Work order text.")
+    report_8d: str = Field(description="8D report summary.")
+    sop_proposal: str = Field(description="SOP revision proposal.")
+
+
+class VerificationResult(BaseModel):
+    """Post-repair conveyor verification outcome."""
+
+    good_streak: int
+    defect_rate: float
 
 
 class ImpactMetrics(BaseModel):
@@ -116,7 +228,10 @@ class TelemetryAlert(BaseModel):
 
 class IncidentState(BaseModel):
     incident_id: str = "INC-0412"
-    status: str = "normal"  # normal, detecting, tracing, investigating, analyzing, repairing, verifying, closed
+    # normal, detecting, tracing, investigating, analyzing, awaiting_evidence, repairing,
+    # verifying, closed, escalated, error
+    status: str = "normal"
+    status_reason: Optional[str] = None  # escalation or error reason
     defect_type: Optional[str] = None
     defect_rate: float = 0.005
     spc_ucl: float = 0.030
@@ -126,6 +241,7 @@ class IncidentState(BaseModel):
     verification_count: int = 0
     verification_target: int = 50
     repair_done: bool = False
+    approved: bool = False  # shift-leader sign-off, recorded by the Orchestrator after close
     findings: List[AgentFinding] = Field(default_factory=list)
     impact: Optional[ImpactMetrics] = None
     documents: Dict[str, Any] = Field(default_factory=dict)
@@ -135,6 +251,8 @@ class IncidentState(BaseModel):
 
 
 class DefectInjectionRequest(BaseModel):
+    """Defect signal the Orchestrator receives to open an incident (demo inject; edge/SPC later)."""
+
     scenario: str = Field(
         default="cnc_tool_wear",
         description="Anomaly scenario: 'cnc_tool_wear' or 'im_damp_material'",
@@ -155,6 +273,7 @@ class DefectInjectionRequest(BaseModel):
         default="medium",
         description="Severity level: low, medium, high",
     )
+    defect_rate: float = 0.077
     machine_id: str = Field(
         default="CNC-02",
         description="Target machine identifier",
@@ -268,6 +387,43 @@ class SensorTelemetryWindowResponse(BaseModel):
     metrics: SensorMetrics
     baseline: SensorBaseline = Field(default_factory=SensorBaseline)
     anomaly_detected: bool = False
+
+    def __getitem__(self, item: str) -> Any:
+        return getattr(self, item)
+
+    def get(self, item: str, default: Any = None) -> Any:
+        return getattr(self, item, default)
+
+
+class TelemetryPoint(BaseModel):
+    """Discrete machine sensor measurement record."""
+
+    timestamp: str
+    machine_id: str
+    vibration_mm_s: float
+    temperature_c: float
+    current_a: float
+    spindle_speed_rpm: int = 12000
+    is_anomalous: bool = False
+    anomaly_score: float = 0.0
+
+    def __getitem__(self, item: str) -> Any:
+        return getattr(self, item)
+
+    def get(self, item: str, default: Any = None) -> Any:
+        return getattr(self, item, default)
+
+
+class MultiMachineTelemetryResponse(BaseModel):
+    """Multi-machine telemetry time-series payload for comparative correlation."""
+
+    series: Dict[str, List[TelemetryPoint]] = Field(default_factory=dict)
+    baseline: SensorBaseline = Field(default_factory=SensorBaseline)
+    vibration_warning_threshold: float = 1.95
+    current_warning_threshold: float = 13.0
+    anomaly_onset_time: Optional[str] = "2026-10-05T09:30:00Z"
+    time_window: str = "09:00-10:00"
+    source: str = "seed_data"
 
     def __getitem__(self, item: str) -> Any:
         return getattr(self, item)

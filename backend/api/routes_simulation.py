@@ -2,76 +2,72 @@
 
 from __future__ import annotations
 
-import asyncio
-import time
 from typing import Any, Dict
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from backend.agents.orchestrator import orchestrator
-from backend.core.blackboard import blackboard
 from backend.core.models import DefectInjectionRequest, SimulationStatusResponse
 from backend.tools.bigquery_tool import reset_buffers
 from simulator.injection_engine import injection_engine
 
 router = APIRouter(prefix="/api/simulation", tags=["simulation"])
 
-_active_task: asyncio.Task | None = None
+# Scenario 2 trigger values used when the caller leaves the CNC defaults untouched.
+_IM_DAMP_MATERIAL_DEFAULTS: Dict[str, Any] = {
+    "machine_id": "IM-05",
+    "tool_id": "MOLD-03",
+    "defect_type": "short_fill",
+    "defect_rate": 0.081,
+}
+
+
+def _resolve_trigger(req: DefectInjectionRequest) -> DefectInjectionRequest:
+    """Fills scenario-specific machine/tool/defect values the caller did not set."""
+    if req.scenario != "im_damp_material":
+        return req
+    unset = {k: v for k, v in _IM_DAMP_MATERIAL_DEFAULTS.items() if k not in req.model_fields_set}
+    return req.model_copy(update=unset)
 
 
 @router.post("/inject")
 async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) -> Dict[str, Any]:
-    """Triggers defect injection and executes the 4-phase Kaizen Agent incident flow."""
-    global _active_task
+    """Injects the scenario's defect burst into the simulator and starts the incident workflow."""
+    if orchestrator.is_running:
+        raise HTTPException(status_code=409, detail="An incident workflow is already running")
 
-    # 1. Stop any currently running simulation task
-    if _active_task and not _active_task.done():
-        _active_task.cancel()
-        _active_task = None
-    orchestrator.stop_simulation()
-
-    # 2. Trigger deterministic anomaly injection in simulator engine
-    scenario = req.scenario or "cnc_tool_wear"
-    if scenario == "im_damp_material":
-        target_machine = req.machine_id if req.machine_id != "CNC-02" else "IM-05"
-        target_tool = req.tool_id if req.tool_id != "T07" else "MOLD-03"
+    trigger = _resolve_trigger(req)
+    if trigger.scenario == "im_damp_material":
         burst = injection_engine.inject_scenario_2_im_damp_material(
-            machine_id=target_machine,
-            tool_id=target_tool,
+            machine_id=trigger.machine_id, tool_id=trigger.tool_id
         )
         message = (
-            f"Scenario 2 defect burst injected: IM-05 mold cavity #3 short fill & sink marks. "
-            f"Dryer dew point rising to -18°C. Mode={req.mode}."
+            f"Scenario 2 defect burst injected: {trigger.machine_id} mold cavity #3 short fill "
+            "& sink marks, dryer dew point rising to -18°C. ADK orchestrator workflow started."
         )
     else:
-        target_machine = req.machine_id or "CNC-02"
-        target_tool = req.tool_id or "T07"
         burst = injection_engine.inject_scenario_1_cnc_tool_wear(
-            machine_id=target_machine,
-            tool_id=target_tool,
+            machine_id=trigger.machine_id, tool_id=trigger.tool_id
         )
         message = (
-            f"Scenario 1 defect burst injected: CNC-02/T07 spindle vibration spike (+35%) and vertical scratches. "
-            f"Defect rate surging to 7.7% (exceeding UCL). Mode={req.mode}."
+            f"Scenario 1 defect burst injected: {trigger.machine_id}/{trigger.tool_id} spindle "
+            "vibration spike (+35%) and vertical scratches exceeding UCL. ADK orchestrator workflow started."
         )
 
     duration = (
-        req.duration_seconds
-        if req.duration_seconds is not None
-        else (8.0 if req.mode == "fast" else 90.0)
+        trigger.duration_seconds
+        if trigger.duration_seconds is not None
+        else (8.0 if trigger.mode == "fast" else 90.0)
     )
-    orchestrator.total_duration = duration
-
-    # 3. Launch orchestrator flow asynchronously in the background
-    _active_task = asyncio.create_task(orchestrator.run_incident_simulation(req=req))
-
+    orchestrator.start_incident(trigger)
     return {
         "status": "triggered",
-        "scenario": scenario,
-        "mode": req.mode,
+        "scenario": trigger.scenario,
+        "mode": trigger.mode,
         "duration_seconds": duration,
-        "target_machine": target_machine,
-        "target_tool": target_tool,
+        "defect_type": trigger.defect_type,
+        "target_machine": trigger.machine_id,
+        "target_tool": trigger.tool_id,
         "burst_telemetry": burst,
         "message": message,
     }
@@ -79,24 +75,10 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) 
 
 @router.post("/reset")
 async def reset_simulation() -> Dict[str, Any]:
-    """Resets the blackboard, simulator machinery, and BigQuery buffers to normal pristine conditions."""
-    global _active_task
-
-    # 1. Cancel active simulation background task
-    if _active_task and not _active_task.done():
-        _active_task.cancel()
-        _active_task = None
-    orchestrator.stop_simulation()
-
-    # 2. Reset Blackboard shared state
-    state = blackboard.reset()
-
-    # 3. Reset Simulator machine telemetry and conveyor belts
+    """Cancels the running workflow, then restores the Blackboard, simulator and BigQuery buffers."""
+    state = await orchestrator.reset()
     injection_engine.reset()
-
-    # 4. Reset BigQuery mock data and buffers
     bq_reset = reset_buffers()
-
     return {
         "status": "reset",
         "message": "Simulation reset to pristine baseline (Blackboard, Simulator, and BigQuery buffers restored)",
@@ -107,17 +89,5 @@ async def reset_simulation() -> Dict[str, Any]:
 
 @router.get("/status", response_model=SimulationStatusResponse)
 async def get_simulation_status() -> SimulationStatusResponse:
-    """Returns current active simulation scenario, execution status, and elapsed time."""
-    elapsed = None
-    if orchestrator.is_running and orchestrator.start_time:
-        elapsed = round(time.time() - orchestrator.start_time, 2)
-
-    return SimulationStatusResponse(
-        status="running" if orchestrator.is_running else "idle",
-        active_scenario=orchestrator.current_scenario,
-        mode=orchestrator.current_mode,
-        target_machine=orchestrator.target_machine,
-        target_tool=orchestrator.target_tool,
-        elapsed_seconds=elapsed,
-        total_seconds=orchestrator.total_duration,
-    )
+    """Returns the running incident trigger and elapsed time."""
+    return orchestrator.status()

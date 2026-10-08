@@ -17,12 +17,15 @@ from typing import Generator
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.agents.orchestrator import orchestrator
+from google.adk.agents import LlmAgent
+
+from backend.agents.orchestrator import Orchestrator, orchestrator
 from backend.api.main import app
 from backend.core.blackboard import blackboard
 from backend.core.models import DefectInjectionRequest, SimulationStatusResponse
 from backend.tools.spc_calculator import StreakGatekeeper
 from simulator.injection_engine import injection_engine
+from tests.test_orchestrator import FakeLlm
 
 
 @pytest.fixture(autouse=True)
@@ -172,12 +175,17 @@ def test_physical_streak_reset_on_defect_recurrence() -> None:
 def test_e2e_fast_forward_verifies_streak_and_closure() -> None:
     """Tests that fast-forward orchestration achieves 50/50 physical streak and closed state."""
     blackboard.reset()
-    req = DefectInjectionRequest(scenario="cnc_tool_wear", mode="fast", duration_seconds=0.2)
-    asyncio.run(orchestrator.run_incident_simulation(req=req))
+    saved_model = LlmAgent._default_model
+    try:
+        LlmAgent.set_default_model(FakeLlm())
+        req = DefectInjectionRequest(scenario="cnc_tool_wear", mode="fast", duration_seconds=0.2)
+        asyncio.run(Orchestrator(step_delay=0).run_incident(req))
 
-    state = blackboard.get_state()
-    assert state.status == "closed"
-    assert state.verification_count == 50
-    assert state.verification_target == 50
-    assert len(state.findings) >= 7
-    assert state.repair_done is True
+        state = blackboard.get_state()
+        assert state.status == "closed"
+        assert state.verification_count == 50
+        assert state.verification_target == 50
+        assert len(state.findings) >= 7
+        assert state.repair_done is True
+    finally:
+        LlmAgent._default_model = saved_model

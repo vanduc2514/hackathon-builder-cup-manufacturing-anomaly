@@ -9,9 +9,12 @@ export type IncidentStatus =
   | 'tracing'
   | 'investigating'
   | 'analyzing'
+  | 'awaiting_evidence'
   | 'repairing'
   | 'verifying'
-  | 'closed';
+  | 'closed'
+  | 'escalated'
+  | 'error';
 
 export interface AgentFinding {
   agent_id: string;
@@ -22,6 +25,28 @@ export interface AgentFinding {
   confidence: number;
   citation: string;
   timestamp: string;
+}
+
+export interface CitationReference {
+  document_id: string;
+  title: string;
+  page_number?: number;
+  section?: string;
+  snippet: string;
+  relevance_score: number;
+  last_revised?: string;
+  citation?: string;
+}
+
+export interface RAGSearchResult {
+  defect_symptom: string;
+  suspect_asset: string;
+  query: string;
+  citations: CitationReference[];
+  confidence: number;
+  summary?: string;
+  engine: string;
+  total_found: number;
 }
 
 export interface ImpactMetrics {
@@ -65,9 +90,34 @@ export interface ImpactCalculationRequest {
   downtime_cost_per_hour_usd?: number;
 }
 
+export interface MachineTelemetryPayload {
+  machine_id: string;
+  timestamp: string;
+  tool_id?: string | null;
+  operating_status: string;
+  spindle_vibration: number;
+  spindle_temp: number;
+  motor_current: number;
+  rpm: number;
+  anomaly_score: number;
+  dryer_dew_point?: number;
+}
+
+export interface TelemetryAlert {
+  machine_id: string;
+  timestamp: string;
+  anomaly_score: number;
+  operating_status: string;
+  metric_name: string;
+  metric_value: number;
+  threshold: number;
+  message: string;
+}
+
 export interface IncidentState {
   incident_id: string;
   status: IncidentStatus;
+  status_reason: string | null;
   defect_type: string | null;
   defect_rate: number;
   spc_ucl: number;
@@ -77,10 +127,57 @@ export interface IncidentState {
   verification_count: number;
   verification_target: number;
   repair_done?: boolean;
+  approved: boolean;
   findings: AgentFinding[];
   impact: ImpactMetrics | null;
   documents: Record<string, unknown>;
+  latest_telemetry?: MachineTelemetryPayload | null;
+  telemetry_alerts?: TelemetryAlert[];
   updated_at: string;
+}
+
+export interface TelemetryPoint {
+  timestamp: string;
+  machine_id: string;
+  vibration_mm_s: number;
+  temperature_c: number;
+  current_a: number;
+  spindle_speed_rpm: number;
+  is_anomalous: boolean;
+  anomaly_score: number;
+}
+
+export interface SensorBaseline {
+  vibration: number;
+  temperature: number;
+  current: number;
+}
+
+export interface MultiMachineTelemetryResponse {
+  series: Record<string, TelemetryPoint[]>;
+  baseline: SensorBaseline;
+  vibration_warning_threshold: number;
+  current_warning_threshold: number;
+  anomaly_onset_time: string | null;
+  time_window: string;
+  source: string;
+}
+
+export type AndonPhaseKey = 'A' | 'B' | 'C' | 'D';
+export type AndonPhaseStatus = 'pending' | 'active' | 'completed' | 'escalated';
+
+export interface AndonPhaseDetails {
+  key: AndonPhaseKey;
+  letter: string;
+  name: string;
+  vietnameseName: string;
+  lampColor: 'red' | 'yellow' | 'blue' | 'green';
+  lampHex: string;
+  description: string;
+  activities: string[];
+  inputs: string[];
+  outputs: string[];
+  statuses: IncidentStatus[];
 }
 
 export interface DefectInjectionRequest {
@@ -89,6 +186,7 @@ export interface DefectInjectionRequest {
   duration_seconds?: number;
   defect_type?: string;
   severity?: 'low' | 'medium' | 'high';
+  defect_rate?: number;
   machine_id?: string;
   tool_id?: string;
 }
@@ -100,7 +198,7 @@ export interface SimulationStatusResponse {
   target_machine: string | null;
   target_tool: string | null;
   elapsed_seconds: number | null;
-  total_seconds: number | null;
+  total_seconds?: number | null;
 }
 
 export interface SpcDataPoint {

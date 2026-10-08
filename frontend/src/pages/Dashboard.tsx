@@ -6,6 +6,7 @@ import ProductionLine from '../components/ProductionLine';
 import SpcChart from '../components/SpcChart';
 import TelemetryChart from '../components/TelemetryChart';
 import IncidentStream from '../components/IncidentStream';
+import DemoController from '../components/DemoController';
 
 interface DashboardProps {
   incident: IncidentState | null;
@@ -14,6 +15,7 @@ interface DashboardProps {
 export default function Dashboard({ incident }: DashboardProps): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <DemoController incident={incident} />
       <section
         style={{
           display: 'grid',

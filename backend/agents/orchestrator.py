@@ -161,6 +161,21 @@ class Orchestrator:
             self._trigger = None
             self._started_at = None
 
+    def stop_simulation(self) -> None:
+        """Synchronously cancels any running incident workflow (test/backward compatibility)."""
+        if self._task and not self._task.done():
+            self._task.cancel()
+            self._task = None
+        self._abort = None
+        self._trigger = None
+        self._started_at = None
+
+    async def run_incident_simulation(
+        self, req: DefectInjectionRequest
+    ) -> IncidentState:
+        """Runs the incident workflow for the simulation request."""
+        return await self.run_incident(req)
+
     def status(self) -> SimulationStatusResponse:
         """Reports the last started trigger; elapsed time only while the workflow runs."""
         trigger = self._trigger

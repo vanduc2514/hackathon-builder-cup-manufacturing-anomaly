@@ -51,14 +51,20 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) 
         )
         message = (
             f"Scenario 1 defect burst injected: {trigger.machine_id}/{trigger.tool_id} spindle "
-            "vibration spike (+35%) and vertical scratches. ADK orchestrator workflow started."
+            "vibration spike (+35%) and vertical scratches exceeding UCL. ADK orchestrator workflow started."
         )
 
+    duration = (
+        trigger.duration_seconds
+        if trigger.duration_seconds is not None
+        else (8.0 if trigger.mode == "fast" else 90.0)
+    )
     orchestrator.start_incident(trigger)
     return {
         "status": "triggered",
         "scenario": trigger.scenario,
         "mode": trigger.mode,
+        "duration_seconds": duration,
         "defect_type": trigger.defect_type,
         "target_machine": trigger.machine_id,
         "target_tool": trigger.tool_id,

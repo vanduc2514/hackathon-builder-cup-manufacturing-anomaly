@@ -144,6 +144,7 @@ async def record_resolution(node_input: dict) -> IncidentState:
             "report_8d": scribe.report_8d,
             "sop_proposal": scribe.sop_proposal,
         },
+        repair_done=True,
     )
     return blackboard.get_state()
 

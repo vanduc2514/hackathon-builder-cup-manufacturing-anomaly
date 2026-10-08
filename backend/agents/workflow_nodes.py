@@ -23,7 +23,6 @@ from backend.core.models import (
     AgentFinding,
     DefectInjectionRequest,
     FindingDraft,
-    ImpactMetrics,
     IncidentState,
     QualityInspectionReport,
     RootCauseFindingDraft,
@@ -269,8 +268,9 @@ async def close_incident(node_input: VerificationResult) -> IncidentState:
 
 async def record_learning(node_input: FindingDraft) -> None:
     _record(agent_continuous_learning, node_input)
-    # Placeholder: default impact numbers until the impact calculator is wired in.
-    blackboard.update_status("closed", impact=ImpactMetrics())
+    state = blackboard.get_state()
+    impact = agent_continuous_learning.calculate_impact_metrics(state)
+    blackboard.update_status("closed", impact=impact)
 
 
 async def escalate_incident(node_input: str) -> None:

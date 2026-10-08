@@ -187,6 +187,64 @@ class ScribeDraft(FindingDraft):
     sop_proposal: str = Field(description="SOP revision proposal.")
 
 
+class EightDReport(BaseModel):
+    """Structured 8D Incident Report (D1 through D8) with human-in-the-loop approval tracking."""
+
+    incident_id: str = Field(description="Incident identifier, e.g. INC-0412")
+    d1_team: str = Field(description="D1: Cross-functional response team")
+    d2_problem: str = Field(description="D2: 5W2H Problem description and defect symptoms")
+    d3_containment: str = Field(description="D3: Immediate containment actions and quarantined material")
+    d4_root_cause: str = Field(description="D4: Root cause 5-Whys and Ishikawa 6M analysis")
+    d5_corrective_actions: str = Field(description="D5: Chosen permanent corrective actions")
+    d6_implementation: str = Field(description="D6: Implementation results and post-repair verification")
+    d7_preventive_action: str = Field(description="D7: Preventive actions and SOP modifications")
+    d8_congratulate_team: str = Field(description="D8: Team recognition and formal sign-off")
+    pending_approval: str = Field(default="shift_leader", description="Approver role awaiting sign-off")
+    approved: bool = Field(default=False, description="True once approved by shift leader")
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class WorkOrder(BaseModel):
+    """Maintenance work order generated for equipment repair or tooling replacement."""
+
+    work_order_id: str = Field(description="Work order number, e.g. WO-8821")
+    title: str = Field(description="Work order summary title")
+    equipment_id: str = Field(description="Target machine or equipment, e.g. CNC-02")
+    description: str = Field(description="Detailed maintenance instructions and specifications")
+    parts_required: List[str] = Field(default_factory=list, description="List of required spare parts and consumables")
+    priority: str = Field(default="HIGH", description="Priority level: LOW, MEDIUM, HIGH, CRITICAL")
+    status: str = Field(default="DRAFT", description="Status: DRAFT, PENDING_APPROVAL, APPROVED, COMPLETED")
+    pending_approval: str = Field(default="shift_leader", description="Approver role awaiting sign-off")
+    approved: bool = Field(default=False, description="True once approved by shift leader")
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class SOPRevisionProposal(BaseModel):
+    """Standard Operating Procedure (SOP) modification proposal to prevent defect recurrence."""
+
+    sop_id: str = Field(description="Target SOP identifier, e.g. SOP-MNT-CNC-04")
+    title: str = Field(description="SOP document title")
+    equipment_id: str = Field(description="Associated machine or line, e.g. CNC-02")
+    current_procedure: str = Field(description="Summary of current standard operating procedure")
+    proposed_revision: str = Field(description="Proposed concrete modifications")
+    justification: str = Field(description="Technical rationale based on incident root cause")
+    threshold_alert_parts: Optional[int] = Field(default=None, description="Automated counter threshold alert limit")
+    pending_approval: str = Field(default="shift_leader", description="Approver role awaiting sign-off")
+    approved: bool = Field(default=False, description="True once approved by shift leader")
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class RepairVideoAnalysis(BaseModel):
+    """Video walkthrough analysis of technician repair procedures."""
+
+    video_uri: str = Field(description="URI or storage path of the repair video")
+    title: str = Field(description="Procedural walkthrough title")
+    equipment_id: str = Field(default="CNC-02", description="Target machine identifier")
+    key_steps: List[str] = Field(default_factory=list, description="Extracted sequential procedural steps")
+    verified_checkpoints: List[str] = Field(default_factory=list, description="Quality and tolerance checkpoints verified")
+    safety_notices: List[str] = Field(default_factory=list, description="Safety and LOTO warnings observed")
+
+
 class VerificationResult(BaseModel):
     """Post-repair conveyor verification outcome."""
 
@@ -222,6 +280,22 @@ class ImpactCalculationRequest(BaseModel):
     grid_emission_factor_kg_per_kwh: Optional[float] = None
     material_emission_factor_kg_per_kg: Optional[float] = None
     downtime_cost_per_hour_usd: Optional[float] = None
+
+
+class KnowledgeBaseEntry(BaseModel):
+    """Defect -> Cause -> Fix institutional memory entry."""
+
+    entry_id: str = Field(description="Unique knowledge entry identifier")
+    incident_id: str = Field(description="Originating incident identifier")
+    defect_type: str = Field(description="Defect classification")
+    machine_id: str = Field(description="Machine identifier")
+    tool_id: Optional[str] = Field(default=None, description="Tool identifier")
+    root_cause: str = Field(description="Identified root cause")
+    resolution_steps: List[str] = Field(default_factory=list, description="Steps taken during physical repair")
+    preventive_action: str = Field(description="Preventive action taken to avoid recurrence")
+    impact: ImpactMetrics = Field(default_factory=ImpactMetrics, description="Calculated sustainability and business impact")
+    video_metadata: Optional[RepairVideoAnalysis] = Field(default=None, description="Associated video walkthrough analysis if available")
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 class MachineTelemetryPayload(BaseModel):

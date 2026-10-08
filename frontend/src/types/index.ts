@@ -29,6 +29,40 @@ export interface ImpactMetrics {
   downtime_minutes: number;
   energy_kwh: number;
   co2_kg: number;
+  cost_savings_usd?: number;
+  energy_co2_kg?: number;
+  material_co2_kg?: number;
+  factory_type?: string;
+}
+
+export interface ManufacturingBenchmark {
+  name: string;
+  description: string;
+  line_speed_parts_per_min: number;
+  detection_lead_time_minutes: number;
+  manual_diagnosis_minutes: number;
+  ai_diagnosis_minutes: number;
+  energy_kwh_per_unit: number;
+  part_mass_kg: number;
+  grid_emission_factor_kg_per_kwh: number;
+  material_emission_factor_kg_per_kg: number;
+  part_cost_usd: number;
+  downtime_cost_per_hour_usd: number;
+}
+
+export interface ImpactCalculationRequest {
+  factory_type?: string;
+  custom_benchmark?: ManufacturingBenchmark;
+  earlier_detection_minutes?: number;
+  manual_diagnosis_minutes?: number;
+  ai_diagnosis_minutes?: number;
+  line_speed_parts_per_min?: number;
+  energy_kwh_per_unit?: number;
+  part_mass_kg?: number;
+  part_cost_usd?: number;
+  grid_emission_factor_kg_per_kwh?: number;
+  material_emission_factor_kg_per_kg?: number;
+  downtime_cost_per_hour_usd?: number;
 }
 
 export interface IncidentState {

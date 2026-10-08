@@ -35,6 +35,7 @@ from backend.agents.workflow_nodes import (
     record_resolution,
     record_traceability,
     reopen_investigation,
+    trace_topology,
     verification_gate,
     verify_repair,
 )
@@ -65,6 +66,7 @@ incident_workflow = Workflow(
         (
             agent_quality_inspector.agent,
             record_detection,
+            trace_topology,
             agent_traceability.agent,
             record_traceability,
             agent_process_analyst.agent,
@@ -96,7 +98,7 @@ incident_workflow = Workflow(
                 "ESCALATE": escalate_incident,
             },
         ),
-        (reopen_investigation, agent_traceability.agent),
+        (reopen_investigation, trace_topology),
         (close_incident, agent_continuous_learning.agent, record_learning),
     ],
 )

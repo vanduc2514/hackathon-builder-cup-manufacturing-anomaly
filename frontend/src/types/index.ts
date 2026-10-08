@@ -90,6 +90,30 @@ export interface ImpactCalculationRequest {
   downtime_cost_per_hour_usd?: number;
 }
 
+export interface MachineTelemetryPayload {
+  machine_id: string;
+  timestamp: string;
+  tool_id?: string | null;
+  operating_status: string;
+  spindle_vibration: number;
+  spindle_temp: number;
+  motor_current: number;
+  rpm: number;
+  anomaly_score: number;
+  dryer_dew_point?: number;
+}
+
+export interface TelemetryAlert {
+  machine_id: string;
+  timestamp: string;
+  anomaly_score: number;
+  operating_status: string;
+  metric_name: string;
+  metric_value: number;
+  threshold: number;
+  message: string;
+}
+
 export interface IncidentState {
   incident_id: string;
   status: IncidentStatus;
@@ -107,7 +131,36 @@ export interface IncidentState {
   findings: AgentFinding[];
   impact: ImpactMetrics | null;
   documents: Record<string, unknown>;
+  latest_telemetry?: MachineTelemetryPayload | null;
+  telemetry_alerts?: TelemetryAlert[];
   updated_at: string;
+}
+
+export interface TelemetryPoint {
+  timestamp: string;
+  machine_id: string;
+  vibration_mm_s: number;
+  temperature_c: number;
+  current_a: number;
+  spindle_speed_rpm: number;
+  is_anomalous: boolean;
+  anomaly_score: number;
+}
+
+export interface SensorBaseline {
+  vibration: number;
+  temperature: number;
+  current: number;
+}
+
+export interface MultiMachineTelemetryResponse {
+  series: Record<string, TelemetryPoint[]>;
+  baseline: SensorBaseline;
+  vibration_warning_threshold: number;
+  current_warning_threshold: number;
+  anomaly_onset_time: string | null;
+  time_window: string;
+  source: string;
 }
 
 export type AndonPhaseKey = 'A' | 'B' | 'C' | 'D';

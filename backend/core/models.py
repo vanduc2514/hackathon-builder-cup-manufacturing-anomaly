@@ -395,6 +395,43 @@ class SensorTelemetryWindowResponse(BaseModel):
         return getattr(self, item, default)
 
 
+class TelemetryPoint(BaseModel):
+    """Discrete machine sensor measurement record."""
+
+    timestamp: str
+    machine_id: str
+    vibration_mm_s: float
+    temperature_c: float
+    current_a: float
+    spindle_speed_rpm: int = 12000
+    is_anomalous: bool = False
+    anomaly_score: float = 0.0
+
+    def __getitem__(self, item: str) -> Any:
+        return getattr(self, item)
+
+    def get(self, item: str, default: Any = None) -> Any:
+        return getattr(self, item, default)
+
+
+class MultiMachineTelemetryResponse(BaseModel):
+    """Multi-machine telemetry time-series payload for comparative correlation."""
+
+    series: Dict[str, List[TelemetryPoint]] = Field(default_factory=dict)
+    baseline: SensorBaseline = Field(default_factory=SensorBaseline)
+    vibration_warning_threshold: float = 1.95
+    current_warning_threshold: float = 13.0
+    anomaly_onset_time: Optional[str] = "2026-10-05T09:30:00Z"
+    time_window: str = "09:00-10:00"
+    source: str = "seed_data"
+
+    def __getitem__(self, item: str) -> Any:
+        return getattr(self, item)
+
+    def get(self, item: str, default: Any = None) -> Any:
+        return getattr(self, item, default)
+
+
 class ControlLimits(BaseModel):
     """Shewhart p-chart statistical control limits."""
 

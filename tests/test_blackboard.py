@@ -1,7 +1,7 @@
-from __future__ import annotations
 """Unit tests for the reactive blackboard and state transitions."""
 
-import pytest
+from __future__ import annotations
+
 from backend.core.blackboard import Blackboard
 from backend.core.models import AgentFinding
 

@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
 from backend.api.routes_gemini_live import router as gemini_live_router
+from backend.api.routes_impact import router as impact_router
 from backend.api.routes_incidents import router as incidents_router
 from backend.api.routes_simulation import router as simulation_router
 from backend.core.config import settings
@@ -17,6 +18,7 @@ app = FastAPI(
 app.include_router(incidents_router)
 app.include_router(simulation_router)
 app.include_router(gemini_live_router)
+app.include_router(impact_router)
 
 
 @app.get("/health")

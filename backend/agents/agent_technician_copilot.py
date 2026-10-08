@@ -16,7 +16,6 @@ from backend.core.models import (
     CopilotSessionTelemetry,
     CopilotTurn,
     FindingDraft,
-    IncidentState,
     RepairCheckpoint,
 )
 
@@ -846,93 +845,6 @@ DEFAULT_DIAGNOSTIC_IM_CITATION = (
     "Technician diagnostic camera stream via Gemini Live (IM-05 dryer inspection)"
 )
 
-
-def build_copilot_finding(board_data: dict | IncidentState | None = None) -> FindingDraft:
-    """Builds a deterministic FindingDraft representing completed interactive repair guidance."""
-    suspect_machine = "CNC-02"
-    suspect_tool = "T07"
-
-    if isinstance(board_data, IncidentState):
-        suspect_machine = board_data.suspect_machine or suspect_machine
-        suspect_tool = board_data.suspect_tool or suspect_tool
-    elif isinstance(board_data, dict):
-        suspect_machine = board_data.get("suspect_machine") or suspect_machine
-        suspect_tool = board_data.get("suspect_tool") or suspect_tool
-
-    is_im = "IM" in suspect_machine.upper()
-
-    if is_im:
-        return FindingDraft(
-            finding=(
-                f"Guided frontline technician in Vietnamese through {suspect_machine} dryer de-energization, "
-                "desiccant filter FLT-ABS-04 replacement, and dewpoint verification (-35.0 °C <= -30.0 °C) "
-                "following SOP-MOLD-02."
-            ),
-            evidence=(
-                "Completed 5/5 OEM checkpoints: heaters de-energized and air pressure vented, "
-                "saturated filter removed, new FLT-ABS-04 filter installed with new O-ring, "
-                "dewpoint measured at -35.0 °C (within -30.0 °C limit), and resin re-drying set at 85 °C for 4 hours."
-            ),
-            confidence=0.94,
-            citation=DEFAULT_IM_CITATION,
-        )
-
-    return FindingDraft(
-        finding=(
-            f"Guided frontline technician in Vietnamese through {suspect_machine} enclosure removal, "
-            f"tool {suspect_tool} insert replacement at 4.2 N·m torque, and dial indicator runout verification "
-            "(0.003 mm <= 0.005 mm) following OEM manual."
-        ),
-        evidence=(
-            f"Completed 5/5 OEM checkpoints: E-Stop/LOTO engaged, insert {suspect_tool} flank wear confirmed, "
-            "new WNMG-080408 insert torqued to 4.2 N·m, spindle runout measured at 0.003 mm "
-            "(within 0.005 mm tolerance), and 1500 RPM test spin completed with 0 safety violations."
-        ),
-        confidence=0.94,
-        citation=DEFAULT_CNC_CITATION,
-    )
-
-
-def build_diagnostic_finding(board_data: dict | IncidentState | None = None) -> FindingDraft:
-    """Builds a deterministic FindingDraft representing gathered technician diagnostic field evidence."""
-    suspect_machine = "CNC-02"
-    suspect_tool = "T07"
-
-    if isinstance(board_data, IncidentState):
-        suspect_machine = board_data.suspect_machine or suspect_machine
-        suspect_tool = board_data.suspect_tool or suspect_tool
-    elif isinstance(board_data, dict):
-        suspect_machine = board_data.get("suspect_machine") or suspect_machine
-        suspect_tool = board_data.get("suspect_tool") or suspect_tool
-
-    is_im = "IM" in suspect_machine.upper()
-
-    if is_im:
-        return FindingDraft(
-            finding=(
-                f"Technician visual and sensor inspection on {suspect_machine} confirms desiccant saturation "
-                "and oil contamination in Dryer-03 filter canister."
-            ),
-            evidence=(
-                "Diagnostic inspection via Gemini Live mobile stream confirms discolored desiccant beads "
-                "and degraded canister dewpoint (-15°C) starving cavity 3, corroborating short fill defect."
-            ),
-            confidence=0.92,
-            citation=DEFAULT_DIAGNOSTIC_IM_CITATION,
-        )
-
-    return FindingDraft(
-        finding=(
-            f"Technician macro camera probe on {suspect_machine} confirms severe flank wear (VB > 0.3mm) "
-            f"and micro-chipping on cutting insert {suspect_tool}."
-        ),
-        evidence=(
-            f"Diagnostic close-up photo received via Gemini Live mobile video stream shows abrasive flank wear "
-            f"exceeding 0.3mm across cutting edge of insert {suspect_tool}, matching workpiece vertical scratch pattern."
-        ),
-        confidence=0.92,
-        citation=DEFAULT_DIAGNOSTIC_CNC_CITATION,
-    )
 
 
 INSTRUCTION = (

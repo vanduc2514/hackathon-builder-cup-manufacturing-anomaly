@@ -3,6 +3,7 @@ import React from 'react';
 import type { IncidentState } from '../types';
 import ProductionLine from '../components/ProductionLine';
 import SpcChart from '../components/SpcChart';
+import TelemetryChart from '../components/TelemetryChart';
 import IncidentStream from '../components/IncidentStream';
 
 interface DashboardProps {
@@ -51,6 +52,10 @@ export default function Dashboard({ incident }: DashboardProps): React.ReactElem
       </section>
 
       <ProductionLine suspectMachine={incident?.suspect_machine ?? null} />
+      <TelemetryChart
+        latestTelemetry={incident?.latest_telemetry ?? null}
+        suspectMachine={incident?.suspect_machine ?? null}
+      />
       <SpcChart defectRate={incident?.defect_rate ?? 0.005} ucl={incident?.spc_ucl ?? 0.03} />
       <IncidentStream findings={incident?.findings ?? []} />
     </div>

@@ -9,9 +9,12 @@ export type IncidentStatus =
   | 'tracing'
   | 'investigating'
   | 'analyzing'
+  | 'awaiting_evidence'
   | 'repairing'
   | 'verifying'
-  | 'closed';
+  | 'closed'
+  | 'escalated'
+  | 'error';
 
 export interface AgentFinding {
   agent_id: string;
@@ -22,6 +25,28 @@ export interface AgentFinding {
   confidence: number;
   citation: string;
   timestamp: string;
+}
+
+export interface CitationReference {
+  document_id: string;
+  title: string;
+  page_number?: number;
+  section?: string;
+  snippet: string;
+  relevance_score: number;
+  last_revised?: string;
+  citation?: string;
+}
+
+export interface RAGSearchResult {
+  defect_symptom: string;
+  suspect_asset: string;
+  query: string;
+  citations: CitationReference[];
+  confidence: number;
+  summary?: string;
+  engine: string;
+  total_found: number;
 }
 
 export interface ImpactMetrics {
@@ -92,6 +117,7 @@ export interface TelemetryAlert {
 export interface IncidentState {
   incident_id: string;
   status: IncidentStatus;
+  status_reason: string | null;
   defect_type: string | null;
   defect_rate: number;
   spc_ucl: number;
@@ -100,6 +126,8 @@ export interface IncidentState {
   root_cause: string | null;
   verification_count: number;
   verification_target: number;
+  repair_done?: boolean;
+  approved: boolean;
   findings: AgentFinding[];
   impact: ImpactMetrics | null;
   documents: Record<string, unknown>;
@@ -135,9 +163,27 @@ export interface MultiMachineTelemetryResponse {
   source: string;
 }
 
+export type AndonPhaseKey = 'A' | 'B' | 'C' | 'D';
+export type AndonPhaseStatus = 'pending' | 'active' | 'completed' | 'escalated';
+
+export interface AndonPhaseDetails {
+  key: AndonPhaseKey;
+  letter: string;
+  name: string;
+  vietnameseName: string;
+  lampColor: 'red' | 'yellow' | 'blue' | 'green';
+  lampHex: string;
+  description: string;
+  activities: string[];
+  inputs: string[];
+  outputs: string[];
+  statuses: IncidentStatus[];
+}
+
 export interface DefectInjectionRequest {
   defect_type: string;
   severity: 'low' | 'medium' | 'high';
+  defect_rate: number;
   machine_id: string;
   tool_id: string;
 }

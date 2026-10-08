@@ -10,9 +10,12 @@ jinja2>=3.1.4
 
 # Google Cloud & Agent SDKs
 google-cloud-aiplatform>=1.60.0
+google-cloud-discoveryengine>=0.13.0
 google-cloud-firestore>=2.16.0
 google-cloud-bigquery>=3.25.0
 google-cloud-pubsub>=2.21.0
+google-adk>=2.11.0
+litellm>=1.84
 
 # Optional Testing & Code Quality
 pytest>=8.0.0

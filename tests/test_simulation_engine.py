@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,21 +11,26 @@ from fastapi.testclient import TestClient
 from backend.agents.orchestrator import orchestrator
 from backend.api.main import app
 from backend.core.blackboard import blackboard
-from backend.core.models import DefectInjectionRequest
+from backend.core.models import DefectInjectionRequest, SimulationStatusResponse
 from simulator.conveyor_simulator import ConveyorSimulator
 from simulator.injection_engine import DefectInjectionEngine, injection_engine
 
 
 @pytest.fixture(autouse=True)
-def clean_state():
-    """Restores pristine state before and after each test."""
+def clean_state(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[DefectInjectionRequest]]:
+    """Restores pristine state; captures workflow triggers instead of running the LLM workflow."""
+    started: list[DefectInjectionRequest] = []
+
+    def fake_start(trigger: DefectInjectionRequest) -> bool:
+        started.append(trigger)
+        return True
+
+    monkeypatch.setattr(orchestrator, "start_incident", fake_start)
     blackboard.reset()
     injection_engine.reset()
-    orchestrator.stop_simulation()
-    yield
+    yield started
     blackboard.reset()
     injection_engine.reset()
-    orchestrator.stop_simulation()
 
 
 def test_scenario_1_cnc_tool_wear_injection() -> None:
@@ -188,32 +194,52 @@ def test_api_simulation_status() -> None:
     assert "status" in data
 
 
-def test_orchestrator_fast_forward_scenario_1() -> None:
-    """Tests complete 4-phase incident lifecycle for Scenario 1 in fast-forward mode."""
-    blackboard.reset()
-    req = DefectInjectionRequest(scenario="cnc_tool_wear", mode="fast", duration_seconds=0.5)
-    asyncio.run(orchestrator.run_incident_simulation(req=req))
+def test_api_inject_scenario_2_opens_incident_with_im05_trigger(
+    clean_state: list[DefectInjectionRequest],
+) -> None:
+    """Scenario 2 fills IM-05 defaults the caller left unset, but keeps explicit overrides."""
+    client = TestClient(app)
+    client.post("/api/simulation/inject", json={"scenario": "im_damp_material", "mode": "fast"})
+    client.post(
+        "/api/simulation/inject",
+        json={"scenario": "im_damp_material", "machine_id": "IM-07", "defect_rate": 0.05},
+    )
 
-    state = blackboard.get_state()
-    assert state.status == "closed"
-    assert state.verification_count == 50
-    assert len(state.findings) == 8
-    assert state.impact is not None
-    assert state.impact.scrap_avoided == 240
+    default, override = clean_state
+    assert (default.machine_id, default.tool_id) == ("IM-05", "MOLD-03")
+    assert (default.defect_type, default.defect_rate) == ("short_fill", 0.081)
+    assert (override.machine_id, override.defect_rate) == ("IM-07", 0.05)
 
 
-def test_orchestrator_fast_forward_scenario_2() -> None:
-    """Tests complete 4-phase incident lifecycle for Scenario 2 in fast-forward mode."""
-    blackboard.reset()
-    req = DefectInjectionRequest(scenario="im_damp_material", mode="fast", duration_seconds=0.5)
-    asyncio.run(orchestrator.run_incident_simulation(req=req))
+def test_api_inject_rejected_while_workflow_running(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A second inject must not disturb the simulator while an incident is in flight."""
+    monkeypatch.setattr(type(orchestrator), "is_running", property(lambda self: True))
+    client = TestClient(app)
+    response = client.post("/api/simulation/inject", json={"scenario": "cnc_tool_wear"})
+    assert response.status_code == 409
+    assert injection_engine.get_status()["active_scenario"] is None
 
-    state = blackboard.get_state()
-    assert state.status == "closed"
-    assert state.verification_count == 50
-    assert len(state.findings) == 8
-    assert state.impact is not None
-    assert state.impact.scrap_avoided == 320
-    # Findings should cite IM-05, mold cavity #3, or dew point
-    citations = " ".join(f.finding + " " + f.evidence for f in state.findings)
-    assert "IM-05" in citations or "cavity #3" in citations
+
+def test_orchestrator_status_reports_running_trigger() -> None:
+    """Status exposes the started trigger while running and goes idle after cancel."""
+
+    async def scenario() -> tuple[SimulationStatusResponse, SimulationStatusResponse]:
+        orch = type(orchestrator)()
+        never_done = asyncio.Event()
+        orch._abort = asyncio.Event()
+        orch._task = asyncio.create_task(never_done.wait())
+        orch._trigger = DefectInjectionRequest(scenario="im_damp_material", machine_id="IM-05")
+        orch._started_at = 0.0
+        running = orch.status()
+        orch._task.cancel()
+        await asyncio.gather(orch._task, return_exceptions=True)
+        await orch.cancel()
+        return running, orch.status()
+
+    running, idle = asyncio.run(scenario())
+    assert running.status == "running"
+    assert running.active_scenario == "im_damp_material"
+    assert running.target_machine == "IM-05"
+    assert running.elapsed_seconds is not None
+    assert idle.status == "idle"
+    assert idle.active_scenario is None

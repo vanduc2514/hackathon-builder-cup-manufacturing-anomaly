@@ -1,8 +1,9 @@
-"""API Routes: Incident board state and real-time streaming."""
+"""API Routes: Incident board state, real-time streaming, and shift-leader approval."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from sse_starlette.sse import EventSourceResponse
 
+from backend.agents.orchestrator import orchestrator
 from backend.core.blackboard import blackboard
 from backend.core.models import IncidentState
 
@@ -28,6 +29,8 @@ async def incident_events():
 
 @router.post("/approve")
 async def approve_incident():
-    """Shift leader approval endpoint to finalize 8D report and close incident."""
-    state = blackboard.update_status("closed")
-    return {"message": "Incident approved and officially closed by Shift Leader", "state": state}
+    """Shift-leader approval input, handed to the Orchestrator (closed incidents only)."""
+    state = orchestrator.approve()
+    if state is None:
+        raise HTTPException(status_code=409, detail="No closed incident awaiting approval")
+    return {"message": "Incident approved by Shift Leader", "state": state}

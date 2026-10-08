@@ -26,6 +26,12 @@ class Orchestrator:
     def stop_simulation(self) -> None:
         """Stops and cancels any running incident simulation."""
         self.is_running = False
+        self.current_scenario = None
+        self.current_mode = None
+        self.target_machine = None
+        self.target_tool = None
+        self.start_time = None
+        self.total_duration = None
         if self._current_task and not self._current_task.done():
             self._current_task.cancel()
             self._current_task = None
@@ -158,7 +164,9 @@ class Orchestrator:
 
         # 5. Phase C: Technician Copilot (multimodal resolution)
         blackboard.update_status(
-            "repairing", root_cause=f"Tool {tool_id} worn past 2,000 part limit"
+            "repairing",
+            root_cause=f"Tool {tool_id} worn past 2,000 part limit",
+            repair_done=True,
         )
         await asyncio.sleep(step_delay)
 
@@ -317,7 +325,9 @@ class Orchestrator:
 
         # 5. Phase C: Technician Copilot (multimodal resolution)
         blackboard.update_status(
-            "repairing", root_cause="Dryer desiccant bed saturated; resin moisture 0.28%"
+            "repairing",
+            root_cause="Dryer desiccant bed saturated; resin moisture 0.28%",
+            repair_done=True,
         )
         await asyncio.sleep(step_delay)
 

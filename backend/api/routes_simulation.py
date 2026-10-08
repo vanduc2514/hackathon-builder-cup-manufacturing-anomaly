@@ -55,6 +55,13 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) 
             f"Defect rate surging to 7.7% (exceeding UCL). Mode={req.mode}."
         )
 
+    duration = (
+        req.duration_seconds
+        if req.duration_seconds is not None
+        else (8.0 if req.mode == "fast" else 90.0)
+    )
+    orchestrator.total_duration = duration
+
     # 3. Launch orchestrator flow asynchronously in the background
     _active_task = asyncio.create_task(orchestrator.run_incident_simulation(req=req))
 
@@ -62,7 +69,7 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) 
         "status": "triggered",
         "scenario": scenario,
         "mode": req.mode,
-        "duration_seconds": orchestrator.total_duration,
+        "duration_seconds": duration,
         "target_machine": target_machine,
         "target_tool": target_tool,
         "burst_telemetry": burst,

@@ -76,6 +76,7 @@ export interface IncidentState {
   root_cause: string | null;
   verification_count: number;
   verification_target: number;
+  repair_done?: boolean;
   findings: AgentFinding[];
   impact: ImpactMetrics | null;
   documents: Record<string, unknown>;
@@ -83,10 +84,23 @@ export interface IncidentState {
 }
 
 export interface DefectInjectionRequest {
-  defect_type: string;
-  severity: 'low' | 'medium' | 'high';
-  machine_id: string;
-  tool_id: string;
+  scenario?: 'cnc_tool_wear' | 'im_damp_material' | string;
+  mode?: 'demo' | 'fast' | string;
+  duration_seconds?: number;
+  defect_type?: string;
+  severity?: 'low' | 'medium' | 'high';
+  machine_id?: string;
+  tool_id?: string;
+}
+
+export interface SimulationStatusResponse {
+  status: 'running' | 'idle' | string;
+  active_scenario: string | null;
+  mode: string | null;
+  target_machine: string | null;
+  target_tool: string | null;
+  elapsed_seconds: number | null;
+  total_seconds: number | null;
 }
 
 export interface SpcDataPoint {

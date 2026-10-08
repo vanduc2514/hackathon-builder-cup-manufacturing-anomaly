@@ -21,12 +21,14 @@ class Settings(BaseSettings):
     # BigQuery / Emulator settings
     bigquery_emulator_host: str | None = None
     bigquery_dataset: str = "manufacturing"
+    bigquery_fallback_to_mock: bool = True
 
     # Vertex AI Search / Discovery Engine settings
     vertex_search_datastore_id: str = "kaizen-knowledge-store"
     vertex_search_location: str = "global"
     vertex_search_collection: str = "default_collection"
     vertex_search_serving_config: str = "default_search"
+    rag_fallback_to_local: bool = True
 
     # Gemini Live settings
     gemini_live_model: str = "gemini-2.0-flash-exp"
@@ -46,9 +48,9 @@ class Settings(BaseSettings):
     mqtt_reconnect_max_delay: float = 60.0
     mqtt_anomaly_threshold: float = 0.70
 
-    # LLM provider switch (ollama for local tests, gemini for deploy).
+    # LLM provider switch (mock for standalone local dev/ci, ollama for local LLM, gemini for deploy).
     # Ollama endpoint: LiteLLM reads OLLAMA_API_BASE directly (default http://localhost:11434).
-    ai_provider: Literal["ollama", "gemini"] = "ollama"
+    ai_provider: Literal["ollama", "gemini", "mock"] = "ollama"
     ollama_model: str = "gemma2:2b"
     gemini_model: str = "gemini-flash-latest"
 
@@ -58,10 +60,12 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def llm_model(self) -> str:
-        """ADK model string: ``ollama_chat/...`` resolves to LiteLlm, ``gemini-...`` to Gemini."""
+        """ADK model string: ``ollama_chat/...`` resolves to LiteLlm, ``gemini-...`` to Gemini, ``mock`` to MockLlm."""
         if self.ai_provider == "ollama":
             # `ollama_chat/` (not `ollama/`) avoids tool-call loops in LiteLLM.
             return f"ollama_chat/{self.ollama_model}"
+        if self.ai_provider == "mock":
+            return "mock"
         return self.gemini_model
 
     @model_validator(mode="after")

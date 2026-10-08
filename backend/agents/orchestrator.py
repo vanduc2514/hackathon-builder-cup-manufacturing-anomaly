@@ -46,8 +46,14 @@ from backend.core.models import DefectInjectionRequest, IncidentState, Simulatio
 logger = logging.getLogger(__name__)
 
 # Every agent_* node is model-less and resolves to this default at call time.
-LlmAgent.set_default_model(settings.llm_model)
-logger.info("LLM provider=%s model=%s", settings.ai_provider, settings.llm_model)
+if settings.ai_provider == "mock":
+    from backend.agents.mock_llm import MockLlm
+
+    LlmAgent.set_default_model(MockLlm())
+    logger.info("LLM provider=mock using in-memory MockLlm")
+else:
+    LlmAgent.set_default_model(settings.llm_model)
+    logger.info("LLM provider=%s model=%s", settings.ai_provider, settings.llm_model)
 
 APP_NAME = "kaizen_orchestrator"
 WORKFLOW_NAME = "kaizen_incident"

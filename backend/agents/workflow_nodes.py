@@ -25,9 +25,11 @@ from backend.core.models import (
     FindingDraft,
     ImpactMetrics,
     IncidentState,
+    QualityInspectionReport,
     ScribeDraft,
     VerificationResult,
 )
+from simulator.injection_engine import injection_engine
 
 logger = logging.getLogger(__name__)
 
@@ -84,9 +86,42 @@ async def open_incident(ctx: Context, node_input: DefectInjectionRequest) -> Inc
     return blackboard.get_state()
 
 
-async def record_detection(node_input: FindingDraft) -> IncidentState:
+async def inspect_production(ctx: Context, node_input: dict) -> Event:
+    """Quality Inspector measures the conveyor window; only an upper SPC breach opens Phase A."""
+    report = await agent_quality_inspector.inspect_production_window(blackboard.get_state().spc_ucl)
+    ctx.state["qi_report"] = report.model_dump()
+    spc = report.spc
+    if spc.breach_direction == "upper":
+        return Event(
+            route="BREACH",
+            output={
+                "board": blackboard.get_state().model_dump(),
+                "inspection": report.model_dump(),
+            },
+        )
+    return Event(
+        route="NO_BREACH",
+        output=(
+            f"No SPC breach: defect rate {spc.defect_rate:.1%} within UCL {spc.limits.ucl:.1%} "
+            f"over {spc.sample_size} parts"
+        ),
+    )
+
+
+async def dismiss_incident(node_input: str) -> None:
+    blackboard.update_status("dismissed", status_reason=node_input)
+    logger.info("Incident %s dismissed: %s", blackboard.get_state().incident_id, node_input)
+
+
+async def record_detection(ctx: Context, node_input: FindingDraft) -> IncidentState:
     _record(agent_quality_inspector, node_input)
-    blackboard.update_status("tracing")
+    report = QualityInspectionReport.model_validate(ctx.state["qi_report"])
+    counts = report.defect_type_counts
+    blackboard.update_status(
+        "tracing",
+        defect_rate=report.spc.defect_rate,
+        defect_type=max(counts, key=counts.get) if counts else blackboard.get_state().defect_type,
+    )
     return blackboard.get_state()
 
 
@@ -137,6 +172,8 @@ async def record_resolution(node_input: dict) -> IncidentState:
     scribe = ScribeDraft.model_validate(node_input[agent_incident_scribe.agent.name])
     _record(agent_technician_copilot, copilot)
     _record(agent_incident_scribe, scribe)
+    # Simulated plant: the completed repair restores the line before post-repair inspection.
+    injection_engine.set_verification_recovery()
     blackboard.update_status(
         "verifying",
         documents={

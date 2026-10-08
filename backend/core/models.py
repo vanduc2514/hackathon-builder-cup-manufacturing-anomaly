@@ -141,7 +141,7 @@ class TelemetryAlert(BaseModel):
 class IncidentState(BaseModel):
     incident_id: str = "INC-0412"
     # normal, detecting, tracing, investigating, analyzing, awaiting_evidence, repairing,
-    # verifying, closed, escalated, error
+    # verifying, closed, dismissed, escalated, error
     status: str = "normal"
     status_reason: Optional[str] = None  # escalation or error reason
     defect_type: Optional[str] = None
@@ -426,6 +426,14 @@ class FilteredFramePacket(BaseModel):
     image_token: Optional[str] = None
     cavity_id: Optional[int] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class QualityInspectionReport(BaseModel):
+    """Quality Inspector Phase A evidence: SPC on the latest conveyor window plus edge-classified defect frames."""
+
+    spc: SpcEvaluationResult
+    defect_type_counts: Dict[str, int] = Field(default_factory=dict)
+    defect_frames: List[FilteredFramePacket] = Field(default_factory=list)
 
 
 class EdgeFilterStatistics(BaseModel):

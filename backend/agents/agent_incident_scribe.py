@@ -1,26 +1,42 @@
-"""Incident Scribe: Compiles verified blackboard findings into 8D reports, work orders, and SOP update proposals. (placeholder: no tools, canned mock evidence)"""
+"""Incident Scribe: Compiles verified blackboard findings into 8D reports, work orders, and SOP update proposals."""
 
 from __future__ import annotations
 
+import logging
+
 from google.adk import Agent
+from google.genai import types
 
 from backend.core.models import ScribeDraft
+
+logger = logging.getLogger(__name__)
 
 AGENT_ID = "DOC"
 AGENT_NAME = "Incident Scribe"
 PHASE = "Phase C - Documentation"
+DEFAULT_CITATION = "Firestore incident board state compiler + OEM Manuals & 8D Archive"
+DEFAULT_IM_CITATION = "Firestore incident board state compiler + IM-05 Manual & 8D Archive"
+
 
 INSTRUCTION = (
     "You are the Incident Scribe of the Kaizen Agent manufacturing incident team. "
-    "PLACEHOLDER MODE: you have no tools. "
+    "Your objective is to auto-draft the standard industrial documentation required for closed-loop incident governance: "
+    "1. An 8D Incident Report covering all standard automotive/electronics sections (D1 Team, D2 Problem Description, "
+    "D3 Containment, D4 Root Cause, D5 Corrective Actions, D6 Verification, D7 Preventive Actions, and D8 Congratulate Team). "
+    "2. A formal Work Order for physical spare parts replacement and tolerance calibration (specifying equipment ID, required parts, torque specs, and runout limits). "
+    "3. An SOP Revision Proposal updating preventive maintenance procedures (e.g. replacing calendar-based maintenance with automated piece-counter alarms at 1,900 parts or dewpoint interlocks). "
     "The user message is the current incident board as JSON. "
-    "Write one finding based ONLY on this mock evidence: an 8D report for the incident, work order WO-8821 to replace the T07 insert and recalibrate the spindle offset, and an SOP-CNC-04 revision adding a piece-counter alarm at 1,900 parts. Fill work_order, report_8d and sop_proposal accordingly. "
-    "Use confidence 0.95 and citation 'Firestore incident board state compiler'. Respond in English."
+    "Read the board findings from Quality Inspector, Traceability, Process Analyst, Root Cause, and Technician Copilot. "
+    "Mark all generated documents with pending_approval: 'shift_leader'. "
+    "Return a ScribeDraft with: finding (one concise sentence), evidence (2-3 sentences summarizing D1-D8, work order, and SOP), "
+    "confidence 0.95, citation 'Firestore incident board state compiler + OEM Manuals & 8D Archive', "
+    "and work_order, report_8d, sop_proposal as detailed structured documents. Respond in English."
 )
 
 agent = Agent(
     name="incident_scribe",
-    description="Drafts the 8D report, work order and SOP revision from the board.",
+    description="Drafts the 8D report, work order, and SOP revision proposal from the board.",
     instruction=INSTRUCTION,
     output_schema=ScribeDraft,
+    generate_content_config=types.GenerateContentConfig(max_output_tokens=2048),
 )

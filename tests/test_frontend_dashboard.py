@@ -10,6 +10,7 @@ Validates:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import subprocess
 from pathlib import Path
@@ -75,33 +76,36 @@ def test_required_dashboard_components_exist() -> None:
         assert "export default function" in content, f"{comp} must have a default export component"
 
 
-@pytest.mark.asyncio
-async def test_frontend_sse_stream_contract() -> None:
+def test_frontend_sse_stream_contract() -> None:
     """Verifies backend SSE stream produces incident_update events with valid IncidentState schema."""
-    blackboard.reset()
-    blackboard.add_finding(
-        AgentFinding(
-            agent_id="quality_inspector",
-            agent_name="Quality Inspector",
-            phase="detecting",
-            finding="Defect rate spiked to 3.8% exceeding UCL 3.0%",
-            evidence="Camera 01 scratch defect",
-            confidence=0.98,
-            citation="SPC Rules Section 4",
+
+    async def _run() -> None:
+        blackboard.reset()
+        blackboard.add_finding(
+            AgentFinding(
+                agent_id="quality_inspector",
+                agent_name="Quality Inspector",
+                phase="detecting",
+                finding="Defect rate spiked to 3.8% exceeding UCL 3.0%",
+                evidence="Camera 01 scratch defect",
+                confidence=0.98,
+                citation="SPC Rules Section 4",
+            )
         )
-    )
 
-    # Verify blackboard streaming generator delivers initial snapshot matching IncidentState schema
-    gen = blackboard.subscribe()
-    initial_event_json = await anext(gen)
-    await gen.aclose()
+        # Verify blackboard streaming generator delivers initial snapshot matching IncidentState schema
+        gen = blackboard.subscribe()
+        initial_event_json = await anext(gen)
+        await gen.aclose()
 
-    parsed = json.loads(initial_event_json)
-    incident_state = IncidentState(**parsed)
+        parsed = json.loads(initial_event_json)
+        incident_state = IncidentState(**parsed)
 
-    assert incident_state.incident_id == "INC-0412"
-    assert len(incident_state.findings) == 1
-    assert incident_state.findings[0].agent_id == "quality_inspector"
+        assert incident_state.incident_id == "INC-0412"
+        assert len(incident_state.findings) == 1
+        assert incident_state.findings[0].agent_id == "quality_inspector"
+
+    asyncio.run(_run())
 
     # Verify route registration for both /events and /stream
     from backend.api.routes_incidents import router as incidents_router

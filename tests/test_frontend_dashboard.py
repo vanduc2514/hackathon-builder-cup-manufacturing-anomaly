@@ -15,7 +15,6 @@ import json
 import subprocess
 from pathlib import Path
 
-import pytest
 from starlette.testclient import TestClient
 
 from backend.api.main import app

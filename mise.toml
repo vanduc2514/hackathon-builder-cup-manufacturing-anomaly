@@ -27,6 +27,7 @@ APP_ENV       = "development"
 API_HOST      = "0.0.0.0"
 API_PORT      = "8000"
 FRONTEND_PORT = "3000"
+AI_PROVIDER   = "mock"
 RCLONE_CONFIG = "{{config_root}}/.rclone/rclone.conf"
 
 # GOOGLE_APPLICATION_CREDENTIALS = "{{config_root}}/.gcp/credentials.json"

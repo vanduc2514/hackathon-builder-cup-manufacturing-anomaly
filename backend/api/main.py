@@ -60,6 +60,7 @@ app.include_router(impact_router)
 app.include_router(telemetry_router)
 
 
+@app.get("/healthz", include_in_schema=False)
 @app.get("/health")
 @app.get("/healthz")
 async def health_check():

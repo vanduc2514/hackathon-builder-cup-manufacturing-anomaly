@@ -72,9 +72,9 @@ class Settings(BaseSettings):
     mqtt_reconnect_max_delay: float = 60.0
     mqtt_anomaly_threshold: float = 0.70
 
-    # LLM provider switch (mock for standalone local dev/ci, ollama for local LLM, gemini for deploy).
+    # LLM provider switch (mock for offline local dev/ci, ollama for local LLM, gemini for deploy).
     # Ollama endpoint: LiteLLM reads OLLAMA_API_BASE directly (default http://localhost:11434).
-    ai_provider: Literal["ollama", "gemini", "mock"] = "ollama"
+    ai_provider: Literal["ollama", "gemini", "mock"] = "mock"
     ollama_model: str = "gemma2:2b"
     gemini_model: str = "gemini-flash-latest"
     google_genai_use_vertexai: bool = False

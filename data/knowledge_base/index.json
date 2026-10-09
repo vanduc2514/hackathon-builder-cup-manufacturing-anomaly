@@ -1,0 +1,240 @@
+{
+  "version": "1.0.0",
+  "knowledge_base": "Kaizen Agent Manufacturing Domain Knowledge Base",
+  "documents": [
+    {
+      "document_id": "manuals/cnc_operating_manual.md",
+      "title": "CNC Vertical Machining Center Operating & Maintenance Manual",
+      "category": "manual",
+      "machines": ["CNC-01", "CNC-02", "CNC-03"],
+      "total_pages": 128,
+      "key_topics": [
+        "spindle_runout",
+        "insert_wear_threshold",
+        "scratch_vertical",
+        "spindle_vibration",
+        "tool_t07"
+      ],
+      "page_anchors": {
+        "1": "Chapter 1: Machine Architecture & Operating Boundaries",
+        "45": "Chapter 3: Spindle Dynamics & Vibration Thresholds",
+        "88": "Chapter 4: Tooling Station Allocations & Life Ratings",
+        "112": "Section 4.5: Spindle Vibration & Cutting Insert Diagnostics",
+        "120": "Chapter 5: Preventive Maintenance Schedules & SOP References"
+      },
+      "critical_citations": [
+        {
+          "page_number": 112,
+          "section": "Section 4.5: Spindle Vibration & Cutting Insert Diagnostics",
+          "snippet": "When vertical scratches (scratch_vertical) appear on finished Face A accompanied by spindle vibration increase (> 35% above baseline or RMS > 4.5 mm/s) and current elevation (+10% to +15%), the primary root cause is cutting tool insert flank wear or edge chipping on active cutter T07."
+        },
+        {
+          "page_number": 45,
+          "section": "Section 3.3: Dynamic Runout Tolerances",
+          "snippet": "Spindle runout tolerance TIR <= 0.005 mm (5.0 µm). Measured runout > 0.005 mm causes asymmetric chip loading, harmonic chatter, and surface scratches."
+        },
+        {
+          "page_number": 88,
+          "section": "Section 4.2: Standard Automotive Transmission Housing Tooling Layout",
+          "snippet": "Tool station T07 (Face Mill Ø50, 4-Flute APMT1604PDER-M2) manufacturer rated life limit is 2,000 parts."
+        }
+      ]
+    },
+    {
+      "document_id": "maint_logs/cnc_tool_t07_maintenance.md",
+      "title": "CNC-02 Tool Station T07 Maintenance & Inspection Log",
+      "category": "maint_log",
+      "machines": ["CNC-02"],
+      "total_pages": 3,
+      "key_topics": [
+        "tool_installation_history",
+        "parts_counter_2400",
+        "manufacturer_limit_2000",
+        "calendar_sop",
+        "spindle_runout_0003"
+      ],
+      "page_anchors": {
+        "1": "Tool Asset Overview & Installation Metadata",
+        "2": "Historical Maintenance Timeline & Cumulative Tool Usage",
+        "3": "Corrective Action & Verification Record"
+      },
+      "critical_citations": [
+        {
+          "page_number": 2,
+          "section": "Historical Maintenance Timeline & Cumulative Tool Usage",
+          "snippet": "Tool T07 ran 2,400 parts against manufacturer limit of 2,000 parts under calendar-based SOP-MNT-CNC-04. Flank wear measured VB = 0.38 mm with chipped edge on pocket 2."
+        },
+        {
+          "page_number": 3,
+          "section": "Corrective Action & Verification Record",
+          "snippet": "Replaced all 4 inserts with fresh APMT1604PDER-M2. Torqued to 3.5 N·m. Dial indicator runout measured 0.003 mm (< 0.005 mm threshold). 50/50 consecutive parts verified defect-free."
+        }
+      ]
+    },
+    {
+      "document_id": "past_8d_reports/8D_2026_03_12_spindle_vibration.md",
+      "title": "8D Incident Report: CNC-02 Spindle Vibration Spike & Machined Face Scratching",
+      "category": "8d_report",
+      "machines": ["CNC-02"],
+      "total_pages": 5,
+      "key_topics": [
+        "8d_methodology",
+        "spindle_vibration_spike",
+        "scratch_vertical",
+        "5_whys",
+        "ishikawa_6m",
+        "insert_replacement_cure"
+      ],
+      "page_anchors": {
+        "1": "D1: Team Establishment & D2: Problem Description",
+        "2": "D3: Interim Containment Actions (ICA)",
+        "3": "D4: Root Cause Analysis (5-Whys & Ishikawa)",
+        "4": "D5: Permanent Corrective Action (PCA) & D6: Verification",
+        "5": "D7: Prevent Recurrence & D8: Sign-off"
+      },
+      "critical_citations": [
+        {
+          "page_number": 4,
+          "section": "D5: Permanent Corrective Action (PCA)",
+          "snippet": "Prior incident on 2026-03-12 where spindle vibration was cured by insert replacement on tool T07, torquing to 3.5 N·m, and confirming runout 0.003 mm < 0.005 mm."
+        },
+        {
+          "page_number": 3,
+          "section": "D4: Root Cause Analysis (5-Whys)",
+          "snippet": "Root cause chain confirmed: vertical scratches -> chipped insert -> spindle vibration -> tool exceeded 2,000 cycle life limit -> calendar-based SOP lacked cycle counter interlock."
+        }
+      ]
+    },
+    {
+      "document_id": "manuals/injection_molding_guide.md",
+      "title": "Industrial Injection Molding Machine & Polymer Processing Guide",
+      "category": "manual",
+      "machines": ["IM-05", "IM-06"],
+      "total_pages": 94,
+      "key_topics": [
+        "abs_resin",
+        "moisture_limit_002",
+        "dew_point_minus_40",
+        "dew_point_minus_18_failure",
+        "dehumidifier_filter",
+        "sink_mark",
+        "short_fill"
+      ],
+      "page_anchors": {
+        "1": "Chapter 1: Machine Specifications & Clamping Units",
+        "32": "Chapter 2: Raw Material Properties — ABS Resin Processing",
+        "58": "Chapter 3: Dehumidifying Dryer Operation & Maintenance",
+        "75": "Chapter 4: Troubleshooting Multi-Cavity Quality Imbalances"
+      },
+      "critical_citations": [
+        {
+          "page_number": 32,
+          "section": "Chapter 2: Raw Material Properties — ABS Resin Processing",
+          "snippet": "ABS resin processing moisture limit is <= 0.02% by weight (200 ppm). Moisture > 0.02% causes steam vaporization, leading to sink marks (sink_mark) and short fill (short_fill)."
+        },
+        {
+          "page_number": 58,
+          "section": "Chapter 3: Dehumidifying Dryer Operation & Maintenance",
+          "snippet": "Desiccant honeycomb dryer nominal dew point is -40 °C. Warning threshold is -30 °C. Critical failure limit is -18 °C. Minimum pre-drying requirement is 4 hours at 80-85 °C."
+        }
+      ]
+    },
+    {
+      "document_id": "manuals/mold_spec_im05_4cavity.md",
+      "title": "Tooling Specification & Rheological Analysis: 4-Cavity Enclosure Mold (MOLD-E4C-05)",
+      "category": "spec",
+      "machines": ["IM-05"],
+      "total_pages": 24,
+      "key_topics": [
+        "mold_cavity_3",
+        "runner_length_285mm",
+        "pressure_drop",
+        "rheological_sensitivity",
+        "sink_mark",
+        "short_fill"
+      ],
+      "page_anchors": {
+        "1": "Mold Construction & Cavity Allocation",
+        "2": "Hydraulic Runner Length & Flow Resistance Analysis",
+        "3": "Defect Susceptibility & Troubleshooting Signatures"
+      },
+      "critical_citations": [
+        {
+          "page_number": 2,
+          "section": "Hydraulic Runner Length & Flow Resistance Analysis",
+          "snippet": "Cavity #3 runner length is 285 mm compared to 180 mm for Cavity 1 and Cavity 2 (+26% higher pressure drop), causing highest flow resistance and melt cooling."
+        },
+        {
+          "page_number": 3,
+          "section": "Defect Susceptibility & Troubleshooting Signatures",
+          "snippet": "When ABS moisture exceeds 0.02%, Cavity #3 is the first to exhibit sink marks and short fill due to its 285 mm runner length while other cavities remain visually acceptable."
+        }
+      ]
+    },
+    {
+      "document_id": "maint_logs/dehumidifier_dryer_maintenance.md",
+      "title": "Auxiliary Equipment Maintenance Log: Dehumidifier Dryer-03",
+      "category": "maint_log",
+      "machines": ["IM-05"],
+      "total_pages": 3,
+      "key_topics": [
+        "dryer_03",
+        "intake_filter_clogged",
+        "dew_point_spike_minus_18",
+        "abs_lot_changeover",
+        "filter_replacement_recovery"
+      ],
+      "page_anchors": {
+        "1": "Equipment Profile & Telemetry Baselines",
+        "2": "Maintenance History & Filter Service Records",
+        "3": "Inspection Findings, Filter Remediation & Recovery"
+      },
+      "critical_citations": [
+        {
+          "page_number": 2,
+          "section": "Maintenance History & Filter Service Records",
+          "snippet": "Dryer-03 dew point drifted from -40 °C to -18 °C at 13:50 on 2026-10-07. New damp resin lot ABS-20261007-B introduced at 14:00 resulted in sink marks on Cavity #3 at 14:20."
+        },
+        {
+          "page_number": 3,
+          "section": "Inspection Findings, Filter Remediation & Recovery",
+          "snippet": "Clogged intake filter cartridge FLT-DM-04 choked desiccant airflow. Swapped filter, regenerated dryer to -41.5 °C dew point, re-dried resin for 4 hours to 0.011% moisture."
+        }
+      ]
+    },
+    {
+      "document_id": "past_8d_reports/8D_2026_03_12_dryer_filter_dewpoint.md",
+      "title": "8D Incident Report: IM-05 Cavity 3 Sink Marks & Clogged Dryer Intake Filter",
+      "category": "8d_report",
+      "machines": ["IM-05"],
+      "total_pages": 5,
+      "key_topics": [
+        "8d_methodology",
+        "cavity_3_sink_mark",
+        "short_fill",
+        "clogged_dryer_filter",
+        "dew_point_minus_18",
+        "abs_moisture_002"
+      ],
+      "page_anchors": {
+        "1": "D1: Team Establishment & D2: Problem Description",
+        "2": "D3: Interim Containment Actions (ICA)",
+        "3": "D4: Root Cause Analysis (5-Whys & Ishikawa)",
+        "4": "D5: Permanent Corrective Action (PCA) & D6: Verification",
+        "5": "D7: Prevent Recurrence & D8: Sign-off"
+      },
+      "critical_citations": [
+        {
+          "page_number": 4,
+          "section": "D5: Permanent Corrective Action",
+          "snippet": "Replaced clogged filter cartridge FLT-DM-04, restored dew point to -41 °C, re-dried resin for 4 hours to 0.012% moisture. 50 consecutive shots (200 parts) verified defect-free."
+        },
+        {
+          "page_number": 3,
+          "section": "D4: Root Cause Analysis (5-Whys)",
+          "snippet": "Root cause: Clogged intake filter on Dryer-03 choked airflow -> dew point climbed to -18 °C -> ABS resin pellet moisture reached 0.045% (> 0.02% threshold) -> Cavity #3 runner length (285 mm) suffered localized pressure drop."
+        }
+      ]
+    }
+  ]
+}

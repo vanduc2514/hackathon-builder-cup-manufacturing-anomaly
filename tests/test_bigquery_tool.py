@@ -325,3 +325,43 @@ def test_query_sensor_telemetry_window_failure_raises_runtime_error():
     with patch("backend.tools.bigquery_tool.get_bigquery_client", return_value=mock_client):
         with pytest.raises(RuntimeError, match="BigQuery query failed"):
             query_sensor_telemetry_window(machine_id="CNC-02")
+
+
+def test_query_traceability_topology_mock_fallback():
+    """Test client initialization failure falls back to mock traceability fixtures."""
+    with patch(
+        "backend.tools.bigquery_tool.get_bigquery_client",
+        side_effect=RuntimeError("No BigQuery client available"),
+    ):
+        # Default with fallback enabled
+        response = query_traceability_topology(time_window="09:30-10:00")
+        assert response.source == "mock_fallback"
+        assert len(response.suspects) >= 1
+        assert response.suspects[0].machine_id == "CNC-02"
+        assert response.suspects[0].tool_id == "T07"
+
+        # With fallback disabled, it raises
+        with patch("backend.tools.bigquery_tool.settings.bigquery_fallback_to_mock", False):
+            with pytest.raises(RuntimeError, match="No BigQuery client available"):
+                query_traceability_topology(time_window="09:30-10:00")
+
+
+def test_query_sensor_telemetry_window_mock_fallback():
+    """Test client initialization failure falls back to mock sensor telemetry fixtures."""
+    with patch(
+        "backend.tools.bigquery_tool.get_bigquery_client",
+        side_effect=RuntimeError("No BigQuery client available"),
+    ):
+        response_anomaly = query_sensor_telemetry_window(machine_id="CNC-02")
+        assert response_anomaly.source == "mock_fallback"
+        assert response_anomaly.machine_id == "CNC-02"
+        assert response_anomaly.anomaly_detected is True
+        assert response_anomaly.metrics.max_vibration == 3.82
+
+        response_normal = query_sensor_telemetry_window(machine_id="CNC-01")
+        assert response_normal.anomaly_detected is False
+
+        # With fallback disabled, it raises
+        with patch("backend.tools.bigquery_tool.settings.bigquery_fallback_to_mock", False):
+            with pytest.raises(RuntimeError, match="No BigQuery client available"):
+                query_sensor_telemetry_window(machine_id="CNC-02")

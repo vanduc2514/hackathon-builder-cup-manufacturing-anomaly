@@ -141,6 +141,79 @@ def get_bigquery_client() -> Any:
         raise RuntimeError(f"BigQuery client initialization failed: {exc}") from exc
 
 
+def get_mock_traceability_topology(
+    time_window: Optional[str] = "09:30-10:00",
+) -> TraceabilityTopologyResponse:
+    """Returns grounded mock traceability topology correlation from local dataset fixtures."""
+    return TraceabilityTopologyResponse(
+        source="mock_fallback",
+        suspects=[
+            SuspectCorrelation(
+                machine_id="CNC-02",
+                tool_id="T07",
+                correlation_score=0.95,
+                defect_count=23,
+                total_parts=25,
+                sample_ratio=0.92,
+            ),
+            SuspectCorrelation(
+                machine_id="CNC-01",
+                tool_id="T04",
+                correlation_score=0.02,
+                defect_count=0,
+                total_parts=28,
+                sample_ratio=0.0,
+            ),
+            SuspectCorrelation(
+                machine_id="CNC-03",
+                tool_id="T07",
+                correlation_score=0.01,
+                defect_count=0,
+                total_parts=27,
+                sample_ratio=0.0,
+            ),
+        ],
+        excluded_factors=[
+            "lot_id: AL-5083-B4 (normal distribution across line)",
+            "operator_id: OP-12 (normal distribution across line)",
+        ],
+        factor_distributions=[
+            FactorDistribution(
+                factor_type="lot_id",
+                factor_value="AL-5083-B4",
+                defect_count=23,
+                total_parts=80,
+                defect_ratio=0.29,
+                is_anomalous=False,
+            )
+        ],
+        time_window=time_window,
+    )
+
+
+def get_mock_sensor_telemetry_window(
+    machine_id: str,
+    time_window: Optional[str] = "30 MINUTE",
+) -> SensorTelemetryWindowResponse:
+    """Returns grounded mock sensor telemetry metrics for local development parity."""
+    is_anomaly = machine_id.upper() == "CNC-02"
+    return SensorTelemetryWindowResponse(
+        machine_id=machine_id,
+        source="mock_fallback",
+        time_window=time_window,
+        metrics=SensorMetrics(
+            min_vibration=1.20 if is_anomaly else 0.85,
+            max_vibration=3.82 if is_anomaly else 1.75,
+            avg_vibration=2.45 if is_anomaly else 1.45,
+            std_vibration=0.65 if is_anomaly else 0.15,
+            avg_temperature=43.2 if is_anomaly else 39.5,
+            avg_current=14.1 if is_anomaly else 11.8,
+            sample_count=180,
+        ),
+        anomaly_detected=is_anomaly,
+    )
+
+
 def query_traceability_topology(
     time_window: Optional[str] = "09:30-10:00",
     start_time: Optional[str] = None,
@@ -157,14 +230,23 @@ def query_traceability_topology(
         RuntimeError: If query execution against BigQuery fails.
         ValueError: If a time argument is malformed.
     """
+    try:
+        client = get_bigquery_client()
+    except Exception as exc:
+        if settings.bigquery_fallback_to_mock:
+            logger.warning(
+                "BigQuery client unavailable (%s); falling back to mock traceability fixtures.",
+                exc,
+            )
+            return get_mock_traceability_topology(time_window=time_window)
+        raise
+
     from google.cloud import bigquery
 
     where_clauses, params = _time_filters(time_window, start_time, end_time)
     if product_ids:
         where_clauses.insert(0, "product_id IN UNNEST(@product_ids)")
         params.append(bigquery.ArrayQueryParameter("product_ids", "STRING", list(product_ids)))
-
-    client = get_bigquery_client()
     dataset_id = f"{client.project}.{settings.bigquery_dataset}"
     where_str = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
 
@@ -277,13 +359,22 @@ def query_sensor_telemetry_window(
         RuntimeError: If query execution against BigQuery fails.
         ValueError: If a time argument is malformed.
     """
+    try:
+        client = get_bigquery_client()
+    except Exception as exc:
+        if settings.bigquery_fallback_to_mock:
+            logger.warning(
+                "BigQuery client unavailable (%s); falling back to mock sensor telemetry fixtures.",
+                exc,
+            )
+            return get_mock_sensor_telemetry_window(machine_id=machine_id, time_window=time_window)
+        raise
+
     from google.cloud import bigquery
 
     where_clauses, params = _time_filters(time_window, start_time, end_time)
     where_clauses.insert(0, "machine_id = @machine_id")
     params.append(bigquery.ScalarQueryParameter("machine_id", "STRING", machine_id))
-
-    client = get_bigquery_client()
     dataset_id = f"{client.project}.{settings.bigquery_dataset}"
     where_str = f"WHERE {' AND '.join(where_clauses)}"
 

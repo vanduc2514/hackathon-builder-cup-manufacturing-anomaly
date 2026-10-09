@@ -83,6 +83,10 @@ export default function Dashboard({ incident }: DashboardProps): React.ReactElem
         approved={incident?.approved ?? false}
         documents={incident?.documents}
         findings={incident?.findings ?? []}
+        suspectMachine={incident?.suspect_machine ?? null}
+        suspectTool={incident?.suspect_tool ?? null}
+        rootCause={incident?.root_cause ?? null}
+        defectType={incident?.defect_type ?? null}
       />
 
       {/* Sustainability & Avoided Scrap Impact */}

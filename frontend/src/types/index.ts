@@ -262,3 +262,55 @@ export interface MachineStatus {
   temperature_c: number;
   last_maintenance: string;
 }
+
+export interface EightDReport {
+  incident_id: string;
+  d1_team: string;
+  d2_problem: string;
+  d3_containment: string;
+  d4_root_cause: string;
+  d5_corrective_actions: string;
+  d6_implementation: string;
+  d7_preventive_action: string;
+  d8_congratulate_team: string;
+  pending_approval: string;
+  approved: boolean;
+  created_at: string;
+}
+
+export interface WorkOrder {
+  work_order_id: string;
+  title: string;
+  equipment_id: string;
+  description: string;
+  parts_required: string[];
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | string;
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'COMPLETED' | string;
+  pending_approval: string;
+  approved: boolean;
+  created_at: string;
+}
+
+export interface SOPRevisionProposal {
+  sop_id: string;
+  title: string;
+  equipment_id: string;
+  current_procedure: string;
+  proposed_revision: string;
+  justification: string;
+  threshold_alert_parts?: number | null;
+  pending_approval: string;
+  approved: boolean;
+  created_at: string;
+}
+
+export interface ApprovalAuditTrail {
+  approver_name: string;
+  approver_role: string;
+  approver_id: string;
+  timestamp: string;
+  signature_hash: string;
+  standard: string;
+  verification_evidence: string;
+}
+

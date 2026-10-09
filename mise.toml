@@ -216,3 +216,20 @@ run = 'rclone copy .cache/gdrive/{{arg(name="folder")}} gdrive:{{arg(name="folde
 [tasks."drive:push"]
 description = "Upload cached changes to a Drive folder (copy only, never deletes): mise run drive:push <Folder>"
 run = 'rclone copy .cache/gdrive/{{arg(name="folder")}} gdrive:{{arg(name="folder")}} --drive-shared-with-me -v'
+
+# =============================================================================
+# Cloud Run & Workload Identity Deployment
+# =============================================================================
+
+[tasks."deploy:iam"]
+description = "Provision least-privileged IAM roles & Cloud Run service account"
+run = "bash scripts/setup_workload_identity.sh"
+
+[tasks."deploy:backend"]
+description = "Build container and deploy FastAPI backend to Google Cloud Run"
+run = "bash scripts/deploy_cloud_run.sh"
+
+[tasks."deploy:backend:dry"]
+description = "Dry-run validation of backend container build and Cloud Run deployment"
+run = "bash scripts/deploy_cloud_run.sh --dry-run"
+

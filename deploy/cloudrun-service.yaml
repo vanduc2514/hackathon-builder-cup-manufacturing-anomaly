@@ -1,0 +1,80 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: kaizen-backend
+  labels:
+    cloud.googleapis.com/location: asia-southeast1
+    app.kubernetes.io/name: kaizen-backend
+    app.kubernetes.io/part-of: kaizen-agent
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/description: "Kaizen Agent: Autonomous Line Quality, Telemetry Correlation & Multi-Agent RCA"
+spec:
+  template:
+    metadata:
+      annotations:
+        # Scale between 0 (cost-effective idle) and 10 concurrent container instances
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "10"
+        # 2nd generation execution environment for full Linux kernel syscall compatibility
+        run.googleapis.com/execution-environment: gen2
+        # CPU boost during container cold start for rapid FastAPI & agent initialization
+        run.googleapis.com/startup-cpu-boost: "true"
+        # Session affinity for persistent Server-Sent Events (SSE) and WebSocket streams
+        run.googleapis.com/sessionAffinity: "true"
+    spec:
+      # Concurrency per container instance
+      containerConcurrency: 80
+      # Maximum request/streaming duration: 3600 seconds (1 hour) for continuous live telemetries & Gemini Live
+      timeoutSeconds: 3600
+      # Dedicated least-privileged service account with Workload Identity
+      serviceAccountName: kaizen-backend-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      containers:
+        - name: kaizen-backend
+          image: asia-southeast1-docker.pkg.dev/${GCP_PROJECT_ID}/kaizen-agent/backend:latest
+          resources:
+            limits:
+              cpu: "2000m"
+              memory: 2Gi
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: GCP_PROJECT_ID
+              value: "${GCP_PROJECT_ID}"
+            - name: GCP_REGION
+              value: "asia-southeast1"
+            - name: BIGQUERY_DATASET
+              value: "manufacturing"
+            - name: VERTEX_SEARCH_DATASTORE_ID
+              value: "kaizen-knowledge-store"
+            - name: AI_PROVIDER
+              value: "gemini"
+            - name: GEMINI_MODEL
+              value: "gemini-flash-latest"
+            - name: GOOGLE_GENAI_USE_VERTEXAI
+              value: "true"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: MQTT_BROKER_HOST
+              value: "broker.emqx.io"
+            - name: MQTT_BROKER_PORT
+              value: "1883"
+          ports:
+            - name: http1
+              containerPort: 8080
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+            timeoutSeconds: 5

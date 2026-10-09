@@ -5,7 +5,7 @@ import AndonPhaseTracker from '../components/AndonPhaseTracker';
 import ProductionLine from '../components/ProductionLine';
 import SpcChart from '../components/SpcChart';
 import TelemetryChart from '../components/TelemetryChart';
-import RootCauseCard from '../components/RootCauseCard';
+import IshikawaViewer from '../components/IshikawaViewer';
 import Report8DCard from '../components/Report8DCard';
 import ImpactCard from '../components/ImpactCard';
 import IncidentStream from '../components/IncidentStream';
@@ -66,11 +66,13 @@ export default function Dashboard({ incident }: DashboardProps): React.ReactElem
       />
       <SpcChart defectRate={incident?.defect_rate ?? 0.005} ucl={incident?.spc_ucl ?? 0.03} />
 
-      {/* 5-Whys Root Cause Deduction & Knowledge Base Citations */}
-      <RootCauseCard
+      {/* Interactive 5-Whys Root Cause Deduction & 6M Ishikawa Fishbone Diagram */}
+      <IshikawaViewer
+        incident={incident}
         rootCause={incident?.root_cause ?? null}
         suspectMachine={incident?.suspect_machine ?? null}
         suspectTool={incident?.suspect_tool ?? null}
+        defectType={incident?.defect_type ?? null}
         findings={incident?.findings ?? []}
       />
 

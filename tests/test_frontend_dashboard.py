@@ -61,6 +61,7 @@ def test_required_dashboard_components_exist() -> None:
         "DemoController.tsx",
         "ImpactCard.tsx",
         "IncidentStream.tsx",
+        "IshikawaViewer.tsx",
         "ProductionLine.tsx",
         "Report8DCard.tsx",
         "RootCauseCard.tsx",

@@ -7,23 +7,40 @@ export default function App(): React.ReactElement {
   const [incident, setIncident] = useState<IncidentState | null>(null);
 
   useEffect(() => {
-    const eventSource = new EventSource('/api/incidents/events');
+    let eventSource: EventSource | null = null;
+    let fallbackAttempted = false;
 
-    eventSource.addEventListener('incident_update', (event: MessageEvent<string>) => {
+    const handleMessage = (event: MessageEvent<string>) => {
       try {
         const data: IncidentState = JSON.parse(event.data);
         setIncident(data);
       } catch (err) {
         console.error('Failed to parse incident SSE event:', err);
       }
-    });
-
-    eventSource.onerror = (err) => {
-      console.warn('SSE connection error:', err);
     };
 
+    const initEventSource = (url: string) => {
+      const es = new EventSource(url);
+      es.addEventListener('incident_update', handleMessage);
+      es.onerror = (err) => {
+        if (!fallbackAttempted && url === '/api/incidents/stream') {
+          fallbackAttempted = true;
+          console.warn('SSE /api/incidents/stream unreachable, falling back to /api/incidents/events:', err);
+          es.close();
+          eventSource = initEventSource('/api/incidents/events');
+        } else {
+          console.warn(`SSE connection error on ${url}:`, err);
+        }
+      };
+      return es;
+    };
+
+    eventSource = initEventSource('/api/incidents/stream');
+
     return () => {
-      eventSource.close();
+      if (eventSource) {
+        eventSource.close();
+      }
     };
   }, []);
 

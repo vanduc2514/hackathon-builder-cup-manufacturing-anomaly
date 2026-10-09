@@ -26,6 +26,7 @@ from backend.tools.rag_search_tool import (
     format_citations_for_prompt,
     search_knowledge_base_sync,
 )
+from simulator.injection_engine import injection_engine
 
 
 def test_zero_credential_orchestrator_mock_workflow():
@@ -33,6 +34,8 @@ def test_zero_credential_orchestrator_mock_workflow():
     saved = LlmAgent._default_model
     try:
         LlmAgent.set_default_model(MockLlm())
+        injection_engine.reset()
+        injection_engine.inject_scenario_1_cnc_tool_wear()
         orch = Orchestrator(step_delay=0)
         req = DefectInjectionRequest(
             defect_type="scratch_vertical",
@@ -61,6 +64,7 @@ def test_zero_credential_orchestrator_mock_workflow():
         assert "LEARN" in ids
     finally:
         LlmAgent._default_model = saved
+        injection_engine.reset()
 
 
 def test_zero_credential_bigquery_mock_fallback():

@@ -25,7 +25,17 @@ class MockLlm(BaseLlm):
     ) -> AsyncGenerator[LlmResponse, None]:
         si = str(llm_request.config.system_instruction or "")
 
-        if "Quality Inspector" in si:
+        if "Incident Scribe" in si:
+            payload = {
+                "finding": "8D incident report drafted and emergency maintenance work order WO-2026-1004 generated.",
+                "evidence": "D1-D8 sections compiled, preventative action proposed to update SOP from calendar-based to usage-based tool change.",
+                "confidence": 0.95,
+                "citation": "Kaizen Scribe Knowledge Base & ISO 9001 8D Protocol",
+                "work_order": "WO-2026-1004",
+                "report_8d": "8D Report: Anomaly in CNC-02 Face A finish due to over-extended T07 insert...",
+                "sop_proposal": "Update SOP-MNT-CNC-04: Implement hard tool counter lockout at 2,000 cuts.",
+            }
+        elif "You are the Quality Inspector" in si or "Quality Inspector" in si:
             payload = {
                 "finding": "Vision inspection detected defect rate of 7.67% (23/300) exceeding SPC UCL of 3.00% on Face A vertical scratch.",
                 "evidence": "Gemma Edge Gateway Frame #8412 + Gemini Vision Metrology: vertical scratch 2.4 mm",
@@ -59,16 +69,6 @@ class MockLlm(BaseLlm):
                 "evidence": "Dial indicator measurement confirmed 0.008 mm TIR. 4-step repair checklist completed.",
                 "confidence": 0.95,
                 "citation": "OEM CNC Maintenance Manual Section 4.5 (Runout Inspection)",
-            }
-        elif "Incident Scribe" in si:
-            payload = {
-                "finding": "8D incident report drafted and emergency maintenance work order WO-2026-1004 generated.",
-                "evidence": "D1-D8 sections compiled, preventative action proposed to update SOP from calendar-based to usage-based tool change.",
-                "confidence": 0.95,
-                "citation": "Kaizen Scribe Knowledge Base & ISO 9001 8D Protocol",
-                "work_order": "WO-2026-1004",
-                "report_8d": "8D Report: Anomaly in CNC-02 Face A finish due to over-extended T07 insert...",
-                "sop_proposal": "Update SOP-MNT-CNC-04: Implement hard tool counter lockout at 2,000 cuts.",
             }
         elif "Continuous Learning" in si:
             payload = {

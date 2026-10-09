@@ -170,9 +170,7 @@ class Orchestrator:
         self._trigger = None
         self._started_at = None
 
-    async def run_incident_simulation(
-        self, req: DefectInjectionRequest
-    ) -> IncidentState:
+    async def run_incident_simulation(self, req: DefectInjectionRequest) -> IncidentState:
         """Runs the incident workflow for the simulation request."""
         return await self.run_incident(req)
 

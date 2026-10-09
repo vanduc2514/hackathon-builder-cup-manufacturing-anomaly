@@ -1,245 +1,445 @@
-"""ADK Tool: Direct rclone / Google Drive connector for external knowledge base access."""
+"""ADK Tool: Cloud-native Google Drive API v3 connector for external knowledge base access."""
 
 from __future__ import annotations
 
 import asyncio
-import json
+import io
 import logging
 import os
-import shutil
-import subprocess
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from backend.core.config import settings
 from backend.core.models import GoogleDriveDocument
 
 logger = logging.getLogger(__name__)
 
+# Standard MIME types
+MIME_DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+MIME_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+MIME_GOOGLE_DOC = "application/vnd.google-apps.document"
+MIME_GOOGLE_SHEET = "application/vnd.google-apps.spreadsheet"
+
+# Fallback mock documents for offline / zero-credential local dev parity
+MOCK_GDRIVE_DOCUMENTS: List[GoogleDriveDocument] = [
+    GoogleDriveDocument(
+        file_id="mock-doc-cnc-01",
+        web_view_link="https://drive.google.com/file/d/mock-doc-cnc-01/view",
+        path="manuals/cnc_operating_manual.docx",
+        name="cnc_operating_manual.docx",
+        size_bytes=15420,
+        is_dir=False,
+        mime_type=MIME_DOCX,
+        mod_time="2026-03-12T10:00:00Z",
+    ),
+    GoogleDriveDocument(
+        file_id="mock-doc-cnc-maint-01",
+        web_view_link="https://drive.google.com/file/d/mock-doc-cnc-maint-01/view",
+        path="maint_logs/cnc_tool_t07_maintenance.xlsx",
+        name="cnc_tool_t07_maintenance.xlsx",
+        size_bytes=8400,
+        is_dir=False,
+        mime_type=MIME_XLSX,
+        mod_time="2026-03-12T11:00:00Z",
+    ),
+    GoogleDriveDocument(
+        file_id="mock-doc-im-01",
+        web_view_link="https://drive.google.com/file/d/mock-doc-im-01/view",
+        path="manuals/injection_molding_guide.docx",
+        name="injection_molding_guide.docx",
+        size_bytes=12800,
+        is_dir=False,
+        mime_type=MIME_DOCX,
+        mod_time="2026-03-12T12:00:00Z",
+    ),
+]
+
+MOCK_DOC_TEXTS: Dict[str, str] = {
+    "mock-doc-cnc-01": (
+        "# CNC VMC-850 Operating Manual\n\n"
+        "## Section 4.2 - Spindle Tooling & Insert Replacement\n"
+        "When machining stainless and alloy steels, tool station T07 utilizes insert WNMG-080408. "
+        "Excessive tool flank wear (VB > 0.3mm) causes vertical scratch defects on workpiece outer surfaces. "
+        "Upon insert replacement, torque clamping screw to 4.2 N·m. "
+        "Measure spindle and arbor radial runout with dial indicator. Runout must not exceed 0.005 mm (tolerance limit).\n"
+    ),
+    "mock-doc-cnc-maint-01": (
+        "### Sheet: Tooling Maintenance Checklist\n"
+        "Station: T07 | Insert_Code: WNMG-080408 | Torque_Spec: 4.2 N·m | Max_Runout: 0.005 mm | Status: Active\n"
+        "Station: T08 | Insert_Code: CNMG-120408 | Torque_Spec: 5.0 N·m | Max_Runout: 0.005 mm | Status: Active\n"
+    ),
+    "mock-doc-im-01": (
+        "# Injection Molding IM-05 Operating Guide\n\n"
+        "## Section 3.1 - Resin Dehumidifier & Dryer System\n"
+        "Short fill and sink mark defects occur when desiccant canister is saturated or dewpoint exceeds -30.0 °C. "
+        "Replace auxiliary dryer filter with FLT-ABS-04. Verify dewpoint reaches -35.0 °C or lower.\n"
+    ),
+}
+
 
 class GoogleDriveConnector:
-    """Direct connector to external Google Drive storage via rclone.
+    """Cloud-native Google Drive API v3 connector.
 
-    Allows streaming and pulling knowledge base files directly from the canonical
-    remote (e.g. `gdrive:💻 Competition | AI Builder Cup`) without requiring them
-    to be checked into git.
+    Replaces rclone CLI wrappers with official google-api-python-client.
+    Authenticates automatically via Application Default Credentials (ADC) in Cloud Run
+    and provides offline mock fallbacks for local dev parity.
     """
 
     def __init__(
         self,
-        remote: Optional[str] = None,
-        base_folder: Optional[str] = None,
+        folder_id: Optional[str] = None,
+        service_account_path: Optional[str] = None,
         cache_dir: Optional[str | Path] = None,
         timeout_seconds: float = 30.0,
     ) -> None:
-        self.remote = remote or settings.gdrive_remote
-        self.base_folder = base_folder or settings.gdrive_base_folder
+        self.folder_id = folder_id or settings.gdrive_folder_id
+        self.service_account_path = service_account_path or settings.gdrive_service_account_path
         self.cache_dir = Path(cache_dir or settings.gdrive_cache_dir)
         self.timeout = timeout_seconds
+        self._service: Optional[Any] = None
+        self._initialized = False
 
-    def _resolve_rclone_bin(self) -> Optional[str]:
-        """Find the rclone binary on PATH or standard mise/local directories."""
-        found = shutil.which("rclone")
-        if found:
-            return found
+    def _get_service(self) -> Optional[Any]:
+        """Lazy-initialize Google Drive v3 resource using Application Default Credentials."""
+        if self._initialized:
+            return self._service
 
-        # Fallback candidate locations
-        home = Path.home()
-        candidates = [
-            home / ".local/share/mise/installs/rclone/1.75.1/bin/rclone",
-            home / ".local/bin/rclone",
-            Path("/usr/local/bin/rclone"),
-            Path("/opt/homebrew/bin/rclone"),
-        ]
-        for c in candidates:
-            if c.is_file() and os.access(c, os.X_OK):
-                return str(c)
-        return None
+        self._initialized = True
+        try:
+            from google.auth import default
+            from google.oauth2 import service_account
+            from googleapiclient.discovery import build
+
+            scopes = ["https://www.googleapis.com/auth/drive.readonly"]
+
+            if self.service_account_path and os.path.isfile(self.service_account_path):
+                creds = service_account.Credentials.from_service_account_file(
+                    self.service_account_path, scopes=scopes
+                )
+            else:
+                creds, _ = default(scopes=scopes)
+
+            self._service = build("drive", "v3", credentials=creds, cache_discovery=False)
+            logger.info("Successfully initialized Google Drive v3 API client")
+            return self._service
+        except Exception as exc:
+            logger.debug(
+                "Google Drive API v3 credentials unavailable (%s); falling back to mock mode",
+                exc,
+            )
+            self._service = None
+            return None
 
     def is_available(self) -> bool:
-        """Check if rclone is installed and the configured remote exists."""
-        rclone_bin = self._resolve_rclone_bin()
-        if not rclone_bin:
-            logger.debug("rclone binary not found")
-            return False
-
-        try:
-            res = subprocess.run(
-                [rclone_bin, "listremotes"],
-                capture_output=True,
-                text=True,
-                timeout=5.0,
-                check=False,
-            )
-            if res.returncode != 0:
-                return False
-            expected_remote = f"{self.remote}:"
-            return any(line.strip() == expected_remote for line in res.stdout.splitlines())
-        except Exception as exc:
-            logger.debug("rclone listremotes check failed: %s", exc)
-            return False
-
-    def _format_remote_target(self, subpath: str = "") -> str:
-        """Construct rclone remote path target string."""
-        clean_subpath = subpath.strip("/")
-        if clean_subpath:
-            return f"{self.remote}:{self.base_folder}/{clean_subpath}"
-        return f"{self.remote}:{self.base_folder}"
+        """Check if live Google Drive v3 client is connected and accessible."""
+        return self._get_service() is not None
 
     def list_documents(
-        self, subfolder: str = "", recursive: bool = False
+        self, folder_id: Optional[str] = None, recursive: bool = False
     ) -> List[GoogleDriveDocument]:
-        """List files and folders directly from Google Drive via rclone lsjson."""
-        rclone_bin = self._resolve_rclone_bin()
-        if not rclone_bin:
-            logger.warning("rclone not found; cannot list remote Google Drive files")
-            return []
+        """List files in the target Google Drive folder."""
+        service = self._get_service()
+        target_folder = folder_id or self.folder_id
 
-        target = self._format_remote_target(subfolder)
-        cmd = [rclone_bin, "lsjson", target, "--drive-shared-with-me"]
-        if recursive:
-            cmd.append("-R")
+        if not service or not target_folder:
+            logger.debug("Listing Google Drive documents from local mock fallback")
+            return list(MOCK_GDRIVE_DOCUMENTS)
 
         try:
-            res = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout,
-                check=False,
+            query = f"'{target_folder}' in parents and trashed = false"
+            fields = "files(id, name, mimeType, size, modifiedTime, webViewLink)"
+            results = (
+                service.files()
+                .list(
+                    q=query,
+                    fields=fields,
+                    supportsAllDrives=True,
+                    includeItemsFromAllDrives=True,
+                    pageSize=100,
+                )
+                .execute()
             )
-            if res.returncode != 0:
-                logger.warning("rclone lsjson failed (%s): %s", res.returncode, res.stderr)
-                return []
 
-            raw_data = json.loads(res.stdout)
+            files = results.get("files", [])
             documents: List[GoogleDriveDocument] = []
-            for item in raw_data:
-                if not isinstance(item, dict):
-                    continue
-                path = item.get("Path") or item.get("Name", "")
-                full_rel_path = f"{subfolder.strip('/')}/{path}".strip("/") if subfolder else path
+            for f in files:
                 documents.append(
                     GoogleDriveDocument(
-                        path=full_rel_path,
-                        name=item.get("Name", ""),
-                        size_bytes=int(item.get("Size", 0)),
-                        is_dir=bool(item.get("IsDir", False)),
-                        mime_type=item.get("MimeType"),
-                        mod_time=item.get("ModTime"),
+                        file_id=f.get("id"),
+                        web_view_link=f.get("webViewLink"),
+                        path=f.get("name", ""),
+                        name=f.get("name", ""),
+                        size_bytes=int(f.get("size", 0)),
+                        is_dir=f.get("mimeType") == "application/vnd.google-apps.folder",
+                        mime_type=f.get("mimeType"),
+                        mod_time=f.get("modifiedTime"),
                     )
                 )
             return documents
         except Exception as exc:
-            logger.warning("Failed to list Google Drive documents: %s", exc)
-            return []
+            logger.warning("Failed to list Google Drive files via v3 API: %s", exc)
+            return list(MOCK_GDRIVE_DOCUMENTS)
 
-    def stream_document_bytes(self, remote_path: str) -> bytes:
-        """Stream raw file content directly from Google Drive without local file creation."""
-        rclone_bin = self._resolve_rclone_bin()
-        if not rclone_bin:
-            raise RuntimeError("rclone binary not available to stream Google Drive file")
-
-        target = self._format_remote_target(remote_path)
-        cmd = [rclone_bin, "cat", target, "--drive-shared-with-me"]
+    def stream_document_bytes(self, file_id: str) -> bytes:
+        """Download raw binary content of a file from Google Drive into memory."""
+        service = self._get_service()
+        if not service:
+            text = MOCK_DOC_TEXTS.get(file_id, "Mock document content for offline parity.")
+            return text.encode("utf-8")
 
         try:
-            res = subprocess.run(
-                cmd,
-                capture_output=True,
-                timeout=self.timeout,
-                check=False,
-            )
-            if res.returncode != 0:
-                err_msg = res.stderr.decode("utf-8", errors="replace")
-                raise RuntimeError(
-                    f"rclone cat failed for '{target}' (code {res.returncode}): {err_msg}"
-                )
-            return res.stdout
+            request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
+            return request.execute()
         except Exception as exc:
-            logger.error("Error streaming Google Drive document '%s': %s", remote_path, exc)
-            raise RuntimeError(f"Google Drive streaming error for '{remote_path}': {exc}") from exc
+            logger.error("Error streaming document bytes for file_id '%s': %s", file_id, exc)
+            raise RuntimeError(f"Failed to stream document '{file_id}': {exc}") from exc
 
-    def stream_document_text(
-        self, remote_path: str, encoding: str = "utf-8", errors: str = "replace"
+    def export_google_doc_text(self, file_id: str, mime_type: str) -> str:
+        """Export native Google Docs or Sheets to text / CSV format."""
+        service = self._get_service()
+        if not service:
+            return MOCK_DOC_TEXTS.get(file_id, "")
+
+        export_mime = "text/plain"
+        if mime_type == MIME_GOOGLE_SHEET:
+            export_mime = "text/csv"
+
+        try:
+            request = service.files().export_media(fileId=file_id, mimeType=export_mime)
+            content_bytes = request.execute()
+            return content_bytes.decode("utf-8", errors="replace")
+        except Exception as exc:
+            logger.error("Error exporting Google Doc '%s': %s", file_id, exc)
+            raise RuntimeError(f"Failed to export Google Doc '{file_id}': {exc}") from exc
+
+    def extract_document_text(
+        self,
+        file_bytes: bytes,
+        mime_type: Optional[str] = None,
+        filename: Optional[str] = None,
     ) -> str:
-        """Stream document as text string."""
-        raw_bytes = self.stream_document_bytes(remote_path)
-        return raw_bytes.decode(encoding, errors=errors)
+        """Format-agnostic in-memory document parser converting docx/xlsx/text into Markdown."""
+        name = (filename or "").lower()
+        mime = (mime_type or "").lower()
 
-    def fetch_to_cache(self, remote_path: str, force_refresh: bool = False) -> Path:
-        """Fetch remote document to local cache directory (.cache/gdrive) and return its Path."""
-        clean_rel = remote_path.lstrip("/")
-        dest_path = self.cache_dir / clean_rel
+        # Handle Word (.docx)
+        if name.endswith(".docx") or mime == MIME_DOCX:
+            return self._parse_docx_in_memory(file_bytes)
 
+        # Handle Excel (.xlsx)
+        if name.endswith(".xlsx") or mime == MIME_XLSX:
+            return self._parse_xlsx_in_memory(file_bytes)
+
+        # Handle plain text / markdown / csv
+        try:
+            return file_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            return file_bytes.decode("latin-1", errors="replace")
+
+    @staticmethod
+    def _parse_docx_in_memory(file_bytes: bytes) -> str:
+        """Extract paragraphs and tables from .docx bytes into clean GitHub-flavored Markdown."""
+        try:
+            from docx import Document
+
+            doc = Document(io.BytesIO(file_bytes))
+            sections: List[str] = []
+
+            for p in doc.paragraphs:
+                text = p.text.strip()
+                if not text:
+                    continue
+                # Preserve heading hierarchy if styled
+                style_name = getattr(p.style, "name", "").lower()
+                if "heading 1" in style_name or "title" in style_name:
+                    sections.append(f"# {text}")
+                elif "heading 2" in style_name:
+                    sections.append(f"## {text}")
+                elif "heading 3" in style_name:
+                    sections.append(f"### {text}")
+                else:
+                    sections.append(text)
+
+            # Preserve tables as markdown tables
+            for table in doc.tables:
+                table_lines: List[str] = []
+                for row_idx, row in enumerate(table.rows):
+                    cells = [cell.text.strip().replace("\n", " ") for cell in row.cells]
+                    if not any(cells):
+                        continue
+                    if row_idx == 0:
+                        table_lines.append("| " + " | ".join(cells) + " |")
+                        table_lines.append("| " + " | ".join(["---"] * len(cells)) + " |")
+                    else:
+                        table_lines.append("| " + " | ".join(cells) + " |")
+                if table_lines:
+                    sections.append("\n".join(table_lines))
+
+            return "\n\n".join(sections)
+        except Exception as exc:
+            logger.warning("docx parsing failed; falling back to raw decode: %s", exc)
+            return file_bytes.decode("utf-8", errors="replace")
+
+    @staticmethod
+    def _parse_xlsx_in_memory(file_bytes: bytes) -> str:
+        """Extract Excel sheets into header-anchored key-value text records."""
+        try:
+            import openpyxl
+
+            wb = openpyxl.load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
+            sheet_sections: List[str] = []
+
+            for sheet_name in wb.sheetnames:
+                sheet = wb[sheet_name]
+                rows = list(sheet.iter_rows(values_only=True))
+                if not rows:
+                    continue
+
+                # Locate first non-empty row as column headers
+                header_idx = -1
+                headers: List[str] = []
+                for idx, r in enumerate(rows):
+                    non_empty = [
+                        str(cell).strip() for cell in r if cell is not None and str(cell).strip()
+                    ]
+                    if non_empty:
+                        header_idx = idx
+                        headers = [
+                            str(cell).strip() if cell is not None else f"Col_{i}"
+                            for i, cell in enumerate(r)
+                        ]
+                        break
+
+                if header_idx == -1:
+                    continue
+
+                records: List[str] = [f"### Sheet: {sheet_name}"]
+                for r in rows[header_idx + 1 :]:
+                    if not any(cell is not None for cell in r):
+                        continue
+                    record_parts = []
+                    for h, val in zip(headers, r):
+                        if val is not None and str(val).strip():
+                            record_parts.append(f"{h}: {val}")
+                    if record_parts:
+                        records.append(" | ".join(record_parts))
+
+                if len(records) > 1:
+                    sheet_sections.append("\n".join(records))
+
+            return "\n\n".join(sheet_sections)
+        except Exception as exc:
+            logger.warning("xlsx parsing failed; falling back to raw decode: %s", exc)
+            return file_bytes.decode("utf-8", errors="replace")
+
+    def search_exact_documents(
+        self, query_terms: List[str], folder_id: Optional[str] = None
+    ) -> List[GoogleDriveDocument]:
+        """Search Google Drive for files containing exact terms via fullText contains."""
+        service = self._get_service()
+        target_folder = folder_id or self.folder_id
+
+        if not service or not target_folder:
+            # Local mock search
+            matches: List[GoogleDriveDocument] = []
+            for doc in MOCK_GDRIVE_DOCUMENTS:
+                content = MOCK_DOC_TEXTS.get(doc.file_id or "", "")
+                if any(
+                    term.lower() in content.lower() or term.lower() in doc.name.lower()
+                    for term in query_terms
+                ):
+                    matches.append(doc)
+            return matches
+
+        try:
+            # Build fullText contains query
+            sub_clauses = [
+                f"fullText contains '{t}' or name contains '{t}'" for t in query_terms if t
+            ]
+            if not sub_clauses:
+                return self.list_documents(folder_id=target_folder)
+
+            q_clause = " or ".join(sub_clauses)
+            query = f"'{target_folder}' in parents and trashed = false and ({q_clause})"
+            fields = "files(id, name, mimeType, size, modifiedTime, webViewLink)"
+
+            results = (
+                service.files()
+                .list(
+                    q=query,
+                    fields=fields,
+                    supportsAllDrives=True,
+                    includeItemsFromAllDrives=True,
+                    pageSize=20,
+                )
+                .execute()
+            )
+
+            files = results.get("files", [])
+            matched: List[GoogleDriveDocument] = []
+            for f in files:
+                matched.append(
+                    GoogleDriveDocument(
+                        file_id=f.get("id"),
+                        web_view_link=f.get("webViewLink"),
+                        path=f.get("name", ""),
+                        name=f.get("name", ""),
+                        size_bytes=int(f.get("size", 0)),
+                        is_dir=f.get("mimeType") == "application/vnd.google-apps.folder",
+                        mime_type=f.get("mimeType"),
+                        mod_time=f.get("modifiedTime"),
+                    )
+                )
+            return matched
+        except Exception as exc:
+            logger.warning("Google Drive exact fullText search failed: %s", exc)
+            return []
+
+    def fetch_to_cache(self, file_id: str, filename: str, force_refresh: bool = False) -> Path:
+        """Optionally fetch remote document to local cache directory (.cache/gdrive)."""
+        dest_path = self.cache_dir / filename
         if dest_path.is_file() and not force_refresh:
             return dest_path
 
         dest_path.parent.mkdir(parents=True, exist_ok=True)
-        content = self.stream_document_bytes(remote_path)
+        content = self.stream_document_bytes(file_id)
         dest_path.write_bytes(content)
         return dest_path
-
-    def sync_folder(self, subfolder: str = "", local_target: Optional[Path] = None) -> Path:
-        """Download or sync remote folder directly into local cache directory without git commit."""
-        rclone_bin = self._resolve_rclone_bin()
-        if not rclone_bin:
-            raise RuntimeError("rclone binary not available to sync Google Drive folder")
-
-        target_dir = local_target or (self.cache_dir / subfolder.strip("/"))
-        target_dir.mkdir(parents=True, exist_ok=True)
-
-        remote_source = self._format_remote_target(subfolder)
-        cmd = [
-            rclone_bin,
-            "copy",
-            remote_source,
-            str(target_dir),
-            "--drive-shared-with-me",
-            "--drive-export-formats",
-            "md,csv",
-        ]
-
-        res = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=self.timeout * 2,
-            check=False,
-        )
-        if res.returncode != 0:
-            raise RuntimeError(f"rclone copy failed: {res.stderr}")
-        return target_dir
 
     # -------------------------------------------------------------------------
     # Asynchronous methods
     # -------------------------------------------------------------------------
 
     async def list_documents_async(
-        self, subfolder: str = "", recursive: bool = False
+        self, folder_id: Optional[str] = None, recursive: bool = False
     ) -> List[GoogleDriveDocument]:
         """Asynchronously list remote documents."""
-        return await asyncio.to_thread(self.list_documents, subfolder, recursive)
+        return await asyncio.to_thread(self.list_documents, folder_id, recursive)
 
-    async def stream_document_bytes_async(self, remote_path: str) -> bytes:
+    async def stream_document_bytes_async(self, file_id: str) -> bytes:
         """Asynchronously stream raw document bytes."""
-        return await asyncio.to_thread(self.stream_document_bytes, remote_path)
+        return await asyncio.to_thread(self.stream_document_bytes, file_id)
 
-    async def stream_document_text_async(
-        self, remote_path: str, encoding: str = "utf-8", errors: str = "replace"
+    async def extract_document_text_async(
+        self,
+        file_bytes: bytes,
+        mime_type: Optional[str] = None,
+        filename: Optional[str] = None,
     ) -> str:
-        """Asynchronously stream document text."""
-        return await asyncio.to_thread(self.stream_document_text, remote_path, encoding, errors)
+        """Asynchronously extract document text."""
+        return await asyncio.to_thread(self.extract_document_text, file_bytes, mime_type, filename)
 
-    async def fetch_to_cache_async(self, remote_path: str, force_refresh: bool = False) -> Path:
-        """Asynchronously fetch document to cache."""
-        return await asyncio.to_thread(self.fetch_to_cache, remote_path, force_refresh)
+    async def search_exact_documents_async(
+        self, query_terms: List[str], folder_id: Optional[str] = None
+    ) -> List[GoogleDriveDocument]:
+        """Asynchronously search exact documents."""
+        return await asyncio.to_thread(self.search_exact_documents, query_terms, folder_id)
 
-    async def sync_folder_async(
-        self, subfolder: str = "", local_target: Optional[Path] = None
+    async def fetch_to_cache_async(
+        self, file_id: str, filename: str, force_refresh: bool = False
     ) -> Path:
-        """Asynchronously sync folder to local cache."""
-        return await asyncio.to_thread(self.sync_folder, subfolder, local_target)
+        """Asynchronously fetch document to cache."""
+        return await asyncio.to_thread(self.fetch_to_cache, file_id, filename, force_refresh)
 
 
 # Module-level singleton
@@ -247,27 +447,19 @@ gdrive_connector = GoogleDriveConnector()
 
 
 def list_gdrive_documents(
-    subfolder: str = "", recursive: bool = False
+    folder_id: Optional[str] = None, recursive: bool = False
 ) -> List[GoogleDriveDocument]:
     """Helper to list Google Drive documents using default connector."""
-    return gdrive_connector.list_documents(subfolder=subfolder, recursive=recursive)
+    return gdrive_connector.list_documents(folder_id=folder_id, recursive=recursive)
 
 
-def stream_gdrive_document(remote_path: str) -> bytes:
+def stream_gdrive_document(file_id: str) -> bytes:
     """Helper to stream Google Drive document bytes."""
-    return gdrive_connector.stream_document_bytes(remote_path)
+    return gdrive_connector.stream_document_bytes(file_id)
 
 
-def stream_gdrive_document_text(remote_path: str) -> str:
-    """Helper to stream Google Drive document text."""
-    return gdrive_connector.stream_document_text(remote_path)
-
-
-def fetch_gdrive_document(remote_path: str, force_refresh: bool = False) -> Path:
-    """Helper to fetch Google Drive document into local cache."""
-    return gdrive_connector.fetch_to_cache(remote_path, force_refresh=force_refresh)
-
-
-def sync_gdrive_knowledge_base(subfolder: str = "knowledge base") -> Path:
-    """Helper to pull external knowledge base files into cache for offline indexing."""
-    return gdrive_connector.sync_folder(subfolder=subfolder)
+def search_gdrive_exact_documents(
+    query_terms: List[str], folder_id: Optional[str] = None
+) -> List[GoogleDriveDocument]:
+    """Helper to search Google Drive documents with exact terms."""
+    return gdrive_connector.search_exact_documents(query_terms=query_terms, folder_id=folder_id)

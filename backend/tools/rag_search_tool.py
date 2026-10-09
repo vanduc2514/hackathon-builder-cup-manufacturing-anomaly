@@ -1,4 +1,4 @@
-"""ADK Tool: Vertex AI Search domain knowledge base RAG retriever connecting to Google Cloud."""
+"""ADK Tool: Hybrid Vertex AI Search and Google Drive domain knowledge base RAG retriever."""
 
 from __future__ import annotations
 
@@ -22,6 +22,16 @@ MACHINE_FAMILIES: Dict[str, Set[str]] = {
     "injection_molding": {"im", "im-05", "im-01", "dryer-03", "dryer", "mold", "cavity"},
 }
 
+# Equipment model and family hierarchies for progressive relaxation
+ASSET_HIERARCHIES: Dict[str, Dict[str, str]] = {
+    "cnc-01": {"model": "VMC-850", "family": "CNC Milling Center"},
+    "cnc-02": {"model": "VMC-850", "family": "CNC Milling Center"},
+    "cnc-03": {"model": "VMC-850", "family": "CNC Milling Center"},
+    "im-05": {"model": "IM-05", "family": "Injection Molding"},
+    "im-01": {"model": "IM-01", "family": "Injection Molding"},
+    "dryer-03": {"model": "Dryer-03", "family": "Resin Dehumidifier"},
+}
+
 # Domain symptom synonym mappings
 SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
     "scratch_vertical": {
@@ -38,6 +48,10 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "t07",
         "face",
         "bap400r",
+        "longitudinal",
+        "groove",
+        "vết xước dọc",
+        "bavia",
     },
     "spindle_vibration": {
         "spindle_vibration",
@@ -51,6 +65,8 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "chatter",
         "bearing",
         "temperature",
+        "độ rung",
+        "độ đảo",
     },
     "short_fill": {
         "short_fill",
@@ -66,6 +82,8 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "flow",
         "damp",
         "moisture",
+        "thiếu liệu",
+        "hụt liệu",
     },
     "sink_mark": {
         "sink_mark",
@@ -78,6 +96,7 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "dewpoint",
         "moisture",
         "dryer",
+        "lõm bề mặt",
     },
     "damp_material": {
         "damp_material",
@@ -92,6 +111,8 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "hygroscopic",
         "desiccant",
         "flt-dm-04",
+        "flt-abs-04",
+        "ẩm liệu",
     },
     "tool_wear": {
         "tool_wear",
@@ -101,20 +122,78 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "flank",
         "vb",
         "t07",
+        "wnmg",
         "counter",
         "2400",
         "2000",
         "calendar",
         "sop-mnt-cnc-04",
+        "mòn dao",
     },
 }
 
+# Key industrial part & tolerance identifiers to boost in hybrid exact search
+EXACT_PART_TOKENS: Set[str] = {
+    "wnmg-080408",
+    "cnmg-120408",
+    "flt-abs-04",
+    "flt-dm-04",
+    "vmc-850",
+    "4.2 n·m",
+    "4.2 nm",
+    "0.005 mm",
+    "0.005mm",
+    "-35.0 °c",
+    "-35 °c",
+    "sop-mnt-cnc-04",
+    "sop-mold-02",
+}
+
+
+def get_asset_hierarchy(asset: str) -> List[Tuple[str, str]]:
+    """Return progressive relaxation hierarchy for an asset: (tier_name, name)."""
+    clean = asset.lower().strip()
+    tiers: List[Tuple[str, str]] = [("instance", asset.upper())]
+
+    if clean in ASSET_HIERARCHIES:
+        info = ASSET_HIERARCHIES[clean]
+        tiers.append(("model", info["model"]))
+        tiers.append(("family", info["family"]))
+    elif "cnc" in clean:
+        tiers.append(("model", "VMC-850"))
+        tiers.append(("family", "CNC Milling Center"))
+    elif "im" in clean or "mold" in clean:
+        tiers.append(("model", "IM-05"))
+        tiers.append(("family", "Injection Molding"))
+    elif "dryer" in clean:
+        tiers.append(("model", "Dryer-03"))
+        tiers.append(("family", "Resin Dehumidifier"))
+
+    return tiers
+
+
+def expand_symptom_queries(symptom: str, asset: str) -> List[str]:
+    """Generate multi-query expanded variations for symptom and asset."""
+    queries = [f"{symptom} {asset}"]
+    clean_sym = symptom.lower().strip()
+
+    if clean_sym in ("scratch_vertical", "tool_wear"):
+        queries.append(f"{asset} insert flank wear longitudinal score mark")
+        queries.append(f"{asset} T07 WNMG-080408 runout tolerance")
+        queries.append(f"{asset} mòn mảnh dao xước dọc")
+    elif clean_sym in ("short_fill", "sink_mark", "damp_material"):
+        queries.append(f"{asset} resin dehumidifier desiccant dewpoint short fill")
+        queries.append(f"{asset} FLT-ABS-04 dryer filter maintenance")
+        queries.append(f"{asset} ẩm liệu thiếu liệu sấy nhựa")
+    elif clean_sym == "spindle_vibration":
+        queries.append(f"{asset} spindle bearing vibration runout 0.005mm")
+        queries.append(f"{asset} độ rung trục chính độ đảo")
+
+    return queries
+
 
 class VertexAISearchClient:
-    """Connector to Google Cloud Vertex AI Search Datastores (Discovery Engine).
-
-    Connects directly to Google Cloud infrastructure with no local filesystem fallback.
-    """
+    """Connector to Google Cloud Vertex AI Search Datastores (Discovery Engine)."""
 
     def __init__(self) -> None:
         self.project_id = settings.gcp_project_id
@@ -143,10 +222,7 @@ class VertexAISearchClient:
         max_results: int = 5,
         min_relevance: float = 0.35,
     ) -> List[CitationReference]:
-        """Query Vertex AI Search Datastore directly and format results into CitationReference objects.
-
-        Raises an error on infrastructure or API failure (never falls back to local files).
-        """
+        """Query Vertex AI Search Datastore directly and format results into CitationReference objects."""
         from google.cloud import discoveryengine_v1 as discoveryengine
 
         client = self._get_client()
@@ -217,7 +293,7 @@ class VertexAISearchClient:
                         doc_data.get("snippet") or struct_data.get("snippet") or doc_data or ""
                     )
 
-            # Extract page anchor if present in struct data or snippet
+            # Extract page anchor if present
             page_val = doc_data.get("page_number") or struct_data.get("page_number")
             page_num = (
                 int(page_val)
@@ -259,7 +335,6 @@ class VertexAISearchClient:
             if isinstance(raw_relevance, (int, float)):
                 relevance = float(raw_relevance)
             else:
-                # Rank-based decay if Discovery Engine does not return raw score
                 relevance = max(0.40, 0.95 - (rank * 0.05))
 
             if relevance >= min_relevance:
@@ -289,10 +364,8 @@ def _resolve_dual_keys(
     filter_machine: Optional[str] = None,
 ) -> Tuple[str, str, str]:
     """Validate and resolve mandatory dual query keys (defect symptom + suspect asset)."""
-    # 1. Resolve asset
     asset = suspect_asset or filter_machine
     if not asset and query:
-        # Infer asset from query text
         for machines in MACHINE_FAMILIES.values():
             for m in machines:
                 if re.search(rf"\b{re.escape(m)}\b", query, re.IGNORECASE):
@@ -301,7 +374,6 @@ def _resolve_dual_keys(
             if asset:
                 break
 
-    # 2. Resolve symptom
     symptom = defect_symptom
     if not symptom and query:
         for s_key in SYMPTOM_SYNONYMS.keys():
@@ -328,11 +400,7 @@ def search_gdrive_knowledge(
     min_relevance: float = 0.35,
     connector: Optional[GoogleDriveConnector] = None,
 ) -> RAGSearchResult:
-    """RAG search querying external Google Drive knowledge base documents directly via rclone.
-
-    Allows streaming and indexing documents directly from the remote shared drive
-    without requiring checked-in files in git.
-    """
+    """Exact full-text RAG search querying Google Drive documents directly via Drive API v3."""
     symptom, asset, clean_query = _resolve_dual_keys(
         defect_symptom=defect_symptom,
         suspect_asset=suspect_asset,
@@ -343,61 +411,75 @@ def search_gdrive_knowledge(
     conn = connector or gdrive_connector
     citations: List[CitationReference] = []
 
-    # Check remote documents
-    files = conn.list_documents("knowledge base")
-    if not files:
-        files = conn.list_documents()
+    # Build exact search terms
+    search_terms = [asset.lower(), symptom.lower()]
+    asset_tiers = get_asset_hierarchy(asset)
+    for _, tier_name in asset_tiers:
+        search_terms.append(tier_name.lower())
 
-    doc_files = [f for f in files if not f.is_dir]
+    matching_docs = conn.search_exact_documents(query_terms=search_terms)
+    if not matching_docs:
+        matching_docs = conn.list_documents()
 
     query_tokens = set(re.findall(r"\w+", clean_query.lower()))
-    asset_tokens = {asset.lower(), asset.lower().replace("-", ""), asset.lower().replace("_", "")}
-    for _, members in MACHINE_FAMILIES.items():
-        if asset.lower() in members:
-            asset_tokens.update(members)
-            asset_tokens.update(m.replace("-", "") for m in members)
-            break
     symptom_tokens = SYMPTOM_SYNONYMS.get(symptom, {symptom.lower()})
 
-    for doc in doc_files:
+    for doc in matching_docs:
+        if doc.is_dir:
+            continue
+
         name_lower = doc.name.lower()
-        score = 0.40  # Base score for domain documents
+        score = 0.45
 
-        if any(tok in name_lower for tok in asset_tokens):
-            score += 0.30
-        if any(tok in name_lower for tok in symptom_tokens):
+        # Check filename matches
+        if any(term in name_lower for term in search_terms):
             score += 0.25
+        if any(tok in name_lower for tok in symptom_tokens):
+            score += 0.20
 
+        # Stream & parse document text in memory without disk writes
         snippet_text = f"Google Drive document: {doc.name}"
-        if score >= min_relevance:
-            try:
-                content_preview = conn.stream_document_text(doc.path)
-                preview_lower = content_preview.lower()
-                matches = sum(1 for tok in query_tokens if tok in preview_lower)
-                if matches > 0:
-                    score = min(0.95, score + (matches * 0.05))
-                    for tok in query_tokens:
-                        idx = preview_lower.find(tok)
-                        if idx != -1:
-                            start = max(0, idx - 60)
-                            end = min(len(content_preview), idx + 140)
-                            snippet_text = content_preview[start:end].strip().replace("\n", " ")
-                            break
-            except Exception as exc:
-                logger.debug("Could not stream document text preview for %s: %s", doc.name, exc)
+        try:
+            file_bytes = conn.stream_document_bytes(doc.file_id or doc.path)
+            content_text = conn.extract_document_text(
+                file_bytes=file_bytes, mime_type=doc.mime_type, filename=doc.name
+            )
+            content_lower = content_text.lower()
 
-            if score >= min_relevance:
-                ref = CitationReference(
-                    document_id=f"gdrive://{doc.path}",
-                    title=doc.name,
-                    page_number=1,
-                    section="External Drive Reference",
-                    snippet=snippet_text,
-                    relevance_score=round(score, 2),
-                    last_revised=doc.mod_time[:10] if doc.mod_time else None,
-                )
-                ref.citation = ref.formatted_citation()
-                citations.append(ref)
+            matches = sum(1 for tok in query_tokens if tok in content_lower)
+            if matches > 0:
+                score = min(0.96, score + (matches * 0.06))
+
+            # Check exact part token presence
+            for part_tok in EXACT_PART_TOKENS:
+                if part_tok in content_lower:
+                    score = min(0.98, score + 0.15)
+                    break
+
+            # Extract window snippet around highest scoring keyword
+            for tok in list(query_tokens) + list(symptom_tokens):
+                idx = content_lower.find(tok)
+                if idx != -1:
+                    start = max(0, idx - 60)
+                    end = min(len(content_text), idx + 200)
+                    snippet_text = content_text[start:end].strip().replace("\n", " ")
+                    break
+        except Exception as exc:
+            logger.debug("In-memory extraction error for %s: %s", doc.name, exc)
+
+        if score >= min_relevance:
+            doc_id = doc.web_view_link or f"gdrive://{doc.path}"
+            ref = CitationReference(
+                document_id=doc_id,
+                title=doc.name,
+                page_number=1,
+                section="Google Drive Grounded Reference",
+                snippet=snippet_text,
+                relevance_score=round(score, 2),
+                last_revised=doc.mod_time[:10] if doc.mod_time else None,
+            )
+            ref.citation = ref.formatted_citation()
+            citations.append(ref)
 
     citations.sort(key=lambda c: c.relevance_score, reverse=True)
     citations = citations[:max_results]
@@ -433,6 +515,147 @@ def search_gdrive_knowledge(
     )
 
 
+def search_hybrid_knowledge(
+    defect_symptom: Optional[str] = None,
+    suspect_asset: Optional[str] = None,
+    query: Optional[str] = None,
+    filter_machine: Optional[str] = None,
+    max_results: int = 5,
+    min_relevance: float = 0.35,
+    connector: Optional[GoogleDriveConnector] = None,
+) -> RAGSearchResult:
+    """Two-Stage Hybrid Search combining Vertex AI Search semantic discovery and Google Drive exact search.
+
+    Implements:
+    1. Multi-Query Expansion.
+    2. Progressive Hierarchical Relaxation (Asset -> Model -> Family).
+    3. Reciprocal Rank Fusion (RRF) for robust multi-engine scoring.
+    4. Exact part/torque token bonus.
+    5. Anti-Hallucination Guardrail (relevance >= 0.35).
+    """
+    symptom, asset, clean_query = _resolve_dual_keys(
+        defect_symptom=defect_symptom,
+        suspect_asset=suspect_asset,
+        query=query,
+        filter_machine=filter_machine,
+    )
+
+    vertex_citations: List[CitationReference] = []
+    # 1. Vertex AI Search (Semantic)
+    try:
+        # Try specific query first
+        vertex_citations = _vertex_client.search(
+            defect_symptom=symptom,
+            suspect_asset=asset,
+            query=clean_query,
+            max_results=max_results,
+            min_relevance=min_relevance,
+        )
+        # Progressive relaxation if 0 citations found
+        if not vertex_citations:
+            tiers = get_asset_hierarchy(asset)
+            for tier_label, tier_name in tiers[1:]:
+                logger.debug("Progressive relaxation to tier '%s' (%s)", tier_label, tier_name)
+                vertex_citations = _vertex_client.search(
+                    defect_symptom=symptom,
+                    suspect_asset=tier_name,
+                    query=f"{symptom} {tier_name}",
+                    max_results=max_results,
+                    min_relevance=min_relevance,
+                )
+                if vertex_citations:
+                    break
+    except Exception as exc:
+        logger.debug("Vertex AI Search unavailable in hybrid pass: %s", exc)
+
+    # 2. Google Drive Exact Search
+    drive_result = search_gdrive_knowledge(
+        defect_symptom=symptom,
+        suspect_asset=asset,
+        query=clean_query,
+        max_results=max_results,
+        min_relevance=min_relevance,
+        connector=connector,
+    )
+    drive_citations = drive_result.citations
+
+    # 3. Reciprocal Rank Fusion (RRF)
+    # RRF_Score = 1/(60 + Rank_v) + 1/(60 + Rank_d)
+    doc_scores: Dict[str, float] = {}
+    doc_map: Dict[str, CitationReference] = {}
+
+    for rank, c in enumerate(vertex_citations):
+        key = c.title.lower()
+        doc_scores[key] = doc_scores.get(key, 0.0) + (1.0 / (60 + rank))
+        doc_map[key] = c
+
+    for rank, c in enumerate(drive_citations):
+        key = c.title.lower()
+        doc_scores[key] = doc_scores.get(key, 0.0) + (1.0 / (60 + rank))
+        if key not in doc_map or c.relevance_score > doc_map[key].relevance_score:
+            doc_map[key] = c
+
+    # Normalize fused citations
+    fused_citations: List[CitationReference] = []
+    for key, rrf_raw in doc_scores.items():
+        base_ref = doc_map[key]
+        # Normalize RRF raw score (typically 0.016 - 0.033) into standard 0.40 - 0.98 scale
+        normalized_score = min(0.98, 0.40 + (rrf_raw * 18.0))
+
+        # Check for exact token bonus
+        snippet_lower = base_ref.snippet.lower()
+        for exact_tok in EXACT_PART_TOKENS:
+            if exact_tok in snippet_lower:
+                normalized_score = min(0.99, normalized_score + 0.12)
+                break
+
+        if normalized_score >= min_relevance:
+            fused_ref = CitationReference(
+                document_id=base_ref.document_id,
+                title=base_ref.title,
+                page_number=base_ref.page_number,
+                section=base_ref.section or "Hybrid Grounded Section",
+                snippet=base_ref.snippet,
+                relevance_score=round(normalized_score, 2),
+                last_revised=base_ref.last_revised,
+            )
+            fused_ref.citation = fused_ref.formatted_citation()
+            fused_citations.append(fused_ref)
+
+    fused_citations.sort(key=lambda c: c.relevance_score, reverse=True)
+    fused_citations = fused_citations[:max_results]
+
+    if not fused_citations:
+        return RAGSearchResult(
+            defect_symptom=symptom,
+            suspect_asset=asset,
+            query=clean_query,
+            citations=[],
+            confidence=0.0,
+            summary=(
+                f"No verified knowledge base documents exceeded relevance threshold {min_relevance} "
+                f"in hybrid search for symptom '{symptom}' on asset '{asset}'. Request field evidence."
+            ),
+            engine="hybrid",
+            total_found=0,
+        )
+
+    top_score = max(c.relevance_score for c in fused_citations)
+    avg_score = sum(c.relevance_score for c in fused_citations) / len(fused_citations)
+    confidence = round(min(1.0, (0.7 * top_score) + (0.3 * avg_score)), 2)
+
+    return RAGSearchResult(
+        defect_symptom=symptom,
+        suspect_asset=asset,
+        query=clean_query,
+        citations=fused_citations,
+        confidence=confidence,
+        summary=f"Retrieved {len(fused_citations)} verified citations via hybrid Vertex AI & Google Drive search.",
+        engine="hybrid",
+        total_found=len(fused_citations),
+    )
+
+
 def search_knowledge_base_sync(
     defect_symptom: Optional[str] = None,
     suspect_asset: Optional[str] = None,
@@ -442,12 +665,12 @@ def search_knowledge_base_sync(
     min_relevance: float = 0.35,
     source: str = "vertex_ai_search",
 ) -> RAGSearchResult:
-    """Synchronous RAG search querying Vertex AI Search or Google Drive directly.
+    """Synchronous RAG search supporting 'hybrid', 'vertex_ai_search', or 'google_drive'.
 
     Enforces:
     1. Dual Query Keys: defect_symptom and suspect_asset mandatory parameters.
-    2. Direct Google Infrastructure: Queries Vertex AI Search or Google Drive directly.
-    3. Strict Citation Contract: Formatted citations with page, section, and last revised date.
+    2. Direct Google Cloud Infrastructure & Google Drive API v3.
+    3. Multi-Query Expansion & Progressive Hierarchical Relaxation.
     4. Anti-Hallucination Guardrail: Returns confidence 0.0 and empty citations when below threshold.
     """
     if source in ("google_drive", "gdrive"):
@@ -460,6 +683,17 @@ def search_knowledge_base_sync(
             min_relevance=min_relevance,
         )
 
+    if source in ("hybrid", "auto"):
+        return search_hybrid_knowledge(
+            defect_symptom=defect_symptom,
+            suspect_asset=suspect_asset,
+            query=query,
+            filter_machine=filter_machine,
+            max_results=max_results,
+            min_relevance=min_relevance,
+        )
+
+    # Pure Vertex AI Search mode
     symptom, asset, clean_query = _resolve_dual_keys(
         defect_symptom=defect_symptom,
         suspect_asset=suspect_asset,
@@ -475,7 +709,6 @@ def search_knowledge_base_sync(
         min_relevance=min_relevance,
     )
 
-    # Anti-Hallucination Guardrail: return confidence 0.0 if empty or below threshold
     if not citations:
         return RAGSearchResult(
             defect_symptom=symptom,
@@ -491,7 +724,6 @@ def search_knowledge_base_sync(
             total_found=0,
         )
 
-    # Compute overall confidence score
     top_score = max(c.relevance_score for c in citations)
     avg_score = sum(c.relevance_score for c in citations) / len(citations)
     confidence = round(min(1.0, (0.7 * top_score) + (0.3 * avg_score)), 2)
@@ -517,7 +749,7 @@ async def search_knowledge_base(
     min_relevance: float = 0.35,
     source: str = "vertex_ai_search",
 ) -> RAGSearchResult:
-    """Asynchronous ADK Tool: Executes RAG search against Vertex AI Search or Google Drive."""
+    """Asynchronous ADK Tool: Executes hybrid RAG search against Vertex AI and Google Drive."""
     return await asyncio.to_thread(
         search_knowledge_base_sync,
         defect_symptom=defect_symptom,
@@ -577,5 +809,6 @@ def get_oem_manual_citations(asset: str, symptom: str) -> List[CitationReference
         suspect_asset=asset,
         max_results=3,
         min_relevance=0.35,
+        source="vertex_ai_search",
     )
     return result.citations

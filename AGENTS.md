@@ -139,27 +139,16 @@ export default function SpcChart({ bars, ucl }: SpcChartProps): React.ReactEleme
 The team's competition documents are stored in external Google Drive and accessed directly via the `backend/tools/gdrive_tool.py` connector:
 
 - **Folder:** `💻 Competition | AI Builder Cup`
-- **Remote:** `gdrive` (configured via `mise run drive:auth`)
-- **Local Cache:** `.cache/gdrive/` (gitignored; no checked-in repository copies)
+- **Integration:** Native Google Drive API v3 (`googleapiclient`) + Vertex AI Search Hybrid Pipeline
+- **Authentication:** Application Default Credentials (ADC) in production (Cloud Run); graceful mock fallback in local dev without credentials
+- **Local Cache:** `.cache/gdrive/` (gitignored; on-demand cache)
 
-### Retrieving and Streaming Content
+### Retrieving and Querying Content
 
-Kaizen connects to Google Drive directly without committing knowledge base files to git.
-
-Stream a remote file directly:
-```bash
-mise run drive:stream "knowledge base/MDS-EEH Series Instruction Manual.pdf"
-```
-
-Sync external knowledge base docs to local cache for indexing:
-```bash
-mise run drive:sync-kb
-```
-
-Or download a folder to `.cache/gdrive/` using rclone:
-```bash
-mise run drive:pull "💻 Competition | AI Builder Cup"
-```
+Kaizen integrates Google Drive directly into the RAG pipeline (`backend/tools/gdrive_tool.py` and `backend/tools/rag_search_tool.py`) without checking raw documents into git.
+- **Hybrid Retrieval:** Vertex AI Search handles semantic causal discovery, while Google Drive API v3 provides exact part code (`WNMG-080408`) and specification retrieval via Reciprocal Rank Fusion (RRF).
+- **Format Agnostic:** Word documents (`.docx`) and Excel spreadsheets (`.xlsx`) are parsed directly in memory via `python-docx` and `openpyxl` without disk writes.
+- **Dev Tasks:** Developer sync utilities remain available via `mise run drive:pull` and `mise run drive:auth` for manual asset inspection.
 
 ---
 

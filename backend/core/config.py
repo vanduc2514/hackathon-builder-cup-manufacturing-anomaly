@@ -28,9 +28,10 @@ class Settings(BaseSettings):
     vertex_search_collection: str = "default_collection"
     vertex_search_serving_config: str = "default_search"
 
-    # Google Drive (rclone) settings
-    gdrive_remote: str = "gdrive"
+    # Google Drive API v3 settings
+    gdrive_folder_id: str | None = None
     gdrive_base_folder: str = "💻 Competition | AI Builder Cup"
+    gdrive_service_account_path: str | None = None
     gdrive_cache_dir: str = ".cache/gdrive"
 
     # Gemini Live settings

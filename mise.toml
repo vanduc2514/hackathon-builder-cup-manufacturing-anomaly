@@ -184,14 +184,22 @@ run = "mkdir -p .rclone && rclone config create gdrive drive scope=drive"
 description = "List a Drive folder: mise run drive:ls <Folder>"
 run = 'rclone lsf gdrive:{{arg(name="folder")}} --drive-shared-with-me'
 
+[tasks."drive:stream"]
+description = "Stream a remote Drive file to stdout: mise run drive:stream <Path>"
+run = 'rclone cat gdrive:{{arg(name="path")}} --drive-shared-with-me'
+
 [tasks."drive:pull"]
-description = "Download a Drive folder to data/knowledge_base/drive/: mise run drive:pull <Folder>"
-run = 'rclone copy gdrive:{{arg(name="folder")}} data/knowledge_base/drive/ --drive-shared-with-me --drive-export-formats md,csv --progress'
+description = "Download a Drive folder to local cache (.cache/gdrive/): mise run drive:pull <Folder>"
+run = 'rclone copy gdrive:{{arg(name="folder")}} .cache/gdrive/{{arg(name="folder")}} --drive-shared-with-me --drive-export-formats md,csv --progress'
+
+[tasks."drive:sync-kb"]
+description = "Sync Google Drive knowledge base to local cache (.cache/gdrive/knowledge_base)"
+run = 'rclone copy "gdrive:💻 Competition | AI Builder Cup/knowledge base" .cache/gdrive/knowledge_base --drive-shared-with-me --drive-export-formats md,csv -v'
 
 [tasks."drive:push:dry"]
-description = "Preview upload of local changes (no writes): mise run drive:push:dry <Folder>"
-run = 'rclone copy data/knowledge_base/drive/ gdrive:{{arg(name="folder")}} --drive-shared-with-me --dry-run -v'
+description = "Preview upload of cached changes (no writes): mise run drive:push:dry <Folder>"
+run = 'rclone copy .cache/gdrive/{{arg(name="folder")}} gdrive:{{arg(name="folder")}} --drive-shared-with-me --dry-run -v'
 
 [tasks."drive:push"]
-description = "Upload local changes to a Drive folder (copy only, never deletes): mise run drive:push <Folder>"
-run = 'rclone copy data/knowledge_base/drive/ gdrive:{{arg(name="folder")}} --drive-shared-with-me -v'
+description = "Upload cached changes to a Drive folder (copy only, never deletes): mise run drive:push <Folder>"
+run = 'rclone copy .cache/gdrive/{{arg(name="folder")}} gdrive:{{arg(name="folder")}} --drive-shared-with-me -v'

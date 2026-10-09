@@ -136,25 +136,19 @@ export default function SpcChart({ bars, ucl }: SpcChartProps): React.ReactEleme
 
 ## Google Drive Source
 
-The team's competition documents are stored in Google Drive:
+The team's competition documents are stored in external Google Drive and accessed directly via the `backend/tools/gdrive_tool.py` connector:
 
 - **Folder:** `💻 Competition | AI Builder Cup`
-- **Remote:** `gdrive` (configured via `mise run drive:auth`)
-- **Local Mirror:** `data/knowledge_base/drive/AI Builder Cup/`
+- **Integration:** Native Google Drive API v3 (`googleapiclient`) + Vertex AI Search Hybrid Pipeline
+- **Authentication:** Application Default Credentials (ADC) in production (Cloud Run); graceful mock fallback in local dev without credentials
+- **Local Cache:** `.cache/gdrive/` (gitignored; on-demand cache)
 
-### Retrieving Content
+### Retrieving and Querying Content
 
-Fetch content from the default folder using the mise task:
-
-```bash
-mise run drive:pull "💻 Competition | AI Builder Cup"
-```
-
-Or using `rclone` directly:
-
-```bash
-mise exec -- rclone copy gdrive:"💻 Competition | AI Builder Cup" "data/knowledge_base/drive/AI Builder Cup" --drive-shared-with-me
-```
+Kaizen integrates Google Drive directly into the RAG pipeline (`backend/tools/gdrive_tool.py` and `backend/tools/rag_search_tool.py`) without checking raw documents into git.
+- **Hybrid Retrieval:** Vertex AI Search handles semantic causal discovery, while Google Drive API v3 provides exact part code (`WNMG-080408`) and specification retrieval via Reciprocal Rank Fusion (RRF).
+- **Format Agnostic:** Word documents (`.docx`) and Excel spreadsheets (`.xlsx`) are parsed directly in memory via `python-docx` and `openpyxl` without disk writes.
+- **Dev Tasks:** Developer sync utilities remain available via `mise run drive:pull` and `mise run drive:auth` for manual asset inspection.
 
 ---
 

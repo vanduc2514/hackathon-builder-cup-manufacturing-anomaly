@@ -25,3 +25,8 @@ requests>=2.31.0
 # Industrial & Edge Protocols
 paho-mqtt>=2.1.0
 
+# Document & Cloud Drive Integrations
+google-api-python-client>=2.100.0
+python-docx>=1.1.0
+openpyxl>=3.1.2
+

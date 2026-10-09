@@ -53,6 +53,23 @@ class KnowledgeDocumentMeta(BaseModel):
     tags: List[str] = Field(default_factory=list)
 
 
+class GoogleDriveDocument(BaseModel):
+    """Schema for document stored or discovered in remote Google Drive."""
+
+    file_id: Optional[str] = Field(default=None, description="Google Drive file ID")
+    web_view_link: Optional[str] = Field(
+        default=None, description="Direct web link to open file in Drive"
+    )
+    path: str = Field(description="Remote relative path in Google Drive")
+    name: str = Field(description="File name")
+    size_bytes: int = Field(default=0, description="Size in bytes")
+    is_dir: bool = Field(default=False, description="Whether this item is a folder")
+    mime_type: Optional[str] = Field(default=None, description="MIME type if available")
+    mod_time: Optional[str] = Field(
+        default=None, description="Last modification timestamp (ISO/string)"
+    )
+
+
 class RAGSearchRequest(BaseModel):
     """Query parameters for knowledge base search with dual keys."""
 

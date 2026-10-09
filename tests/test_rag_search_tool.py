@@ -389,3 +389,77 @@ def test_get_oem_manual_citations_convenience():
         assert isinstance(citations, list)
         assert len(citations) == 1
         assert isinstance(citations[0], CitationReference)
+
+
+def test_search_gdrive_knowledge_success():
+    """Verify search_gdrive_knowledge queries Drive connector and extracts grounded citations."""
+    from backend.tools.rag_search_tool import search_gdrive_knowledge
+
+    result = search_gdrive_knowledge(
+        defect_symptom="scratch_vertical",
+        suspect_asset="CNC-02",
+    )
+    assert isinstance(result, RAGSearchResult)
+    assert result.engine == "google_drive"
+    assert result.confidence > 0.50
+    assert len(result.citations) >= 1
+    top_citation = result.citations[0]
+    assert "cnc" in top_citation.title.lower()
+    assert top_citation.relevance_score >= 0.50
+
+
+def test_search_hybrid_knowledge_rrf():
+    """Verify search_hybrid_knowledge combines Vertex AI and Google Drive citations via RRF."""
+    from backend.tools.rag_search_tool import search_hybrid_knowledge
+
+    mock_items = [
+        _create_mock_search_result(
+            doc_id="cnc_manual_doc",
+            title="CNC VMC-850 Manual",
+            link="manuals/cnc.md",
+            snippet="Spindle vibration diagnostics with T07 insert WNMG-080408.",
+            relevance_score=0.91,
+        )
+    ]
+    mock_client = _create_mock_client(mock_items)
+
+    with patch(
+        "backend.tools.rag_search_tool._vertex_client._get_client", return_value=mock_client
+    ):
+        result = search_hybrid_knowledge(
+            defect_symptom="scratch_vertical",
+            suspect_asset="CNC-02",
+        )
+        assert isinstance(result, RAGSearchResult)
+        assert result.engine == "hybrid"
+        assert result.confidence > 0.60
+        assert len(result.citations) >= 1
+        # Chunks containing exact token WNMG-080408 receive boost
+        assert any("080408" in c.snippet for c in result.citations)
+
+
+def test_progressive_relaxation():
+    """Verify get_asset_hierarchy generates progressive relaxation tiers."""
+    from backend.tools.rag_search_tool import get_asset_hierarchy
+
+    cnc_tiers = get_asset_hierarchy("CNC-02")
+    assert len(cnc_tiers) == 3
+    assert cnc_tiers[0] == ("instance", "CNC-02")
+    assert cnc_tiers[1] == ("model", "VMC-850")
+    assert cnc_tiers[2] == ("family", "CNC Milling Center")
+
+    im_tiers = get_asset_hierarchy("IM-05")
+    assert len(im_tiers) == 3
+    assert im_tiers[0] == ("instance", "IM-05")
+    assert im_tiers[1] == ("model", "IM-05")
+
+
+def test_multi_query_expansion():
+    """Verify expand_symptom_queries generates technical and bilingual variations."""
+    from backend.tools.rag_search_tool import expand_symptom_queries
+
+    queries = expand_symptom_queries("scratch_vertical", "CNC-02")
+    assert len(queries) >= 3
+    # Checks for OEM terminology and Vietnamese equivalent
+    assert any("flank wear" in q for q in queries)
+    assert any("xước" in q for q in queries)

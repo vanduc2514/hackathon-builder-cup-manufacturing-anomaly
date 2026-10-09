@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     vertex_search_serving_config: str = "default_search"
     rag_fallback_to_local: bool = True
 
+    # Google Drive API v3 settings
+    gdrive_folder_id: str | None = None
+    gdrive_base_folder: str = "💻 Competition | AI Builder Cup"
+    gdrive_service_account_path: str | None = None
+    gdrive_cache_dir: str = ".cache/gdrive"
+
     # Gemini Live settings
     gemini_live_model: str = "gemini-2.0-flash-exp"
     gemini_live_endpoint: str | None = None

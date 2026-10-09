@@ -13,11 +13,20 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, File, Form, Query, UploadFile, WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 
+from backend.agents.agent_technician_copilot import (
+    AGENT_ID,
+    AGENT_NAME,
+    DIAGNOSTIC_PHASE,
+    analyze_visual_evidence_frame,
+    build_contextual_diagnostic_probe_vi,
+)
+from backend.core.blackboard import blackboard
 from backend.core.config import settings
 from backend.core.models import (
+    AgentFinding,
     GeminiLiveServerContent,
     GeminiLiveServerMessage,
     GeminiLiveSessionStatus,
@@ -57,6 +66,22 @@ def generate_synthetic_pcm_chunks(
 def generate_grounded_response(user_text: str) -> Dict[str, str]:
     """Generates domain-grounded Vietnamese technician guidance matching factory telemetry."""
     query = user_text.lower().strip()
+    state = blackboard.get_state()
+
+    # Diagnostic Feedback Loop: If incident is awaiting field evidence, Copilot verbalizes the probe
+    if (state.status == "awaiting_evidence" or state.diagnostic_request) and any(
+        k in query for k in ["bị gì", "sao thế", "làm gì", "kiểm tra", "yêu cầu", "sửa"]
+    ):
+        probe = state.diagnostic_request or build_contextual_diagnostic_probe_vi(
+            confidence=0.65,
+            machine_id=state.suspect_machine or "CNC-02",
+            tool_id=state.suspect_tool,
+            defect_type=state.defect_type,
+        )
+        return {
+            "transcription": probe,
+            "freq": "480",
+        }
 
     if any(k in query for k in ["đồng hồ so", "độ đảo", "0.008", "rà gá"]):
         return {
@@ -357,6 +382,23 @@ async def gemini_live_websocket(
                 )
 
                 if is_image:
+                    cur_st = blackboard.get_state()
+                    ev_payload = analyze_visual_evidence_frame(
+                        image_bytes=raw_bytes,
+                        machine_id=cur_st.suspect_machine or "CNC-02",
+                        tool_id=cur_st.suspect_tool,
+                        filename="mobile_camera_frame.jpg",
+                    )
+                    finding = AgentFinding(
+                        agent_id=AGENT_ID,
+                        agent_name=AGENT_NAME,
+                        phase=DIAGNOSTIC_PHASE,
+                        finding=f"Frontline technician camera frame confirms defect root cause on {cur_st.suspect_machine or 'CNC-02'}.",
+                        evidence=ev_payload.analysis,
+                        confidence=0.92,
+                        citation=ev_payload.citation,
+                    )
+                    blackboard.attach_field_evidence(finding, ev_payload)
                     resp = generate_grounded_response("ảnh camera kiểm định")
                 else:
                     resp = generate_grounded_response("bị gì")
@@ -438,7 +480,34 @@ async def gemini_live_websocket(
                 if "realtime_input" in payload and payload["realtime_input"]:
                     chunks = payload["realtime_input"].get("media_chunks", [])
                     has_video = any("image" in c.get("mime_type", "") for c in chunks)
-                    user_text = "ảnh camera kiểm định" if has_video else "bị gì"
+                    if has_video:
+                        for c in chunks:
+                            if "image" in c.get("mime_type", ""):
+                                try:
+                                    img_bytes = base64.b64decode(c.get("data", ""))
+                                except Exception:
+                                    img_bytes = b""
+                                cur_st = blackboard.get_state()
+                                ev_payload = analyze_visual_evidence_frame(
+                                    image_bytes=img_bytes,
+                                    machine_id=cur_st.suspect_machine or "CNC-02",
+                                    tool_id=cur_st.suspect_tool,
+                                    filename="realtime_frame.jpg",
+                                )
+                                finding = AgentFinding(
+                                    agent_id=AGENT_ID,
+                                    agent_name=AGENT_NAME,
+                                    phase=DIAGNOSTIC_PHASE,
+                                    finding=f"Frontline technician camera frame confirms defect root cause on {cur_st.suspect_machine or 'CNC-02'}.",
+                                    evidence=ev_payload.analysis,
+                                    confidence=0.92,
+                                    citation=ev_payload.citation,
+                                )
+                                blackboard.attach_field_evidence(finding, ev_payload)
+                                break
+                        user_text = "ảnh camera kiểm định"
+                    else:
+                        user_text = "bị gì"
 
                 if not user_text:
                     user_text = "Chào Copilot"
@@ -483,3 +552,35 @@ async def gemini_live_websocket(
         if session.active_generation_task and not session.active_generation_task.done():
             session.active_generation_task.cancel()
         # Keep session in manager for resumption window unless closed
+
+
+@router.post("/evidence")
+async def upload_gemini_live_evidence(
+    file: UploadFile = File(...),
+    notes: Optional[str] = Form(None),
+) -> Dict[str, Any]:
+    """Ingests visual evidence photo from technician's mobile device via Gemini Live session."""
+    image_bytes = await file.read()
+    cur_st = blackboard.get_state()
+    ev_payload = analyze_visual_evidence_frame(
+        image_bytes=image_bytes,
+        machine_id=cur_st.suspect_machine or "CNC-02",
+        tool_id=cur_st.suspect_tool,
+        filename=file.filename or "evidence.jpg",
+    )
+    finding = AgentFinding(
+        agent_id=AGENT_ID,
+        agent_name=AGENT_NAME,
+        phase=DIAGNOSTIC_PHASE,
+        finding=f"Frontline technician submitted close-up photo confirming defect root cause on {cur_st.suspect_machine or 'CNC-02'}.",
+        evidence=ev_payload.analysis + (f" Ghi chú: {notes}" if notes else ""),
+        confidence=0.92,
+        citation=ev_payload.citation,
+    )
+    new_state = blackboard.attach_field_evidence(finding, ev_payload)
+    return {
+        "status": "success",
+        "evidence": ev_payload.model_dump(),
+        "finding": finding.model_dump(),
+        "incident_status": new_state.status,
+    }

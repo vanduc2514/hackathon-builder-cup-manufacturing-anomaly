@@ -142,6 +142,19 @@ export interface TelemetryAlert {
   message: string;
 }
 
+export interface VisualEvidencePayload {
+  image_id: string;
+  filename?: string | null;
+  mime_type: string;
+  size_bytes: number;
+  image_base64?: string | null;
+  analysis: string;
+  defect_detected: boolean;
+  wear_measurement_mm?: number | null;
+  timestamp: string;
+  citation: string;
+}
+
 export interface IncidentState {
   incident_id: string;
   status: IncidentStatus;
@@ -161,6 +174,8 @@ export interface IncidentState {
   documents: Record<string, unknown>;
   latest_telemetry?: MachineTelemetryPayload | null;
   telemetry_alerts?: TelemetryAlert[];
+  diagnostic_request?: string | null;
+  visual_evidence?: VisualEvidencePayload | null;
   updated_at: string;
 }
 

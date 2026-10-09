@@ -34,6 +34,7 @@ from simulator.injection_engine import injection_engine
 logger = logging.getLogger(__name__)
 
 RCA_CONFIDENCE_THRESHOLD = 0.7
+SECONDARY_CONFIDENCE_THRESHOLD = 0.85
 MAX_EVIDENCE_ROUNDS = 2
 MAX_REOPENS = 1
 VERIFICATION_CITATION = "End-of-line Camera Station #1 inspection buffer"
@@ -176,17 +177,49 @@ async def rca_gate(ctx: Context, node_input: RootCauseFindingDraft) -> Event:
     """Routes on root-cause confidence: repair, gather field evidence, or escalate."""
     _record(agent_root_cause, node_input)
     confidence = node_input.confidence
-    if confidence >= RCA_CONFIDENCE_THRESHOLD:
-        blackboard.update_status("repairing", root_cause=node_input.finding)
+    rounds = ctx.state.get("evidence_rounds", 0)
+
+    # Criterion 5: Secondary Convergence: Verifies that the re-evaluated hypothesis
+    # converges with confidence >= 0.85 before proceeding to Phase C repair.
+    threshold = SECONDARY_CONFIDENCE_THRESHOLD if rounds >= 1 else RCA_CONFIDENCE_THRESHOLD
+
+    if confidence >= threshold:
+        blackboard.update_status(
+            "repairing", root_cause=node_input.finding, diagnostic_request=None
+        )
         return Event(route="CONFIDENT", output=blackboard.get_state().model_dump())
-    if ctx.state["evidence_rounds"] < MAX_EVIDENCE_ROUNDS:
-        ctx.state["evidence_rounds"] += 1
-        blackboard.update_status("awaiting_evidence")
+
+    if rounds < MAX_EVIDENCE_ROUNDS:
+        ctx.state["evidence_rounds"] = rounds + 1
+        # Criterion 1: Low-Confidence Triggering: Halts linear progression and extracts
+        # the missing evidence requirement (need).
+        diag_req = node_input.diagnostic_request
+        if not diag_req:
+            state = blackboard.get_state()
+            from backend.agents.agent_technician_copilot import (
+                build_contextual_diagnostic_probe_vi,
+            )
+
+            diag_req = build_contextual_diagnostic_probe_vi(
+                confidence=confidence,
+                machine_id=state.suspect_machine or "CNC-02",
+                tool_id=state.suspect_tool,
+                defect_type=state.defect_type,
+            )
+        blackboard.update_status("awaiting_evidence", diagnostic_request=diag_req)
         return Event(route="NEED_EVIDENCE", output=blackboard.get_state().model_dump())
+
+    blackboard.update_status(
+        "escalated",
+        status_reason=(
+            f"Root cause confidence {confidence:.2f} still below {threshold:.2f} "
+            f"after {MAX_EVIDENCE_ROUNDS} evidence rounds"
+        ),
+    )
     return Event(
         route="ESCALATE",
         output=(
-            f"Root cause confidence {confidence:.2f} still below {RCA_CONFIDENCE_THRESHOLD} "
+            f"Root cause confidence {confidence:.2f} still below {threshold:.2f} "
             f"after {MAX_EVIDENCE_ROUNDS} evidence rounds"
         ),
     )
@@ -194,7 +227,7 @@ async def rca_gate(ctx: Context, node_input: RootCauseFindingDraft) -> Event:
 
 async def record_field_evidence(node_input: FindingDraft) -> IncidentState:
     _record(agent_technician_copilot, node_input, phase=agent_technician_copilot.DIAGNOSTIC_PHASE)
-    blackboard.update_status("analyzing")
+    blackboard.update_status("analyzing", diagnostic_request=None)
     return blackboard.get_state()
 
 

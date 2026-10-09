@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, List, Optional
+import re
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 from backend.core.config import settings
 from backend.core.models import (
@@ -20,6 +22,95 @@ from backend.core.models import (
 logger = logging.getLogger(__name__)
 
 MOCK_SENSOR_TELEMETRY: List[Dict[str, Any]] = []
+
+# Upper bound for one query including BigQuery job retries; a failing job surfaces as an
+# error instead of being re-run for the library default of ~10 minutes.
+QUERY_TIMEOUT_SECONDS = 30.0
+
+_CLOCK_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+_INTERVAL_RE = re.compile(r"^(\d{1,4}) (MINUTE|HOUR)$")
+
+
+def _timestamp_filter(name: str, op: str, value: str) -> Tuple[str, Any]:
+    """Builds a parameterized timestamp bound from an ISO-8601 timestamp or an HH:MM clock time."""
+    from google.cloud import bigquery
+
+    value = value.strip()
+    if _CLOCK_RE.match(value):
+        return (
+            f"FORMAT_TIMESTAMP('%H:%M', timestamp) {op} @{name}",
+            bigquery.ScalarQueryParameter(name, "STRING", value),
+        )
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError(
+            f"{name} must be an ISO-8601 timestamp (e.g. 2026-10-05T09:30:00Z) "
+            f"or HH:MM, got {value!r}"
+        ) from exc
+    return f"timestamp {op} @{name}", bigquery.ScalarQueryParameter(name, "TIMESTAMP", parsed)
+
+
+def _time_filters(
+    time_window: Optional[str], start_time: Optional[str], end_time: Optional[str]
+) -> Tuple[List[str], List[Any]]:
+    """Translates time arguments into parameterized WHERE clauses.
+
+    Explicit start/end bounds take precedence over time_window, which accepts
+    "HH:MM-HH:MM" (clock range) or "<N> MINUTE|HOUR" (trailing interval).
+
+    Raises:
+        ValueError: If any time argument is malformed.
+    """
+    from google.cloud import bigquery
+
+    clauses: List[str] = []
+    params: List[Any] = []
+    for name, op, value in (("start_time", ">=", start_time), ("end_time", "<=", end_time)):
+        if value:
+            clause, param = _timestamp_filter(name, op, value)
+            clauses.append(clause)
+            params.append(param)
+    if clauses or not time_window:
+        return clauses, params
+
+    window = time_window.strip()
+    interval = _INTERVAL_RE.match(window.upper())
+    if interval:
+        # The unit is whitelisted by the regex; only the count is a bound parameter.
+        clauses.append(
+            "timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), "
+            f"INTERVAL @window_count {interval.group(2)})"
+        )
+        params.append(
+            bigquery.ScalarQueryParameter("window_count", "INT64", int(interval.group(1)))
+        )
+        return clauses, params
+
+    parts = [p.strip() for p in window.split("-")]
+    if len(parts) == 2 and all(_CLOCK_RE.match(p) for p in parts):
+        clauses.append(
+            "FORMAT_TIMESTAMP('%H:%M', timestamp) >= @window_start "
+            "AND FORMAT_TIMESTAMP('%H:%M', timestamp) <= @window_end"
+        )
+        params.append(bigquery.ScalarQueryParameter("window_start", "STRING", parts[0]))
+        params.append(bigquery.ScalarQueryParameter("window_end", "STRING", parts[1]))
+        return clauses, params
+
+    raise ValueError(f"time_window must be 'HH:MM-HH:MM' or '<N> MINUTE|HOUR', got {time_window!r}")
+
+
+def _run_query(client: Any, sql: str, params: List[Any]) -> Any:
+    """Runs a parameterized query with job retries bounded by QUERY_TIMEOUT_SECONDS."""
+    from google.cloud import bigquery
+    from google.cloud.bigquery.retry import DEFAULT_JOB_RETRY
+
+    job = client.query(
+        sql,
+        job_config=bigquery.QueryJobConfig(query_parameters=params),
+        job_retry=DEFAULT_JOB_RETRY.with_deadline(QUERY_TIMEOUT_SECONDS),
+    )
+    return job.result(timeout=QUERY_TIMEOUT_SECONDS)
 
 
 def get_bigquery_client() -> Any:
@@ -64,26 +155,17 @@ def query_traceability_topology(
 
     Raises:
         RuntimeError: If query execution against BigQuery fails.
+        ValueError: If a time argument is malformed.
     """
+    from google.cloud import bigquery
+
+    where_clauses, params = _time_filters(time_window, start_time, end_time)
+    if product_ids:
+        where_clauses.insert(0, "product_id IN UNNEST(@product_ids)")
+        params.append(bigquery.ArrayQueryParameter("product_ids", "STRING", list(product_ids)))
+
     client = get_bigquery_client()
     dataset_id = f"{client.project}.{settings.bigquery_dataset}"
-
-    where_clauses: List[str] = []
-    if product_ids:
-        quoted_ids = ", ".join(f"'{p}'" for p in product_ids)
-        where_clauses.append(f"product_id IN ({quoted_ids})")
-    if start_time:
-        where_clauses.append(f"timestamp >= TIMESTAMP('{start_time}')")
-    if end_time:
-        where_clauses.append(f"timestamp <= TIMESTAMP('{end_time}')")
-    if time_window and not start_time and not end_time and "-" in time_window:
-        parts = time_window.split("-")
-        if len(parts) == 2 and ":" in parts[0] and ":" in parts[1]:
-            where_clauses.append(
-                f"FORMAT_TIMESTAMP('%H:%M', timestamp) >= '{parts[0]}' "
-                f"AND FORMAT_TIMESTAMP('%H:%M', timestamp) <= '{parts[1]}'"
-            )
-
     where_str = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
 
     # Primary correlation query across machine_id and tool_id
@@ -124,7 +206,7 @@ def query_traceability_topology(
     """
 
     try:
-        results_mt = client.query(query_machine_tool).result()
+        results_mt = _run_query(client, query_machine_tool, params)
         suspects: List[SuspectCorrelation] = []
         for row in results_mt:
             ratio = float(row.defect_ratio or 0.0)
@@ -139,7 +221,7 @@ def query_traceability_topology(
                 )
             )
 
-        results_factors = client.query(query_factors).result()
+        results_factors = _run_query(client, query_factors, params)
         factor_distributions: List[FactorDistribution] = []
         excluded_factors: List[str] = []
 
@@ -193,27 +275,16 @@ def query_sensor_telemetry_window(
 
     Raises:
         RuntimeError: If query execution against BigQuery fails.
+        ValueError: If a time argument is malformed.
     """
+    from google.cloud import bigquery
+
+    where_clauses, params = _time_filters(time_window, start_time, end_time)
+    where_clauses.insert(0, "machine_id = @machine_id")
+    params.append(bigquery.ScalarQueryParameter("machine_id", "STRING", machine_id))
+
     client = get_bigquery_client()
     dataset_id = f"{client.project}.{settings.bigquery_dataset}"
-
-    where_clauses: List[str] = [f"machine_id = '{machine_id}'"]
-    if start_time:
-        where_clauses.append(f"timestamp >= TIMESTAMP('{start_time}')")
-    if end_time:
-        where_clauses.append(f"timestamp <= TIMESTAMP('{end_time}')")
-    if time_window and not start_time and not end_time:
-        if "-" in time_window and ":" in time_window:
-            parts = time_window.split("-")
-            where_clauses.append(
-                f"FORMAT_TIMESTAMP('%H:%M', timestamp) >= '{parts[0]}' "
-                f"AND FORMAT_TIMESTAMP('%H:%M', timestamp) <= '{parts[1]}'"
-            )
-        elif "MINUTE" in time_window or "HOUR" in time_window:
-            where_clauses.append(
-                f"timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL {time_window})"
-            )
-
     where_str = f"WHERE {' AND '.join(where_clauses)}"
 
     query = f"""
@@ -230,7 +301,7 @@ def query_sensor_telemetry_window(
     """
 
     try:
-        results = client.query(query).result()
+        results = _run_query(client, query, params)
         row = next(iter(results), None)
 
         min_vib = float(row.min_vibration or 0.0) if row else 0.0

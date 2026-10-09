@@ -23,11 +23,13 @@ from backend.core.models import (
     AgentFinding,
     DefectInjectionRequest,
     FindingDraft,
-    ImpactMetrics,
     IncidentState,
+    QualityInspectionReport,
+    RootCauseFindingDraft,
     ScribeDraft,
     VerificationResult,
 )
+from simulator.injection_engine import injection_engine
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,8 @@ def _record(agent: ModuleType, draft: FindingDraft, phase: str | None = None) ->
             evidence=draft.evidence,
             confidence=min(1.0, max(0.0, draft.confidence)),
             citation=draft.citation,
+            five_whys=getattr(draft, "five_whys", None),
+            ishikawa=getattr(draft, "ishikawa", None),
         )
     )
 
@@ -84,17 +88,80 @@ async def open_incident(ctx: Context, node_input: DefectInjectionRequest) -> Inc
     return blackboard.get_state()
 
 
-async def record_detection(node_input: FindingDraft) -> IncidentState:
+async def inspect_production(ctx: Context, node_input: dict) -> Event:
+    """Quality Inspector measures the conveyor window; only an upper SPC breach opens Phase A."""
+    report = await agent_quality_inspector.inspect_production_window(blackboard.get_state().spc_ucl)
+    ctx.state["qi_report"] = report.model_dump()
+    spc = report.spc
+    if spc.breach_direction == "upper":
+        return Event(
+            route="BREACH",
+            output={
+                "board": blackboard.get_state().model_dump(),
+                "inspection": report.model_dump(),
+            },
+        )
+    return Event(
+        route="NO_BREACH",
+        output=(
+            f"No SPC breach: defect rate {spc.defect_rate:.1%} within UCL {spc.limits.ucl:.1%} "
+            f"over {spc.sample_size} parts"
+        ),
+    )
+
+
+async def dismiss_incident(node_input: str) -> None:
+    blackboard.update_status("dismissed", status_reason=node_input)
+    logger.info("Incident %s dismissed: %s", blackboard.get_state().incident_id, node_input)
+
+
+async def record_detection(ctx: Context, node_input: FindingDraft) -> IncidentState:
     _record(agent_quality_inspector, node_input)
-    blackboard.update_status("tracing")
+    report = QualityInspectionReport.model_validate(ctx.state["qi_report"])
+    counts = report.defect_type_counts
+    blackboard.update_status(
+        "tracing",
+        defect_rate=report.spc.defect_rate,
+        defect_type=max(counts, key=counts.get) if counts else blackboard.get_state().defect_type,
+    )
     return blackboard.get_state()
+
+
+async def trace_topology(ctx: Context, node_input: IncidentState | dict) -> dict:
+    """Traceability Agent queries discrete topology and passes the evidence report to the reasoner."""
+    qi_report_data = ctx.state.get("qi_report")
+    product_ids = None
+    if qi_report_data:
+        frames = qi_report_data.get("defect_frames", [])
+        product_ids = [f["product_id"] for f in frames if f.get("product_id")]
+
+    trigger = ctx.state.get("trigger", {})
+    time_window = trigger.get("time_window", "09:30-10:00")
+
+    report = await agent_traceability.trace_line_topology(
+        time_window=time_window,
+        product_ids=product_ids,
+    )
+    ctx.state["traceability_report"] = report.model_dump()
+    return {
+        "board": blackboard.get_state().model_dump(),
+        "traceability": report.model_dump(),
+    }
 
 
 async def record_traceability(ctx: Context, node_input: FindingDraft) -> IncidentState:
     _record(agent_traceability, node_input)
-    trigger = ctx.state["trigger"]
+    report_data = ctx.state.get("traceability_report")
+    if report_data and report_data.get("suspects"):
+        top = report_data["suspects"][0]
+        suspect_machine = top.get("machine_id")
+        suspect_tool = top.get("tool_id")
+    else:
+        trigger = ctx.state.get("trigger", {})
+        suspect_machine = trigger.get("machine_id", "CNC-02")
+        suspect_tool = trigger.get("tool_id", "T07")
     blackboard.update_status(
-        "investigating", suspect_machine=trigger["machine_id"], suspect_tool=trigger["tool_id"]
+        "investigating", suspect_machine=suspect_machine, suspect_tool=suspect_tool
     )
     return blackboard.get_state()
 
@@ -105,7 +172,7 @@ async def record_process_analysis(node_input: FindingDraft) -> IncidentState:
     return blackboard.get_state()
 
 
-async def rca_gate(ctx: Context, node_input: FindingDraft) -> Event:
+async def rca_gate(ctx: Context, node_input: RootCauseFindingDraft) -> Event:
     """Routes on root-cause confidence: repair, gather field evidence, or escalate."""
     _record(agent_root_cause, node_input)
     confidence = node_input.confidence
@@ -137,14 +204,17 @@ async def record_resolution(node_input: dict) -> IncidentState:
     scribe = ScribeDraft.model_validate(node_input[agent_incident_scribe.agent.name])
     _record(agent_technician_copilot, copilot)
     _record(agent_incident_scribe, scribe)
+    # Simulated plant: the completed repair restores the line before post-repair inspection.
+    injection_engine.set_verification_recovery()
+    blackboard.set_repair_done(True)
     blackboard.update_status(
         "verifying",
+        repair_done=True,
         documents={
             "work_order": scribe.work_order,
             "report_8d": scribe.report_8d,
             "sop_proposal": scribe.sop_proposal,
         },
-        repair_done=True,
     )
     return blackboard.get_state()
 
@@ -198,8 +268,9 @@ async def close_incident(node_input: VerificationResult) -> IncidentState:
 
 async def record_learning(node_input: FindingDraft) -> None:
     _record(agent_continuous_learning, node_input)
-    # Placeholder: default impact numbers until the impact calculator is wired in.
-    blackboard.update_status("closed", impact=ImpactMetrics())
+    state = blackboard.get_state()
+    impact = agent_continuous_learning.calculate_impact_metrics(state)
+    blackboard.update_status("closed", impact=impact)
 
 
 async def escalate_incident(node_input: str) -> None:

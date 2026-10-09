@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import Generator
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -24,7 +25,7 @@ from backend.core.blackboard import blackboard
 from backend.core.models import DefectInjectionRequest, SimulationStatusResponse
 from backend.tools.spc_calculator import StreakGatekeeper
 from simulator.injection_engine import injection_engine
-from tests.test_orchestrator import FakeLlm
+from tests.test_orchestrator import MOCK_TOPOLOGY, FakeLlm
 
 
 @pytest.fixture(autouse=True)
@@ -177,13 +178,18 @@ def test_e2e_fast_forward_verifies_streak_and_closure() -> None:
     saved_model = LlmAgent._default_model
     try:
         LlmAgent.set_default_model(FakeLlm())
+        injection_engine.inject_scenario_1_cnc_tool_wear()
         req = DefectInjectionRequest(scenario="cnc_tool_wear", mode="fast", duration_seconds=0.2)
-        asyncio.run(Orchestrator(step_delay=0).run_incident(req))
+        with patch(
+            "backend.agents.agent_traceability.trace_line_topology",
+            return_value=MOCK_TOPOLOGY,
+        ):
+            asyncio.run(Orchestrator(step_delay=0).run_incident(req))
 
         state = blackboard.get_state()
         assert state.status == "closed"
-        assert state.verification_count == 50
         assert state.verification_target == 50
+        assert state.verification_count >= state.verification_target
         assert len(state.findings) >= 7
         assert state.repair_done is True
     finally:

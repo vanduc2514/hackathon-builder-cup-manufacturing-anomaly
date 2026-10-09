@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 class MachineSimulator:
     """Simulates real-time sensor streams across CNC-01, CNC-02, CNC-03, and optional IM-05."""
 
-    def __init__(self, include_im: bool = False) -> None:
+    def __init__(self, include_im: bool = False, seed: int | None = None) -> None:
+        self.rng = random.Random(seed)
         self.include_im = include_im
         self.anomaly_active: dict[str, bool] = {
             "CNC-01": False,
@@ -70,6 +71,8 @@ class MachineSimulator:
             del self.machines_meta["IM-05"]
         logger.info("Reset all machine telemetry to baseline")
 
+    reset_baseline = reset
+
     def tick(self) -> list[MachineTelemetry]:
         """Generates a synchronous telemetry snapshot for all machines."""
         now = datetime.now(timezone.utc).isoformat()
@@ -82,20 +85,22 @@ class MachineSimulator:
 
             if m_type == "im":
                 # Injection Molding IM-05: machine parameters remain normal while dew point rises
-                base_vib = 0.80 + random.gauss(0.0, 0.02)
-                base_current = 16.50 + random.gauss(0.0, 0.20)
-                base_temp = 210.0 + random.gauss(0.0, 0.5)
+                base_vib = 0.80 + self.rng.gauss(0.0, 0.02)
+                base_current = 16.50 + self.rng.gauss(0.0, 0.20)
+                base_temp = 210.0 + self.rng.gauss(0.0, 0.5)
                 base_rpm = 0
 
                 if is_anomalous:
                     # Scenario 2: Material dryer dew point rises from -40 C to -18 C
-                    dryer_dew_point = round(-18.0 + random.gauss(0.0, 0.3) + (1.0 - sev) * -5.0, 1)
+                    dryer_dew_point = round(
+                        -18.0 + self.rng.gauss(0.0, 0.3) + (1.0 - sev) * -5.0, 1
+                    )
                     status = "ALARM" if sev >= 0.8 else "WARNING"
                     anomaly_score = min(0.96, 0.70 + (0.25 * sev))
                 else:
-                    dryer_dew_point = round(-40.0 + random.gauss(0.0, 0.5), 1)
+                    dryer_dew_point = round(-40.0 + self.rng.gauss(0.0, 0.5), 1)
                     status = "NORMAL"
-                    anomaly_score = max(0.01, round(random.uniform(0.02, 0.06), 3))
+                    anomaly_score = max(0.01, round(self.rng.uniform(0.02, 0.06), 3))
 
                 results.append(
                     MachineTelemetry(
@@ -115,10 +120,10 @@ class MachineSimulator:
 
             # CNC baseline with realistic Gaussian fluctuations
             # Nominal: Vib ~2.0 mm/s, Current ~12.0 A, Temp ~42.0 C, RPM ~1480
-            base_vib = 2.00 + random.gauss(0.0, 0.05)
-            base_current = 12.00 + random.gauss(0.0, 0.15)
-            base_temp = 42.00 + random.gauss(0.0, 0.3)
-            base_rpm = meta["base_rpm"] + int(random.gauss(0, 3))
+            base_vib = 2.00 + self.rng.gauss(0.0, 0.05)
+            base_current = 12.00 + self.rng.gauss(0.0, 0.15)
+            base_temp = 42.00 + self.rng.gauss(0.0, 0.3)
+            base_rpm = meta["base_rpm"] + int(self.rng.gauss(0, 3))
 
             if is_anomalous:
                 # Scenario 1: Tool wear causes +35% vibration surge and +12% current rise
@@ -136,7 +141,7 @@ class MachineSimulator:
                 spindle_temp = round(base_temp, 1)
                 rpm = base_rpm
                 status = "NORMAL"
-                anomaly_score = max(0.01, round(random.uniform(0.02, 0.08), 3))
+                anomaly_score = max(0.01, round(self.rng.uniform(0.02, 0.08), 3))
 
             results.append(
                 MachineTelemetry(

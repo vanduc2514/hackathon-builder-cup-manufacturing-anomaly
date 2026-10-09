@@ -1,26 +1,58 @@
-"""Traceability Agent: Queries discrete line topology and outputs a ranked suspect list. (placeholder: no tools, canned mock evidence)"""
+"""Traceability Agent: queries discrete line topology, performs cross-cohort elimination, and isolates suspects."""
 
 from __future__ import annotations
 
+import asyncio
+import logging
+
 from google.adk import Agent
 
-from backend.core.models import FindingDraft
+from backend.core.models import (
+    FindingDraft,
+    TraceabilityTopologyResponse,
+)
+from backend.tools.bigquery_tool import query_traceability_topology
+
+logger = logging.getLogger(__name__)
 
 AGENT_ID = "TRA"
 AGENT_NAME = "Traceability Agent"
 PHASE = "Phase B - Tracing"
+CITATION = "BigQuery manufacturing.traceability cross-lot correlation"
 
 INSTRUCTION = (
     "You are the Traceability Agent of the Kaizen Agent manufacturing incident team. "
-    "PLACEHOLDER MODE: you have no tools. "
-    "The user message is the current incident board as JSON. "
-    "Write one finding based ONLY on this mock evidence: 100% of defective parts were routed through CNC-02 with cutting tool T07. CNC-01 and CNC-03 used blank lot AL-5083-B4 with 0 defects, so raw material is excluded. "
-    "Use confidence 0.95 and citation 'BigQuery traceability_discrete_events cross-lot correlation'. Respond in English."
+    "The user message is JSON with two keys: 'board' (the current incident board) and "
+    "'traceability' (the discrete line topology report from BigQuery: 'suspects', 'excluded_factors', "
+    "'factor_distributions'). "
+    "Write one finding that isolates the primary suspect machine (machine_id) and tool (tool_id) "
+    "from 'traceability.suspects' (the pair with the highest correlation_score and defect_count) "
+    "and specifies the excluded non-causal factors from 'traceability.excluded_factors' "
+    "(such as raw material lots or operators ruled out across normal concurrent machines). "
+    "The evidence must quote the suspect machine, tool, defect count, total parts, and the ruled-out factors. "
+    "Set confidence to the top suspect's correlation_score (or 0.95 if correlation_score >= 0.7). "
+    "Build the citation as 'BigQuery manufacturing.traceability cross-lot correlation'. Respond in English."
 )
 
 agent = Agent(
     name="traceability",
-    description="Isolates the suspect machine and tool from discrete line traceability.",
+    description="Isolates the suspect machine and tool from discrete line topology while excluding innocent factors.",
     instruction=INSTRUCTION,
     output_schema=FindingDraft,
 )
+
+
+async def trace_line_topology(
+    time_window: str | None = "09:30-10:00",
+    start_time: str | None = None,
+    end_time: str | None = None,
+    product_ids: list[str] | None = None,
+) -> TraceabilityTopologyResponse:
+    """Queries discrete manufacturing topology directly from BigQuery."""
+    return await asyncio.to_thread(
+        query_traceability_topology,
+        time_window=time_window,
+        start_time=start_time,
+        end_time=end_time,
+        product_ids=product_ids,
+    )

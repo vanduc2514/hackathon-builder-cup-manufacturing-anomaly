@@ -276,7 +276,7 @@ def test_anti_hallucination_guardrail_below_relevance_threshold():
 
 
 def test_no_fallback_on_infrastructure_error():
-    """Infrastructure/API errors raise RuntimeError; never fall back to local files."""
+    """Infrastructure/API errors raise RuntimeError when fallback_to_local is disabled."""
     mock_client = _create_mock_client()
     mock_client.search.side_effect = RuntimeError("Google Cloud Discovery Engine 503 Unavailable")
 
@@ -287,7 +287,27 @@ def test_no_fallback_on_infrastructure_error():
             search_knowledge_base_sync(
                 defect_symptom="scratch_vertical",
                 suspect_asset="CNC-02",
+                fallback_to_local=False,
             )
+
+
+def test_vertex_ai_search_failure_graceful_fallback():
+    """Vertex AI Search failure gracefully falls back to local BM25 without raising."""
+    mock_client = _create_mock_client()
+    mock_client.search.side_effect = RuntimeError("Google Cloud Discovery Engine 503 Unavailable")
+
+    with patch(
+        "backend.tools.rag_search_tool._vertex_client._get_client", return_value=mock_client
+    ):
+        result = search_knowledge_base_sync(
+            defect_symptom="scratch_vertical",
+            suspect_asset="CNC-02",
+            fallback_to_local=True,
+        )
+        assert result.engine == "local_bm25"
+        assert len(result) > 0
+        assert result.confidence > 0.0
+        assert any("T07" in c.snippet or "scratch" in c.snippet.lower() for c in result.citations)
 
 
 def test_async_search_knowledge_base():

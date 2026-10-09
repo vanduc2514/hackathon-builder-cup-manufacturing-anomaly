@@ -39,6 +39,7 @@ app.include_router(telemetry_router)
 
 
 @app.get("/health")
+@app.get("/healthz")
 async def health_check():
     return {
         "status": "healthy",

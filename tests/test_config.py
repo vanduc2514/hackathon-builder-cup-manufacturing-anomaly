@@ -30,3 +30,14 @@ def test_gemini_with_key_uses_gemini_model(monkeypatch: pytest.MonkeyPatch, key_
     monkeypatch.setenv(key_var, "k")
     settings = Settings(ai_provider="gemini", gemini_model="gemini-flash-latest")
     assert settings.llm_model == "gemini-flash-latest"
+
+
+def test_mock_ai_provider():
+    settings = Settings(ai_provider="mock")
+    assert settings.llm_model == "mock"
+
+
+def test_fallback_settings_default_true():
+    settings = Settings()
+    assert settings.bigquery_fallback_to_mock is True
+    assert settings.rag_fallback_to_local is True

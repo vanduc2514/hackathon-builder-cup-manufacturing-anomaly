@@ -281,19 +281,35 @@ export default function AndonPhaseTracker({
     if (propIncident !== undefined) return;
 
     let eventSource: EventSource | null = null;
-    try {
-      eventSource = new EventSource('/api/incidents/events');
-      eventSource.addEventListener('incident_update', (event: MessageEvent<string>) => {
-        try {
-          const data: IncidentState = JSON.parse(event.data);
-          setInternalIncident(data);
-        } catch (err) {
-          console.error('Failed to parse incident SSE event in AndonPhaseTracker:', err);
+    let fallbackAttempted = false;
+
+    const handleMessage = (event: MessageEvent<string>) => {
+      try {
+        const data: IncidentState = JSON.parse(event.data);
+        setInternalIncident(data);
+      } catch (err) {
+        console.error('Failed to parse incident SSE event in AndonPhaseTracker:', err);
+      }
+    };
+
+    const initEventSource = (url: string) => {
+      const es = new EventSource(url);
+      es.addEventListener('incident_update', handleMessage);
+      es.onerror = (err) => {
+        if (!fallbackAttempted && url === '/api/incidents/stream') {
+          fallbackAttempted = true;
+          console.warn('AndonPhaseTracker /api/incidents/stream unreachable, falling back to /api/incidents/events:', err);
+          es.close();
+          eventSource = initEventSource('/api/incidents/events');
+        } else {
+          console.warn(`AndonPhaseTracker SSE connection warning on ${url}:`, err);
         }
-      });
-      eventSource.onerror = (err) => {
-        console.warn('AndonPhaseTracker SSE connection warning:', err);
       };
+      return es;
+    };
+
+    try {
+      eventSource = initEventSource('/api/incidents/stream');
     } catch (e) {
       console.warn('EventSource not available:', e);
     }

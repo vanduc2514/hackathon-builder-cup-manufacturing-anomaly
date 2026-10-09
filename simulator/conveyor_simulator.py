@@ -14,7 +14,13 @@ logger = logging.getLogger(__name__)
 class ConveyorSimulator:
     """Simulates physical conveyor belt moving manufactured parts past optical inspection."""
 
-    def __init__(self, initial_sequence: int = 1001, include_im: bool = False) -> None:
+    def __init__(
+        self,
+        initial_sequence: int = 1001,
+        include_im: bool = False,
+        seed: int | None = None,
+    ) -> None:
+        self.rng = random.Random(seed)
         self.sequence: int = initial_sequence
         self.include_im = include_im
         self.machines = ["CNC-01", "CNC-02", "CNC-03"]
@@ -80,15 +86,17 @@ class ConveyorSimulator:
             self.machines.remove("IM-05")
         logger.info("Reset conveyor defect state")
 
+    reset_baseline = reset
+
     def tick(self) -> list[ConveyorPart]:
         """Emits parts passing the camera inspection station in the current tick."""
         now = datetime.now(timezone.utc).isoformat()
         # Round-robin or random distribution across machines operating in parallel
-        parts_count = random.choice([1, 2])
+        parts_count = self.rng.choice([1, 2])
         parts_emitted: list[ConveyorPart] = []
 
         for _ in range(parts_count):
-            machine_id = random.choice(self.machines)
+            machine_id = self.rng.choice(self.machines)
             tool_id = self.machine_tools.get(machine_id, "T07")
             product_id = f"PRD-{self.sequence}"
             self.sequence += 1
@@ -106,17 +114,17 @@ class ConveyorSimulator:
                 scenario = self.anomaly_scenario.get(machine_id, "cnc_tool_wear")
                 if scenario == "im_damp_material" or machine_id == "IM-05":
                     # Scenario 2: Mold cavity #3 short fill and sink marks (~8.1% line defect spike)
-                    if random.random() < 0.324:
+                    if self.rng.random() < 0.324:
                         is_defective = True
                         cavity_id = 3
-                        defect_type = random.choice(["short_fill", "sink_mark"])
+                        defect_type = self.rng.choice(["short_fill", "sink_mark"])
                         self.consecutive_pass_count = 0
                     else:
                         self.consecutive_pass_count += 1
-                        cavity_id = random.choice([1, 2, 4])
+                        cavity_id = self.rng.choice([1, 2, 4])
                 else:
                     # Scenario 1: Tool wear on CNC-02 causes ~7.7% line defect spike (23% on CNC-02)
-                    if random.random() < 0.231:
+                    if self.rng.random() < 0.231:
                         is_defective = True
                         defect_type = "scratch_vertical"
                         self.consecutive_pass_count = 0
@@ -124,7 +132,7 @@ class ConveyorSimulator:
                         self.consecutive_pass_count += 1
             else:
                 # Nominal baseline defect rate ~0.4%
-                if random.random() < 0.004:
+                if self.rng.random() < 0.004:
                     is_defective = True
                     defect_type = "minor_burr"
                     self.consecutive_pass_count = 0

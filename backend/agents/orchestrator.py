@@ -23,7 +23,9 @@ from backend.agents import (
 )
 from backend.agents.workflow_nodes import (
     close_incident,
+    dismiss_incident,
     escalate_incident,
+    inspect_production,
     open_incident,
     rca_gate,
     record_detection,
@@ -33,6 +35,7 @@ from backend.agents.workflow_nodes import (
     record_resolution,
     record_traceability,
     reopen_investigation,
+    trace_topology,
     verification_gate,
     verify_repair,
 )
@@ -43,8 +46,14 @@ from backend.core.models import DefectInjectionRequest, IncidentState, Simulatio
 logger = logging.getLogger(__name__)
 
 # Every agent_* node is model-less and resolves to this default at call time.
-LlmAgent.set_default_model(settings.llm_model)
-logger.info("LLM provider=%s model=%s", settings.ai_provider, settings.llm_model)
+if settings.ai_provider == "mock":
+    from backend.agents.mock_llm import MockLlm
+
+    LlmAgent.set_default_model(MockLlm())
+    logger.info("LLM provider=mock using in-memory MockLlm")
+else:
+    LlmAgent.set_default_model(settings.llm_model)
+    logger.info("LLM provider=%s model=%s", settings.ai_provider, settings.llm_model)
 
 APP_NAME = "kaizen_orchestrator"
 WORKFLOW_NAME = "kaizen_incident"
@@ -55,11 +64,15 @@ resolution_join = JoinNode(name="resolution_join")
 incident_workflow = Workflow(
     name=WORKFLOW_NAME,
     edges=[
+        ("START", open_incident, inspect_production),
         (
-            "START",
-            open_incident,
+            inspect_production,
+            {"BREACH": agent_quality_inspector.agent, "NO_BREACH": dismiss_incident},
+        ),
+        (
             agent_quality_inspector.agent,
             record_detection,
+            trace_topology,
             agent_traceability.agent,
             record_traceability,
             agent_process_analyst.agent,
@@ -91,7 +104,7 @@ incident_workflow = Workflow(
                 "ESCALATE": escalate_incident,
             },
         ),
-        (reopen_investigation, agent_traceability.agent),
+        (reopen_investigation, trace_topology),
         (close_incident, agent_continuous_learning.agent, record_learning),
     ],
 )

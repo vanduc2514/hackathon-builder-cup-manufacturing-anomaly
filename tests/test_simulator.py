@@ -76,7 +76,7 @@ def test_conveyor_simulator_serialization() -> None:
 
 def test_conveyor_simulator_anomaly() -> None:
     """Verifies that enabling defect generation produces scratch defects for CNC-02."""
-    conv = ConveyorSimulator(initial_sequence=3000)
+    conv = ConveyorSimulator(initial_sequence=3000, seed=42)
     conv.set_anomaly("CNC-02", active=True)
 
     defects_seen = 0

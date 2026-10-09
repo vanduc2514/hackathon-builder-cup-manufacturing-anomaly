@@ -52,10 +52,69 @@ def test_incident_current_snapshot() -> None:
         assert data["approved"] is False
 
 
-@pytest.mark.asyncio
-async def test_sse_stream_initial_state() -> None:
+def test_sse_stream_initial_state() -> None:
     """Verifies that both /api/incidents/stream and /api/incidents/events connect and emit initial state."""
-    for path in ("/api/incidents/stream", "/api/incidents/events"):
+
+    async def _run() -> None:
+        for path in ("/api/incidents/stream", "/api/incidents/events"):
+            scope = {
+                "type": "http",
+                "asgi": {"version": "3.0"},
+                "http_version": "1.1",
+                "method": "GET",
+                "headers": [(b"accept", b"text/event-stream")],
+                "scheme": "http",
+                "path": path,
+                "raw_path": path.encode(),
+                "query_string": b"",
+                "server": ("testserver", 80),
+                "client": ("127.0.0.1", 12345),
+                "root_path": "",
+            }
+
+            received_messages = []
+            disconnect_event = asyncio.Event()
+
+            async def receive():
+                await disconnect_event.wait()
+                return {"type": "http.disconnect"}
+
+            async def send(message):
+                received_messages.append(message)
+                if message["type"] == "http.response.body" and message.get("body"):
+                    disconnect_event.set()
+
+            app_task = asyncio.create_task(app(scope, receive, send))
+
+            try:
+                await asyncio.wait_for(disconnect_event.wait(), timeout=3.0)
+            finally:
+                disconnect_event.set()
+                await asyncio.sleep(0.02)
+                if not app_task.done():
+                    app_task.cancel()
+                    try:
+                        await app_task
+                    except asyncio.CancelledError:
+                        pass
+
+            start_msg = next(m for m in received_messages if m["type"] == "http.response.start")
+            assert start_msg["status"] == 200
+
+            body_msgs = [
+                m for m in received_messages if m["type"] == "http.response.body" and m.get("body")
+            ]
+            combined_body = b"".join(m["body"] for m in body_msgs).decode()
+            assert "event: incident_update" in combined_body
+            assert "INC-0412" in combined_body
+
+    asyncio.run(_run())
+
+
+def test_sse_stream_live_updates() -> None:
+    """Verifies that real-time blackboard updates are streamed to active SSE connections."""
+
+    async def _run() -> None:
         scope = {
             "type": "http",
             "asgi": {"version": "3.0"},
@@ -63,15 +122,17 @@ async def test_sse_stream_initial_state() -> None:
             "method": "GET",
             "headers": [(b"accept", b"text/event-stream")],
             "scheme": "http",
-            "path": path,
-            "raw_path": path.encode(),
+            "path": "/api/incidents/stream",
+            "raw_path": b"/api/incidents/stream",
             "query_string": b"",
             "server": ("testserver", 80),
             "client": ("127.0.0.1", 12345),
             "root_path": "",
         }
 
-        received_messages = []
+        received_bodies = []
+        first_received = asyncio.Event()
+        second_received = asyncio.Event()
         disconnect_event = asyncio.Event()
 
         async def receive():
@@ -79,14 +140,33 @@ async def test_sse_stream_initial_state() -> None:
             return {"type": "http.disconnect"}
 
         async def send(message):
-            received_messages.append(message)
             if message["type"] == "http.response.body" and message.get("body"):
-                disconnect_event.set()
+                received_bodies.append(message["body"].decode())
+                if len(received_bodies) == 1:
+                    first_received.set()
+                elif len(received_bodies) >= 2:
+                    second_received.set()
+                    disconnect_event.set()
 
         app_task = asyncio.create_task(app(scope, receive, send))
 
         try:
-            await asyncio.wait_for(disconnect_event.wait(), timeout=3.0)
+            await asyncio.wait_for(first_received.wait(), timeout=3.0)
+
+            # Trigger update on the blackboard
+            blackboard.update_status(
+                "investigating",
+                suspect_machine="CNC-02",
+                suspect_tool="T07",
+                defect_type="scratch_vertical",
+            )
+
+            await asyncio.wait_for(second_received.wait(), timeout=3.0)
+            assert len(received_bodies) >= 2
+            update_text = received_bodies[1]
+            assert "investigating" in update_text
+            assert "CNC-02" in update_text
+            assert "T07" in update_text
         finally:
             disconnect_event.set()
             await asyncio.sleep(0.02)
@@ -97,81 +177,7 @@ async def test_sse_stream_initial_state() -> None:
                 except asyncio.CancelledError:
                     pass
 
-        start_msg = next(m for m in received_messages if m["type"] == "http.response.start")
-        assert start_msg["status"] == 200
-
-        body_msgs = [
-            m for m in received_messages if m["type"] == "http.response.body" and m.get("body")
-        ]
-        combined_body = b"".join(m["body"] for m in body_msgs).decode()
-        assert "event: incident_update" in combined_body
-        assert "INC-0412" in combined_body
-
-
-@pytest.mark.asyncio
-async def test_sse_stream_live_updates() -> None:
-    """Verifies that real-time blackboard updates are streamed to active SSE connections."""
-    scope = {
-        "type": "http",
-        "asgi": {"version": "3.0"},
-        "http_version": "1.1",
-        "method": "GET",
-        "headers": [(b"accept", b"text/event-stream")],
-        "scheme": "http",
-        "path": "/api/incidents/stream",
-        "raw_path": b"/api/incidents/stream",
-        "query_string": b"",
-        "server": ("testserver", 80),
-        "client": ("127.0.0.1", 12345),
-        "root_path": "",
-    }
-
-    received_bodies = []
-    first_received = asyncio.Event()
-    second_received = asyncio.Event()
-    disconnect_event = asyncio.Event()
-
-    async def receive():
-        await disconnect_event.wait()
-        return {"type": "http.disconnect"}
-
-    async def send(message):
-        if message["type"] == "http.response.body" and message.get("body"):
-            received_bodies.append(message["body"].decode())
-            if len(received_bodies) == 1:
-                first_received.set()
-            elif len(received_bodies) >= 2:
-                second_received.set()
-                disconnect_event.set()
-
-    app_task = asyncio.create_task(app(scope, receive, send))
-
-    try:
-        await asyncio.wait_for(first_received.wait(), timeout=3.0)
-
-        # Trigger update on the blackboard
-        blackboard.update_status(
-            "investigating",
-            suspect_machine="CNC-02",
-            suspect_tool="T07",
-            defect_type="scratch_vertical",
-        )
-
-        await asyncio.wait_for(second_received.wait(), timeout=3.0)
-        assert len(received_bodies) >= 2
-        update_text = received_bodies[1]
-        assert "investigating" in update_text
-        assert "CNC-02" in update_text
-        assert "T07" in update_text
-    finally:
-        disconnect_event.set()
-        await asyncio.sleep(0.02)
-        if not app_task.done():
-            app_task.cancel()
-            try:
-                await app_task
-            except asyncio.CancelledError:
-                pass
+    asyncio.run(_run())
 
 
 def test_adk_root_agent_exposed() -> None:
@@ -207,9 +213,12 @@ def test_adk_web_app_initialization() -> None:
     assert "nodes" in graph_json or "edges" in graph_json or isinstance(graph_json, (dict, list))
 
 
-@pytest.mark.asyncio
-async def test_app_lifespan_startup_and_shutdown() -> None:
+def test_app_lifespan_startup_and_shutdown() -> None:
     """Verifies that FastAPI lifespan context manager executes cleanly."""
-    async with lifespan(app):
-        state = blackboard.get_state()
-        assert isinstance(state, IncidentState)
+
+    async def _run() -> None:
+        async with lifespan(app):
+            state = blackboard.get_state()
+            assert isinstance(state, IncidentState)
+
+    asyncio.run(_run())

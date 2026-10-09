@@ -6,6 +6,7 @@ import asyncio
 import json
 import time
 from typing import AsyncGenerator
+from unittest.mock import patch
 
 import pytest
 from google.adk.agents import LlmAgent
@@ -13,8 +14,6 @@ from google.adk.models.base_llm import BaseLlm
 from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
-
-from unittest.mock import patch
 
 from backend.agents import agent_quality_inspector
 from backend.agents.orchestrator import Orchestrator
@@ -63,29 +62,31 @@ class FakeLlm(BaseLlm):
         )
 
 
+MOCK_TOPOLOGY = TraceabilityTopologyResponse(
+    source="test_fixture",
+    suspects=[
+        SuspectCorrelation(
+            machine_id="CNC-02",
+            tool_id="T07",
+            correlation_score=0.95,
+            defect_count=3,
+            total_parts=4,
+            sample_ratio=0.75,
+        )
+    ],
+    excluded_factors=["lot_id: AL-5083-B4 (normal distribution)"],
+)
+
+
 @pytest.fixture(autouse=True)
 def clean_state():
     blackboard.reset()
     injection_engine.reset()
     injection_engine.inject_scenario_1_cnc_tool_wear()
     saved = LlmAgent._default_model
-    mock_topo = TraceabilityTopologyResponse(
-        source="test_fixture",
-        suspects=[
-            SuspectCorrelation(
-                machine_id="CNC-02",
-                tool_id="T07",
-                correlation_score=0.95,
-                defect_count=3,
-                total_parts=4,
-                sample_ratio=0.75,
-            )
-        ],
-        excluded_factors=["lot_id: AL-5083-B4 (normal distribution)"],
-    )
     with patch(
         "backend.agents.agent_traceability.trace_line_topology",
-        return_value=mock_topo,
+        return_value=MOCK_TOPOLOGY,
     ):
         yield
     LlmAgent._default_model = saved

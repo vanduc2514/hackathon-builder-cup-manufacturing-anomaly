@@ -59,6 +59,7 @@ def test_required_dashboard_components_exist() -> None:
     required_components = [
         "AndonPhaseTracker.tsx",
         "DemoController.tsx",
+        "DocumentApprovals.tsx",
         "ImpactCard.tsx",
         "IncidentStream.tsx",
         "IshikawaViewer.tsx",

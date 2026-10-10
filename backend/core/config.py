@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings
@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     app_name: str = "Kaizen Agent Platform"
     version: str = "0.1.0"
     log_level: str = "INFO"
+    app_env: str = "development"
+    host: str = "0.0.0.0"
+    port: int = 8000
     gcp_project_id: str = "kaizen-local"
     gcp_region: str = "asia-southeast1"
 
@@ -69,9 +72,35 @@ class Settings(BaseSettings):
     ai_provider: Literal["ollama", "gemini", "mock"] = "ollama"
     ollama_model: str = "gemma2:2b"
     gemini_model: str = "gemini-flash-latest"
+    google_genai_use_vertexai: bool = False
 
     # Pause between simulated conveyor verification batches (seconds)
     simulation_step_delay: float = 0.4
+
+    @model_validator(mode="before")
+    @classmethod
+    def _resolve_network_settings(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Resolve port: PORT takes precedence (Cloud Run), followed by API_PORT
+            if "port" not in data:
+                port_env = os.environ.get("PORT") or os.environ.get("API_PORT")
+                if port_env is not None:
+                    try:
+                        data["port"] = int(port_env)
+                    except ValueError:
+                        pass
+            # Resolve host: HOST or API_HOST
+            if "host" not in data:
+                host_env = os.environ.get("HOST") or os.environ.get("API_HOST")
+                if host_env is not None:
+                    data["host"] = host_env
+        return data
+
+    @computed_field
+    @property
+    def is_production(self) -> bool:
+        """Indicates whether running in a production deployment environment."""
+        return self.app_env.lower() == "production"
 
     @computed_field
     @property
@@ -86,10 +115,16 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _require_gemini_key(self) -> Settings:
-        if self.ai_provider == "gemini" and not (
-            os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
-        ):
-            raise ValueError("AI_PROVIDER=gemini requires GOOGLE_API_KEY")
+        if self.ai_provider == "gemini":
+            use_vertex = (
+                self.google_genai_use_vertexai
+                or os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "").lower() in ("true", "1")
+                or self.is_production
+            )
+            if not use_vertex and not (
+                os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+            ):
+                raise ValueError("AI_PROVIDER=gemini requires GOOGLE_API_KEY")
         return self
 
 

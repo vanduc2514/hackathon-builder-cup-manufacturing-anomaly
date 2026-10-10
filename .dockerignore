@@ -1,0 +1,44 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Antigravity & Agent workspace artifacts
+.agents
+.gemini
+.sessions
+
+# Python virtual environment and bytecode
+.venv
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov/
+
+# Local cache & credentials
+.cache/
+.rclone/
+.gcp/
+*.key
+*.pem
+*.json-credentials
+
+# Frontend source (deployed separately to Firebase Hosting)
+frontend/
+node_modules/
+
+# Test suite and docs (not needed inside Cloud Run production image)
+tests/
+docs/
+*.md
+
+# Local dev configurations
+docker-compose*.yml
+mise.local.toml
+.env*

@@ -161,8 +161,11 @@ class Orchestrator:
         runner = InMemoryRunner(node=incident_workflow, app_name=APP_NAME)
         try:
             session_kwargs = {}
-            if self._step_delay is not None:
-                session_kwargs["state"] = {"step_delay": self._step_delay}
+            step_delay = self._step_delay
+            if step_delay is None and trigger.mode == "fast":
+                step_delay = 0.05
+            if step_delay is not None:
+                session_kwargs["state"] = {"step_delay": step_delay}
             session = await runner.session_service.create_session(
                 app_name=APP_NAME, user_id="orchestrator", **session_kwargs
             )
@@ -224,7 +227,7 @@ class Orchestrator:
             ),
         )
 
-    def approve(self) -> IncidentState | None:
+    def approve(self, approver: str | None = None) -> IncidentState | None:
         """Records shift-leader approval; only a verified-closed, not-yet-approved incident qualifies."""
         state = blackboard.get_state()
         if state.status != "closed" or state.approved:

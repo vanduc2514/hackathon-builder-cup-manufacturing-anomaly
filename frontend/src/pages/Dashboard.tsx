@@ -84,7 +84,11 @@ export default function Dashboard({ incident }: DashboardProps): React.ReactElem
       />
 
       {/* Sustainability & Avoided Scrap Impact */}
-      <ImpactCard impact={incident?.impact ?? null} />
+      <ImpactCard
+        impact={incident?.impact ?? null}
+        status={incident?.status}
+        incident={incident}
+      />
 
       <IncidentStream findings={incident?.findings ?? []} />
     </div>

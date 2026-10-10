@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Callable
 
 from backend.core.config import settings
+from backend.core.firestore_adapter import FirestoreAdapter, get_firestore_adapter
 from backend.core.models import (
     AgentFinding,
     IncidentState,
@@ -18,16 +19,20 @@ logger = logging.getLogger(__name__)
 
 
 class Blackboard:
-    """In-memory reactive blackboard representing Firestore shared incident state."""
+    """Reactive blackboard representing Firestore shared incident state."""
 
-    def __init__(self):
+    def __init__(self, storage: FirestoreAdapter | None = None) -> None:
         self._state = IncidentState()
         self._listeners: list[asyncio.Queue] = []
+        self._storage = storage if storage is not None else get_firestore_adapter()
+        self._listener_unsubscribe: Callable[[], None] | None = None
+        self._current_listening_incident_id: str | None = None
 
     def get_state(self) -> IncidentState:
         return self._state
 
     def reset(self) -> IncidentState:
+        self._detach_listener()
         self._state = IncidentState()
         self._notify()
         return self._state
@@ -38,6 +43,7 @@ class Blackboard:
         update_dict.update(kwargs)
         self._state = IncidentState(**update_dict)
         self._notify()
+        self._persist()
         return self._state
 
     def set_repair_done(self, repair_done: bool = True) -> IncidentState:
@@ -45,11 +51,13 @@ class Blackboard:
         update_dict["repair_done"] = repair_done
         self._state = IncidentState(**update_dict)
         self._notify()
+        self._persist()
         return self._state
 
     def add_finding(self, finding: AgentFinding) -> IncidentState:
         self._state.findings.append(finding)
         self._notify()
+        self._persist()
         return self._state
 
     def record_telemetry(self, telemetry: MachineTelemetryPayload) -> IncidentState:
@@ -99,18 +107,105 @@ class Blackboard:
                     self._state.suspect_tool = telemetry.tool_id
 
         self._notify()
+        self._persist()
         return self._state
 
-    def _notify(self):
-        data = self._state.model_dump_json()
-        for q in self._listeners:
+    def load_open_incident(self, incident_id: str | None = None) -> IncidentState | None:
+        """Reloads the open incident from Firestore into this Blackboard (restart recovery)."""
+        if not self._storage or not self._storage.is_enabled:
+            return None
+
+        loaded = (
+            self._storage.get_incident(incident_id)
+            if incident_id
+            else self._storage.get_open_incident()
+        )
+        if loaded:
+            self._state = loaded
+            self._notify()
+            self._attach_listener(loaded.incident_id)
+            logger.info(
+                "Recovered incident %s (status: %s) from Firestore",
+                loaded.incident_id,
+                loaded.status,
+            )
+            return self._state
+        return None
+
+    def reload_from_storage(self) -> IncidentState | None:
+        """Alias for load_open_incident()."""
+        return self.load_open_incident()
+
+    def set_storage(self, storage: FirestoreAdapter | None) -> None:
+        """Configures or swaps the backing FirestoreAdapter (testing utility)."""
+        self._detach_listener()
+        self._storage = storage
+
+    @property
+    def is_firestore_enabled(self) -> bool:
+        return bool(self._storage and self._storage.is_enabled)
+
+    def _persist(self) -> None:
+        """Saves current state to Firestore and attaches live listener if enabled."""
+        if not self.is_firestore_enabled:
+            return
+        try:
+            self._storage.save_incident(self._state)
+            self._attach_listener(self._state.incident_id)
+        except Exception as exc:
+            logger.warning(
+                "Blackboard persistence failed for incident %s: %s",
+                self._state.incident_id,
+                exc,
+            )
+
+    def _attach_listener(self, incident_id: str) -> None:
+        if not self.is_firestore_enabled:
+            return
+        if self._current_listening_incident_id == incident_id:
+            return
+        self._detach_listener()
+        self._current_listening_incident_id = incident_id
+        self._listener_unsubscribe = self._storage.attach_listener(
+            incident_id, self._on_remote_update
+        )
+
+    def _detach_listener(self) -> None:
+        if self._listener_unsubscribe:
             try:
-                q.put_nowait(data)
-            except asyncio.QueueFull:
+                self._listener_unsubscribe()
+            except Exception:
                 pass
+            self._listener_unsubscribe = None
+        self._current_listening_incident_id = None
+
+    def _on_remote_update(self, new_state: IncidentState) -> None:
+        if new_state.model_dump() != self._state.model_dump():
+            self._state = new_state
+            self._notify()
+
+    def _notify(self) -> None:
+        data = self._state.model_dump_json()
+        for q in list(self._listeners):
+            try:
+                loop = getattr(q, "_loop", None)
+                if loop and loop.is_running():
+                    loop.call_soon_threadsafe(self._safe_enqueue, q, data)
+                else:
+                    q.put_nowait(data)
+            except (asyncio.QueueFull, RuntimeError):
+                pass
+
+    @staticmethod
+    def _safe_enqueue(q: asyncio.Queue, data: str) -> None:
+        try:
+            q.put_nowait(data)
+        except asyncio.QueueFull:
+            pass
 
     async def subscribe(self) -> AsyncGenerator[str, None]:
         q: asyncio.Queue = asyncio.Queue(maxsize=100)
+        q._loop = asyncio.get_running_loop()
         self._listeners.append(q)
         try:
             # Yield initial state

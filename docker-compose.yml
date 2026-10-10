@@ -24,6 +24,20 @@ services:
     command: ["start", "--host-port=0.0.0.0:8085", "--project=kaizen-local"]
     restart: unless-stopped
 
+  firestore-emulator:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    container_name: kaizen-firestore-emulator
+    ports:
+      - "8080:8080"
+    command:
+      - "gcloud"
+      - "beta"
+      - "emulators"
+      - "firestore"
+      - "start"
+      - "--host-port=0.0.0.0:8080"
+    restart: unless-stopped
+
   backend:
     build:
       context: .
@@ -44,9 +58,11 @@ services:
       - BIGQUERY_EMULATOR_HOST=http://bigquery-emulator:9050
       - BIGQUERY_DATASET=manufacturing
       - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - FIRESTORE_EMULATOR_HOST=firestore-emulator:8080
     depends_on:
       - bigquery-emulator
       - pubsub-emulator
+      - firestore-emulator
 
   frontend:
     build:

@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     pubsub_quality_events_sub: str = "quality-events-sub"
     pubsub_fallback_to_direct: bool = True
 
+    # Firestore / Emulator settings
+    firestore_emulator_host: str | None = None
+    firestore_collection: str = "incidents"
+    firestore_fallback_to_memory: bool = True
+
     # Vertex AI Search / Discovery Engine settings
     vertex_search_datastore_id: str = "kaizen-knowledge-store"
     vertex_search_location: str = "global"

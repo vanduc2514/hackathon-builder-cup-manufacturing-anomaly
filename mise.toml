@@ -171,6 +171,19 @@ run = "docker compose up -d bigquery-emulator"
 description = "Stop BigQuery emulator container"
 run = "docker compose stop bigquery-emulator"
 
+# Pub/Sub emulator (gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators)
+[tasks."pubsub:emulator"]
+description = "Start Pub/Sub emulator container on :8085"
+run = "docker compose up -d pubsub-emulator"
+
+[tasks."pubsub:down"]
+description = "Stop Pub/Sub emulator container"
+run = "docker compose stop pubsub-emulator"
+
+[tasks."pubsub:bootstrap"]
+description = "Bootstrap Pub/Sub topics and subscriptions (telemetry, traceability, quality-events)"
+run = "python scripts/bootstrap_pubsub.py"
+
 # =============================================================================
 # Google Drive (rclone) — see .agents/skills/google-drive-rclone/SKILL.md
 # Remote name: gdrive. Config lives in .rclone/rclone.conf (gitignored).

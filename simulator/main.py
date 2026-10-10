@@ -31,12 +31,15 @@ class FactorySimulatorService:
         inject_on_start: bool = False,
         scenario: str = "cnc_tool_wear",
         seed: Optional[int] = None,
+        pubsub: bool = False,
     ) -> None:
         self.speed = max(0.1, speed)
         self.interval = settings.tick_interval_sec / self.speed
         self.running = False
         self.tick_count = 0
         self._stopped = False
+        self.scenario = scenario
+        self.pubsub = pubsub
 
         include_im = scenario == "im_damp_material"
         self.machine_sim = MachineSimulator(include_im=include_im, seed=seed)
@@ -62,6 +65,28 @@ class FactorySimulatorService:
             self.machine_sim.inject_anomaly(target, severity=severity, scenario="cnc_tool_wear")
             self.conveyor_sim.set_anomaly(target, active=True, scenario="cnc_tool_wear")
 
+        if self.pubsub:
+            try:
+                from backend.core.models import QualityEventPayload
+                from backend.core.pubsub_manager import pubsub_manager
+
+                quality_evt = QualityEventPayload(
+                    machine_id=target,
+                    tool_id="MOLD-03" if scenario == "im_damp_material" else "T07",
+                    defect_type="short_fill"
+                    if scenario == "im_damp_material"
+                    else "scratch_vertical",
+                    scenario=scenario,
+                    mode="fast" if self.speed > 2.0 else "demo",
+                    severity="high" if severity >= 1.0 else "medium",
+                )
+                pubsub_manager.publish_quality_event(quality_evt)
+                logger.info(
+                    "Published anomaly trigger quality-event to Pub/Sub (%s, %s)", target, scenario
+                )
+            except Exception as exc:
+                logger.debug("Pub/Sub quality event dispatch in simulator skipped: %s", exc)
+
     def reset_baseline(self) -> None:
         """Restores all machinery to normal baseline."""
         self.machine_sim.reset()
@@ -84,6 +109,23 @@ class FactorySimulatorService:
             cnc_summaries.append(f"{t.machine_id}: {t.spindle_vibration:.2f}mm/s{flag}")
 
         defects = [p for p in parts if p.status != "PASS"]
+        if self.pubsub and defects:
+            try:
+                from backend.core.models import QualityEventPayload
+                from backend.core.pubsub_manager import pubsub_manager
+
+                for d in defects:
+                    quality_evt = QualityEventPayload(
+                        machine_id=d.machine_id,
+                        tool_id=d.tool_id,
+                        defect_type=d.defect_type or "scratch_vertical",
+                        scenario=self.scenario,
+                        mode="fast" if self.speed > 2.0 else "demo",
+                    )
+                    pubsub_manager.publish_quality_event(quality_evt)
+            except Exception as exc:
+                logger.debug("Pub/Sub quality event dispatch in simulator step skipped: %s", exc)
+
         defect_str = f" ({len(defects)} defect)" if defects else ""
         logger.info(
             "Tick #%d | %s | %d parts%s",
@@ -169,6 +211,11 @@ def main() -> None:
         default=None,
         help="Optional random seed for deterministic simulation runs",
     )
+    parser.add_argument(
+        "--pubsub",
+        action="store_true",
+        help="Publish quality-events to Google Cloud Pub/Sub / emulator",
+    )
     args = parser.parse_args()
 
     service = FactorySimulatorService(
@@ -177,6 +224,7 @@ def main() -> None:
         inject_on_start=args.inject,
         scenario=args.scenario,
         seed=args.seed,
+        pubsub=args.pubsub,
     )
 
     loop = asyncio.new_event_loop()

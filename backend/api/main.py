@@ -19,9 +19,18 @@ logging.basicConfig(level=settings.log_level)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Stops any running incident on shutdown."""
-    yield
-    await orchestrator.cancel()
+    """Starts Pub/Sub background subscribers if available; stops on shutdown."""
+    import asyncio
+
+    from backend.core.pubsub_manager import pubsub_manager
+
+    orchestrator._loop = asyncio.get_running_loop()
+    pubsub_manager.start_subscribers()
+    try:
+        yield
+    finally:
+        pubsub_manager.stop_subscribers()
+        await orchestrator.cancel()
 
 
 app = FastAPI(
@@ -41,11 +50,14 @@ app.include_router(telemetry_router)
 @app.get("/health")
 @app.get("/healthz")
 async def health_check():
+    from backend.core.pubsub_manager import pubsub_manager
+
     return {
         "status": "healthy",
         "app": settings.app_name,
         "version": settings.version,
         "gcp_project": settings.gcp_project_id,
+        "pubsub_available": pubsub_manager.is_available(),
     }
 
 

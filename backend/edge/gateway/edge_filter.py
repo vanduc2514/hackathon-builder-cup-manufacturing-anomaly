@@ -106,8 +106,10 @@ class EdgeNoiseFilter:
         product_id = getattr(frame, "product_id", None) or (
             frame.get("product_id") if isinstance(frame, dict) else "PRD-UNKNOWN"
         )
-        timestamp = getattr(frame, "timestamp", None) or (
-            frame.get("timestamp") if isinstance(frame, dict) else "1970-01-01T00:00:00Z"
+        timestamp = (
+            getattr(frame, "timestamp", None)
+            or (frame.get("timestamp") if isinstance(frame, dict) else None)
+            or "1970-01-01T00:00:00Z"
         )
         machine_id = getattr(frame, "machine_id", None) or (
             frame.get("machine_id") if isinstance(frame, dict) else "CNC-02"

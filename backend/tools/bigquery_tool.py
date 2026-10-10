@@ -16,12 +16,14 @@ from backend.core.models import (
     SensorMetrics,
     SensorTelemetryWindowResponse,
     SuspectCorrelation,
+    TraceabilityEventPayload,
     TraceabilityTopologyResponse,
 )
 
 logger = logging.getLogger(__name__)
 
 MOCK_SENSOR_TELEMETRY: List[Dict[str, Any]] = []
+MOCK_TRACEABILITY_RECORDS: List[Dict[str, Any]] = []
 
 # Upper bound for one query including BigQuery job retries; a failing job surfaces as an
 # error instead of being re-run for the library default of ~10 minutes.
@@ -437,6 +439,7 @@ def query_sensor_telemetry_window(
 def reset_buffers() -> Dict[str, Any]:
     """Restores BigQuery mock data, in-memory buffers, and resets emulator tables if connected."""
     clear_mock_sensor_telemetry()
+    clear_mock_traceability_records()
     try:
         from scripts.seed_bigquery import seed_bigquery
 
@@ -458,6 +461,11 @@ def stream_sensor_telemetry(telemetry: MachineTelemetryPayload) -> bool:
         "spindle_speed_rpm": int(telemetry.rpm),
     }
 
+    # In-memory buffer fallback and inspection
+    MOCK_SENSOR_TELEMETRY.append(row)
+    if len(MOCK_SENSOR_TELEMETRY) > 500:
+        del MOCK_SENSOR_TELEMETRY[:-500]
+
     try:
         client = get_bigquery_client()
         dataset_id = f"{client.project}.{settings.bigquery_dataset}"
@@ -467,12 +475,8 @@ def stream_sensor_telemetry(telemetry: MachineTelemetryPayload) -> bool:
             return True
         logger.warning("BigQuery sensor_telemetry insert error: %s", errors)
     except Exception as exc:
-        logger.warning("BigQuery streaming insert failed (%s); buffering locally", exc)
+        logger.warning("BigQuery streaming insert failed (%s); buffered locally", exc)
 
-    # In-memory buffer fallback
-    MOCK_SENSOR_TELEMETRY.append(row)
-    if len(MOCK_SENSOR_TELEMETRY) > 500:
-        del MOCK_SENSOR_TELEMETRY[:-500]
     return True
 
 
@@ -484,3 +488,44 @@ def get_mock_sensor_telemetry() -> List[Dict[str, Any]]:
 def clear_mock_sensor_telemetry() -> None:
     """Clears buffered in-memory sensor telemetry records."""
     MOCK_SENSOR_TELEMETRY.clear()
+
+
+def stream_traceability_record(record: TraceabilityEventPayload) -> bool:
+    """Streams a discrete traceability event to BigQuery or in-memory mock buffer."""
+    row = {
+        "product_id": record.product_id,
+        "timestamp": record.timestamp,
+        "machine_id": record.machine_id,
+        "tool_id": record.tool_id,
+        "lot_id": record.lot_id,
+        "operator_id": record.operator_id,
+        "status": record.status,
+    }
+
+    # In-memory buffer fallback and inspection
+    MOCK_TRACEABILITY_RECORDS.append(row)
+    if len(MOCK_TRACEABILITY_RECORDS) > 500:
+        del MOCK_TRACEABILITY_RECORDS[:-500]
+
+    try:
+        client = get_bigquery_client()
+        dataset_id = f"{client.project}.{settings.bigquery_dataset}"
+        table_ref = f"{dataset_id}.traceability"
+        errors = client.insert_rows_json(table_ref, [row])
+        if not errors:
+            return True
+        logger.warning("BigQuery traceability insert error: %s", errors)
+    except Exception as exc:
+        logger.warning("BigQuery streaming insert failed (%s); buffered locally", exc)
+
+    return True
+
+
+def get_mock_traceability_records() -> List[Dict[str, Any]]:
+    """Returns buffered in-memory traceability records."""
+    return list(MOCK_TRACEABILITY_RECORDS)
+
+
+def clear_mock_traceability_records() -> None:
+    """Clears buffered in-memory traceability records."""
+    MOCK_TRACEABILITY_RECORDS.clear()

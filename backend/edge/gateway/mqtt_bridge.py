@@ -16,7 +16,13 @@ except ImportError:
 
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
-from backend.core.models import MachineTelemetryPayload
+from backend.core.models import (
+    MachineTelemetryPayload,
+    QualityEventPayload,
+    TraceabilityEventPayload,
+)
+from backend.core.pubsub_manager import pubsub_manager
+from backend.edge.gateway.edge_filter import EdgeInspectionStation
 from backend.tools.bigquery_tool import stream_sensor_telemetry
 
 logger = logging.getLogger(__name__)
@@ -50,8 +56,10 @@ class MQTTBridge:
             self.topics = [
                 f"{self.base_topic}/motor01/telemetry",
                 f"{self.base_topic}/+/telemetry",
+                f"{self.base_topic}/conveyor/inspection",
             ]
 
+        self.edge_station = EdgeInspectionStation()
         self.client: Optional[Any] = None
         self.is_connected = False
         self._running = False
@@ -128,7 +136,10 @@ class MQTTBridge:
 
     def _on_message(self, client: Any, userdata: Any, msg: Any) -> None:
         """Handles incoming MQTT messages."""
-        self.process_message(msg.topic, msg.payload)
+        if "conveyor" in msg.topic or "inspection" in msg.topic:
+            self.process_conveyor_message(msg.topic, msg.payload)
+        else:
+            self.process_message(msg.topic, msg.payload)
 
     def process_message(
         self,
@@ -160,10 +171,11 @@ class MQTTBridge:
 
         # 2. Update Blackboard and notify when anomalous
         blackboard.record_telemetry(telemetry)
-        if (
+        is_anomalous = (
             telemetry.anomaly_score >= settings.mqtt_anomaly_threshold
             or telemetry.operating_status in ("WARNING", "ALARM")
-        ):
+        )
+        if is_anomalous:
             self.anomaly_count += 1
             logger.warning(
                 "ANOMALY DETECTED on %s (%s): score=%.2f, vib=%.2f, temp=%.2f, curr=%.2f",
@@ -174,6 +186,22 @@ class MQTTBridge:
                 telemetry.spindle_temp,
                 telemetry.motor_current,
             )
+            # Forward anomalous signal to Pub/Sub telemetry topic
+            pubsub_manager.publish_telemetry(telemetry)
+            # Emit QualityEvent for SPC/defect event to quality-events topic
+            pubsub_manager.publish_quality_event(
+                QualityEventPayload(
+                    machine_id=telemetry.machine_id,
+                    tool_id=telemetry.tool_id or "T07",
+                    event_type="spc_alarm"
+                    if telemetry.operating_status == "ALARM"
+                    else "telemetry_anomaly",
+                    defect_type="scratch_vertical"
+                    if "02" in telemetry.machine_id
+                    else "short_fill",
+                    severity="high" if telemetry.operating_status == "ALARM" else "medium",
+                )
+            )
 
         logger.debug(
             "Ingested telemetry [%s]: %s vib=%.2f score=%.2f",
@@ -183,6 +211,54 @@ class MQTTBridge:
             telemetry.anomaly_score,
         )
         return telemetry
+
+    def process_conveyor_message(
+        self,
+        topic: str,
+        payload_bytes: bytes,
+    ) -> Optional[TraceabilityEventPayload]:
+        """Parses discrete conveyor part frame, runs edge filter, and publishes traceability/quality events."""
+        import json
+
+        try:
+            payload_str = payload_bytes.decode("utf-8")
+            data = json.loads(payload_str)
+        except Exception as exc:
+            logger.warning("Rejected invalid conveyor packet on %s: %s", topic, exc)
+            return None
+
+        self.message_count += 1
+        product_id = str(data.get("product_id") or f"PRD-{int(time.time())}")
+        machine_id = str(data.get("machine_id") or "CNC-02")
+        tool_id = str(data.get("tool_id") or "T07")
+        lot_id = str(data.get("lot_id") or "AL-5083-B4")
+        status = str(data.get("status") or "PASS")
+
+        trace_payload = TraceabilityEventPayload(
+            product_id=product_id,
+            machine_id=machine_id,
+            tool_id=tool_id,
+            lot_id=lot_id,
+            status=status,
+        )
+
+        # Publish traceability tag to Pub/Sub
+        pubsub_manager.publish_traceability(trace_payload)
+
+        # Run edge inspection filter
+        _, packet = self.edge_station.inspect(data)
+        if packet.filter_decision == "FORWARD" or status != "PASS":
+            defect_type = data.get("defect_type") or "scratch_vertical"
+            quality_evt = QualityEventPayload(
+                machine_id=machine_id,
+                tool_id=tool_id,
+                defect_type=defect_type,
+                filtered_frame=packet,
+                scenario="cnc_tool_wear" if "cnc" in machine_id.lower() else "im_damp_material",
+            )
+            pubsub_manager.publish_quality_event(quality_evt)
+
+        return trace_payload
 
     def start(self) -> None:
         """Starts the MQTT listener asynchronously."""

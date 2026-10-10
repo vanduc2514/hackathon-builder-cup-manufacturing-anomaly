@@ -13,6 +13,7 @@ firebase = "15.32.1" # Firebase CLI (hosting & emulators)
 ruff     = "0.16.10" # PEP 8 fast linter & code formatter (per AGENTS.md)
 jq       = "1.8.2"   # JSON query utility for scripts & simulation payloads
 rclone   = "1.75.1"  # Google Drive fetch/update CLI (see .agents/skills/google-drive-rclone)
+"npm:@google/stitch" = "latest"
 
 # =============================================================================
 # Environment

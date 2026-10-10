@@ -185,6 +185,15 @@ run = "docker compose stop pubsub-emulator"
 description = "Bootstrap Pub/Sub topics and subscriptions (telemetry, traceability, quality-events)"
 run = "python scripts/bootstrap_pubsub.py"
 
+# Firestore emulator (gcloud beta emulators firestore on :8080)
+[tasks."firestore:emulator"]
+description = "Start Firestore emulator container on :8080"
+run = "docker compose up -d firestore-emulator"
+
+[tasks."firestore:down"]
+description = "Stop Firestore emulator container"
+run = "docker compose stop firestore-emulator"
+
 # =============================================================================
 # Google Drive (rclone) — see .agents/skills/google-drive-rclone/SKILL.md
 # Remote name: gdrive. Config lives in .rclone/rclone.conf (gitignored).

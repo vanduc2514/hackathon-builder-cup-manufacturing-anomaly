@@ -12,17 +12,30 @@ from backend.api.routes_impact import router as impact_router
 from backend.api.routes_incidents import router as incidents_router
 from backend.api.routes_simulation import router as simulation_router
 from backend.api.routes_telemetry import router as telemetry_router
+from backend.core.blackboard import blackboard
 from backend.core.config import settings
 
+logger = logging.getLogger(__name__)
 logging.basicConfig(level=settings.log_level)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Starts Pub/Sub background subscribers if available; stops on shutdown."""
+    """Reloads open incident and starts Pub/Sub subscribers; stops them on shutdown."""
     import asyncio
 
     from backend.core.pubsub_manager import pubsub_manager
+
+    try:
+        reloaded = blackboard.load_open_incident()
+        if reloaded:
+            logger.info(
+                "Recovered open incident %s (status=%s) from Firestore on startup",
+                reloaded.incident_id,
+                reloaded.status,
+            )
+    except Exception as exc:
+        logger.warning("Failed to recover incident from Firestore on startup: %s", exc)
 
     orchestrator._loop = asyncio.get_running_loop()
     pubsub_manager.start_subscribers()

@@ -1,3 +1,214 @@
 {
-  "$comment": "JSON schema definition for the Firestore shared incident state (blackboard) and 4-part message contract."
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "JSON schema definition for the Firestore shared incident state (blackboard) and 4-part message contract.",
+  "title": "IncidentDocument",
+  "description": "Firestore document stored under /incidents/{incident_id} representing reactive Blackboard shared state.",
+  "type": "object",
+  "required": [
+    "incident_id",
+    "status",
+    "defect_rate",
+    "spc_ucl",
+    "verification_count",
+    "verification_target",
+    "repair_done",
+    "approved",
+    "findings",
+    "documents",
+    "updated_at"
+  ],
+  "properties": {
+    "incident_id": {
+      "type": "string",
+      "description": "Unique identifier for the manufacturing incident (e.g., INC-0412 or INC-7F3A2B)."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "normal",
+        "detecting",
+        "tracing",
+        "investigating",
+        "analyzing",
+        "awaiting_evidence",
+        "repairing",
+        "verifying",
+        "closed",
+        "dismissed",
+        "escalated",
+        "error"
+      ],
+      "description": "Lifecycle state of the incident across detection, root cause, repair, and verification."
+    },
+    "status_reason": {
+      "type": ["string", "null"],
+      "description": "Detailed reason when status is escalated, dismissed, or error."
+    },
+    "defect_type": {
+      "type": ["string", "null"],
+      "description": "Identified defect classification (e.g., scratch_vertical, short_fill, porosity)."
+    },
+    "defect_rate": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Latest computed defective fraction across the sampling window."
+    },
+    "spc_ucl": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Statistical Process Control Upper Control Limit threshold."
+    },
+    "suspect_machine": {
+      "type": ["string", "null"],
+      "description": "Machine identifier identified by Traceability and Process Analyst (e.g., CNC-02, IM-05)."
+    },
+    "suspect_tool": {
+      "type": ["string", "null"],
+      "description": "Cutting tool or mold cavity identifier (e.g., T07, MOLD-03)."
+    },
+    "root_cause": {
+      "type": ["string", "null"],
+      "description": "Confirmed root cause deduction from the 5-Whys and Ishikawa analysis."
+    },
+    "verification_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Current consecutive streak of defect-free parts passing optical inspection post-repair."
+    },
+    "verification_target": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Target streak required before incident can transition to closed status."
+    },
+    "repair_done": {
+      "type": "boolean",
+      "description": "Indicates physical technician intervention complete, gating entry to post-repair verification."
+    },
+    "approved": {
+      "type": "boolean",
+      "description": "Shift-leader sign-off recorded by the Orchestrator after verified closure."
+    },
+    "findings": {
+      "type": "array",
+      "description": "Ordered log of four-part contract findings emitted by specialized AI agents.",
+      "items": {
+        "$ref": "#/definitions/AgentFinding"
+      }
+    },
+    "impact": {
+      "type": ["object", "null"],
+      "description": "Kaizen sustainability and economic impact metrics.",
+      "properties": {
+        "scrap_avoided": { "type": "integer", "minimum": 0 },
+        "downtime_minutes": { "type": "number", "minimum": 0.0 },
+        "energy_kwh": { "type": "number", "minimum": 0.0 },
+        "co2_kg": { "type": "number", "minimum": 0.0 },
+        "cost_savings_usd": { "type": "number", "minimum": 0.0 }
+      }
+    },
+    "documents": {
+      "type": "object",
+      "description": "Synthesized 8D report, maintenance work order, and updated SOP documents.",
+      "additionalProperties": true
+    },
+    "latest_telemetry": {
+      "type": ["object", "null"],
+      "description": "Latest sensor telemetry packet ingested from the physical edge."
+    },
+    "telemetry_alerts": {
+      "type": "array",
+      "description": "Rolling buffer of anomalous telemetry threshold breach events.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "machine_id": { "type": "string" },
+          "timestamp": { "type": "string" },
+          "anomaly_score": { "type": "number" },
+          "operating_status": { "type": "string" },
+          "metric_name": { "type": "string" },
+          "metric_value": { "type": "number" },
+          "threshold": { "type": "number" },
+          "message": { "type": "string" }
+        },
+        "required": ["machine_id", "timestamp", "anomaly_score", "operating_status", "message"]
+      }
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "Timestamp of the last incident state mutation."
+    }
+  },
+  "definitions": {
+    "AgentFinding": {
+      "type": "object",
+      "description": "The authoritative four-part agent output contract: finding, evidence, confidence, citation.",
+      "required": [
+        "agent_id",
+        "agent_name",
+        "phase",
+        "finding",
+        "evidence",
+        "confidence",
+        "citation",
+        "timestamp"
+      ],
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "description": "Canonical uppercase identifier of the emitting agent (e.g., QUALITY, TRACE, PROCESS, RCA)."
+        },
+        "agent_name": {
+          "type": "string",
+          "description": "Human-readable display name of the agent."
+        },
+        "phase": {
+          "type": "string",
+          "description": "Investigation phase (e.g., Phase A - Detection, Phase B - Root Cause, Phase C - Resolution)."
+        },
+        "finding": {
+          "type": "string",
+          "description": "Clear declarative conclusion deduced by the agent."
+        },
+        "evidence": {
+          "type": "string",
+          "description": "Quantifiable empirical data supporting the finding."
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Statistical or model certainty score between 0.0 and 1.0."
+        },
+        "citation": {
+          "type": "string",
+          "description": "Verifiable reference source (BigQuery table, sensor window, SOP section, or camera buffer)."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Wall-clock time the finding was recorded."
+        },
+        "five_whys": {
+          "type": ["array", "null"],
+          "description": "5-Whys deductive chain (RCA agent only).",
+          "items": {
+            "type": "object",
+            "required": ["level", "why", "answer"],
+            "properties": {
+              "level": { "type": "integer", "minimum": 1, "maximum": 5 },
+              "why": { "type": "string" },
+              "answer": { "type": "string" },
+              "evidence": { "type": ["string", "null"] },
+              "citation": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "ishikawa": {
+          "type": ["object", "null"],
+          "description": "6M Ishikawa fishbone categorization breakdown (RCA agent only)."
+        }
+      }
+    }
+  }
 }

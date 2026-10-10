@@ -7,6 +7,7 @@ import logging
 
 from google.adk import Agent
 
+from backend.core.config import settings
 from backend.core.models import (
     FindingDraft,
     SensorTelemetryWindowResponse,
@@ -22,13 +23,22 @@ PHASE = "Phase B - Sensor Analysis"
 CITATION = "BigQuery machine_telemetry_5s 09:00-10:00"
 
 
+def _supports_tools() -> bool:
+    """Determines whether the active LLM provider supports function-calling tools."""
+    if settings.ai_provider == "ollama" and (
+        "2b" in settings.llm_model.lower() or "gemma2" in settings.llm_model.lower()
+    ):
+        return False
+    return True
+
+
 async def analyze_machine_telemetry(
     machine_id: str,
     time_window: str | None = "09:00-10:00",
     start_time: str | None = None,
     end_time: str | None = None,
 ) -> SensorTelemetryWindowResponse:
-    """Queries continuous sensor telemetry directly from BigQuery."""
+    """ADK Tool: Queries continuous sensor telemetry directly from BigQuery."""
     return await asyncio.to_thread(
         query_sensor_telemetry_window,
         machine_id=machine_id,
@@ -55,6 +65,6 @@ agent = Agent(
     name="process_analyst",
     description="Analyzes suspect machine telemetry for deviations preceding the defects.",
     instruction=INSTRUCTION,
-    tools=[analyze_machine_telemetry],
+    tools=[analyze_machine_telemetry] if _supports_tools() else [],
     output_schema=FindingDraft,
 )

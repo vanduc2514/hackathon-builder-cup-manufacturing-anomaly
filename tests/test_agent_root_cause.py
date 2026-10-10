@@ -166,7 +166,11 @@ def build_root_cause_finding(
 
     field_confirmed = field_evidence_present or has_field_evidence(findings_list)
 
-    is_im = "IM" in suspect_machine.upper() or "SHORT" in defect_type.upper() or "DAMP" in defect_type.upper()
+    is_im = (
+        "IM" in suspect_machine.upper()
+        or "SHORT" in defect_type.upper()
+        or "DAMP" in defect_type.upper()
+    )
 
     if is_im:
         citation = DEFAULT_IM_CITATION
@@ -208,11 +212,21 @@ def build_root_cause_finding(
             ),
         ]
         ishikawa = {
-            "Machine": ["Dryer-03 desiccant canister FLT-DM-04 saturated; dewpoint degraded to -15°C."],
-            "Method": ["Material preparation procedure lacked automated dewpoint interlock to pause injection molding."],
-            "Material": ["ABS resin lot moisture elevated due to desiccant saturation; polymer chain degradation under heat."],
-            "Man": ["Technician shift log did not register manual dewpoint check before shift run."],
-            "Measurement": ["Inline optical inspection camera correctly detected short fill defect breaching SPC UCL."],
+            "Machine": [
+                "Dryer-03 desiccant canister FLT-DM-04 saturated; dewpoint degraded to -15°C."
+            ],
+            "Method": [
+                "Material preparation procedure lacked automated dewpoint interlock to pause injection molding."
+            ],
+            "Material": [
+                "ABS resin lot moisture elevated due to desiccant saturation; polymer chain degradation under heat."
+            ],
+            "Man": [
+                "Technician shift log did not register manual dewpoint check before shift run."
+            ],
+            "Measurement": [
+                "Inline optical inspection camera correctly detected short fill defect breaching SPC UCL."
+            ],
             "Milieu": ["High ambient relative humidity accelerated desiccant canister saturation."],
         }
         finding = (
@@ -363,9 +377,7 @@ def test_query_domain_knowledge_error_propagation_on_rag_error():
         side_effect=RuntimeError("Google Cloud Discovery Engine offline"),
     ):
         with pytest.raises(RuntimeError, match="Google Cloud Discovery Engine offline"):
-            asyncio.run(
-                query_domain_knowledge("scratch_vertical", "CNC-02")
-            )
+            asyncio.run(query_domain_knowledge("scratch_vertical", "CNC-02"))
 
 
 def test_query_domain_knowledge_uses_live_result():
@@ -391,9 +403,7 @@ def test_query_domain_knowledge_uses_live_result():
         "backend.agents.agent_root_cause.search_knowledge_base",
         return_value=live_result,
     ):
-        result = asyncio.run(
-            query_domain_knowledge("scratch_vertical", "CNC-02")
-        )
+        result = asyncio.run(query_domain_knowledge("scratch_vertical", "CNC-02"))
         assert result.citations[0].title == "Live CNC Manual"
 
 
@@ -427,7 +437,11 @@ def test_has_field_evidence_detection():
 def test_build_root_cause_finding_cnc_standard():
     """Verifies 5-Whys deduction chain, Ishikawa 6M classification, and citation for CNC scenario."""
     draft = build_root_cause_finding(
-        board_data={"suspect_machine": "CNC-02", "suspect_tool": "T07", "defect_type": "scratch_vertical"}
+        board_data={
+            "suspect_machine": "CNC-02",
+            "suspect_tool": "T07",
+            "defect_type": "scratch_vertical",
+        }
     )
     assert isinstance(draft, RootCauseFindingDraft)
     assert draft.confidence == 0.87
@@ -443,10 +457,16 @@ def test_build_root_cause_finding_cnc_standard():
         assert len(step.answer) > 0
         assert step.evidence is not None
 
-    assert "vertical scratch" in draft.five_whys[0].why.lower() or "vertical scratch" in draft.five_whys[0].answer.lower()
+    assert (
+        "vertical scratch" in draft.five_whys[0].why.lower()
+        or "vertical scratch" in draft.five_whys[0].answer.lower()
+    )
     assert "2,000" in draft.five_whys[1].answer or "2,400" in draft.five_whys[1].answer
     assert "calendar" in draft.five_whys[2].answer.lower()
-    assert "part-counter" in draft.five_whys[3].answer.lower() or "piece-counter" in draft.five_whys[3].answer.lower()
+    assert (
+        "part-counter" in draft.five_whys[3].answer.lower()
+        or "piece-counter" in draft.five_whys[3].answer.lower()
+    )
 
     # Verify 6M Ishikawa classification
     categories = {"Machine", "Method", "Material", "Man", "Measurement", "Milieu"}
@@ -460,20 +480,35 @@ def test_build_root_cause_finding_cnc_standard():
 def test_build_root_cause_finding_im_scenario():
     """Verifies 5-Whys and Ishikawa for Injection Molding scenario."""
     draft = build_root_cause_finding(
-        board_data={"suspect_machine": "IM-05", "suspect_tool": "CAV-03", "defect_type": "short_fill"}
+        board_data={
+            "suspect_machine": "IM-05",
+            "suspect_tool": "CAV-03",
+            "defect_type": "short_fill",
+        }
     )
     assert isinstance(draft, RootCauseFindingDraft)
     assert draft.confidence >= 0.85
     assert "short fill" in draft.finding.lower()
     assert draft.citation == DEFAULT_IM_CITATION
     assert len(draft.five_whys) == 5
-    assert set(draft.ishikawa.keys()) == {"Machine", "Method", "Material", "Man", "Measurement", "Milieu"}
+    assert set(draft.ishikawa.keys()) == {
+        "Machine",
+        "Method",
+        "Material",
+        "Man",
+        "Measurement",
+        "Milieu",
+    }
 
 
 def test_build_root_cause_finding_with_field_evidence():
     """Verifies confidence raises to >= 0.90 when technician field evidence is attached."""
     draft = build_root_cause_finding(
-        board_data={"suspect_machine": "CNC-02", "suspect_tool": "T07", "defect_type": "scratch_vertical"},
+        board_data={
+            "suspect_machine": "CNC-02",
+            "suspect_tool": "T07",
+            "defect_type": "scratch_vertical",
+        },
         field_evidence_present=True,
     )
     assert draft.confidence >= 0.90
@@ -483,7 +518,11 @@ def test_build_root_cause_finding_with_field_evidence():
 def test_build_root_cause_finding_low_confidence_diagnostic_probe():
     """Verifies diagnostic evidence request is generated when confidence < 0.70."""
     draft = build_root_cause_finding(
-        board_data={"suspect_machine": "CNC-02", "suspect_tool": "T07", "defect_type": "scratch_vertical"},
+        board_data={
+            "suspect_machine": "CNC-02",
+            "suspect_tool": "T07",
+            "defect_type": "scratch_vertical",
+        },
         force_low_confidence=True,
     )
     assert draft.confidence < 0.70

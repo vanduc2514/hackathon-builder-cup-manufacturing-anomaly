@@ -11,13 +11,16 @@ from google.adk import Agent
 from google.genai import types
 
 from backend.core.blackboard import blackboard
+from backend.core.config import settings
 from backend.core.models import (
     AgentFinding,
     CopilotSessionTelemetry,
     CopilotTurn,
     FindingDraft,
+    RAGSearchResult,
     RepairCheckpoint,
 )
+from backend.tools.rag_search_tool import search_knowledge_base
 
 logger = logging.getLogger(__name__)
 
@@ -846,6 +849,27 @@ DEFAULT_DIAGNOSTIC_IM_CITATION = (
 )
 
 
+def _supports_tools() -> bool:
+    """Determines whether the active LLM provider supports function-calling tools."""
+    if settings.ai_provider == "ollama" and (
+        "2b" in settings.llm_model.lower() or "gemma2" in settings.llm_model.lower()
+    ):
+        return False
+    return True
+
+
+async def query_repair_procedure(
+    machine_id: str,
+    defect_symptom: str | None = None,
+    query: str | None = None,
+) -> RAGSearchResult:
+    """ADK Tool: Queries OEM equipment manuals and repair procedures for the suspect machine."""
+    return await search_knowledge_base(
+        defect_symptom=defect_symptom,
+        suspect_asset=machine_id,
+        query=query,
+    )
+
 
 INSTRUCTION = (
     "You are the Technician Copilot of the Kaizen Agent manufacturing incident team. "
@@ -854,14 +878,15 @@ INSTRUCTION = (
     "The user message is the current incident board as JSON. "
     "Follow these steps: "
     "1. Read the incident board to extract suspect_machine, suspect_tool, and root_cause. "
-    "2. If suspect_machine is CNC-02: the technician was guided in Vietnamese through LOTO safety disconnect, "
+    "2. If tools are available, you can call query_repair_procedure to look up OEM specs and torque tolerances. "
+    "3. If suspect_machine is CNC-02: the technician was guided in Vietnamese through LOTO safety disconnect, "
     "safety enclosure removal, replacement of worn insert T07 with new insert WNMG-080408 at 4.2 N·m torque, "
     "verifying dial indicator spindle runout to 0.003 mm (within 0.005 mm tolerance), and running a 1500 RPM test spin, "
     "citing Sổ tay hướng dẫn CNC-02 trang 112. "
-    "3. If suspect_machine is IM-05: the technician was guided in Vietnamese through heating de-energization, "
+    "4. If suspect_machine is IM-05: the technician was guided in Vietnamese through heating de-energization, "
     "replacing saturated dryer filter FLT-ABS-04 with new O-ring, verifying dew point to -35.0 °C (within -30.0 °C tolerance), "
     "and resuming drying at 85 °C for 4 hours, citing SOP-MOLD-02 trang 45. "
-    "4. Return a FindingDraft with one concise sentence for finding summarizing completed repair guidance, "
+    "5. Return a FindingDraft with one concise sentence for finding summarizing completed repair guidance, "
     "2-3 sentences for evidence citing the 5 verified checkpoints and measured tolerances, "
     "confidence set to 0.94, and citation citing the OEM manual. Respond in English."
 )
@@ -870,6 +895,7 @@ agent = Agent(
     name="technician_copilot",
     description="Guides the technician through physical equipment repair in Vietnamese grounded in OEM manuals.",
     instruction=INSTRUCTION,
+    tools=[query_repair_procedure] if _supports_tools() else [],
     output_schema=FindingDraft,
     generate_content_config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=2048),
 )
@@ -881,11 +907,12 @@ DIAGNOSTIC_INSTRUCTION = (
     "The user message is the current incident board as JSON. "
     "Follow these steps: "
     "1. Read the incident board to extract suspect_machine, suspect_tool, and any diagnostic_request from Root Cause Agent. "
-    "2. If suspect_machine is CNC-02: macro camera photo and inspection of insert T07 confirms abrasive flank wear "
+    "2. If tools are available, call query_repair_procedure to cross-reference diagnostic criteria with OEM manuals. "
+    "3. If suspect_machine is CNC-02: macro camera photo and inspection of insert T07 confirms abrasive flank wear "
     "exceeding 0.3mm (VB > 0.3mm) and micro-chipped cutting edge, corroborating workpiece vertical scratches. "
-    "3. If suspect_machine is IM-05: close-up photo and inspection of Dryer-03 confirms saturated desiccant beads and oil fouling, "
+    "4. If suspect_machine is IM-05: close-up photo and inspection of Dryer-03 confirms saturated desiccant beads and oil fouling, "
     "corroborating moisture-induced short fill in cavity 3. "
-    "4. Return a FindingDraft with one concise sentence for finding confirming the physical inspection, "
+    "5. Return a FindingDraft with one concise sentence for finding confirming the physical inspection, "
     "2-3 sentences of visual evidence from the mobile camera feed confirming wear patterns, "
     "confidence set to 0.92, and citation 'Technician diagnostic camera stream via Gemini Live'. "
     "Respond in English."
@@ -895,6 +922,7 @@ diagnostic_agent = Agent(
     name="technician_copilot_diagnostic",
     description="Collects field photos and physical diagnostic evidence from the technician when RCA confidence is low.",
     instruction=DIAGNOSTIC_INSTRUCTION,
+    tools=[query_repair_procedure] if _supports_tools() else [],
     output_schema=FindingDraft,
     generate_content_config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=2048),
 )

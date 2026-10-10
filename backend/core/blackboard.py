@@ -13,6 +13,7 @@ from backend.core.models import (
     IncidentState,
     MachineTelemetryPayload,
     TelemetryAlert,
+    VisualEvidencePayload,
 )
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,22 @@ class Blackboard:
         self._state.findings.append(finding)
         self._notify()
         self._persist()
+        return self._state
+
+    def attach_field_evidence(
+        self,
+        finding: AgentFinding,
+        visual_evidence: VisualEvidencePayload | None = None,
+    ) -> IncidentState:
+        """Attaches technician diagnostic field evidence and optional visual payload, transitioning to analyzing."""
+        update_dict = self._state.model_dump()
+        update_dict["status"] = "analyzing"
+        if visual_evidence:
+            update_dict["visual_evidence"] = visual_evidence.model_dump()
+        update_dict["diagnostic_request"] = None
+        self._state = IncidentState(**update_dict)
+        self._state.findings.append(finding)
+        self._notify()
         return self._state
 
     def record_telemetry(self, telemetry: MachineTelemetryPayload) -> IncidentState:

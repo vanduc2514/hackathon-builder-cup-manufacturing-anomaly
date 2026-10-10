@@ -388,6 +388,36 @@ class TelemetryAlert(BaseModel):
     message: str
 
 
+class VisualEvidencePayload(BaseModel):
+    """Payload representing visual photo evidence submitted by frontline technician."""
+
+    image_id: str = Field(
+        default_factory=lambda: f"img-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
+        description="Unique identifier for uploaded image",
+    )
+    filename: Optional[str] = Field(default=None, description="Original filename if uploaded")
+    mime_type: str = Field(default="image/jpeg", description="MIME type of the evidence photo")
+    size_bytes: int = Field(default=0, description="Size of image in bytes")
+    image_base64: Optional[str] = Field(
+        default=None, description="Optional base64 encoded preview or thumbnail"
+    )
+    analysis: str = Field(
+        default="", description="Visual Metrology / Copilot assessment of the photo"
+    )
+    defect_detected: bool = Field(default=True, description="Whether anomaly/wear was confirmed")
+    wear_measurement_mm: Optional[float] = Field(
+        default=None, description="Measured flank wear VB or chip dimension in mm"
+    )
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        description="Capture or upload timestamp",
+    )
+    citation: str = Field(
+        default="Technician diagnostic camera stream via Gemini Live",
+        description="Audit trail citation source",
+    )
+
+
 class IncidentState(BaseModel):
     incident_id: str = "INC-0412"
     # normal, detecting, tracing, investigating, analyzing, awaiting_evidence, repairing,
@@ -409,6 +439,8 @@ class IncidentState(BaseModel):
     documents: Dict[str, Any] = Field(default_factory=dict)
     latest_telemetry: Optional[MachineTelemetryPayload] = None
     telemetry_alerts: List[TelemetryAlert] = Field(default_factory=list)
+    diagnostic_request: Optional[str] = None
+    visual_evidence: Optional[VisualEvidencePayload] = None
     updated_at: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
 
 

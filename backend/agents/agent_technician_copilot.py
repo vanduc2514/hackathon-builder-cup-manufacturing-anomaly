@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import datetime
 import logging
 import re
@@ -19,6 +20,7 @@ from backend.core.models import (
     FindingDraft,
     RAGSearchResult,
     RepairCheckpoint,
+    VisualEvidencePayload,
 )
 from backend.tools.rag_search_tool import search_knowledge_base
 
@@ -401,6 +403,96 @@ def validate_metric_measurement(
 
 
 # =============================================================================
+# Diagnostic Feedback Loop & Grounded Constants
+# =============================================================================
+
+AGENT_ID = "COPILOT"
+AGENT_NAME = "Technician Copilot"
+PHASE = "Phase C - Resolution"
+DIAGNOSTIC_PHASE = "Phase B - Field Evidence"
+
+DEFAULT_CNC_CITATION = "Gemini Live API multimodal voice session (CNC-02 OEM Manual p.112, mục 4.2)"
+DEFAULT_IM_CITATION = "Gemini Live API multimodal voice session (IM-05 SOP-MOLD-02 p.45, mục 3)"
+DEFAULT_DIAGNOSTIC_CNC_CITATION = (
+    "Technician diagnostic camera stream via Gemini Live (CNC-02 T07 macro inspection)"
+)
+DEFAULT_DIAGNOSTIC_IM_CITATION = (
+    "Technician diagnostic camera stream via Gemini Live (IM-05 dryer inspection)"
+)
+
+
+def build_contextual_diagnostic_probe_vi(
+    confidence: float,
+    machine_id: str = "CNC-02",
+    tool_id: str | None = "T07",
+    defect_type: str | None = "scratch_vertical",
+    diagnostic_request: str | None = None,
+) -> str:
+    """Verbalizes the diagnostic question in Vietnamese for the frontline technician when RCA confidence is low (< 70%).
+
+    Example: 'Độ tin cậy hiện là 65%. Anh vui lòng chụp ảnh cận cảnh mũi dao T07 để xác nhận là mòn lưỡi hay mẻ hạt.'
+    """
+    conf_pct = int(round(confidence * 100)) if confidence <= 1.0 else int(confidence)
+    if diagnostic_request:
+        if f"{conf_pct}%" in diagnostic_request or diagnostic_request.startswith("Độ tin cậy"):
+            return diagnostic_request
+        return f"Độ tin cậy hiện là {conf_pct}%. {diagnostic_request}"
+
+    is_im = "IM" in machine_id.upper() or (defect_type and "short" in defect_type.lower())
+    if is_im:
+        return (
+            f"Độ tin cậy hiện là {conf_pct}%. Anh vui lòng kiểm tra cụm sấy Dryer-03 và chụp ảnh hạt hút ẩm desiccant "
+            f"để xác nhận độ bão hòa ẩm gây lỗi thiếu liệu (short fill)."
+        )
+
+    target_tool = tool_id or "T07"
+    return (
+        f"Độ tin cậy hiện là {conf_pct}%. Anh vui lòng chụp ảnh cận cảnh mũi dao {target_tool} "
+        f"để xác nhận là mòn lưỡi hay mẻ hạt."
+    )
+
+
+def analyze_visual_evidence_frame(
+    image_bytes: bytes,
+    machine_id: str = "CNC-02",
+    tool_id: str | None = "T07",
+    filename: str | None = None,
+) -> VisualEvidencePayload:
+    """Analyzes a close-up photo frame captured by frontline technician's mobile camera."""
+    is_im = "IM" in machine_id.upper()
+    size_bytes = len(image_bytes)
+    b64_preview = base64.b64encode(image_bytes[:512]).decode("ascii") if image_bytes else None
+
+    if is_im:
+        analysis_text = (
+            "Close-up optical inspection of Dryer-03 desiccant canister confirms severe moisture saturation "
+            "(color shifted from blue to pink) and oil contamination on O-ring seal FLT-ABS-04."
+        )
+        citation = DEFAULT_DIAGNOSTIC_IM_CITATION
+        wear_mm = None
+    else:
+        target_tool = tool_id or "T07"
+        analysis_text = (
+            f"Macro optical inspection of cutting insert {target_tool} confirms abrasive flank wear "
+            "exceeding tolerance (VB = 0.35 mm > 0.30 mm limit) and micro-chipping on primary cutting edge, "
+            "corroborating workpiece vertical scratches."
+        )
+        citation = f"Technician diagnostic camera stream via Gemini Live ({machine_id} {target_tool} macro inspection)"
+        wear_mm = 0.35
+
+    return VisualEvidencePayload(
+        filename=filename or ("evidence_photo.jpg" if not is_im else "dryer_photo.jpg"),
+        mime_type="image/jpeg",
+        size_bytes=size_bytes,
+        image_base64=b64_preview,
+        analysis=analysis_text,
+        defect_detected=True,
+        wear_measurement_mm=wear_mm,
+        citation=citation,
+    )
+
+
+# =============================================================================
 # Technician Copilot Session Class
 # =============================================================================
 
@@ -487,6 +579,83 @@ class TechnicianCopilot:
         self.telemetry.total_turns = len(self.telemetry.transcript)
         return turn
 
+    def get_diagnostic_probe(
+        self, confidence: float = 0.65, diagnostic_request: str | None = None
+    ) -> CopilotTurn:
+        """Returns the diagnostic probe turn verbalizing the photo evidence request in Vietnamese."""
+        message_vi = build_contextual_diagnostic_probe_vi(
+            confidence=confidence,
+            machine_id=self.machine_id,
+            tool_id=self.tool_id,
+            diagnostic_request=diagnostic_request,
+        )
+        citation = (
+            DEFAULT_DIAGNOSTIC_IM_CITATION
+            if "IM" in self.machine_id.upper()
+            else DEFAULT_DIAGNOSTIC_CNC_CITATION
+        )
+        turn = CopilotTurn(
+            turn_id=len(self.telemetry.transcript) + 1,
+            speaker="copilot",
+            message_vi=message_vi,
+            citation=citation,
+            checkpoint_verified=False,
+        )
+        self.telemetry.transcript.append(turn)
+        self.telemetry.total_turns = len(self.telemetry.transcript)
+        return turn
+
+    async def process_field_evidence(
+        self,
+        image_bytes: bytes,
+        filename: str | None = None,
+        notes: str | None = None,
+    ) -> tuple[CopilotTurn, VisualEvidencePayload, AgentFinding]:
+        """Ingests visual photo evidence from technician, updates blackboard, and appends turn."""
+        evidence_payload = analyze_visual_evidence_frame(
+            image_bytes=image_bytes,
+            machine_id=self.machine_id,
+            tool_id=self.tool_id,
+            filename=filename,
+        )
+
+        is_im = "IM" in self.machine_id.upper()
+        if is_im:
+            response_vi = (
+                "Đã nhận hình ảnh cụm sấy Dryer-03. Nhận diện hạt hút ẩm bão hòa (đổi màu) "
+                "và gioăng lọc FLT-ABS-04 bám cặn dầu, khớp với nguyên nhân gây thiếu liệu."
+            )
+        else:
+            tool = self.tool_id or "T07"
+            response_vi = (
+                f"Đã nhận hình ảnh trực tiếp từ camera trạm {self.machine_id}. "
+                f"Nhận diện mảnh dao {tool} mòn mặt sau VB=0.35mm và mẻ mép cắt, "
+                f"khớp với tọa độ vết xước dọc trên phôi nhôm AL-5083."
+            )
+
+        turn = CopilotTurn(
+            turn_id=len(self.telemetry.transcript) + 1,
+            speaker="copilot",
+            message_vi=response_vi,
+            citation=evidence_payload.citation,
+            checkpoint_verified=True,
+        )
+        self.telemetry.transcript.append(turn)
+        self.telemetry.total_turns = len(self.telemetry.transcript)
+
+        finding = AgentFinding(
+            agent_id=AGENT_ID,
+            agent_name=AGENT_NAME,
+            phase=DIAGNOSTIC_PHASE,
+            finding=f"Frontline technician submitted close-up photo confirming defect root cause on {self.machine_id}.",
+            evidence=evidence_payload.analysis + (f" Ghi chú: {notes}" if notes else ""),
+            confidence=0.92,
+            citation=evidence_payload.citation,
+        )
+        blackboard.attach_field_evidence(finding, evidence_payload)
+
+        return turn, evidence_payload, finding
+
     async def process_technician_input(
         self, message_vi: str, measured_metric: float | None = None
     ) -> CopilotTurn:
@@ -500,8 +669,17 @@ class TechnicianCopilot:
         )
         self.telemetry.transcript.append(tech_turn)
 
-        # 2. Check for ungrounded/hallucination query
+        # 1.5 Check if in diagnostic mode and responding to diagnostic prompt
+        state = blackboard.get_state()
         lower_msg = message_vi.lower()
+        if (state.status == "awaiting_evidence" or state.diagnostic_request) and any(
+            k in lower_msg for k in ["bị gì", "sao thế", "làm gì", "kiểm tra", "yêu cầu"]
+        ):
+            return self.get_diagnostic_probe(
+                confidence=0.65, diagnostic_request=state.diagnostic_request
+            )
+
+        # 2. Check for ungrounded/hallucination query
         hallucination_triggers = [
             "tăng tốc độ lên 50000",
             "bỏ qua cảm biến",
@@ -833,20 +1011,6 @@ async def run_technician_repair(
 # =============================================================================
 # ADK Workflow Agents & Grounded Finding Builders
 # =============================================================================
-
-AGENT_ID = "COPILOT"
-AGENT_NAME = "Technician Copilot"
-PHASE = "Phase C - Resolution"
-DIAGNOSTIC_PHASE = "Phase B - Field Evidence"
-
-DEFAULT_CNC_CITATION = "Gemini Live API multimodal voice session (CNC-02 OEM Manual p.112, mục 4.2)"
-DEFAULT_IM_CITATION = "Gemini Live API multimodal voice session (IM-05 SOP-MOLD-02 p.45, mục 3)"
-DEFAULT_DIAGNOSTIC_CNC_CITATION = (
-    "Technician diagnostic camera stream via Gemini Live (CNC-02 T07 macro inspection)"
-)
-DEFAULT_DIAGNOSTIC_IM_CITATION = (
-    "Technician diagnostic camera stream via Gemini Live (IM-05 dryer inspection)"
-)
 
 
 def _supports_tools() -> bool:

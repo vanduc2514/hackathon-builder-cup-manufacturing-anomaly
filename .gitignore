@@ -163,3 +163,5 @@ worktrees/
 
 # ADK CLI (adk run / adk web) session DB and artifacts
 .adk/
+
+.stitch.json

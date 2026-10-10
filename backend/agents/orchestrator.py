@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from typing import Any
 
 from google.adk import Workflow
 from google.adk.agents import LlmAgent
@@ -115,10 +116,11 @@ class Orchestrator:
 
     def __init__(self, step_delay: float | None = None) -> None:
         self._step_delay = step_delay
-        self._task: asyncio.Task | None = None
+        self._task: Any = None
         self._abort: asyncio.Event | None = None
         self._trigger: DefectInjectionRequest | None = None
         self._started_at: float | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     @property
     def is_running(self) -> bool:
@@ -131,8 +133,26 @@ class Orchestrator:
         self._abort = asyncio.Event()
         self._trigger = trigger
         self._started_at = time.monotonic()
-        self._task = asyncio.create_task(self.run_incident(trigger, self._abort))
-        return True
+
+        loop: asyncio.AbstractEventLoop | None = None
+        try:
+            loop = asyncio.get_running_loop()
+            self._loop = loop
+        except RuntimeError:
+            loop = self._loop
+
+        if loop is not None and loop.is_running():
+            try:
+                self._task = asyncio.create_task(self.run_incident(trigger, self._abort))
+            except RuntimeError:
+                # Dispatched from background worker thread (e.g. Pub/Sub or MQTT callback)
+                self._task = asyncio.run_coroutine_threadsafe(
+                    self.run_incident(trigger, self._abort), loop
+                )
+            return True
+
+        logger.warning("No running asyncio event loop; incident workflow not started")
+        return False
 
     async def run_incident(
         self, trigger: DefectInjectionRequest, abort: asyncio.Event | None = None

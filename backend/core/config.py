@@ -23,6 +23,16 @@ class Settings(BaseSettings):
     bigquery_dataset: str = "manufacturing"
     bigquery_fallback_to_mock: bool = True
 
+    # Google Cloud Pub/Sub / Emulator settings
+    pubsub_emulator_host: str | None = None
+    pubsub_telemetry_topic: str = "telemetry"
+    pubsub_traceability_topic: str = "traceability"
+    pubsub_quality_events_topic: str = "quality-events"
+    pubsub_telemetry_sub: str = "telemetry-sub"
+    pubsub_traceability_sub: str = "traceability-sub"
+    pubsub_quality_events_sub: str = "quality-events-sub"
+    pubsub_fallback_to_direct: bool = True
+
     # Vertex AI Search / Discovery Engine settings
     vertex_search_datastore_id: str = "kaizen-knowledge-store"
     vertex_search_location: str = "global"

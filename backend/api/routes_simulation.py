@@ -59,7 +59,26 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) 
         if trigger.duration_seconds is not None
         else (8.0 if trigger.mode == "fast" else 90.0)
     )
-    orchestrator.start_incident(trigger)
+
+    # Publish to Pub/Sub quality-events topic (triggers orchestrator subscriber in end-to-end flow)
+    from backend.core.models import QualityEventPayload
+    from backend.core.pubsub_manager import pubsub_manager
+
+    quality_event = QualityEventPayload(
+        scenario=trigger.scenario,
+        mode=trigger.mode,
+        machine_id=trigger.machine_id,
+        tool_id=trigger.tool_id,
+        defect_type=trigger.defect_type,
+        defect_rate=trigger.defect_rate,
+        severity=trigger.severity,
+    )
+    published = pubsub_manager.publish_quality_event(quality_event)
+
+    # If Pub/Sub not available or message not published, trigger orchestrator directly
+    if not published and not orchestrator.is_running:
+        orchestrator.start_incident(trigger)
+
     return {
         "status": "triggered",
         "scenario": trigger.scenario,

@@ -210,13 +210,19 @@ class EightDReport(BaseModel):
     incident_id: str = Field(description="Incident identifier, e.g. INC-0412")
     d1_team: str = Field(description="D1: Cross-functional response team")
     d2_problem: str = Field(description="D2: 5W2H Problem description and defect symptoms")
-    d3_containment: str = Field(description="D3: Immediate containment actions and quarantined material")
+    d3_containment: str = Field(
+        description="D3: Immediate containment actions and quarantined material"
+    )
     d4_root_cause: str = Field(description="D4: Root cause 5-Whys and Ishikawa 6M analysis")
     d5_corrective_actions: str = Field(description="D5: Chosen permanent corrective actions")
-    d6_implementation: str = Field(description="D6: Implementation results and post-repair verification")
+    d6_implementation: str = Field(
+        description="D6: Implementation results and post-repair verification"
+    )
     d7_preventive_action: str = Field(description="D7: Preventive actions and SOP modifications")
     d8_congratulate_team: str = Field(description="D8: Team recognition and formal sign-off")
-    pending_approval: str = Field(default="shift_leader", description="Approver role awaiting sign-off")
+    pending_approval: str = Field(
+        default="shift_leader", description="Approver role awaiting sign-off"
+    )
     approved: bool = Field(default=False, description="True once approved by shift leader")
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
@@ -228,10 +234,16 @@ class WorkOrder(BaseModel):
     title: str = Field(description="Work order summary title")
     equipment_id: str = Field(description="Target machine or equipment, e.g. CNC-02")
     description: str = Field(description="Detailed maintenance instructions and specifications")
-    parts_required: List[str] = Field(default_factory=list, description="List of required spare parts and consumables")
+    parts_required: List[str] = Field(
+        default_factory=list, description="List of required spare parts and consumables"
+    )
     priority: str = Field(default="HIGH", description="Priority level: LOW, MEDIUM, HIGH, CRITICAL")
-    status: str = Field(default="DRAFT", description="Status: DRAFT, PENDING_APPROVAL, APPROVED, COMPLETED")
-    pending_approval: str = Field(default="shift_leader", description="Approver role awaiting sign-off")
+    status: str = Field(
+        default="DRAFT", description="Status: DRAFT, PENDING_APPROVAL, APPROVED, COMPLETED"
+    )
+    pending_approval: str = Field(
+        default="shift_leader", description="Approver role awaiting sign-off"
+    )
     approved: bool = Field(default=False, description="True once approved by shift leader")
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
@@ -245,8 +257,12 @@ class SOPRevisionProposal(BaseModel):
     current_procedure: str = Field(description="Summary of current standard operating procedure")
     proposed_revision: str = Field(description="Proposed concrete modifications")
     justification: str = Field(description="Technical rationale based on incident root cause")
-    threshold_alert_parts: Optional[int] = Field(default=None, description="Automated counter threshold alert limit")
-    pending_approval: str = Field(default="shift_leader", description="Approver role awaiting sign-off")
+    threshold_alert_parts: Optional[int] = Field(
+        default=None, description="Automated counter threshold alert limit"
+    )
+    pending_approval: str = Field(
+        default="shift_leader", description="Approver role awaiting sign-off"
+    )
     approved: bool = Field(default=False, description="True once approved by shift leader")
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
@@ -257,9 +273,15 @@ class RepairVideoAnalysis(BaseModel):
     video_uri: str = Field(description="URI or storage path of the repair video")
     title: str = Field(description="Procedural walkthrough title")
     equipment_id: str = Field(default="CNC-02", description="Target machine identifier")
-    key_steps: List[str] = Field(default_factory=list, description="Extracted sequential procedural steps")
-    verified_checkpoints: List[str] = Field(default_factory=list, description="Quality and tolerance checkpoints verified")
-    safety_notices: List[str] = Field(default_factory=list, description="Safety and LOTO warnings observed")
+    key_steps: List[str] = Field(
+        default_factory=list, description="Extracted sequential procedural steps"
+    )
+    verified_checkpoints: List[str] = Field(
+        default_factory=list, description="Quality and tolerance checkpoints verified"
+    )
+    safety_notices: List[str] = Field(
+        default_factory=list, description="Safety and LOTO warnings observed"
+    )
 
 
 class VerificationResult(BaseModel):
@@ -308,10 +330,16 @@ class KnowledgeBaseEntry(BaseModel):
     machine_id: str = Field(description="Machine identifier")
     tool_id: Optional[str] = Field(default=None, description="Tool identifier")
     root_cause: str = Field(description="Identified root cause")
-    resolution_steps: List[str] = Field(default_factory=list, description="Steps taken during physical repair")
+    resolution_steps: List[str] = Field(
+        default_factory=list, description="Steps taken during physical repair"
+    )
     preventive_action: str = Field(description="Preventive action taken to avoid recurrence")
-    impact: ImpactMetrics = Field(default_factory=ImpactMetrics, description="Calculated sustainability and business impact")
-    video_metadata: Optional[RepairVideoAnalysis] = Field(default=None, description="Associated video walkthrough analysis if available")
+    impact: ImpactMetrics = Field(
+        default_factory=ImpactMetrics, description="Calculated sustainability and business impact"
+    )
+    video_metadata: Optional[RepairVideoAnalysis] = Field(
+        default=None, description="Associated video walkthrough analysis if available"
+    )
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
@@ -821,3 +849,85 @@ class CopilotSessionTelemetry(BaseModel):
     transcript: List[CopilotTurn] = Field(default_factory=list)
     started_at: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
     completed_at: Optional[str] = None
+
+
+class TraceabilityEventPayload(BaseModel):
+    """Discrete traceability event emitted at conveyor optical inspection or tagging stations."""
+
+    product_id: str = Field(description="Discrete product serial number e.g. PRD-1004")
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        description="ISO-8601 timestamp of inspection/operation",
+    )
+    machine_id: str = Field(description="Producing machine ID e.g. CNC-02")
+    tool_id: str = Field(description="Tool or mold cavity ID e.g. T07")
+    lot_id: str = Field(default="AL-5083-B4", description="Material blank lot ID")
+    operator_id: str = Field(default="OP-12", description="Assigned operator ID")
+    status: str = Field(default="PASS", description="PASS or DEFECT status label")
+
+
+class QualityEventPayload(BaseModel):
+    """Quality / SPC anomaly event forwarded from edge Gemma gateway to Orchestrator via Pub/Sub."""
+
+    event_id: str = Field(
+        default_factory=lambda: f"EVT-{int(datetime.now(timezone.utc).timestamp())}",
+        description="Unique quality event identifier",
+    )
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        description="Event creation timestamp",
+    )
+    event_type: str = Field(
+        default="defect_spc_breach",
+        description="Event classification: defect_spc_breach, optical_anomaly, spc_alarm",
+    )
+    scenario: str = Field(
+        default="cnc_tool_wear",
+        description="Associated anomaly scenario e.g. cnc_tool_wear or im_damp_material",
+    )
+    mode: str = Field(
+        default="demo",
+        description="Execution mode: demo (90s) or fast (~8s)",
+    )
+    machine_id: str = Field(
+        default="CNC-02",
+        description="Suspect machine identifier",
+    )
+    tool_id: Optional[str] = Field(
+        default="T07",
+        description="Suspect tool or cavity identifier",
+    )
+    defect_type: Optional[str] = Field(
+        default="scratch_vertical",
+        description="Classified defect symptom",
+    )
+    defect_rate: float = Field(
+        default=0.077,
+        ge=0.0,
+        le=1.0,
+        description="Estimated defect rate triggering event",
+    )
+    severity: str = Field(
+        default="medium",
+        description="Severity level: low, medium, high",
+    )
+    filtered_frame: Optional[FilteredFramePacket] = Field(
+        default=None,
+        description="Filtered camera frame packet from edge classifier",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional context metadata",
+    )
+
+    def to_defect_injection_request(self) -> DefectInjectionRequest:
+        """Converts Pub/Sub quality event into standard Orchestrator DefectInjectionRequest."""
+        return DefectInjectionRequest(
+            scenario=self.scenario,
+            mode=self.mode,
+            defect_type=self.defect_type,
+            severity=self.severity,
+            defect_rate=self.defect_rate,
+            machine_id=self.machine_id,
+            tool_id=self.tool_id or ("MOLD-03" if self.scenario == "im_damp_material" else "T07"),
+        )

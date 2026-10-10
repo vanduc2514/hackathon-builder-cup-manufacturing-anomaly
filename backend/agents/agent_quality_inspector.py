@@ -7,14 +7,22 @@ from collections.abc import AsyncIterator
 
 from google.adk import Agent
 
+from backend.core.config import settings
 from backend.core.models import (
     FilteredFramePacket,
     FindingDraft,
     QualityInspectionReport,
+    SpcEvaluationResult,
+    StreakVerificationResult,
     VerificationResult,
 )
 from backend.edge.gateway.edge_filter import EdgeInspectionStation
-from backend.tools.spc_calculator import StreakGatekeeper, evaluate_defect_rate
+from backend.tools.spc_calculator import (
+    DEFAULT_BASELINE_P,
+    DEFAULT_VERIFICATION_TARGET,
+    StreakGatekeeper,
+    evaluate_defect_rate,
+)
 from simulator.injection_engine import injection_engine
 
 AGENT_ID = "QA"
@@ -34,6 +42,7 @@ INSTRUCTION = (
     "'inspection' (the conveyor window you just measured: 'spc' is the p-chart evaluation, "
     "'defect_type_counts' counts edge-classified defects by type, 'defect_frames' are the "
     "Gemma Edge packets of the first defective parts). "
+    "If tools are available, you can call check_spc_control_limits or check_verification_streak. "
     "Write one finding that classifies the dominant defect (the type with the highest count in "
     "'defect_type_counts', located by 'defect_frames[].bounding_box') and states the SPC breach. "
     "The evidence must quote spc.defect_count of spc.sample_size products, spc.defect_rate versus "
@@ -45,10 +54,57 @@ INSTRUCTION = (
     "' + SPC p-chart Nelson Rule 1'. Respond in English."
 )
 
+
+def _supports_tools() -> bool:
+    """Determines whether the active LLM provider supports function-calling tools."""
+    if settings.ai_provider == "ollama" and (
+        "2b" in settings.llm_model.lower() or "gemma2" in settings.llm_model.lower()
+    ):
+        return False
+    return True
+
+
+def check_spc_control_limits(
+    defect_count: int,
+    sample_size: int,
+    baseline_p: float = DEFAULT_BASELINE_P,
+    ucl_override: float | None = None,
+) -> SpcEvaluationResult:
+    """ADK Tool: Calculates Shewhart p-chart control limits and evaluates defect rate for SPC breach."""
+    return evaluate_defect_rate(
+        defect_count=defect_count,
+        sample_size=sample_size,
+        baseline_p=baseline_p,
+        ucl_override=ucl_override,
+    )
+
+
+def check_verification_streak(
+    good_streak: int,
+    target: int = DEFAULT_VERIFICATION_TARGET,
+) -> StreakVerificationResult:
+    """ADK Tool: Evaluates whether consecutive defect-free parts have reached the verification target."""
+    verified = good_streak >= target
+    remaining = max(0, target - good_streak)
+    return StreakVerificationResult(
+        good_streak=good_streak,
+        target=target,
+        verified=verified,
+        last_was_defect=False,
+        recurrence_detected=False,
+        message=(
+            f"Physical recovery verified: {good_streak}/{target} consecutive defect-free parts."
+            if verified
+            else f"Verification in progress: {good_streak}/{target} consecutive defect-free parts ({remaining} remaining)."
+        ),
+    )
+
+
 agent = Agent(
     name="quality_inspector",
     description="Classifies the defect and SPC breach from the measured conveyor window.",
     instruction=INSTRUCTION,
+    tools=[check_spc_control_limits, check_verification_streak] if _supports_tools() else [],
     output_schema=FindingDraft,
 )
 

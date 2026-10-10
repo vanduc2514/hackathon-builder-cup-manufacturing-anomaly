@@ -12,6 +12,7 @@ from backend.agents.agent_process_analyst import (
     AGENT_NAME,
     CITATION,
     PHASE,
+    _supports_tools,
     agent,
     analyze_machine_telemetry,
 )
@@ -64,8 +65,11 @@ def test_agent_process_analyst_adk_definition():
     assert AGENT_NAME == "Process Analyst Agent"
     assert PHASE == "Phase B - Sensor Analysis"
     assert agent.output_schema is FindingDraft
-    assert len(agent.tools) == 1
-    assert agent.tools[0] is analyze_machine_telemetry
+    if _supports_tools():
+        assert len(agent.tools) == 1
+        assert agent.tools[0] is analyze_machine_telemetry
+    else:
+        assert len(agent.tools) == 0
 
 
 def test_load_mock_sensor_telemetry():

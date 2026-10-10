@@ -22,7 +22,9 @@ AGENT_NAME = "Root Cause Agent"
 PHASE = "Phase B - Root Cause"
 
 DEFAULT_CITATION = "Vertex AI Search: CNC Manual p.112 + Maintenance Log T07 + 8D-2026-03-12"
-DEFAULT_IM_CITATION = "Vertex AI Search: IM-05 Manual p.78 + Maintenance Log Dryer-03 + 8D-2026-02-14"
+DEFAULT_IM_CITATION = (
+    "Vertex AI Search: IM-05 Manual p.78 + Maintenance Log Dryer-03 + 8D-2026-02-14"
+)
 
 DIAGNOSTIC_REQUEST_TEXT = (
     "Độ tin cậy hiện dưới 70%. Đề nghị kỹ thuật viên chụp ảnh cận cảnh mũi dao T07 "
@@ -49,7 +51,9 @@ def has_field_evidence(findings: list[Any]) -> bool:
         phase = getattr(f, "phase", None) or (f.get("phase") if isinstance(f, dict) else None)
         if phase == "Phase B - Field Evidence":
             return True
-        agent_id = getattr(f, "agent_id", None) or (f.get("agent_id") if isinstance(f, dict) else None)
+        agent_id = getattr(f, "agent_id", None) or (
+            f.get("agent_id") if isinstance(f, dict) else None
+        )
         if agent_id == "COPILOT" and phase != "Phase C - Resolution":
             return True
     return False
@@ -72,7 +76,9 @@ INSTRUCTION = (
 
 
 def _supports_tools() -> bool:
-    if settings.ai_provider == "ollama" and ("2b" in settings.llm_model.lower() or "gemma2" in settings.llm_model.lower()):
+    if settings.ai_provider == "ollama" and (
+        "2b" in settings.llm_model.lower() or "gemma2" in settings.llm_model.lower()
+    ):
         return False
     return True
 

@@ -159,4 +159,3 @@ def test_eight_d_report_and_document_schemas():
     assert kb.entry_id == "KB-001"
     assert kb.impact.scrap_avoided == 240
     assert kb.video_metadata is not None
-

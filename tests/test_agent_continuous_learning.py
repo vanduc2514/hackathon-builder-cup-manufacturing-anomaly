@@ -99,7 +99,9 @@ def ingest_defect_resolution(
     defect_type = "scratch_vertical"
     machine_id = "CNC-02"
     tool_id = "T07"
-    root_cause = "Tool T07 insert flank wear exceeded 2,000 cuts due to weekly calendar maintenance SOP."
+    root_cause = (
+        "Tool T07 insert flank wear exceeded 2,000 cuts due to weekly calendar maintenance SOP."
+    )
 
     if isinstance(board_data, IncidentState):
         incident_id = board_data.incident_id or incident_id
@@ -128,11 +130,11 @@ def ingest_defect_resolution(
             "Purged auxiliary air line and verified dewpoint restored to -42°C (threshold <= -40°C).",
             "Executed 50-part conveyor verification with 0 short fill defects.",
         ]
-        preventive_action = (
-            "Revised SOP-MNT-IM-05 to add automated PLC dewpoint interlock pausing resin feed if dewpoint > -30°C."
-        )
+        preventive_action = "Revised SOP-MNT-IM-05 to add automated PLC dewpoint interlock pausing resin feed if dewpoint > -30°C."
         domain = "injection_molding"
-        v_uri = video_uri or "gs://kaizen-knowledge/expert_videos/im05_dryer_overhaul_walkthrough.mp4"
+        v_uri = (
+            video_uri or "gs://kaizen-knowledge/expert_videos/im05_dryer_overhaul_walkthrough.mp4"
+        )
     else:
         resolution_steps = [
             f"Removed worn carbide insert on {machine_id} tool {tool_id}.",
@@ -140,11 +142,12 @@ def ingest_defect_resolution(
             "Verified spindle runout <= 0.005 mm using magnetic dial indicator.",
             "Completed 50-part conveyor streak confirmation with 0 scratch defects.",
         ]
-        preventive_action = (
-            "Revised SOP-MNT-CNC-04 to mandate automated piece-counter warning at 1,900 parts and lockout at 2,000 parts."
-        )
+        preventive_action = "Revised SOP-MNT-CNC-04 to mandate automated piece-counter warning at 1,900 parts and lockout at 2,000 parts."
         domain = "cnc"
-        v_uri = video_uri or "gs://kaizen-knowledge/expert_videos/cnc02_tool_insert_swap_walkthrough.mp4"
+        v_uri = (
+            video_uri
+            or "gs://kaizen-knowledge/expert_videos/cnc02_tool_insert_swap_walkthrough.mp4"
+        )
 
     video_analysis = analyze_repair_video_walkthrough(v_uri, domain=domain)
 

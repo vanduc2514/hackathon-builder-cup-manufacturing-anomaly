@@ -82,6 +82,8 @@ MOCK_TOPOLOGY = TraceabilityTopologyResponse(
 def clean_state():
     blackboard.reset()
     injection_engine.reset()
+    injection_engine.conveyor_sim.rng.seed(42)
+    injection_engine.machine_sim.rng.seed(42)
     injection_engine.inject_scenario_1_cnc_tool_wear()
     saved = LlmAgent._default_model
     with patch(

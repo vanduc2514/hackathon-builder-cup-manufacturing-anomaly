@@ -7,6 +7,7 @@ import logging
 
 from google.adk import Agent
 
+from backend.core.config import settings
 from backend.core.models import (
     FindingDraft,
     TraceabilityTopologyResponse,
@@ -25,6 +26,7 @@ INSTRUCTION = (
     "The user message is JSON with two keys: 'board' (the current incident board) and "
     "'traceability' (the discrete line topology report from BigQuery: 'suspects', 'excluded_factors', "
     "'factor_distributions'). "
+    "If tools are available, you can call trace_line_topology to query discrete line topology. "
     "Write one finding that isolates the primary suspect machine (machine_id) and tool (tool_id) "
     "from 'traceability.suspects' (the pair with the highest correlation_score and defect_count) "
     "and specifies the excluded non-causal factors from 'traceability.excluded_factors' "
@@ -34,12 +36,14 @@ INSTRUCTION = (
     "Build the citation as 'BigQuery manufacturing.traceability cross-lot correlation'. Respond in English."
 )
 
-agent = Agent(
-    name="traceability",
-    description="Isolates the suspect machine and tool from discrete line topology while excluding innocent factors.",
-    instruction=INSTRUCTION,
-    output_schema=FindingDraft,
-)
+
+def _supports_tools() -> bool:
+    """Determines whether the active LLM provider supports function-calling tools."""
+    if settings.ai_provider == "ollama" and (
+        "2b" in settings.llm_model.lower() or "gemma2" in settings.llm_model.lower()
+    ):
+        return False
+    return True
 
 
 async def trace_line_topology(
@@ -48,7 +52,7 @@ async def trace_line_topology(
     end_time: str | None = None,
     product_ids: list[str] | None = None,
 ) -> TraceabilityTopologyResponse:
-    """Queries discrete manufacturing topology directly from BigQuery."""
+    """ADK Tool: Queries discrete manufacturing topology and factor distributions directly from BigQuery."""
     return await asyncio.to_thread(
         query_traceability_topology,
         time_window=time_window,
@@ -56,3 +60,12 @@ async def trace_line_topology(
         end_time=end_time,
         product_ids=product_ids,
     )
+
+
+agent = Agent(
+    name="traceability",
+    description="Isolates the suspect machine and tool from discrete line topology while excluding innocent factors.",
+    instruction=INSTRUCTION,
+    tools=[trace_line_topology] if _supports_tools() else [],
+    output_schema=FindingDraft,
+)

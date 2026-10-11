@@ -1,0 +1,422 @@
+<!DOCTYPE html><html lang="en" style=""><head></head><body class="bg-surface font-body-md text-on-surface antialiased min-h-screen"><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-secondary":"#ffffff","inverse-primary":"#bec6e0","on-tertiary-fixed-variant":"#004c6e","primary":"#000000","outline-variant":"#c6c6cd","tertiary-fixed":"#c9e6ff","on-tertiary":"#ffffff","inverse-on-surface":"#eaf1ff","on-error-container":"#93000a","primary-fixed":"#dae2fd","tertiary-container":"#001e2f","on-tertiary-fixed":"#001e2f","on-primary-container":"#7c839b","secondary-container":"#645efb","surface-variant":"#d3e4fe","surface-container-low":"#eff4ff","error":"#ba1a1a","surface-bright":"#f8f9ff","on-primary-fixed-variant":"#3f465c","on-secondary-container":"#fffbff","on-tertiary-container":"#008cc7","surface-container":"#e5eeff","on-surface-variant":"#45464d","surface-dim":"#cbdbf5","surface-container-lowest":"#ffffff","primary-fixed-dim":"#bec6e0","tertiary-fixed-dim":"#89ceff","on-secondary-fixed-variant":"#3323cc","tertiary":"#000000","on-surface":"#0b1c30","error-container":"#ffdad6","on-error":"#ffffff","surface-container-high":"#dce9ff","surface-tint":"#565e74","outline":"#76777d","on-primary":"#ffffff","secondary":"#4b41e1","secondary-fixed-dim":"#c3c0ff","on-primary-fixed":"#131b2e","primary-container":"#131b2e","secondary-fixed":"#e2dfff","surface-container-highest":"#d3e4fe","on-background":"#0b1c30","inverse-surface":"#213145","on-secondary-fixed":"#0f0069","surface":"#f8f9ff","background":"#f8f9ff"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"space-lg":"1.5rem",margin:"1rem","space-md":"0.75rem","space-xl":"2rem","gutter-desktop":"1.5rem","space-2xs":"0.125rem","space-xs":"0.25rem",gutter:"1.25rem","space-sm":"0.5rem","space-base":"1rem","space-2xl":"3rem","margin-desktop":"2rem"},fontFamily:{"mono-metric":["JetBrains Mono"],"headline-lg":["Geist"],"headline-md":["Geist"],"body-lg":["Geist"],"body-sm":["Geist"],"display-mobile":["Geist"],"headline-sm":["Geist"],"headline-lg-mobile":["Geist"],"label-md":["Geist"],"label-sm":["Geist"],display:["Geist"],"body-md":["Geist"]},fontSize:{"mono-metric":["0.875rem",{lineHeight:"1.25rem",letterSpacing:"-0.01em",fontWeight:"500"}],"headline-lg":["1.75rem",{lineHeight:"2.25rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-md":["1.25rem",{lineHeight:"1.75rem",letterSpacing:"-0.02em",fontWeight:"600"}],"body-lg":["1rem",{lineHeight:"1.625rem",letterSpacing:"-0.011em",fontWeight:"400"}],"body-sm":["0.8125rem",{lineHeight:"1.25rem",letterSpacing:"0em",fontWeight:"400"}],"display-mobile":["2rem",{lineHeight:"2.5rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-sm":["1.125rem",{lineHeight:"1.5rem",letterSpacing:"-0.015em",fontWeight:"500"}],"headline-lg-mobile":["1.5rem",{lineHeight:"2rem",letterSpacing:"-0.02em",fontWeight:"600"}],"label-md":["0.8125rem",{lineHeight:"1.125rem",letterSpacing:"0.01em",fontWeight:"500"}],"label-sm":["0.6875rem",{lineHeight:"1rem",letterSpacing:"0.04em",fontWeight:"600"}],display:["2.5rem",{lineHeight:"3rem",letterSpacing:"-0.035em",fontWeight:"600"}],"body-md":["0.875rem",{lineHeight:"1.375rem",letterSpacing:"-0.006em",fontWeight:"400"}]}}}};</script><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-secondary":"#ffffff","inverse-primary":"#bec6e0","on-tertiary-fixed-variant":"#004c6e","primary":"#000000","outline-variant":"#c6c6cd","tertiary-fixed":"#c9e6ff","on-tertiary":"#ffffff","inverse-on-surface":"#eaf1ff","on-error-container":"#93000a","primary-fixed":"#dae2fd","tertiary-container":"#001e2f","on-tertiary-fixed":"#001e2f","on-primary-container":"#7c839b","secondary-container":"#645efb","surface-variant":"#d3e4fe","surface-container-low":"#eff4ff","error":"#ba1a1a","surface-bright":"#f8f9ff","on-primary-fixed-variant":"#3f465c","on-secondary-container":"#fffbff","on-tertiary-container":"#008cc7","surface-container":"#e5eeff","on-surface-variant":"#45464d","surface-dim":"#cbdbf5","surface-container-lowest":"#ffffff","primary-fixed-dim":"#bec6e0","tertiary-fixed-dim":"#89ceff","on-secondary-fixed-variant":"#3323cc","tertiary":"#000000","on-surface":"#0b1c30","error-container":"#ffdad6","on-error":"#ffffff","surface-container-high":"#dce9ff","surface-tint":"#565e74","outline":"#76777d","on-primary":"#ffffff","secondary":"#4b41e1","secondary-fixed-dim":"#c3c0ff","on-primary-fixed":"#131b2e","primary-container":"#131b2e","secondary-fixed":"#e2dfff","surface-container-highest":"#d3e4fe","on-background":"#0b1c30","inverse-surface":"#213145","on-secondary-fixed":"#0f0069","surface":"#f8f9ff","background":"#f8f9ff"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"space-lg":"1.5rem",margin:"1rem","space-md":"0.75rem","space-xl":"2rem","gutter-desktop":"1.5rem","space-2xs":"0.125rem","space-xs":"0.25rem",gutter:"1.25rem","space-sm":"0.5rem","space-base":"1rem","space-2xl":"3rem","margin-desktop":"2rem"},fontFamily:{"mono-metric":["JetBrains Mono"],"headline-lg":["Geist"],"headline-md":["Geist"],"body-lg":["Geist"],"body-sm":["Geist"],"display-mobile":["Geist"],"headline-sm":["Geist"],"headline-lg-mobile":["Geist"],"label-md":["Geist"],"label-sm":["Geist"],display:["Geist"],"body-md":["Geist"]},fontSize:{"mono-metric":["0.875rem",{lineHeight:"1.25rem",letterSpacing:"-0.01em",fontWeight:"500"}],"headline-lg":["1.75rem",{lineHeight:"2.25rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-md":["1.25rem",{lineHeight:"1.75rem",letterSpacing:"-0.02em",fontWeight:"600"}],"body-lg":["1rem",{lineHeight:"1.625rem",letterSpacing:"-0.011em",fontWeight:"400"}],"body-sm":["0.8125rem",{lineHeight:"1.25rem",letterSpacing:"0em",fontWeight:"400"}],"display-mobile":["2rem",{lineHeight:"2.5rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-sm":["1.125rem",{lineHeight:"1.5rem",letterSpacing:"-0.015em",fontWeight:"500"}],"headline-lg-mobile":["1.5rem",{lineHeight:"2rem",letterSpacing:"-0.02em",fontWeight:"600"}],"label-md":["0.8125rem",{lineHeight:"1.125rem",letterSpacing:"0.01em",fontWeight:"500"}],"label-sm":["0.6875rem",{lineHeight:"1rem",letterSpacing:"0.04em",fontWeight:"600"}],display:["2.5rem",{lineHeight:"3rem",letterSpacing:"-0.035em",fontWeight:"600"}],"body-md":["0.875rem",{lineHeight:"1.375rem",letterSpacing:"-0.006em",fontWeight:"400"}]}}}};</script><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-secondary":"#ffffff","inverse-primary":"#bec6e0","on-tertiary-fixed-variant":"#004c6e","primary":"#000000","outline-variant":"#c6c6cd","tertiary-fixed":"#c9e6ff","on-tertiary":"#ffffff","inverse-on-surface":"#eaf1ff","on-error-container":"#93000a","primary-fixed":"#dae2fd","tertiary-container":"#001e2f","on-tertiary-fixed":"#001e2f","on-primary-container":"#7c839b","secondary-container":"#645efb","surface-variant":"#d3e4fe","surface-container-low":"#eff4ff","error":"#ba1a1a","surface-bright":"#f8f9ff","on-primary-fixed-variant":"#3f465c","on-secondary-container":"#fffbff","on-tertiary-container":"#008cc7","surface-container":"#e5eeff","on-surface-variant":"#45464d","surface-dim":"#cbdbf5","surface-container-lowest":"#ffffff","primary-fixed-dim":"#bec6e0","tertiary-fixed-dim":"#89ceff","on-secondary-fixed-variant":"#3323cc","tertiary":"#000000","on-surface":"#0b1c30","error-container":"#ffdad6","on-error":"#ffffff","surface-container-high":"#dce9ff","surface-tint":"#565e74","outline":"#76777d","on-primary":"#ffffff","secondary":"#4b41e1","secondary-fixed-dim":"#c3c0ff","on-primary-fixed":"#131b2e","primary-container":"#131b2e","secondary-fixed":"#e2dfff","surface-container-highest":"#d3e4fe","on-background":"#0b1c30","inverse-surface":"#213145","on-secondary-fixed":"#0f0069","surface":"#f8f9ff","background":"#f8f9ff"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"space-lg":"1.5rem",margin:"1rem","space-md":"0.75rem","space-xl":"2rem","gutter-desktop":"1.5rem","space-2xs":"0.125rem","space-xs":"0.25rem",gutter:"1.25rem","space-sm":"0.5rem","space-base":"1rem","space-2xl":"3rem","margin-desktop":"2rem"},fontFamily:{"mono-metric":["JetBrains Mono"],"headline-lg":["Geist"],"headline-md":["Geist"],"body-lg":["Geist"],"body-sm":["Geist"],"display-mobile":["Geist"],"headline-sm":["Geist"],"headline-lg-mobile":["Geist"],"label-md":["Geist"],"label-sm":["Geist"],display:["Geist"],"body-md":["Geist"]},fontSize:{"mono-metric":["0.875rem",{lineHeight:"1.25rem",letterSpacing:"-0.01em",fontWeight:"500"}],"headline-lg":["1.75rem",{lineHeight:"2.25rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-md":["1.25rem",{lineHeight:"1.75rem",letterSpacing:"-0.02em",fontWeight:"600"}],"body-lg":["1rem",{lineHeight:"1.625rem",letterSpacing:"-0.011em",fontWeight:"400"}],"body-sm":["0.8125rem",{lineHeight:"1.25rem",letterSpacing:"0em",fontWeight:"400"}],"display-mobile":["2rem",{lineHeight:"2.5rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-sm":["1.125rem",{lineHeight:"1.5rem",letterSpacing:"-0.015em",fontWeight:"500"}],"headline-lg-mobile":["1.5rem",{lineHeight:"2rem",letterSpacing:"-0.02em",fontWeight:"600"}],"label-md":["0.8125rem",{lineHeight:"1.125rem",letterSpacing:"0.01em",fontWeight:"500"}],"label-sm":["0.6875rem",{lineHeight:"1rem",letterSpacing:"0.04em",fontWeight:"600"}],display:["2.5rem",{lineHeight:"3rem",letterSpacing:"-0.035em",fontWeight:"600"}],"body-md":["0.875rem",{lineHeight:"1.375rem",letterSpacing:"-0.006em",fontWeight:"400"}]}}}};</script><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-secondary":"#ffffff","inverse-primary":"#bec6e0","on-tertiary-fixed-variant":"#004c6e","primary":"#000000","outline-variant":"#c6c6cd","tertiary-fixed":"#c9e6ff","on-tertiary":"#ffffff","inverse-on-surface":"#eaf1ff","on-error-container":"#93000a","primary-fixed":"#dae2fd","tertiary-container":"#001e2f","on-tertiary-fixed":"#001e2f","on-primary-container":"#7c839b","secondary-container":"#645efb","surface-variant":"#d3e4fe","surface-container-low":"#eff4ff","error":"#ba1a1a","surface-bright":"#f8f9ff","on-primary-fixed-variant":"#3f465c","on-secondary-container":"#fffbff","on-tertiary-container":"#008cc7","surface-container":"#e5eeff","on-surface-variant":"#45464d","surface-dim":"#cbdbf5","surface-container-lowest":"#ffffff","primary-fixed-dim":"#bec6e0","tertiary-fixed-dim":"#89ceff","on-secondary-fixed-variant":"#3323cc","tertiary":"#000000","on-surface":"#0b1c30","error-container":"#ffdad6","on-error":"#ffffff","surface-container-high":"#dce9ff","surface-tint":"#565e74","outline":"#76777d","on-primary":"#ffffff","secondary":"#4b41e1","secondary-fixed-dim":"#c3c0ff","on-primary-fixed":"#131b2e","primary-container":"#131b2e","secondary-fixed":"#e2dfff","surface-container-highest":"#d3e4fe","on-background":"#0b1c30","inverse-surface":"#213145","on-secondary-fixed":"#0f0069","surface":"#f8f9ff","background":"#f8f9ff"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"space-lg":"1.5rem",margin:"1rem","space-md":"0.75rem","space-xl":"2rem","gutter-desktop":"1.5rem","space-2xs":"0.125rem","space-xs":"0.25rem",gutter:"1.25rem","space-sm":"0.5rem","space-base":"1rem","space-2xl":"3rem","margin-desktop":"2rem"},fontFamily:{"mono-metric":["JetBrains Mono"],"headline-lg":["Geist"],"headline-md":["Geist"],"body-lg":["Geist"],"body-sm":["Geist"],"display-mobile":["Geist"],"headline-sm":["Geist"],"headline-lg-mobile":["Geist"],"label-md":["Geist"],"label-sm":["Geist"],display:["Geist"],"body-md":["Geist"]},fontSize:{"mono-metric":["0.875rem",{lineHeight:"1.25rem",letterSpacing:"-0.01em",fontWeight:"500"}],"headline-lg":["1.75rem",{lineHeight:"2.25rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-md":["1.25rem",{lineHeight:"1.75rem",letterSpacing:"-0.02em",fontWeight:"600"}],"body-lg":["1rem",{lineHeight:"1.625rem",letterSpacing:"-0.011em",fontWeight:"400"}],"body-sm":["0.8125rem",{lineHeight:"1.25rem",letterSpacing:"0em",fontWeight:"400"}],"display-mobile":["2rem",{lineHeight:"2.5rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-sm":["1.125rem",{lineHeight:"1.5rem",letterSpacing:"-0.015em",fontWeight:"500"}],"headline-lg-mobile":["1.5rem",{lineHeight:"2rem",letterSpacing:"-0.02em",fontWeight:"600"}],"label-md":["0.8125rem",{lineHeight:"1.125rem",letterSpacing:"0.01em",fontWeight:"500"}],"label-sm":["0.6875rem",{lineHeight:"1rem",letterSpacing:"0.04em",fontWeight:"600"}],display:["2.5rem",{lineHeight:"3rem",letterSpacing:"-0.035em",fontWeight:"600"}],"body-md":["0.875rem",{lineHeight:"1.375rem",letterSpacing:"-0.006em",fontWeight:"400"}]}}}};</script><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-secondary":"#ffffff","inverse-primary":"#bec6e0","on-tertiary-fixed-variant":"#004c6e","primary":"#000000","outline-variant":"#c6c6cd","tertiary-fixed":"#c9e6ff","on-tertiary":"#ffffff","inverse-on-surface":"#eaf1ff","on-error-container":"#93000a","primary-fixed":"#dae2fd","tertiary-container":"#001e2f","on-tertiary-fixed":"#001e2f","on-primary-container":"#7c839b","secondary-container":"#645efb","surface-variant":"#d3e4fe","surface-container-low":"#eff4ff","error":"#ba1a1a","surface-bright":"#f8f9ff","on-primary-fixed-variant":"#3f465c","on-secondary-container":"#fffbff","on-tertiary-container":"#008cc7","surface-container":"#e5eeff","on-surface-variant":"#45464d","surface-dim":"#cbdbf5","surface-container-lowest":"#ffffff","primary-fixed-dim":"#bec6e0","tertiary-fixed-dim":"#89ceff","on-secondary-fixed-variant":"#3323cc","tertiary":"#000000","on-surface":"#0b1c30","error-container":"#ffdad6","on-error":"#ffffff","surface-container-high":"#dce9ff","surface-tint":"#565e74","outline":"#76777d","on-primary":"#ffffff","secondary":"#4b41e1","secondary-fixed-dim":"#c3c0ff","on-primary-fixed":"#131b2e","primary-container":"#131b2e","secondary-fixed":"#e2dfff","surface-container-highest":"#d3e4fe","on-background":"#0b1c30","inverse-surface":"#213145","on-secondary-fixed":"#0f0069","surface":"#f8f9ff","background":"#f8f9ff"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"space-lg":"1.5rem",margin:"1rem","space-md":"0.75rem","space-xl":"2rem","gutter-desktop":"1.5rem","space-2xs":"0.125rem","space-xs":"0.25rem",gutter:"1.25rem","space-sm":"0.5rem","space-base":"1rem","space-2xl":"3rem","margin-desktop":"2rem"},fontFamily:{"mono-metric":["JetBrains Mono"],"headline-lg":["Geist"],"headline-md":["Geist"],"body-lg":["Geist"],"body-sm":["Geist"],"display-mobile":["Geist"],"headline-sm":["Geist"],"headline-lg-mobile":["Geist"],"label-md":["Geist"],"label-sm":["Geist"],display:["Geist"],"body-md":["Geist"]},fontSize:{"mono-metric":["0.875rem",{lineHeight:"1.25rem",letterSpacing:"-0.01em",fontWeight:"500"}],"headline-lg":["1.75rem",{lineHeight:"2.25rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-md":["1.25rem",{lineHeight:"1.75rem",letterSpacing:"-0.02em",fontWeight:"600"}],"body-lg":["1rem",{lineHeight:"1.625rem",letterSpacing:"-0.011em",fontWeight:"400"}],"body-sm":["0.8125rem",{lineHeight:"1.25rem",letterSpacing:"0em",fontWeight:"400"}],"display-mobile":["2rem",{lineHeight:"2.5rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-sm":["1.125rem",{lineHeight:"1.5rem",letterSpacing:"-0.015em",fontWeight:"500"}],"headline-lg-mobile":["1.5rem",{lineHeight:"2rem",letterSpacing:"-0.02em",fontWeight:"600"}],"label-md":["0.8125rem",{lineHeight:"1.125rem",letterSpacing:"0.01em",fontWeight:"500"}],"label-sm":["0.6875rem",{lineHeight:"1rem",letterSpacing:"0.04em",fontWeight:"600"}],display:["2.5rem",{lineHeight:"3rem",letterSpacing:"-0.035em",fontWeight:"600"}],"body-md":["0.875rem",{lineHeight:"1.375rem",letterSpacing:"-0.006em",fontWeight:"400"}]}}}};</script><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-secondary":"#ffffff","inverse-primary":"#bec6e0","on-tertiary-fixed-variant":"#004c6e","primary":"#000000","outline-variant":"#c6c6cd","tertiary-fixed":"#c9e6ff","on-tertiary":"#ffffff","inverse-on-surface":"#eaf1ff","on-error-container":"#93000a","primary-fixed":"#dae2fd","tertiary-container":"#001e2f","on-tertiary-fixed":"#001e2f","on-primary-container":"#7c839b","secondary-container":"#645efb","surface-variant":"#d3e4fe","surface-container-low":"#eff4ff","error":"#ba1a1a","surface-bright":"#f8f9ff","on-primary-fixed-variant":"#3f465c","on-secondary-container":"#fffbff","on-tertiary-container":"#008cc7","surface-container":"#e5eeff","on-surface-variant":"#45464d","surface-dim":"#cbdbf5","surface-container-lowest":"#ffffff","primary-fixed-dim":"#bec6e0","tertiary-fixed-dim":"#89ceff","on-secondary-fixed-variant":"#3323cc","tertiary":"#000000","on-surface":"#0b1c30","error-container":"#ffdad6","on-error":"#ffffff","surface-container-high":"#dce9ff","surface-tint":"#565e74","outline":"#76777d","on-primary":"#ffffff","secondary":"#4b41e1","secondary-fixed-dim":"#c3c0ff","on-primary-fixed":"#131b2e","primary-container":"#131b2e","secondary-fixed":"#e2dfff","surface-container-highest":"#d3e4fe","on-background":"#0b1c30","inverse-surface":"#213145","on-secondary-fixed":"#0f0069","surface":"#f8f9ff","background":"#f8f9ff"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"space-lg":"1.5rem",margin:"1rem","space-md":"0.75rem","space-xl":"2rem","gutter-desktop":"1.5rem","space-2xs":"0.125rem","space-xs":"0.25rem",gutter:"1.25rem","space-sm":"0.5rem","space-base":"1rem","space-2xl":"3rem","margin-desktop":"2rem"},fontFamily:{"mono-metric":["JetBrains Mono"],"headline-lg":["Geist"],"headline-md":["Geist"],"body-lg":["Geist"],"body-sm":["Geist"],"display-mobile":["Geist"],"headline-sm":["Geist"],"headline-lg-mobile":["Geist"],"label-md":["Geist"],"label-sm":["Geist"],display:["Geist"],"body-md":["Geist"]},fontSize:{"mono-metric":["0.875rem",{lineHeight:"1.25rem",letterSpacing:"-0.01em",fontWeight:"500"}],"headline-lg":["1.75rem",{lineHeight:"2.25rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-md":["1.25rem",{lineHeight:"1.75rem",letterSpacing:"-0.02em",fontWeight:"600"}],"body-lg":["1rem",{lineHeight:"1.625rem",letterSpacing:"-0.011em",fontWeight:"400"}],"body-sm":["0.8125rem",{lineHeight:"1.25rem",letterSpacing:"0em",fontWeight:"400"}],"display-mobile":["2rem",{lineHeight:"2.5rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-sm":["1.125rem",{lineHeight:"1.5rem",letterSpacing:"-0.015em",fontWeight:"500"}],"headline-lg-mobile":["1.5rem",{lineHeight:"2rem",letterSpacing:"-0.02em",fontWeight:"600"}],"label-md":["0.8125rem",{lineHeight:"1.125rem",letterSpacing:"0.01em",fontWeight:"500"}],"label-sm":["0.6875rem",{lineHeight:"1rem",letterSpacing:"0.04em",fontWeight:"600"}],display:["2.5rem",{lineHeight:"3rem",letterSpacing:"-0.035em",fontWeight:"600"}],"body-md":["0.875rem",{lineHeight:"1.375rem",letterSpacing:"-0.006em",fontWeight:"400"}]}}}};</script><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-secondary":"#ffffff","inverse-primary":"#bec6e0","on-tertiary-fixed-variant":"#004c6e","primary":"#000000","outline-variant":"#c6c6cd","tertiary-fixed":"#c9e6ff","on-tertiary":"#ffffff","inverse-on-surface":"#eaf1ff","on-error-container":"#93000a","primary-fixed":"#dae2fd","tertiary-container":"#001e2f","on-tertiary-fixed":"#001e2f","on-primary-container":"#7c839b","secondary-container":"#645efb","surface-variant":"#d3e4fe","surface-container-low":"#eff4ff","error":"#ba1a1a","surface-bright":"#f8f9ff","on-primary-fixed-variant":"#3f465c","on-secondary-container":"#fffbff","on-tertiary-container":"#008cc7","surface-container":"#e5eeff","on-surface-variant":"#45464d","surface-dim":"#cbdbf5","surface-container-lowest":"#ffffff","primary-fixed-dim":"#bec6e0","tertiary-fixed-dim":"#89ceff","on-secondary-fixed-variant":"#3323cc","tertiary":"#000000","on-surface":"#0b1c30","error-container":"#ffdad6","on-error":"#ffffff","surface-container-high":"#dce9ff","surface-tint":"#565e74","outline":"#76777d","on-primary":"#ffffff","secondary":"#4b41e1","secondary-fixed-dim":"#c3c0ff","on-primary-fixed":"#131b2e","primary-container":"#131b2e","secondary-fixed":"#e2dfff","surface-container-highest":"#d3e4fe","on-background":"#0b1c30","inverse-surface":"#213145","on-secondary-fixed":"#0f0069","surface":"#f8f9ff","background":"#f8f9ff"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"space-lg":"1.5rem",margin:"1rem","space-md":"0.75rem","space-xl":"2rem","gutter-desktop":"1.5rem","space-2xs":"0.125rem","space-xs":"0.25rem",gutter:"1.25rem","space-sm":"0.5rem","space-base":"1rem","space-2xl":"3rem","margin-desktop":"2rem"},fontFamily:{"mono-metric":["JetBrains Mono"],"headline-lg":["Geist"],"headline-md":["Geist"],"body-lg":["Geist"],"body-sm":["Geist"],"display-mobile":["Geist"],"headline-sm":["Geist"],"headline-lg-mobile":["Geist"],"label-md":["Geist"],"label-sm":["Geist"],display:["Geist"],"body-md":["Geist"]},fontSize:{"mono-metric":["0.875rem",{lineHeight:"1.25rem",letterSpacing:"-0.01em",fontWeight:"500"}],"headline-lg":["1.75rem",{lineHeight:"2.25rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-md":["1.25rem",{lineHeight:"1.75rem",letterSpacing:"-0.02em",fontWeight:"600"}],"body-lg":["1rem",{lineHeight:"1.625rem",letterSpacing:"-0.011em",fontWeight:"400"}],"body-sm":["0.8125rem",{lineHeight:"1.25rem",letterSpacing:"0em",fontWeight:"400"}],"display-mobile":["2rem",{lineHeight:"2.5rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-sm":["1.125rem",{lineHeight:"1.5rem",letterSpacing:"-0.015em",fontWeight:"500"}],"headline-lg-mobile":["1.5rem",{lineHeight:"2rem",letterSpacing:"-0.02em",fontWeight:"600"}],"label-md":["0.8125rem",{lineHeight:"1.125rem",letterSpacing:"0.01em",fontWeight:"500"}],"label-sm":["0.6875rem",{lineHeight:"1rem",letterSpacing:"0.04em",fontWeight:"600"}],display:["2.5rem",{lineHeight:"3rem",letterSpacing:"-0.035em",fontWeight:"600"}],"body-md":["0.875rem",{lineHeight:"1.375rem",letterSpacing:"-0.006em",fontWeight:"400"}]}}}};</script><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-secondary":"#ffffff","inverse-primary":"#bec6e0","on-tertiary-fixed-variant":"#004c6e","primary":"#000000","outline-variant":"#c6c6cd","tertiary-fixed":"#c9e6ff","on-tertiary":"#ffffff","inverse-on-surface":"#eaf1ff","on-error-container":"#93000a","primary-fixed":"#dae2fd","tertiary-container":"#001e2f","on-tertiary-fixed":"#001e2f","on-primary-container":"#7c839b","secondary-container":"#645efb","surface-variant":"#d3e4fe","surface-container-low":"#eff4ff","error":"#ba1a1a","surface-bright":"#f8f9ff","on-primary-fixed-variant":"#3f465c","on-secondary-container":"#fffbff","on-tertiary-container":"#008cc7","surface-container":"#e5eeff","on-surface-variant":"#45464d","surface-dim":"#cbdbf5","surface-container-lowest":"#ffffff","primary-fixed-dim":"#bec6e0","tertiary-fixed-dim":"#89ceff","on-secondary-fixed-variant":"#3323cc","tertiary":"#000000","on-surface":"#0b1c30","error-container":"#ffdad6","on-error":"#ffffff","surface-container-high":"#dce9ff","surface-tint":"#565e74","outline":"#76777d","on-primary":"#ffffff","secondary":"#4b41e1","secondary-fixed-dim":"#c3c0ff","on-primary-fixed":"#131b2e","primary-container":"#131b2e","secondary-fixed":"#e2dfff","surface-container-highest":"#d3e4fe","on-background":"#0b1c30","inverse-surface":"#213145","on-secondary-fixed":"#0f0069","surface":"#f8f9ff","background":"#f8f9ff"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"space-lg":"1.5rem",margin:"1rem","space-md":"0.75rem","space-xl":"2rem","gutter-desktop":"1.5rem","space-2xs":"0.125rem","space-xs":"0.25rem",gutter:"1.25rem","space-sm":"0.5rem","space-base":"1rem","space-2xl":"3rem","margin-desktop":"2rem"},fontFamily:{"mono-metric":["JetBrains Mono"],"headline-lg":["Geist"],"headline-md":["Geist"],"body-lg":["Geist"],"body-sm":["Geist"],"display-mobile":["Geist"],"headline-sm":["Geist"],"headline-lg-mobile":["Geist"],"label-md":["Geist"],"label-sm":["Geist"],display:["Geist"],"body-md":["Geist"]},fontSize:{"mono-metric":["0.875rem",{lineHeight:"1.25rem",letterSpacing:"-0.01em",fontWeight:"500"}],"headline-lg":["1.75rem",{lineHeight:"2.25rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-md":["1.25rem",{lineHeight:"1.75rem",letterSpacing:"-0.02em",fontWeight:"600"}],"body-lg":["1rem",{lineHeight:"1.625rem",letterSpacing:"-0.011em",fontWeight:"400"}],"body-sm":["0.8125rem",{lineHeight:"1.25rem",letterSpacing:"0em",fontWeight:"400"}],"display-mobile":["2rem",{lineHeight:"2.5rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-sm":["1.125rem",{lineHeight:"1.5rem",letterSpacing:"-0.015em",fontWeight:"500"}],"headline-lg-mobile":["1.5rem",{lineHeight:"2rem",letterSpacing:"-0.02em",fontWeight:"600"}],"label-md":["0.8125rem",{lineHeight:"1.125rem",letterSpacing:"0.01em",fontWeight:"500"}],"label-sm":["0.6875rem",{lineHeight:"1rem",letterSpacing:"0.04em",fontWeight:"600"}],display:["2.5rem",{lineHeight:"3rem",letterSpacing:"-0.035em",fontWeight:"600"}],"body-md":["0.875rem",{lineHeight:"1.375rem",letterSpacing:"-0.006em",fontWeight:"400"}]}}}};</script><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-secondary":"#ffffff","inverse-primary":"#bec6e0","on-tertiary-fixed-variant":"#004c6e","primary":"#000000","outline-variant":"#c6c6cd","tertiary-fixed":"#c9e6ff","on-tertiary":"#ffffff","inverse-on-surface":"#eaf1ff","on-error-container":"#93000a","primary-fixed":"#dae2fd","tertiary-container":"#001e2f","on-tertiary-fixed":"#001e2f","on-primary-container":"#7c839b","secondary-container":"#645efb","surface-variant":"#d3e4fe","surface-container-low":"#eff4ff","error":"#ba1a1a","surface-bright":"#f8f9ff","on-primary-fixed-variant":"#3f465c","on-secondary-container":"#fffbff","on-tertiary-container":"#008cc7","surface-container":"#e5eeff","on-surface-variant":"#45464d","surface-dim":"#cbdbf5","surface-container-lowest":"#ffffff","primary-fixed-dim":"#bec6e0","tertiary-fixed-dim":"#89ceff","on-secondary-fixed-variant":"#3323cc","tertiary":"#000000","on-surface":"#0b1c30","error-container":"#ffdad6","on-error":"#ffffff","surface-container-high":"#dce9ff","surface-tint":"#565e74","outline":"#76777d","on-primary":"#ffffff","secondary":"#4b41e1","secondary-fixed-dim":"#c3c0ff","on-primary-fixed":"#131b2e","primary-container":"#131b2e","secondary-fixed":"#e2dfff","surface-container-highest":"#d3e4fe","on-background":"#0b1c30","inverse-surface":"#213145","on-secondary-fixed":"#0f0069","surface":"#f8f9ff","background":"#f8f9ff"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"space-lg":"1.5rem",margin:"1rem","space-md":"0.75rem","space-xl":"2rem","gutter-desktop":"1.5rem","space-2xs":"0.125rem","space-xs":"0.25rem",gutter:"1.25rem","space-sm":"0.5rem","space-base":"1rem","space-2xl":"3rem","margin-desktop":"2rem"},fontFamily:{"mono-metric":["JetBrains Mono"],"headline-lg":["Geist"],"headline-md":["Geist"],"body-lg":["Geist"],"body-sm":["Geist"],"display-mobile":["Geist"],"headline-sm":["Geist"],"headline-lg-mobile":["Geist"],"label-md":["Geist"],"label-sm":["Geist"],display:["Geist"],"body-md":["Geist"]},fontSize:{"mono-metric":["0.875rem",{lineHeight:"1.25rem",letterSpacing:"-0.01em",fontWeight:"500"}],"headline-lg":["1.75rem",{lineHeight:"2.25rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-md":["1.25rem",{lineHeight:"1.75rem",letterSpacing:"-0.02em",fontWeight:"600"}],"body-lg":["1rem",{lineHeight:"1.625rem",letterSpacing:"-0.011em",fontWeight:"400"}],"body-sm":["0.8125rem",{lineHeight:"1.25rem",letterSpacing:"0em",fontWeight:"400"}],"display-mobile":["2rem",{lineHeight:"2.5rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-sm":["1.125rem",{lineHeight:"1.5rem",letterSpacing:"-0.015em",fontWeight:"500"}],"headline-lg-mobile":["1.5rem",{lineHeight:"2rem",letterSpacing:"-0.02em",fontWeight:"600"}],"label-md":["0.8125rem",{lineHeight:"1.125rem",letterSpacing:"0.01em",fontWeight:"500"}],"label-sm":["0.6875rem",{lineHeight:"1rem",letterSpacing:"0.04em",fontWeight:"600"}],display:["2.5rem",{lineHeight:"3rem",letterSpacing:"-0.035em",fontWeight:"600"}],"body-md":["0.875rem",{lineHeight:"1.375rem",letterSpacing:"-0.006em",fontWeight:"400"}]}}}};</script><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-secondary":"#ffffff","inverse-primary":"#bec6e0","on-tertiary-fixed-variant":"#004c6e","primary":"#000000","outline-variant":"#c6c6cd","tertiary-fixed":"#c9e6ff","on-tertiary":"#ffffff","inverse-on-surface":"#eaf1ff","on-error-container":"#93000a","primary-fixed":"#dae2fd","tertiary-container":"#001e2f","on-tertiary-fixed":"#001e2f","on-primary-container":"#7c839b","secondary-container":"#645efb","surface-variant":"#d3e4fe","surface-container-low":"#eff4ff","error":"#ba1a1a","surface-bright":"#f8f9ff","on-primary-fixed-variant":"#3f465c","on-secondary-container":"#fffbff","on-tertiary-container":"#008cc7","surface-container":"#e5eeff","on-surface-variant":"#45464d","surface-dim":"#cbdbf5","surface-container-lowest":"#ffffff","primary-fixed-dim":"#bec6e0","tertiary-fixed-dim":"#89ceff","on-secondary-fixed-variant":"#3323cc","tertiary":"#000000","on-surface":"#0b1c30","error-container":"#ffdad6","on-error":"#ffffff","surface-container-high":"#dce9ff","surface-tint":"#565e74","outline":"#76777d","on-primary":"#ffffff","secondary":"#4b41e1","secondary-fixed-dim":"#c3c0ff","on-primary-fixed":"#131b2e","primary-container":"#131b2e","secondary-fixed":"#e2dfff","surface-container-highest":"#d3e4fe","on-background":"#0b1c30","inverse-surface":"#213145","on-secondary-fixed":"#0f0069","surface":"#f8f9ff","background":"#f8f9ff"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"space-lg":"1.5rem",margin:"1rem","space-md":"0.75rem","space-xl":"2rem","gutter-desktop":"1.5rem","space-2xs":"0.125rem","space-xs":"0.25rem",gutter:"1.25rem","space-sm":"0.5rem","space-base":"1rem","space-2xl":"3rem","margin-desktop":"2rem"},fontFamily:{"mono-metric":["JetBrains Mono"],"headline-lg":["Geist"],"headline-md":["Geist"],"body-lg":["Geist"],"body-sm":["Geist"],"display-mobile":["Geist"],"headline-sm":["Geist"],"headline-lg-mobile":["Geist"],"label-md":["Geist"],"label-sm":["Geist"],display:["Geist"],"body-md":["Geist"]},fontSize:{"mono-metric":["0.875rem",{lineHeight:"1.25rem",letterSpacing:"-0.01em",fontWeight:"500"}],"headline-lg":["1.75rem",{lineHeight:"2.25rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-md":["1.25rem",{lineHeight:"1.75rem",letterSpacing:"-0.02em",fontWeight:"600"}],"body-lg":["1rem",{lineHeight:"1.625rem",letterSpacing:"-0.011em",fontWeight:"400"}],"body-sm":["0.8125rem",{lineHeight:"1.25rem",letterSpacing:"0em",fontWeight:"400"}],"display-mobile":["2rem",{lineHeight:"2.5rem",letterSpacing:"-0.025em",fontWeight:"600"}],"headline-sm":["1.125rem",{lineHeight:"1.5rem",letterSpacing:"-0.015em",fontWeight:"500"}],"headline-lg-mobile":["1.5rem",{lineHeight:"2rem",letterSpacing:"-0.02em",fontWeight:"600"}],"label-md":["0.8125rem",{lineHeight:"1.125rem",letterSpacing:"0.01em",fontWeight:"500"}],"label-sm":["0.6875rem",{lineHeight:"1rem",letterSpacing:"0.04em",fontWeight:"600"}],display:["2.5rem",{lineHeight:"3rem",letterSpacing:"-0.035em",fontWeight:"600"}],"body-md":["0.875rem",{lineHeight:"1.375rem",letterSpacing:"-0.006em",fontWeight:"400"}]}}}};</script><aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between py-space-base px-space-md"><div class="flex flex-col gap-space-lg"><div class="flex items-center gap-3 px-3 py-2"><div class="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center text-on-primary shadow-sm flex-shrink-0"><span class="material-symbols-outlined text-[22px]">precision_manufacturing</span></div><div class="flex flex-col min-w-0"><span class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight leading-snug">Lumina Slate</span><span class="font-label-sm text-[10px] tracking-wider uppercase font-semibold text-outline">FACTORY OPERATIONS</span></div></div><div class="flex flex-col mt-4 space-y-5"><div class="flex flex-col"><span class="px-3 mb-2 font-label-sm text-[11px] uppercase tracking-wider text-outline font-semibold">COMMAND CORE</span><nav class="flex flex-col gap-1"><a class="flex items-center gap-3 px-3 py-2 rounded-xl text-on-surface hover:bg-surface-container font-label-md text-label-md transition-all font-medium" href="#"><span class="material-symbols-outlined text-[20px] text-on-surface-variant">grid_view</span><span class="text-[15px]">Dashboard</span></a><a class="flex items-center gap-3 px-3 py-2 rounded-xl text-on-surface hover:bg-surface-container font-label-md text-label-md transition-all font-medium" href="#"><span class="material-symbols-outlined text-[20px] text-on-surface-variant">adjust</span><span class="text-[15px]">Incident Log</span></a></nav></div><div class="flex flex-col"><span class="px-3 mb-2 font-label-sm text-[11px] uppercase tracking-wider text-outline font-semibold">RESOURCES &amp; OPS</span><nav class="flex flex-col gap-1"><div class="flex items-center justify-between px-3 py-2 rounded-xl text-on-surface hover:bg-surface-container cursor-pointer transition-all font-medium"><div class="flex items-center gap-3"><span class="material-symbols-outlined text-[20px] text-on-surface-variant">menu_book</span><span class="text-[15px]">Knowledge Hub</span></div><span class="material-symbols-outlined text-[18px] text-outline">expand_more</span></div><div class="relative ml-4 pl-4 border-l border-outline-variant/30 flex flex-col gap-1.5 py-1"><a class="text-body-sm text-[14px] text-on-surface-variant hover:text-on-surface transition-colors py-0.5" href="#">SOP Library</a><a class="text-body-sm text-[14px] text-on-surface-variant hover:text-on-surface transition-colors py-0.5" href="#">Tech Walkthroughs</a></div><a class="flex items-center gap-3 px-3 py-2 rounded-xl text-on-surface hover:bg-surface-container font-label-md text-label-md transition-all font-medium mt-1" href="#"><span class="material-symbols-outlined text-[20px] text-on-surface-variant">trending_up</span><span class="text-[15px]">Impact</span></a></nav></div></div></div><div class="pt-space-sm"><div class="flex items-center justify-between p-space-xs rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer"><div class="flex items-center gap-space-sm min-w-0"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="flex flex-col min-w-0"><span class="font-label-md text-label-md text-on-surface font-semibold truncate">Devon Vance</span><span class="font-label-sm text-label-sm text-on-surface-variant truncate">Lead Plant Ops</span></div></div><span class="material-symbols-outlined text-on-surface-variant text-[16px]">unfold_more</span></div></div></aside><div class="pl-64 flex flex-col min-h-screen"><header class="fixed top-0 left-64 right-0 h-16 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex-1"></div><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-xs px-3 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-body-sm text-body-sm cursor-text border border-outline-variant/30"><span class="material-symbols-outlined text-[16px]">search</span><span class="text-[13px] text-on-surface-variant">Jump to asset...</span><span class="font-mono-metric text-mono-metric text-[11px] px-1.5 py-0.5 rounded bg-surface-container-lowest shadow-xs text-on-surface-variant ml-2 border border-outline-variant/30">⌘K</span></div><div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low font-mono-metric text-mono-metric text-[12px] text-on-surface-variant"><span class="material-symbols-outlined text-[16px]">schedule</span><span class="">14:28:09 UTC</span></div><div class="flex items-center gap-2.5 pl-2"><div class="flex flex-col text-right"><span class="font-headline-sm text-[14px] text-on-surface font-semibold leading-tight">Devon Vance</span><span class="font-label-sm text-[11px] text-on-surface-variant leading-tight">Lead Plant Ops</span></div><div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-on-primary flex-shrink-0"><span class="material-symbols-outlined text-[20px]">person</span></div></div></div></header><main class="w-full pt-16 bg-surface flex-1 px-space-lg"><div class="flex flex-col w-full pb-16 space-y-6">
+<!-- Top Hero Header & Line Selector Bar -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary-container animate-pulse"></span>
+          Line-01 Active
+        </span>
+<span class="text-on-surface-variant font-body-sm text-body-sm">•</span>
+<span class="text-on-surface-variant font-body-sm text-body-sm">Shift A (Alpha Floor)</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Telemetry Core</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Real-time spindle telemetry, precision feedback, and closed-loop process health.</p>
+</div>
+<!-- Action & Quick State Controls -->
+<div class="flex items-center gap-2 self-start md:self-auto">
+<div class="inline-flex items-center p-1 rounded-xl bg-surface-container-low shadow-sm">
+<button class="px-3 py-1 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm transition-all hover:opacity-90 flex items-center gap-1.5" id="freqBtn">
+<span class="material-symbols-outlined text-[15px] text-secondary">sensors</span>
+<span class="">Live 50Hz</span>
+</button>
+<button class="px-3 py-1 rounded-lg text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[15px]">tune</span>
+<span class="">Calibrated</span>
+</button>
+</div>
+<button class="px-3.5 py-1.5 rounded-xl bg-surface-container-lowest text-on-surface hover:bg-surface-container font-label-md text-label-md shadow-sm transition-all flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">ios_share</span>
+<span class="">Export</span>
+</button>
+<button class="px-3.5 py-1.5 rounded-xl bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md shadow-sm transition-all flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">add</span>
+<span class="">New Run</span>
+</button>
+</div>
+</div>
+<!-- Metric KPI Row (4 Clean Tactile Cards) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- KPI 1 -->
+<div class="bg-surface-container-lowest rounded-2xl p-5 shadow-sm transition-all hover:shadow-md flex flex-col justify-between group">
+<div class="flex items-center justify-between mb-3">
+<span class="font-label-md text-label-md text-on-surface-variant">Line Health</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary-container"></span>
+          Optimal
+        </span>
+</div>
+<div class="flex items-baseline justify-between">
+<span class="font-display text-display text-on-surface font-semibold tracking-tight">99.4%</span>
+<span class="font-mono-metric text-mono-metric text-on-surface-variant">+0.3% shift</span>
+</div>
+<div class="w-full bg-surface-container-low h-1.5 rounded-full mt-4 overflow-hidden">
+<div class="bg-secondary-container h-full rounded-full" style="width: 99.4%"></div>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="bg-surface-container-lowest rounded-2xl p-5 shadow-sm transition-all hover:shadow-md flex flex-col justify-between group">
+<div class="flex items-center justify-between mb-3">
+<span class="font-label-md text-label-md text-on-surface-variant">Throughput</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface font-label-sm text-label-sm font-semibold">
+<span class="material-symbols-outlined text-[14px] text-secondary">trending_up</span>
+          Peak
+        </span>
+</div>
+<div class="flex items-baseline justify-between">
+<span class="font-display text-display text-on-surface font-semibold tracking-tight">24.8<span class="font-headline-md text-headline-md font-normal text-on-surface-variant ml-1">k/s</span></span>
+<span class="font-mono-metric text-mono-metric text-on-surface-variant">Target: 22.0k</span>
+</div>
+<div class="w-full bg-surface-container-low h-1.5 rounded-full mt-4 overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 88%"></div>
+</div>
+</div>
+<!-- KPI 3 -->
+<div class="bg-surface-container-lowest rounded-2xl p-5 shadow-sm transition-all hover:shadow-md flex flex-col justify-between group">
+<div class="flex items-center justify-between mb-3">
+<span class="font-label-md text-label-md text-on-surface-variant">Defect Rate</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm font-semibold">
+          UCL 3.00%
+        </span>
+</div>
+<div class="flex items-baseline justify-between">
+<span class="font-display text-display text-on-surface font-semibold tracking-tight">0.42<span class="font-headline-md text-headline-md font-normal text-on-surface-variant ml-1">%</span></span>
+<span class="font-mono-metric text-mono-metric text-secondary-container font-semibold">-0.18%</span>
+</div>
+<div class="w-full bg-surface-container-low h-1.5 rounded-full mt-4 overflow-hidden">
+<div class="bg-secondary-container h-full rounded-full" style="width: 14%"></div>
+</div>
+</div>
+<!-- KPI 4 -->
+<div class="bg-surface-container-lowest rounded-2xl p-5 shadow-sm transition-all hover:shadow-md flex flex-col justify-between group">
+<div class="flex items-center justify-between mb-3">
+<span class="font-label-md text-label-md text-on-surface-variant">Recovery Streak</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold">
+          96% Done
+        </span>
+</div>
+<div class="flex items-baseline justify-between">
+<span class="font-display text-display text-on-surface font-semibold tracking-tight">48<span class="font-headline-md text-headline-md font-normal text-on-surface-variant ml-1">/ 50</span></span>
+<span class="font-mono-metric text-mono-metric text-on-surface-variant">Verified</span>
+</div>
+<div class="w-full bg-surface-container-low h-1.5 rounded-full mt-4 overflow-hidden">
+<div class="bg-secondary-fixed-dim h-full rounded-full" style="width: 96%"></div>
+</div>
+</div>
+</div>
+<!-- Telemetry Spline Chart Section (Minimalist High-Clarity Canvas) -->
+<div class="bg-surface-container-lowest rounded-3xl p-6 shadow-sm space-y-5">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-on-surface">analytics</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight">Signal Telemetry Correlation</h2>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Multi-band cross-correlation: Spindle Vibration (mm/s), Current Draw (A), and Bearing Temp (°C).</p>
+</div>
+<!-- Controls: Legend Pills + Time Range -->
+<div class="flex flex-wrap items-center gap-2">
+<div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low">
+<span class="w-2 h-2 rounded-full bg-secondary-container"></span>
+<span class="font-label-sm text-label-sm text-on-surface font-medium">Vibration (0.38 mm/s)</span>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low">
+<span class="w-2 h-2 rounded-full bg-on-surface"></span>
+<span class="font-label-sm text-label-sm text-on-surface font-medium">Current (14.2 A)</span>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low">
+<span class="w-2 h-2 rounded-full bg-outline"></span>
+<span class="font-label-sm text-label-sm text-on-surface font-medium">Temp (41.8 °C)</span>
+</div>
+<div class="inline-flex items-center p-0.5 rounded-xl bg-surface-container-low ml-2">
+<button class="px-2.5 py-1 rounded-lg bg-surface-container-lowest text-on-surface font-label-sm text-label-sm shadow-xs font-semibold">Live</button>
+<button class="px-2.5 py-1 rounded-lg text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm">15m</button>
+<button class="px-2.5 py-1 rounded-lg text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm">1h</button>
+<button class="px-2.5 py-1 rounded-lg text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm">Shift</button>
+</div>
+</div>
+</div>
+<!-- Responsive Spline Chart Canvas -->
+<div class="relative w-full h-72 sm:h-80 bg-surface-container-low/40 rounded-2xl p-4 flex flex-col justify-between overflow-hidden">
+<!-- Grid lines subtle -->
+<div class="absolute inset-0 flex flex-col justify-between p-6 pointer-events-none opacity-30">
+<div class="w-full border-b border-outline-variant"></div>
+<div class="w-full border-b border-outline-variant"></div>
+<div class="w-full border-b border-outline-variant"></div>
+<div class="w-full border-b border-outline-variant"></div>
+</div>
+<!-- Live Threshold Zone Tag -->
+<div class="absolute right-6 top-6 bg-surface-container-lowest/90 backdrop-blur-md px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-2 pointer-events-none z-10">
+<span class="w-2 h-2 rounded-full bg-secondary-container animate-ping"></span>
+<span class="font-mono-metric text-mono-metric text-[11px] text-on-surface">Sigma Band ±0.04 σ</span>
+</div>
+<!-- Main SVG Waveforms -->
+<div class="relative w-full h-full flex items-center">
+<svg class="w-full h-full overflow-visible" fill="none" preserveAspectRatio="none" viewBox="0 0 900 240">
+<defs>
+<linearGradient id="vibeGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#645efb" stop-opacity="0.22"></stop>
+<stop offset="100%" stop-color="#645efb" stop-opacity="0.0"></stop>
+</linearGradient>
+<linearGradient id="currentGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#0b1c30" stop-opacity="0.08"></stop>
+<stop offset="100%" stop-color="#0b1c30" stop-opacity="0.0"></stop>
+</linearGradient>
+</defs>
+<!-- Vibration Spline Area Fill -->
+<path d="M 0,160 Q 75,130 150,140 T 300,105 T 450,118 T 600,75 T 750,90 T 900,60 L 900,240 L 0,240 Z" fill="url(#vibeGrad)"></path>
+<!-- Current Spline Area Fill -->
+<path d="M 0,190 Q 80,180 160,175 T 320,160 T 480,145 T 640,155 T 800,135 T 900,125 L 900,240 L 0,240 Z" fill="url(#currentGrad)"></path>
+<!-- Background Temp Wave (Muted Grey / Outline) -->
+<path d="M 0,110 C 120,120 200,95 320,105 C 440,115 560,95 680,100 C 800,105 850,85 900,90" fill="none" stroke="#76777d" stroke-dasharray="4 4" stroke-width="1.8"></path>
+<!-- Current Draw (Dark Solid Line) -->
+<path d="M 0,190 Q 80,180 160,175 T 320,160 T 480,145 T 640,155 T 800,135 T 900,125" fill="none" stroke="#0b1c30" stroke-width="2"></path>
+<!-- Primary Vibration Spline (Vibrant Secondary Indigo-Cyan) -->
+<path d="M 0,160 Q 75,130 150,140 T 300,105 T 450,118 T 600,75 T 750,90 T 900,60" fill="none" stroke="#645efb" stroke-linecap="round" stroke-width="2.75"></path>
+<!-- Active Marker Dot on Vibration line -->
+<circle class="shadow-sm" cx="750" cy="90" fill="#645efb" r="5"></circle>
+<circle cx="750" cy="90" fill="none" r="10" stroke="#645efb" stroke-opacity="0.4" stroke-width="1.5"></circle>
+<circle cx="900" cy="60" fill="#645efb" r="4.5"></circle>
+</svg>
+</div>
+<!-- Bottom Timeline Axis -->
+<div class="flex items-center justify-between text-on-surface-variant font-mono-metric text-mono-metric text-[11px] pt-2 px-1">
+<span class="">14:15:00</span>
+<span class="">14:20:00</span>
+<span class="">14:25:00</span>
+<span class="">14:30:00</span>
+<span class="text-on-surface font-semibold">14:32:08 (Now)</span>
+</div>
+</div>
+</div>
+<!-- Andon 4-Phase Step Progress (Clean Stepper Pill Architecture) -->
+<div class="bg-surface-container-lowest rounded-3xl p-6 shadow-sm">
+<div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-2">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight">Product Line</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Closed-loop mitigation sequence for Line-01 Spindle Sync anomaly.</p>
+</div>
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container text-on-surface font-label-md text-label-md">
+<span class="material-symbols-outlined text-[16px] text-secondary">verified</span>
+<span class="">Standard Operating Procedure #209</span>
+</span>
+</div>
+<!-- Stepper Pipeline -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+<!-- Step A -->
+<div class="p-4 rounded-2xl bg-surface-container-low flex flex-col justify-between relative overflow-hidden group">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Normal</span>
+<span class="w-6 h-6 rounded-full bg-surface-container-lowest flex items-center justify-center text-secondary shadow-xs">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</span>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm text-on-surface font-semibold mb-0.5">Engine Block</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Defect: 1%</div>
+</div>
+<div class="mt-3 flex items-center gap-1.5 text-on-surface-variant font-mono-metric text-mono-metric text-[11px]">
+<span class="material-symbols-outlined text-[14px]">done_all</span>
+<span class="">14:02:11 Complete</span>
+</div>
+</div>
+<!-- Step B -->
+<div class="p-4 rounded-2xl bg-surface-container-low flex flex-col justify-between relative overflow-hidden group">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Normal</span>
+<span class="w-6 h-6 rounded-full bg-surface-container-lowest flex items-center justify-center text-secondary shadow-xs">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</span>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm text-on-surface font-semibold mb-0.5">Cylinder Head</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Defect: 1%</div>
+</div>
+<div class="mt-3 flex items-center gap-1.5 text-on-surface-variant font-mono-metric text-mono-metric text-[11px]">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+<span class="">14:14:40 Verified</span>
+</div>
+</div>
+<!-- Step C (Active Progress) -->
+<div class="p-4 rounded-2xl bg-red-50 border border-red-200 text-on-surface flex flex-col justify-between relative overflow-hidden shadow-xs"><div class="flex items-center justify-between mb-2"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-label-sm text-label-sm uppercase tracking-wider font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>Warning</span><span class="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow-xs"><span class="material-symbols-outlined text-[15px]">warning</span></span></div><div><div class="font-headline-sm text-headline-sm text-on-surface font-semibold mb-1 flex items-center justify-between"><span class="">Gearbox Casing</span></div><div class="font-body-sm text-body-sm text-red-700 font-medium flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">report_problem</span>High product defect: 5%</div></div><div class="mt-3"><div class="flex justify-between items-center text-red-800 font-mono-metric text-mono-metric text-[11px] mb-1"><span class="font-medium">Progress: 96%</span><span class="font-semibold">20 units held</span></div><div class="w-full bg-red-200 h-1.5 rounded-full overflow-hidden"><div class="bg-red-600 h-full rounded-full" style="width: 96%"></div></div></div></div>
+<!-- Step D (Queued) -->
+<div class="p-4 rounded-2xl bg-surface-container-low/60 flex flex-col justify-between opacity-80">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">NORMAL</span>
+<span class="w-6 h-6 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">hourglass_empty</span>
+</span>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm text-on-surface font-semibold mb-0.5">Clutch Housing</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Defect: -</div>
+</div>
+<div class="mt-3 flex items-center gap-1.5 text-on-surface-variant font-mono-metric text-mono-metric text-[11px]">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+<span class="">Queued (est. 3m)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Active Stations Grid (3 Sleek Tactile Station Cards) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+<!-- Station 1 -->
+<div class="bg-surface-container-lowest rounded-3xl p-5 shadow-sm transition-all hover:shadow-md flex flex-col justify-between space-y-4">
+<div>
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-2">
+<div class="w-9 h-9 rounded-xl bg-surface-container flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[20px]">precision_manufacturing</span>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm text-on-surface font-semibold leading-tight">CNC-02 Milling</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant">Primary Finishing</div>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold">Adaptive</span>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-4 bg-surface-container-low p-3 rounded-2xl">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Vibration</span>
+<div class="font-headline-sm text-headline-sm font-semibold text-on-surface mt-0.5">0.38 <span class="font-body-sm text-body-sm text-on-surface-variant font-normal">mm/s</span></div>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Spindle Speed</span>
+<div class="font-headline-sm text-headline-sm font-semibold text-on-surface mt-0.5">18,400 <span class="font-body-sm text-body-sm text-on-surface-variant font-normal">rpm</span></div>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-2">
+<span class="font-mono-metric text-mono-metric text-on-surface-variant text-[11px]">Tool wear: 12%</span>
+<button class="px-3.5 py-1.5 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high font-label-md text-label-md transition-colors flex items-center gap-1">
+<span class="">Adjust Damper</span>
+<span class="material-symbols-outlined text-[15px]">tune</span>
+</button>
+</div>
+</div>
+<!-- Station 2 -->
+<div class="bg-surface-container-lowest rounded-3xl p-5 shadow-sm transition-all hover:shadow-md flex flex-col justify-between space-y-4">
+<div>
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-2">
+<div class="w-9 h-9 rounded-xl bg-surface-container flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-[20px]">compress</span>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm text-on-surface font-semibold leading-tight">IM-05 Extrusion</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant">Polymer Curing</div>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold">Nominal</span>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-4 bg-surface-container-low p-3 rounded-2xl">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Pressure</span>
+<div class="font-headline-sm text-headline-sm font-semibold text-on-surface mt-0.5">142 <span class="font-body-sm text-body-sm text-on-surface-variant font-normal">bar</span></div>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Core Temp</span>
+<div class="font-headline-sm text-headline-sm font-semibold text-on-surface mt-0.5">215.4 <span class="font-body-sm text-body-sm text-on-surface-variant font-normal">°C</span></div>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-2">
+<span class="font-mono-metric text-mono-metric text-on-surface-variant text-[11px]">Flow: 4.8 L/min</span>
+<button class="px-3.5 py-1.5 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high font-label-md text-label-md transition-colors flex items-center gap-1">
+<span class="">View Log</span>
+<span class="material-symbols-outlined text-[15px]">list_alt</span>
+</button>
+</div>
+</div>
+<!-- Station 3 -->
+<div class="bg-surface-container-lowest rounded-3xl p-5 shadow-sm transition-all hover:shadow-md flex flex-col justify-between space-y-4">
+<div>
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-2">
+<div class="w-9 h-9 rounded-xl bg-surface-container flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[20px]">camera</span>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm text-on-surface font-semibold leading-tight">CAM Vision QA</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant">Optical Defect Scan</div>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold">99.8% Pass</span>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-4 bg-surface-container-low p-3 rounded-2xl">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Escape Rate</span>
+<div class="font-headline-sm text-headline-sm font-semibold text-on-surface mt-0.5">0 <span class="font-body-sm text-body-sm text-on-surface-variant font-normal">ppm</span></div>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Model Confidence</span>
+<div class="font-headline-sm text-headline-sm font-semibold text-on-surface mt-0.5">99.98 <span class="font-body-sm text-body-sm text-on-surface-variant font-normal">%</span></div>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-2">
+<span class="font-mono-metric text-mono-metric text-on-surface-variant text-[11px]">Last scan: 2s ago</span>
+<button class="px-3.5 py-1.5 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high font-label-md text-label-md transition-colors flex items-center gap-1">
+<span class="">Micrograph</span>
+<span class="material-symbols-outlined text-[15px]">zoom_in</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Bottom Floating Apple-Style Pill Action Dock -->
+<div class="sticky bottom-6 z-30 flex justify-center w-full pt-4 pointer-events-none">
+
+</div>
+</div>
+<!-- Minimal Interactive Micro-behavior Script -->
+<script>
+  (function() {
+    const diagBtn = document.getElementById('diagBtn');
+    if (diagBtn) {
+      diagBtn.addEventListener('click', function() {
+        const orig = this.innerHTML;
+        this.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">refresh</span><span>Running...</span>';
+        setTimeout(() => {
+          this.innerHTML = '<span class="material-symbols-outlined text-[16px]">done</span><span>All Clear (0 Err)</span>';
+          setTimeout(() => {
+            this.innerHTML = orig;
+          }, 2400);
+        }, 1100);
+      });
+    }
+
+    const audioToggle = document.getElementById('audioToggle');
+    if (audioToggle) {
+      audioToggle.addEventListener('click', function() {
+        const icon = this.querySelector('.material-symbols-outlined');
+        if (icon.textContent === 'volume_up') {
+          icon.textContent = 'volume_off';
+          this.classList.add('opacity-60');
+        } else {
+          icon.textContent = 'volume_up';
+          this.classList.remove('opacity-60');
+        }
+      });
+    }
+  })();
+</script></main></div></body></html>

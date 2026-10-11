@@ -1,0 +1,196 @@
+<!DOCTYPE html><html class="h-full bg-background" lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_tab" name="shell-type"><title>Apex Field Copilot</title><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "secondary": "#4b41e1", "error-container": "#ffdad6", "surface-variant": "#d3e4fe", "inverse-on-surface": "#eaf1ff", "primary-fixed-dim": "#bec6e0", "on-primary-container": "#7c839b", "secondary-fixed-dim": "#c3c0ff", "surface-bright": "#f8f9ff", "primary-container": "#131b2e", "outline-variant": "#c6c6cd", "on-secondary-container": "#fffbff", "surface-container-highest": "#d3e4fe", "surface-container-low": "#eff4ff", "on-error-container": "#93000a", "surface-dim": "cbdbf5", "surface-tint": "#565e74", "primary": "#000000", "on-surface-variant": "#45464d", "tertiary": "#000000", "on-error": "#ffffff", "outline": "#76777d", "background": "#f8f9ff", "on-tertiary-fixed-variant": "#004c6e", "primary-fixed": "#dae2fd", "inverse-surface": "#213145", "surface-container": "#e5eeff", "on-background": "#0b1c30", "on-primary-fixed-variant": "#3f465c", "tertiary-fixed-dim": "#89ceff", "on-secondary-fixed-variant": "#3323cc", "surface": "#f8f9ff", "tertiary-container": "#001e2f", "on-surface": "#0b1c30", "error": "#ba1a1a", "secondary-container": "#645efb", "on-tertiary-container": "#008cc7", "secondary-fixed": "#e2dfff", "on-secondary": "#ffffff", "on-tertiary": "#ffffff", "inverse-primary": "#bec6e0", "surface-container-lowest": "#ffffff", "surface-container-high": "#dce9ff", "tertiary-fixed": "#c9e6ff", "on-primary-fixed": "#131b2e", "on-secondary-fixed": "#0f0069", "on-tertiary-fixed": "#001e2f", "on-primary": "#ffffff" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "margin-desktop": "2.5rem", "margin-tablet": "1.5rem", "gutter": "1rem", "space-md": "1rem", "margin": "1rem", "space-xs": "0.25rem", "space-sm": "0.5rem", "space-lg": "1.5rem", "gutter-tablet": "1.25rem", "gutter-desktop": "1.5rem", "space-xl": "2.25rem" }, fontFamily: { "label-md": ["Geist"], "label-lg": ["Geist"], "headline-lg-mobile": ["Geist"], "headline-sm": ["Geist"], "body-md": ["Geist"], "headline-xl-mobile": ["Geist"], "body-lg": ["Geist"], "headline-md": ["Geist"], "body-sm": ["Geist"], "headline-lg": ["Geist"], "label-sm": ["Geist"], "headline-xl": ["Geist"] }, fontSize: { "label-md": ["13px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "label-lg": ["15px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }], "headline-lg-mobile": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "headline-sm": ["17px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "body-md": ["15px", { "lineHeight": "22px", "letterSpacing": "0em", "fontWeight": "400" }], "headline-xl-mobile": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.025em", "fontWeight": "700" }], "body-lg": ["17px", { "lineHeight": "26px", "letterSpacing": "-0.005em", "fontWeight": "400" }], "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" }], "body-sm": ["13px", { "lineHeight": "18px", "letterSpacing": "0.005em", "fontWeight": "400" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "700" }], "headline-xl": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.03em", "fontWeight": "700" }] } } } };</script><style>@layer base{html,body{width:100%;margin:0;padding:0;min-height:100%;}body{overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style></head><body class="bg-surface font-body-md text-on-surface antialiased flex flex-col min-h-full selection:bg-secondary/20"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/80 backdrop-blur-2xl shadow-[0_1px_12px_rgba(11,28,48,0.04)]"><div class="h-20 px-margin flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0"><div class="flex items-center justify-center p-space-xs rounded-xl bg-surface-container-lowest/80 backdrop-blur-md shadow-[0_2px_8px_rgba(11,28,48,0.06)] shrink-0"><img alt="Apex Industrial Copilot Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1WEW_QiB8b1506KUbhGDwTqnPcfMWl21zsmH0KxebrcFqSzoIxcT3mTznJqeNKqOD277OQLUBb4q3wH8eIxQtHFHP_z65iIrhsC6AbxPjjDORKNBcYI1cOtYtcb5-DoYGumZoeTWXNr51KzAfAwGZpglxBgbQkYzqITayTmghVX8LhsFagi4fQ99LrVfExJrTEyvncFXtxjgEYPGUR-PrbqKeNEGBbbLWaMODelnO0oMsQ8V04IxXZF0QY9"></div><div class="flex flex-col min-w-0"><div class="flex items-center gap-space-xs"><h1 class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight truncate">Apex Field Copilot</h1></div><div class="flex items-center gap-1.5"><span class="flex h-2 w-2 relative shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span></span><span class="font-label-sm text-label-sm text-secondary truncate font-bold tracking-wider uppercase">Gemini Live · vi-VN active</span></div></div></div><div class="flex items-center gap-space-sm shrink-0"><div class="flex items-center gap-space-xs pl-space-sm pr-space-xs py-space-xs rounded-full bg-surface-container/70 backdrop-blur-lg shadow-[0_2px_10px_rgba(15,23,42,0.05)]"><div class="hidden sm:flex flex-col text-right mr-1"><span class="font-label-sm text-label-sm text-on-surface font-bold leading-none">Tuan Nguyen</span><span class="font-label-sm text-label-sm text-on-surface-variant font-medium leading-none">L3 Tech</span></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-2 ring-surface-container-lowest shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvI6p4nPYRsHT0cY4XEg8zY3ChO5yGirRNXlN5ZJg4mRQOjkpW_NdZ1T7Li2pWNvJ6LCUoneFc9g89NBuWqHF66BtNQ3J6fqjRDbC-Fxz36skyfSy-VCODsxNVmJMxfJXlfysoNGb3OmceU1RqVApWl8GS1ps3us-URha6lG2SbQ4RNuSN0owkAi5DNvLS8qvaKZq93CU0qsuou-YOOWhxtXDPySxxRrVYjWCaZxtzugoRIvItYztyaQ"></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-20 pb-28 bg-surface px-margin"><div class="flex flex-col w-full gap-space-md">
+<!-- Top Navigation & Flow Breadcrumb -->
+<div class="flex items-center justify-between">
+<button class="flex items-center gap-space-xs text-on-surface-variant active:text-on-surface transition-colors py-1 pl-0 pr-space-sm" onclick="history.back()" type="button">
+<span class="material-symbols-outlined text-[20px]">arrow_back_ios</span>
+<span class="font-label-lg text-label-lg tracking-tight">Lathe 02 Fix</span>
+</button>
+<div class="flex items-center gap-1.5 px-space-sm py-1 rounded-full bg-secondary-container/20 text-secondary">
+<span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;">sync</span>
+<span class="font-label-sm text-label-sm uppercase tracking-wider">Telemetry Synced</span>
+</div>
+</div>
+<!-- Job Info Glass Card -->
+<div class="relative overflow-hidden rounded-xl bg-surface-container-lowest/80 backdrop-blur-2xl p-space-md shadow-[0_4px_20px_rgba(11,28,48,0.05)]">
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between gap-space-sm flex-wrap">
+<span class="font-label-sm text-label-sm tracking-wider uppercase px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-bold">REPAIR COMPLETE
+        </span>
+<div class="flex items-center gap-1.5">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Auto-Validating</span>
+</div>
+</div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface font-semibold tracking-tight mt-1">
+        Lathe 02 Toolhead
+      </h2>
+<div class="flex items-center gap-space-sm text-on-surface-variant">
+<span class="font-label-md text-label-md">Incident: #INC-8919</span>
+<span class="inline-block w-1 h-1 rounded-full bg-outline"></span>
+<span class="font-label-md text-label-md">Bay C-04</span>
+<span class="inline-block w-1 h-1 rounded-full bg-outline"></span>
+<span class="font-label-md text-label-md">Torque Rig α</span>
+</div>
+</div>
+</div>
+<!-- Media Evidence Section Header -->
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[20px]">verified_user</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight">Required Evidence</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-bold">2/2 COMPLIANT</span>
+</div>
+<!-- Media Evidence Card 1: Video Walkthrough -->
+<div class="rounded-xl bg-surface-container-lowest/70 backdrop-blur-xl p-space-md shadow-[0_4px_16px_rgba(11,28,48,0.04)] flex flex-col gap-space-sm">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="min-w-0">
+<h3 class="font-label-lg text-label-lg text-on-surface font-semibold">Record Repair Video (Short Walkthrough)</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Max 30s summary of torque and seated collar</p>
+</div>
+<span class="material-symbols-outlined text-secondary text-[24px]" style="font-variation-settings: 'FILL' 1;">videocam</span>
+</div>
+<!-- Video Preview / Upload Frame -->
+<div class="relative w-full rounded-xl overflow-hidden bg-primary-container shadow-inner">
+<div class="w-full h-36 bg-cover bg-center opacity-70" data-alt="High precision CNC lathe mechanical spindle assembly close up in a well-lit German industrial plant with glowing diagnostic indicators and metallic clean oiled parts." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA3PQzo0n6ooh7WdJsPQ-h6qrHEIah5R1KP7gHa06hDkmvemHY3zXt-YNB3DVBNeM_Gt200R5c5LH7UM072TfaeSuhhthHD5BPW7MIJ-4ciuctVLNlVtYWvdKdus7aejOLA2oNrKOwOe2GJ14Es10wun6LXs4OuCEZ-fLGSYVxt_lHXAZOlv3G4FjxpFZdrYjmEqSRwhm2wAt_MYWcZY0HKjJARiik1hbVIt8hWM8vwADBkgDc1WaMxlw')"></div>
+<!-- Video Metadata Scrim Overlay -->
+<div class="absolute inset-0 flex flex-col justify-between p-space-sm bg-gradient-to-t from-primary/80 via-transparent to-primary/40">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/70 backdrop-blur-md">
+<span class="inline-block w-2 h-2 rounded-full bg-error animate-pulse"></span>
+<span class="font-label-sm text-label-sm text-on-primary">1080p · 60fps</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-primary bg-primary/70 px-2 py-0.5 rounded-full backdrop-blur-md">00:12 / 00:30</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs text-on-primary">
+<span class="material-symbols-outlined text-[18px]">movie</span>
+<span class="font-label-md text-label-md truncate max-w-[190px]">collar_torque_check.mp4</span>
+</div>
+<button class="h-10 px-space-sm rounded-lg bg-surface-container-lowest/80 backdrop-blur-md text-on-surface font-label-md text-label-md flex items-center gap-1 active:scale-95 transition-all" type="button">
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+<span class="">Review</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Action & Status Row -->
+<div class="flex items-center justify-between gap-space-sm pt-1">
+<div class="flex items-center gap-1.5 min-w-0">
+<span class="material-symbols-outlined text-secondary text-[18px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-label-sm text-label-sm text-on-surface font-semibold truncate">collar_torque_check.mp4 (12s, 1080p) attached ✓</span>
+</div>
+<button class="min-h-[44px] min-w-[44px] px-space-sm rounded-lg bg-surface-container text-on-surface-variant font-label-md text-label-md flex items-center gap-1 active:bg-surface-container-high transition-colors shrink-0" type="button">
+<span class="material-symbols-outlined text-[16px]">refresh</span>
+<span class="">Retake</span>
+</button>
+</div>
+</div>
+<!-- Media Evidence Card 2: Photo Evidence -->
+<div class="rounded-xl bg-surface-container-lowest/70 backdrop-blur-xl p-space-md shadow-[0_4px_16px_rgba(11,28,48,0.04)] flex flex-col gap-space-sm">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="min-w-0">
+<h3 class="font-label-lg text-label-lg text-on-surface font-semibold">Photo of Finished Toolhead &amp; Workspace</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">High clarity image showing clear workspace &amp; secured bolts</p>
+</div>
+<span class="material-symbols-outlined text-secondary text-[24px]">photo_camera</span>
+</div>
+<!-- Image Thumbnail Container -->
+<div class="relative w-full rounded-xl overflow-hidden bg-surface-container">
+<div class="w-full h-36 bg-cover bg-center" data-alt="Industrial lathe chuck and newly replaced sealed rubber O-ring assembly cleanly wiped down with calibrated digital torque wrench lying safely on clean blue shop towel in high tech factory." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAvyXNh5Pr5TXdlpjNTsfOs5KVpykM3e8xnveP0a0pYEq9df1mM4tzFB_rlN-NAdcUpEnvWoKgi6eqhi-22AphNLISbhXOTcd8Y83xGPWsZH9B6D25oY3FNwbadSWxrS9HHuL15fRILs6prmelf8wBATPrZqhazJE1T7ggvyyzzHD9JLlqfVPyvUMKgvDecL1jJc0xtyUUXBUUt8DSlVUaihv2Wp0Hhh4qppChzWuaX6F24Ljdn30sH7Q')"></div>
+<!-- Verified Inspection Badge Overlay -->
+<div class="absolute top-space-xs right-space-xs">
+<div class="flex items-center gap-1 px-2 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-md shadow-md text-secondary">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-label-sm text-label-sm font-bold">AI Pass: Zero FOD</span>
+</div>
+</div>
+</div>
+<!-- Photo Status & Easy Tap Retake -->
+<div class="flex items-center justify-between gap-space-sm pt-1">
+<div class="flex items-center gap-1.5 min-w-0">
+<span class="material-symbols-outlined text-secondary text-[18px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-label-sm text-label-sm text-on-surface font-semibold truncate">finished_assembly.jpg attached ✓</span>
+</div>
+<button class="min-h-[44px] px-space-sm rounded-lg bg-surface-container text-on-surface-variant font-label-md text-label-md flex items-center gap-1 active:bg-surface-container-high transition-colors shrink-0" type="button">
+<span class="material-symbols-outlined text-[16px]">replay</span>
+<span class="">Retake</span>
+</button>
+</div>
+</div>
+<!-- Handover Notes Input Box -->
+<div class="rounded-xl bg-surface-container-lowest/80 backdrop-blur-xl p-space-md shadow-[0_4px_16px_rgba(11,28,48,0.04)] flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<label class="font-label-lg text-label-lg text-on-surface font-semibold flex items-center gap-1.5" for="handover-notes">
+<span class="material-symbols-outlined text-secondary text-[20px]">edit_note</span>
+        Technician Handover Notes
+      </label>
+<div class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[14px]">translate</span>
+<span class="">vi-VN Audio Dictated</span>
+</div>
+</div>
+<!-- Frosted Input Area with Voice Activation Trigger -->
+<div class="relative flex items-center rounded-xl bg-surface-container/60 focus-within:bg-surface-container-lowest transition-colors p-space-xs">
+<textarea class="w-full bg-transparent border-0 outline-none resize-none p-space-sm font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60" id="handover-notes" placeholder="State repair outcome, replacements, and run-clear tests..." rows="3">Replaced O-ring, torqued 4 bolts to 45Nm, tested spindle spin freely.</textarea>
+<button class="absolute right-space-sm bottom-space-sm h-10 w-10 rounded-xl bg-secondary text-on-secondary flex items-center justify-center shadow-[0_4px_12px_rgba(75,65,225,0.3)] active:scale-90 transition-transform" title="Push to talk audio dictate" type="button"><span class="material-symbols-outlined text-[20px]">mic</span></button>
+</div>
+<!-- Quality Telemetry Chips -->
+<div class="flex items-center gap-space-xs overflow-x-auto py-1">
+<span class="font-label-sm text-label-sm px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-medium whitespace-nowrap">
+        Torque: 45.1 Nm (Nominal)
+      </span>
+<span class="font-label-sm text-label-sm px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-medium whitespace-nowrap">
+        Clearance: 0.02 mm
+      </span>
+<span class="font-label-sm text-label-sm px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-medium whitespace-nowrap">
+        Temp: 24.3°C
+      </span>
+</div>
+</div>
+<!-- Signoff Safety Confirmation -->
+<div class="rounded-xl bg-surface-container-low/90 backdrop-blur-md p-space-md flex items-center gap-space-sm">
+<div class="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center shrink-0 text-secondary">
+<span class="material-symbols-outlined text-[22px]">health_and_safety</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-semibold">L3 Signoff Verified: Tuan Nguyen</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Digital certificate #APK-99401 auto-attached</span>
+</div>
+</div>
+<!-- Glove-Friendly Dominant Action Button (64px) -->
+<div class="flex flex-col items-center gap-1 pt-1 pb-2"><button class="min-h-[44px] h-10 px-space-md rounded-xl bg-primary text-on-primary flex items-center justify-center gap-space-xs shadow-md active:scale-95 transition-all" id="submitRepairBtn" type="button"><span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">check</span><span class="font-label-md text-label-md tracking-tight font-medium">Submit Repair</span></button><p class="font-body-sm text-body-sm text-on-surface-variant text-center">Sends data for workflow validation</p></div>
+</div>
+<script>
+  // Simple interaction feedback for the dominant submit button
+  document.getElementById('submitRepairBtn')?.addEventListener('click', function() {
+    const btn = this;
+    const originalText = btn.innerHTML;
+    btn.classList.add('opacity-85');
+    btn.innerHTML = `
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[22px] animate-spin">progress_activity</span>
+        <span class="font-label-lg text-label-lg tracking-wide uppercase font-bold">DISPATCHING TO ORCHESTRATOR...</span>
+      </div>
+    `;
+    setTimeout(() => {
+      btn.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+          <span class="font-label-lg text-label-lg tracking-wide uppercase font-bold">PAYLOAD SENT · TICKET CLOSED</span>
+        </div>
+      `;
+      btn.classList.remove('bg-primary');
+      btn.classList.add('bg-secondary');
+    }, 1200);
+  });
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe pointer-events-none" data-active-classes="bg-primary text-on-primary shadow-[0_4px_16px_rgba(15,23,42,0.18)]"><div class="max-w-md mx-auto px-margin pb-space-sm pt-space-xs pointer-events-auto"><div class="h-20 bg-surface-container-lowest/85 backdrop-blur-2xl rounded-full shadow-[0_12px_36px_-6px_rgba(15,23,42,0.12),0_4px_16px_rgba(15,23,42,0.04)] px-space-xs flex items-center justify-around gap-1"><a aria-current="page" class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 transition-all active:scale-95 bg-primary text-on-primary shadow-[0_4px_16px_rgba(15,23,42,0.18)]" data-path="work-list" href="#"><span class="material-symbols-outlined text-[22px]">fact_check</span><span class="font-label-sm text-label-sm tracking-tight">Work List</span></a><a class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 text-on-surface-variant transition-all active:scale-95" data-path="ai-helper" href="#"><div class="relative flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">mic</span><span class="material-symbols-outlined text-[12px] absolute -top-1 -right-2 text-secondary">auto_awesome</span></div><span class="font-label-sm text-label-sm tracking-tight">AI Helper</span></a><a class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 text-on-surface-variant transition-all active:scale-95 relative" data-path="notifications" href="#"><div class="relative flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute -top-1 -right-2 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-error text-on-error font-label-sm text-[10px] leading-none shadow-sm">2</span></div><span class="font-label-sm text-label-sm tracking-tight">Notifications</span></a><a class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 text-on-surface-variant transition-all active:scale-95" data-path="settings" href="#"><span class="material-symbols-outlined text-[22px]">tune</span><span class="font-label-sm text-label-sm tracking-tight">Settings</span></a></div></div></nav>
+
+
+
+</body></html>

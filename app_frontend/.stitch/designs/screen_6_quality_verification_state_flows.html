@@ -1,0 +1,296 @@
+<!DOCTYPE html><html class="h-full bg-background" lang="en" style=""><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_tab" name="shell-type"><title>Apex Field Copilot</title><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "secondary": "#4b41e1", "error-container": "#ffdad6", "surface-variant": "#d3e4fe", "inverse-on-surface": "#eaf1ff", "primary-fixed-dim": "#bec6e0", "on-primary-container": "#7c839b", "secondary-fixed-dim": "#c3c0ff", "surface-bright": "#f8f9ff", "primary-container": "#131b2e", "outline-variant": "#c6c6cd", "on-secondary-container": "#fffbff", "surface-container-highest": "#d3e4fe", "surface-container-low": "#eff4ff", "on-error-container": "#93000a", "surface-dim": "cbdbf5", "surface-tint": "#565e74", "primary": "#000000", "on-surface-variant": "#45464d", "tertiary": "#000000", "on-error": "#ffffff", "outline": "#76777d", "background": "#f8f9ff", "on-tertiary-fixed-variant": "#004c6e", "primary-fixed": "#dae2fd", "inverse-surface": "#213145", "surface-container": "#e5eeff", "on-background": "#0b1c30", "on-primary-fixed-variant": "#3f465c", "tertiary-fixed-dim": "#89ceff", "on-secondary-fixed-variant": "#3323cc", "surface": "#f8f9ff", "tertiary-container": "#001e2f", "on-surface": "#0b1c30", "error": "#ba1a1a", "secondary-container": "#645efb", "on-tertiary-container": "#008cc7", "secondary-fixed": "#e2dfff", "on-secondary": "#ffffff", "on-tertiary": "#ffffff", "inverse-primary": "#bec6e0", "surface-container-lowest": "#ffffff", "surface-container-high": "#dce9ff", "tertiary-fixed": "#c9e6ff", "on-primary-fixed": "#131b2e", "on-secondary-fixed": "#0f0069", "on-tertiary-fixed": "#001e2f", "on-primary": "#ffffff" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "margin-desktop": "2.5rem", "margin-tablet": "1.5rem", "gutter": "1rem", "space-md": "1rem", "margin": "1rem", "space-xs": "0.25rem", "space-sm": "0.5rem", "space-lg": "1.5rem", "gutter-tablet": "1.25rem", "gutter-desktop": "1.5rem", "space-xl": "2.25rem" }, fontFamily: { "label-md": ["Geist"], "label-lg": ["Geist"], "headline-lg-mobile": ["Geist"], "headline-sm": ["Geist"], "body-md": ["Geist"], "headline-xl-mobile": ["Geist"], "body-lg": ["Geist"], "headline-md": ["Geist"], "body-sm": ["Geist"], "headline-lg": ["Geist"], "label-sm": ["Geist"], "headline-xl": ["Geist"] }, fontSize: { "label-md": ["13px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "label-lg": ["15px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }], "headline-lg-mobile": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "headline-sm": ["17px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "body-md": ["15px", { "lineHeight": "22px", "letterSpacing": "0em", "fontWeight": "400" }], "headline-xl-mobile": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.025em", "fontWeight": "700" }], "body-lg": ["17px", { "lineHeight": "26px", "letterSpacing": "-0.005em", "fontWeight": "400" }], "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" }], "body-sm": ["13px", { "lineHeight": "18px", "letterSpacing": "0.005em", "fontWeight": "400" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "700" }], "headline-xl": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.03em", "fontWeight": "700" }] } } } };</script><style>@layer base{html,body{width:100%;margin:0;padding:0;min-height:100%;}body{overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style></head><body class="bg-surface font-body-md text-on-surface antialiased flex flex-col min-h-full selection:bg-secondary/20"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/80 backdrop-blur-2xl shadow-[0_1px_12px_rgba(11,28,48,0.04)]"><div class="h-20 px-margin flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0"><div class="flex items-center justify-center p-space-xs rounded-xl bg-surface-container-lowest/80 backdrop-blur-md shadow-[0_2px_8px_rgba(11,28,48,0.06)] shrink-0"><img alt="Apex Industrial Copilot Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1WEW_QiB8b1506KUbhGDwTqnPcfMWl21zsmH0KxebrcFqSzoIxcT3mTznJqeNKqOD277OQLUBb4q3wH8eIxQtHFHP_z65iIrhsC6AbxPjjDORKNBcYI1cOtYtcb5-DoYGumZoeTWXNr51KzAfAwGZpglxBgbQkYzqITayTmghVX8LhsFagi4fQ99LrVfExJrTEyvncFXtxjgEYPGUR-PrbqKeNEGBbbLWaMODelnO0oMsQ8V04IxXZF0QY9"></div><div class="flex flex-col min-w-0"><div class="flex items-center gap-space-xs"><h1 class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight truncate">Apex Field Copilot</h1></div><div class="flex items-center gap-1.5"><span class="flex h-2 w-2 relative shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span></span><span class="font-label-sm text-label-sm text-secondary truncate font-bold tracking-wider uppercase">Gemini Live · vi-VN active</span></div></div></div><div class="flex items-center gap-space-sm shrink-0"><div class="flex items-center gap-space-xs pl-space-sm pr-space-xs py-space-xs rounded-full bg-surface-container/70 backdrop-blur-lg shadow-[0_2px_10px_rgba(15,23,42,0.05)]"><div class="hidden sm:flex flex-col text-right mr-1"><span class="font-label-sm text-label-sm text-on-surface font-bold leading-none">Tuan Nguyen</span><span class="font-label-sm text-label-sm text-on-surface-variant font-medium leading-none">L3 Tech</span></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-2 ring-surface-container-lowest shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvI6p4nPYRsHT0cY4XEg8zY3ChO5yGirRNXlN5ZJg4mRQOjkpW_NdZ1T7Li2pWNvJ6LCUoneFc9g89NBuWqHF66BtNQ3J6fqjRDbC-Fxz36skyfSy-VCODsxNVmJMxfJXlfysoNGb3OmceU1RqVApWl8GS1ps3us-URha6lG2SbQ4RNuSN0owkAi5DNvLS8qvaKZq93CU0qsuou-YOOWhxtXDPySxxRrVYjWCaZxtzugoRIvItYztyaQ"></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-20 pb-28 bg-surface px-margin"><div class="flex flex-col w-full gap-space-md">
+<!-- Context Breadcrumb & Live Job Strip -->
+<section class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+<span class="material-symbols-outlined text-[16px] text-secondary">precision_manufacturing</span>
+<span class="">INC-8919 · Bay 04 East</span>
+</div>
+<span class="inline-flex items-center gap-1.5 px-space-sm py-0.5 rounded-full bg-surface-container-high text-on-surface font-label-sm text-label-sm">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+</span>
+        Live Feed 120Hz
+      </span>
+</div>
+<div class="flex items-baseline justify-between">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface font-bold tracking-tight">Lathe 02 Verification</h2>
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">Spindle Rev #884</span>
+</div>
+</section>
+<!-- Live Optical Inspection Realtime Hero -->
+<div class="relative w-full h-44 rounded-xl overflow-hidden shadow-md bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="High precision industrial CNC lathe spindle turning polished aerospace steel parts with luminous blue optical laser micrometer sensor beam measuring sub-millimeter tolerances in clean modern manufacturing plant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNfxi65aKVTklQeU76LPGgXGwnPqmDMVNWM3R0vE9Qpvx3mqtRXCeviVgKtVpIUHaUHyWrVlv24l8iJ__Q7WlN1Ir87SY-eOylhitwsZrUcvJqwVE5XIY8zwHKAMt2I2-EdoPaASC9-HxNK5cHpS6hDgYBQElPlMc5c0MZ-V7xOYg3F5WjAJR9IBL-uzFJ3tAJ14CNikRlpLrxwMsTarbiUx8d6jRWu4pkobMfzrbRkf2pbMvO94NkRw">
+<div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/40 to-transparent flex flex-col justify-end p-space-md text-on-primary">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="flex items-center justify-center w-6 h-6 rounded-full bg-secondary text-on-secondary">
+<span class="material-symbols-outlined text-[14px]">sensors</span>
+</span>
+<span class="font-label-md text-label-md font-semibold tracking-wide uppercase">AI Optical Sensor v4.2</span>
+</div>
+<span class="font-label-sm text-label-sm text-surface-container-highest bg-surface-container-highest/20 px-2 py-0.5 rounded-full backdrop-blur-md">Variance ±0.0012mm</span>
+</div>
+<p class="font-body-sm text-body-sm text-surface-container-high mt-1 line-clamp-1">Continuous micrometer sampling active. High-frequency vibration normalized.</p>
+</div>
+</div>
+<!-- Primary Card: Live Quality Run Progress -->
+<section class="flex flex-col gap-space-md p-space-md rounded-xl bg-surface-container-lowest shadow-[0_12px_32px_-8px_rgba(11,28,48,0.08)]">
+<div class="flex items-center justify-between gap-space-sm flex-wrap">
+<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/10 text-secondary">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-80"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-secondary"></span>
+</span>
+<span class="font-label-sm text-label-sm font-bold tracking-wider uppercase">Running Automated Verification</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Cycle: 14s / part</span>
+</div>
+<!-- Counters & Radial Progress Bar -->
+<div class="flex items-center justify-between gap-space-md pt-space-xs">
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant">Validated Run Target</span>
+<div class="flex items-baseline gap-space-xs mt-0.5">
+<span class="font-headline-xl-mobile text-headline-xl-mobile font-bold text-on-surface" id="counter-val">48</span>
+<span class="font-headline-sm text-headline-sm text-on-surface-variant font-semibold">/ 50</span>
+<span class="font-label-md text-label-md font-semibold text-secondary ml-1">Parts (96%)</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">verified</span>
+          48 consecutive passed optical spec
+        </span>
+</div>
+<!-- Compact Circular Telemetry Visual -->
+<div class="relative w-20 h-20 shrink-0 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+<path class="text-surface-container" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.5"></path>
+<path class="text-secondary transition-all duration-700 ease-out" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" id="svg-progress-circle" stroke="currentColor" stroke-dasharray="96, 100" stroke-linecap="round" stroke-width="3.5"></path>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+<span class="font-label-md text-label-md font-bold text-on-surface">96%</span>
+<span class="font-label-sm text-[9px] uppercase tracking-tighter text-on-surface-variant">Q-SCORE</span>
+</div>
+</div>
+</div>
+<!-- Linear Segmented Visual Bar -->
+<div class="flex flex-col gap-1.5">
+<div class="w-full h-3 rounded-full bg-surface-container overflow-hidden p-0.5">
+<div class="h-full rounded-full bg-secondary transition-all duration-500" id="linear-progress-bar" style="width: 96%"></div>
+</div>
+<div class="flex justify-between items-center text-on-surface-variant font-label-sm text-label-sm">
+<span class="">Tolerance threshold: 0.005mm</span>
+<span class="font-semibold text-on-surface">Target 50 zero-drift units</span>
+</div>
+</div>
+<!-- Ready Banner Notification preview -->
+<div class="flex items-center gap-space-sm p-space-sm rounded-xl bg-surface-container-low text-on-surface">
+<span class="material-symbols-outlined text-[22px] text-secondary shrink-0">info</span>
+<p class="font-body-sm text-body-sm leading-tight text-on-surface">
+<strong class="font-semibold">When 50 reached:</strong> Transitioning directly to <em>Verified — waiting for Lead Plant Ops approval</em>.
+      </p>
+</div>
+</section>
+<!-- Interactive Workflow Lifecycle Explorer -->
+<section class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">alt_route</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Workflow Lifecycle States</h3>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-semibold">Touch to Simulate</span>
+</div>
+<!-- Interactive Segmented Selector -->
+<div class="grid grid-cols-4 gap-1 p-1 rounded-xl bg-surface-container-high shadow-inner" role="tablist">
+<button class="state-tab py-2 px-1 rounded-lg text-center transition-all text-on-surface-variant" id="btn-stateA" onclick="switchState('stateA')" type="button">
+<span class="block font-label-sm text-label-sm font-bold">State A</span>
+<span class="block font-label-sm text-[10px] text-on-surface-variant truncate">Complete</span>
+</button>
+<button class="state-tab py-2 px-1 rounded-lg text-center transition-all hover:text-on-surface bg-surface-container-lowest text-on-surface shadow-sm" id="btn-stateB" onclick="switchState('stateB')" type="button">
+<span class="block font-label-sm text-label-sm font-bold">State B</span>
+<span class="block font-label-sm text-[10px] text-on-surface-variant truncate">Defect</span>
+</button>
+<button class="state-tab py-2 px-1 rounded-lg text-center transition-all hover:text-on-surface text-on-surface-variant" id="btn-stateC" onclick="switchState('stateC')" type="button">
+<span class="block font-label-sm text-label-sm font-bold">State C</span>
+<span class="block font-label-sm text-[10px] text-on-surface-variant truncate">Escalate</span>
+</button>
+<button class="state-tab py-2 px-1 rounded-lg text-center transition-all hover:text-on-surface text-on-surface-variant" id="btn-stateD" onclick="switchState('stateD')" type="button">
+<span class="block font-label-sm text-label-sm font-bold">State D</span>
+<span class="block font-label-sm text-[10px] text-on-surface-variant truncate">Approved</span>
+</button>
+</div>
+<!-- STATE A: Verification Complete -->
+<div class="state-card flex flex-col gap-space-sm p-space-md rounded-xl bg-surface-container-lowest shadow-sm hidden" id="card-stateA">
+<div class="flex items-center justify-between">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-variant text-on-surface font-label-sm text-label-sm font-bold">
+<span class="material-symbols-outlined text-[16px] text-secondary">check_circle</span>Post-Verification
+        </div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Status Code: 200-VERIF</span>
+</div>
+<div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface font-bold">Waiting for Lead Plant Ops approval</h4>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Awaiting Plant Lead sign-off</p>
+</div>
+<div class="flex items-center justify-between pt-space-xs mt-space-xs bg-surface-container-low p-space-sm rounded-lg">
+<div class="flex items-center gap-2">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="Portrait of senior industrial plant operations lead manager Marcus Vance in safety hardhat and safety glasses" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNyJ3UKMZZIaChpCfip9HpaS7JEMifKm-UtO6B9tyS-At1DulV9YeDmFbNLkcVcoWPx5AC9qK7NbArDqBpH-dDs8BBM8S5REznZ0khn0Aw7wA7mz8h5VouvyagdO_cUkbmDLxparWr98X3rsxiS5HznSnH_VaIjMjNg59IhwvF-IQEEhXunoklft47gYQo8taswdhV6sQkCnONDoaHIwkuJ74FxOp58g9Xeh2_cTYuPVLtooCujlT6qA">
+<div>
+<span class="font-label-sm text-label-sm font-bold text-on-surface block leading-tight">Marcus Vance</span>
+<span class="font-label-sm text-[10px] text-on-surface-variant">Shift Lead Supervisor · Station 01</span>
+</div>
+</div>
+<span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-secondary font-bold">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+          Awaiting Action
+        </span>
+</div>
+</div>
+<!-- STATE B: Failure / Reopened -->
+<div class="state-card flex flex-col gap-space-sm p-space-md rounded-xl bg-error-container text-on-error-container shadow-sm" id="card-stateB">
+<div class="flex items-center justify-between">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error text-on-error font-label-sm text-label-sm font-bold">
+<span class="material-symbols-outlined text-[16px]">error</span>Quality Failure
+        </div>
+<span class="font-label-sm text-label-sm text-on-error-container">Flag Code: QF-902</span>
+</div>
+<div>
+<h4 class="font-headline-sm text-headline-sm font-bold text-on-error-container">Defects still found</h4>
+<p class="font-body-md text-body-md mt-1 text-on-error-container">
+          Incident returned to tracing agent. Lathe 02 work order closed on mobile terminal and dispatched for mechanical overhaul.
+        </p>
+</div>
+<div class="flex items-center gap-2 p-space-sm rounded-lg bg-surface-container-lowest/60 backdrop-blur-md">
+<span class="material-symbols-outlined text-error text-[20px] shrink-0">warning</span>
+<span class="font-label-sm text-label-sm text-on-error-container leading-tight">Cycle #49 failed optical surface flatness spec (+0.012mm). Root cause logged to incidents.</span>
+</div>
+</div>
+<!-- STATE C: Escalated -->
+<div class="flex flex-col gap-space-sm p-space-md rounded-xl bg-surface-container-high shadow-sm hidden" id="card-stateC">
+<div class="flex items-center justify-between">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-container text-on-primary font-label-sm text-label-sm font-bold">
+<span class="material-symbols-outlined text-[16px]">priority_high</span>Escalation
+        </div>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-mono">CODE: ESC-TORQUE</span>
+</div>
+<div>
+<h4 class="font-headline-sm text-headline-sm font-bold text-on-surface">Escalated to supervisor</h4>
+<p class="font-body-md text-body-md mt-1 text-on-surface-variant">
+          Status Reason: <strong class="text-on-surface font-semibold">Torque sensor calibration offset &gt; 0.05mm detected by automated safety interlock.</strong>
+</p>
+</div>
+<div class="p-space-sm rounded-lg bg-surface-container flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[20px] text-secondary">assignment_ind</span>
+<span class="font-label-sm text-label-sm font-medium text-on-surface">Chief Mechanical Auditor assigned</span>
+</div>
+<span class="font-label-sm text-label-sm font-bold text-secondary">Priority 1</span>
+</div>
+</div>
+<!-- STATE D: Closed & Approved -->
+<div class="flex flex-col gap-space-sm p-space-md rounded-xl bg-surface-container-lowest shadow-sm hidden" id="card-stateD">
+<div class="flex items-center justify-between">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-bold">
+<span class="material-symbols-outlined text-[16px]">verified_user</span>
+          State D · Release Certified
+        </div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">ID: 8919-ARCHIVE</span>
+</div>
+<div>
+<h4 class="font-headline-sm text-headline-sm font-bold text-on-surface">Job approved and released</h4>
+<p class="font-body-md text-body-md mt-1 text-on-surface-variant">
+          Lead Ops digital approved</p>
+</div>
+<div class="flex items-center justify-between p-space-sm rounded-lg bg-surface-container-low text-on-surface">
+<span class="font-label-sm text-label-sm font-mono">SHA-256: 7f89b4c0...39a1</span>
+<span class="font-label-sm text-label-sm font-bold text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">cloud_done</span> Archived
+        </span>
+</div>
+</div>
+</section>
+<!-- Live Telemetry Quick Diagnostics Grid -->
+<section class="grid grid-cols-2 gap-space-sm">
+<div class="flex flex-col p-space-sm rounded-xl bg-surface-container-lowest shadow-sm">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Spindle RPM</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface mt-0.5">3,450 RPM</span>
+<span class="font-label-sm text-[11px] text-secondary font-medium mt-1">±2 RPM Stability</span>
+</div>
+<div class="flex flex-col p-space-sm rounded-xl bg-surface-container-lowest shadow-sm">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Spindle Temp</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface mt-0.5">41.8°C</span>
+<span class="font-label-sm text-[11px] text-on-surface-variant font-medium mt-1">Normal (Limit 65°C)</span>
+</div>
+</section>
+<!-- Glove-Friendly Action Buttons -->
+<section class="flex flex-col gap-space-sm mt-space-xs">
+<!-- Primary Touch Action Button (min 60px height) -->
+<button class="w-full max-w-xs mx-auto py-2.5 px-5 rounded-xl bg-primary text-on-primary font-label-md text-label-md font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-sm" id="expedite-btn" onclick="triggerExpedite()" type="button"><span class="material-symbols-outlined text-[24px] animate-spin">refresh</span><span class="">DISPATCHING PUSH ALERT...</span></button>
+<!-- Secondary Safe Action Button (min 56px height) -->
+
+</section>
+<!-- Telemetry Modal Drawer Preview (Toggled by user action) -->
+
+</div>
+<script>
+  function switchState(targetKey) {
+    const states = ['stateA', 'stateB', 'stateC', 'stateD'];
+    states.forEach(s => {
+      const card = document.getElementById('card-' + s);
+      const btn = document.getElementById('btn-stateA');
+      const curBtn = document.getElementById('btn-' + s);
+      
+      if (s === targetKey) {
+        card.classList.remove('hidden');
+        curBtn.classList.remove('text-on-surface-variant');
+        curBtn.classList.add('bg-surface-container-lowest', 'text-on-surface', 'shadow-sm');
+      } else {
+        card.classList.add('hidden');
+        curBtn.classList.remove('bg-surface-container-lowest', 'text-on-surface', 'shadow-sm');
+        curBtn.classList.add('text-on-surface-variant');
+      }
+    });
+  }
+
+  function triggerExpedite() {
+    const btn = document.getElementById('expedite-btn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="material-symbols-outlined text-[24px] animate-spin">refresh</span><span>DISPATCHING PUSH ALERT...</span>';
+    btn.classList.add('opacity-90');
+    
+    setTimeout(() => {
+      btn.innerHTML = '<span class="material-symbols-outlined text-[24px] text-on-primary">check</span><span>EXPEDITE SENT TO MARCUS VANCE</span>';
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.classList.remove('opacity-90');
+      }, 3000);
+    }, 1200);
+  }
+
+  function openTelemetryDrawer() {
+    const drawer = document.getElementById('telemetry-drawer');
+    drawer.classList.toggle('hidden');
+    drawer.classList.toggle('flex');
+  }
+
+  // Ensure persistent bottom nav highlights "Work List"
+  (function initActiveNavigation() {
+    const navLinks = document.querySelectorAll('nav [data-path]');
+    navLinks.forEach(link => {
+      if (link.getAttribute('data-path') === 'work-list') {
+        link.classList.remove('text-on-surface-variant');
+        link.classList.add('bg-primary', 'text-on-primary', 'shadow-md');
+      } else {
+        link.classList.remove('bg-primary', 'text-on-primary', 'shadow-md');
+        link.classList.add('text-on-surface-variant');
+      }
+    });
+  })();
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe pointer-events-none" data-active-classes="bg-primary text-on-primary shadow-[0_4px_16px_rgba(15,23,42,0.18)]"><div class="max-w-md mx-auto px-margin pb-space-sm pt-space-xs pointer-events-auto"><div class="h-20 bg-surface-container-lowest/85 backdrop-blur-2xl rounded-full shadow-[0_12px_36px_-6px_rgba(15,23,42,0.12),0_4px_16px_rgba(15,23,42,0.04)] px-space-xs flex items-center justify-around gap-1"><a aria-current="page" class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 transition-all active:scale-95 bg-primary text-on-primary shadow-[0_4px_16px_rgba(15,23,42,0.18)]" data-path="work-list" href="#"><span class="material-symbols-outlined text-[22px]">fact_check</span><span class="font-label-sm text-label-sm tracking-tight">Work List</span></a><a class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 text-on-surface-variant transition-all active:scale-95" data-path="ai-helper" href="#"><div class="relative flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">mic</span><span class="material-symbols-outlined text-[12px] absolute -top-1 -right-2 text-secondary">auto_awesome</span></div><span class="font-label-sm text-label-sm tracking-tight">AI Helper</span></a><a class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 text-on-surface-variant transition-all active:scale-95 relative" data-path="notifications" href="#"><div class="relative flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute -top-1 -right-2 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-error text-on-error font-label-sm text-[10px] leading-none shadow-sm">2</span></div><span class="font-label-sm text-label-sm tracking-tight">Notifications</span></a><a class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 text-on-surface-variant transition-all active:scale-95" data-path="settings" href="#"><span class="material-symbols-outlined text-[22px]">tune</span><span class="font-label-sm text-label-sm tracking-tight">Settings</span></a></div></div></nav>
+
+
+
+
+
+</body></html>

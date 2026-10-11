@@ -1,0 +1,198 @@
+<!DOCTYPE html><html class="h-full bg-background" lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_tab" name="shell-type"><title>Apex Field Copilot</title><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "secondary": "#4b41e1", "error-container": "#ffdad6", "surface-variant": "#d3e4fe", "inverse-on-surface": "#eaf1ff", "primary-fixed-dim": "#bec6e0", "on-primary-container": "#7c839b", "secondary-fixed-dim": "#c3c0ff", "surface-bright": "#f8f9ff", "primary-container": "#131b2e", "outline-variant": "#c6c6cd", "on-secondary-container": "#fffbff", "surface-container-highest": "#d3e4fe", "surface-container-low": "#eff4ff", "on-error-container": "#93000a", "surface-dim": "cbdbf5", "surface-tint": "#565e74", "primary": "#000000", "on-surface-variant": "#45464d", "tertiary": "#000000", "on-error": "#ffffff", "outline": "#76777d", "background": "#f8f9ff", "on-tertiary-fixed-variant": "#004c6e", "primary-fixed": "#dae2fd", "inverse-surface": "#213145", "surface-container": "#e5eeff", "on-background": "#0b1c30", "on-primary-fixed-variant": "#3f465c", "tertiary-fixed-dim": "#89ceff", "on-secondary-fixed-variant": "#3323cc", "surface": "#f8f9ff", "tertiary-container": "#001e2f", "on-surface": "#0b1c30", "error": "#ba1a1a", "secondary-container": "#645efb", "on-tertiary-container": "#008cc7", "secondary-fixed": "#e2dfff", "on-secondary": "#ffffff", "on-tertiary": "#ffffff", "inverse-primary": "#bec6e0", "surface-container-lowest": "#ffffff", "surface-container-high": "#dce9ff", "tertiary-fixed": "#c9e6ff", "on-primary-fixed": "#131b2e", "on-secondary-fixed": "#0f0069", "on-tertiary-fixed": "#001e2f", "on-primary": "#ffffff" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "margin-desktop": "2.5rem", "margin-tablet": "1.5rem", "gutter": "1rem", "space-md": "1rem", "margin": "1rem", "space-xs": "0.25rem", "space-sm": "0.5rem", "space-lg": "1.5rem", "gutter-tablet": "1.25rem", "gutter-desktop": "1.5rem", "space-xl": "2.25rem" }, fontFamily: { "label-md": ["Geist"], "label-lg": ["Geist"], "headline-lg-mobile": ["Geist"], "headline-sm": ["Geist"], "body-md": ["Geist"], "headline-xl-mobile": ["Geist"], "body-lg": ["Geist"], "headline-md": ["Geist"], "body-sm": ["Geist"], "headline-lg": ["Geist"], "label-sm": ["Geist"], "headline-xl": ["Geist"] }, fontSize: { "label-md": ["13px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "label-lg": ["15px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }], "headline-lg-mobile": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "headline-sm": ["17px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "body-md": ["15px", { "lineHeight": "22px", "letterSpacing": "0em", "fontWeight": "400" }], "headline-xl-mobile": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.025em", "fontWeight": "700" }], "body-lg": ["17px", { "lineHeight": "26px", "letterSpacing": "-0.005em", "fontWeight": "400" }], "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" }], "body-sm": ["13px", { "lineHeight": "18px", "letterSpacing": "0.005em", "fontWeight": "400" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "700" }], "headline-xl": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.03em", "fontWeight": "700" }] } } } };</script><style>@layer base{html,body{width:100%;margin:0;padding:0;min-height:100%;}body{overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style></head><body class="bg-surface font-body-md text-on-surface antialiased flex flex-col min-h-full selection:bg-secondary/20"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/80 backdrop-blur-2xl shadow-[0_1px_12px_rgba(11,28,48,0.04)]"><div class="h-20 px-margin flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0"><div class="flex items-center justify-center p-space-xs rounded-xl bg-surface-container-lowest/80 backdrop-blur-md shadow-[0_2px_8px_rgba(11,28,48,0.06)] shrink-0"><img alt="Apex Industrial Copilot Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1WEW_QiB8b1506KUbhGDwTqnPcfMWl21zsmH0KxebrcFqSzoIxcT3mTznJqeNKqOD277OQLUBb4q3wH8eIxQtHFHP_z65iIrhsC6AbxPjjDORKNBcYI1cOtYtcb5-DoYGumZoeTWXNr51KzAfAwGZpglxBgbQkYzqITayTmghVX8LhsFagi4fQ99LrVfExJrTEyvncFXtxjgEYPGUR-PrbqKeNEGBbbLWaMODelnO0oMsQ8V04IxXZF0QY9"></div><div class="flex flex-col min-w-0"><div class="flex items-center gap-space-xs"><h1 class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight truncate">Apex Field Copilot</h1></div><div class="flex items-center gap-1.5"><span class="flex h-2 w-2 relative shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span></span><span class="font-label-sm text-label-sm text-secondary truncate font-bold tracking-wider uppercase">Gemini Live · vi-VN active</span></div></div></div><div class="flex items-center gap-space-sm shrink-0"><div class="flex items-center gap-space-xs pl-space-sm pr-space-xs py-space-xs rounded-full bg-surface-container/70 backdrop-blur-lg shadow-[0_2px_10px_rgba(15,23,42,0.05)]"><div class="hidden sm:flex flex-col text-right mr-1"><span class="font-label-sm text-label-sm text-on-surface font-bold leading-none">Tuan Nguyen</span><span class="font-label-sm text-label-sm text-on-surface-variant font-medium leading-none">L3 Tech</span></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-2 ring-surface-container-lowest shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvI6p4nPYRsHT0cY4XEg8zY3ChO5yGirRNXlN5ZJg4mRQOjkpW_NdZ1T7Li2pWNvJ6LCUoneFc9g89NBuWqHF66BtNQ3J6fqjRDbC-Fxz36skyfSy-VCODsxNVmJMxfJXlfysoNGb3OmceU1RqVApWl8GS1ps3us-URha6lG2SbQ4RNuSN0owkAi5DNvLS8qvaKZq93CU0qsuou-YOOWhxtXDPySxxRrVYjWCaZxtzugoRIvItYztyaQ"></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-20 pb-28 bg-surface px-margin"><div class="flex flex-col w-full gap-space-md">
+<!-- Top Telemetry & Status Banner -->
+<div class="flex items-center justify-between w-full"><a href="#" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-lowest/80 backdrop-blur-md shadow-sm border border-outline-variant/30 text-on-surface-variant hover:text-on-surface active:scale-95 transition-all"><span class="material-symbols-outlined text-[18px]">arrow_back</span><span class="font-label-sm text-label-sm font-semibold">Back to Work Orders</span></a><span class="font-label-sm text-label-sm text-on-surface-variant font-mono">WO-40291</span></div><div class="w-full rounded-2xl bg-surface-container-lowest/90 backdrop-blur-2xl p-space-md shadow-[0_10px_30px_-10px_rgba(15,23,42,0.08)] flex flex-col gap-space-xs relative overflow-hidden">
+<div class="flex items-center justify-between gap-space-sm flex-wrap">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container/15 text-secondary">
+<span class="flex h-2 w-2 relative shrink-0">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+</span>
+<span class="font-label-sm text-label-sm uppercase tracking-wider">AWAITING EVIDENCE · 58% AI CONFIDENCE</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">#INC-8924 · Line 04 CNC Milling</span>
+</div>
+<div class="mt-1 flex items-baseline justify-between gap-space-sm">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface font-semibold tracking-tight">
+        Spindle vibration harmonic drift
+      </h2>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded-md bg-surface-container text-on-surface-variant shrink-0">Priority P1</span>
+</div>
+</div>
+<!-- Agent Directive Callout -->
+<div class="w-full rounded-2xl bg-surface-container/70 backdrop-blur-xl p-space-md shadow-sm flex flex-col gap-space-xs">
+<div class="flex items-center gap-space-xs text-secondary">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+<span class="font-label-md text-label-md tracking-tight uppercase">AI Diagnostic Request · Root Cause Agent</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface leading-relaxed">
+      Suspect micro-fracture or thermal scoring on cutting tool flutes. Please capture a high-resolution close-up of cutting tool flank and spindle collar.
+    </p>
+<div class="flex items-center gap-space-sm pt-1">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-secondary">verified</span>
+<span class="font-label-sm text-label-sm">Optimal angle: 45° oblique lighting</span>
+</div>
+</div>
+</div>
+<!-- Live Optical Viewfinder Card -->
+<div class="w-full rounded-3xl bg-surface-container-lowest/80 backdrop-blur-2xl p-space-sm shadow-[0_16px_36px_-12px_rgba(15,23,42,0.12)] flex flex-col gap-space-sm">
+<!-- Camera Viewport Box -->
+<div class="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-primary-container shadow-inner flex flex-col justify-between p-space-sm">
+<!-- Background Viewport Feed Placeholder -->
+<div class="absolute inset-0 w-full h-full bg-cover bg-center opacity-85" data-alt="High precision industrial macro photography of a CNC titanium cutting bit inside milling chamber with cool blue inspection ring lights reflecting off mirror polished metal flutes and mechanical spindle collar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuByAdHm1k1jF_BTzOR3yWAW8H4Htwnz5y4OD4pckQXaPvZewYsKvV-VWb5dhpfxuaEN56cvG3Retsq04U60ZCrKkvHX_Q6Iq5VzrZ99owQjp-1VpsM1546p4Sx7ub1y4Cr5dgWbJQArs5k5PmIc1CW9i4-CCOR2lCHiMDcu-qa7yMW5d2T5IzK8c3cfrWdoRS-c1zx609ZcXxDJJveLWCVYxvZHQscYbkJcX1r0wyAt1vZz6Jiz0CUbyg')"></div>
+<!-- Subtle optical gradient scrim -->
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/60 pointer-events-none"></div>
+<!-- AR Focus Brackets & Reticle Overlay -->
+<div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+<!-- Reticle Center -->
+<div class="relative w-28 h-28 flex items-center justify-center">
+<!-- Corner brackets -->
+<span class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-secondary-fixed"></span>
+<span class="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-secondary-fixed"></span>
+<span class="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-secondary-fixed"></span>
+<span class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-secondary-fixed"></span>
+<!-- Crosshair center dot with pulse -->
+<div class="w-1.5 h-1.5 rounded-full bg-secondary-fixed shadow-[0_0_8px_#c3c0ff]"></div>
+<!-- Scanning target line -->
+<div class="absolute inset-x-2 h-0.5 bg-secondary-fixed/50 animate-pulse"></div>
+</div>
+</div>
+<!-- Viewport Header HUD -->
+<div class="relative z-10 flex items-center justify-between w-full">
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-surface-bright">
+<span class="h-1.5 w-1.5 rounded-full bg-error animate-ping"></span>
+<span class="font-label-sm text-label-sm tracking-wide">Gemini Live · 1080p 60fps</span>
+</div>
+<!-- Torch Flashlight Toggle -->
+<button class="h-10 w-10 min-h-[40px] min-w-[40px] rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-surface-bright active:scale-90 transition-transform" id="torch-toggle" type="button">
+<span class="material-symbols-outlined text-[20px]" id="torch-icon">flashlight_on</span>
+</button>
+</div>
+<!-- Viewport Footer HUD Controls -->
+<div class="relative z-10 flex flex-col gap-2 w-full">
+<!-- Zoom chips row -->
+<div class="flex items-center justify-center gap-space-xs">
+<div class="flex items-center p-1 rounded-full bg-black/60 backdrop-blur-md">
+<button class="zoom-pill px-3 py-1 rounded-full font-label-sm text-label-sm text-surface-bright/70 transition-all" data-zoom="1x" type="button">1x</button>
+<button class="zoom-pill px-3 py-1 rounded-full font-label-sm text-label-sm bg-secondary text-on-secondary shadow-sm transition-all" data-zoom="2.5x" type="button">2.5x Macro</button>
+<button class="zoom-pill px-3 py-1 rounded-full font-label-sm text-label-sm text-surface-bright/70 transition-all" data-zoom="5x" type="button">5x</button>
+</div>
+</div>
+<!-- Audio Wave & Speech Activity Indicator -->
+<div class="flex items-center justify-between px-space-sm py-1.5 rounded-xl bg-black/50 backdrop-blur-md text-surface-bright">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-secondary-fixed">mic</span>
+<span class="font-label-sm text-label-sm text-surface-bright/90">Voice Command Active (vi-VN / EN)</span>
+</div>
+<!-- Live Audio Waveform Bars -->
+<div class="flex items-end gap-1 h-3">
+<span class="w-0.5 h-1.5 bg-secondary-fixed rounded-full animate-pulse"></span>
+<span class="w-0.5 h-3 bg-secondary-fixed rounded-full"></span>
+<span class="w-0.5 h-2 bg-secondary-fixed rounded-full animate-pulse"></span>
+<span class="w-0.5 h-3.5 bg-secondary-fixed rounded-full"></span>
+<span class="w-0.5 h-1 bg-secondary-fixed rounded-full"></span>
+</div>
+</div>
+</div>
+</div>
+<!-- Secondary Micro Guidance Tile inside card -->
+<div class="flex items-center justify-between px-space-sm py-1 text-on-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-secondary">center_focus_strong</span>
+<span class="font-label-sm text-label-sm">Laser auto-focus locked on cutting tip</span>
+</div>
+<span class="font-label-sm text-label-sm font-semibold">DIST: 4.8 cm</span>
+</div>
+</div>
+<!-- Primary Gloved-Hand Action Triggers (62px Standard) -->
+<div class="flex flex-col gap-space-sm w-full mt-1">
+<!-- Big Primary Capture Button -->
+<button class="w-full h-11 rounded-xl bg-primary text-on-primary font-label-md text-label-md flex items-center justify-center gap-2 px-space-md shadow-sm active:scale-[0.98] transition-all" id="capture-button" type="button"><span class="material-symbols-outlined text-[20px]">photo_camera</span><span class="">Capture Photo</span><span class="material-symbols-outlined text-[16px] text-secondary-fixed-dim">auto_awesome</span></button>
+<!-- Secondary Action: Upload Diagnostic Video / Stored Files -->
+<button class="w-full h-11 rounded-xl bg-surface-container-high/80 text-on-surface font-label-md text-label-md flex items-center justify-center gap-2 px-space-md shadow-sm active:scale-[0.98] transition-all" type="button"><span class="material-symbols-outlined text-[18px] text-secondary">video_camera_back</span><span class="">Upload File</span></button>
+</div>
+<!-- Telemetry Transmission Status / WebSocket Route Info -->
+<div class="w-full py-space-xs px-space-sm rounded-xl bg-surface-container-low/60 flex items-center justify-between text-on-surface-variant gap-space-xs">
+<div class="flex items-center gap-1.5 min-w-0">
+<span class="h-2 w-2 rounded-full bg-secondary shrink-0"></span>
+<span class="font-label-sm text-label-sm truncate">Streamed directly via Gemini Live WebSocket</span>
+</div>
+<span class="font-label-sm text-label-sm font-mono text-secondary shrink-0">/api/gemini-live/ws</span>
+</div>
+<!-- Reference Snapshot Comparison Mini-Tray -->
+<div class="w-full flex flex-col gap-space-xs mt-1">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Reference Golden Specimen</span>
+<span class="font-label-sm text-label-sm text-secondary font-semibold">Line 04 Benchmark</span>
+</div>
+<div class="grid grid-cols-2 gap-space-sm">
+<div class="relative h-24 rounded-xl overflow-hidden bg-surface-container shadow-sm">
+<div class="w-full h-full bg-cover bg-center" data-alt="Close up engineering macro shot of pristine CNC end mill flute edges showing zero wear and uniform metallic sheen under factory inspection lighting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDbINNHQwg8XuU2A6V2Wl_mHr0nO4-uvpv8-GUblFVLl83INUCanJlcDvgALizLkAG-VIn37jtNbL0BPIpOpg8LjPotzUqekYVXU_Sh3BdMYkUgZq801X7lTUHj6LkhKMhUuyegMV18ZgfVhwBKpk1XmDc0ZdxRuHXqyNxs5ffVVMjAizaOyDVU8RNKduFU0v6kjMTdczRwPkf5_sb3J5gznVcPTmigz3zZhOQFtrPz3oURpLBXUMelKg')"></div>
+<div class="absolute bottom-1 left-2 px-1.5 py-0.5 rounded bg-black/60 text-white font-label-sm text-[10px]">Nominal (0.00mm)</div>
+</div>
+<div class="relative h-24 rounded-xl overflow-hidden bg-surface-container shadow-sm">
+<div class="w-full h-full bg-cover bg-center" data-alt="Technical macro inspection photograph of a degraded metal drill bit showing heat discoloration and jagged flute fractures highlighted under angled industrial spot lamp" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDjTjIe5E9rB2LcKW6zyhvdZ1L8YZgmedrp0aj_5XT3KMKFn7MeO8jNCrUtaPGlFnl3TMzSGf1hcHgAti99reJwwanqqG0PLhLgjyDm-i3_R5guY2J20TATwBPJdO53WE2VvQVIZi3fNBK0aW508QrM1TP4-fkK17q_e0dP_KkfhumQb0FL-EhkfL-aPWUaSWluJaFyvE2abRI418Lbqup9xCXNqIJFZcY3fhgP85FZmTX0JwqpJ9EsoQ')"></div>
+<div class="absolute bottom-1 left-2 px-1.5 py-0.5 rounded bg-error/90 text-on-error font-label-sm text-[10px]">Critical Wear (&gt;0.35mm)</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Ensure the bottom tab 'Work List' is styled active per instructions
+  (function initActiveTabState() {
+    const workListTab = document.querySelector('nav a[data-path="work-list"]');
+    if (workListTab) {
+      workListTab.classList.remove('text-on-surface-variant');
+      workListTab.classList.add('bg-primary', 'text-on-primary', 'shadow-md');
+    }
+
+    // Zoom pill selection interaction
+    const zoomPills = document.querySelectorAll('.zoom-pill');
+    zoomPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        zoomPills.forEach(p => {
+          p.classList.remove('bg-secondary', 'text-on-secondary', 'shadow-sm');
+          p.classList.add('text-surface-bright/70');
+        });
+        pill.classList.add('bg-secondary', 'text-on-secondary', 'shadow-sm');
+        pill.classList.remove('text-surface-bright/70');
+      });
+    });
+
+    // Flashlight toggle micro-interaction
+    const torchBtn = document.getElementById('torch-toggle');
+    const torchIcon = document.getElementById('torch-icon');
+    let torchState = true;
+    if (torchBtn && torchIcon) {
+      torchBtn.addEventListener('click', () => {
+        torchState = !torchState;
+        if (torchState) {
+          torchIcon.textContent = 'flashlight_on';
+          torchBtn.classList.remove('bg-surface-container-lowest/20', 'text-white/60');
+          torchBtn.classList.add('bg-black/60', 'text-surface-bright');
+        } else {
+          torchIcon.textContent = 'flashlight_off';
+          torchBtn.classList.remove('bg-black/60', 'text-surface-bright');
+          torchBtn.classList.add('bg-surface-container-lowest/20', 'text-white/60');
+        }
+      });
+    }
+
+    // Capture button tap haptic feedback animation
+    const captureBtn = document.getElementById('capture-button');
+    if (captureBtn) {
+      captureBtn.addEventListener('click', () => {
+        captureBtn.classList.add('scale-95');
+        setTimeout(() => {
+          captureBtn.classList.remove('scale-95');
+        }, 150);
+      });
+    }
+  })();
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe pointer-events-none" data-active-classes="bg-primary text-on-primary shadow-[0_4px_16px_rgba(15,23,42,0.18)]"><div class="max-w-md mx-auto px-margin pb-space-sm pt-space-xs pointer-events-auto"><div class="h-20 bg-surface-container-lowest/85 backdrop-blur-2xl rounded-full shadow-[0_12px_36px_-6px_rgba(15,23,42,0.12),0_4px_16px_rgba(15,23,42,0.04)] px-space-xs flex items-center justify-around gap-1"><a aria-current="page" class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 transition-all active:scale-95 bg-primary text-on-primary shadow-[0_4px_16px_rgba(15,23,42,0.18)]" data-path="work-list" href="#"><span class="material-symbols-outlined text-[22px]">fact_check</span><span class="font-label-sm text-label-sm tracking-tight">Work List</span></a><a class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 text-on-surface-variant transition-all active:scale-95" data-path="ai-helper" href="#"><div class="relative flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">mic</span><span class="material-symbols-outlined text-[12px] absolute -top-1 -right-2 text-secondary">auto_awesome</span></div><span class="font-label-sm text-label-sm tracking-tight">AI Helper</span></a><a class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 text-on-surface-variant transition-all active:scale-95 relative" data-path="notifications" href="#"><div class="relative flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute -top-1 -right-2 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-error text-on-error font-label-sm text-[10px] leading-none shadow-sm">2</span></div><span class="font-label-sm text-label-sm tracking-tight">Notifications</span></a><a class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 text-on-surface-variant transition-all active:scale-95" data-path="settings" href="#"><span class="material-symbols-outlined text-[22px]">tune</span><span class="font-label-sm text-label-sm tracking-tight">Settings</span></a></div></div></nav>
+
+
+
+</body></html>

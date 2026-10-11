@@ -1,0 +1,634 @@
+<!DOCTYPE html><html lang="en" style="width: 1280px; height: 3488px; overflow: hidden; position: relative;"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"primary-container":"#131b2e","outline-variant":"#c6c6cd","surface-tint":"#565e74","on-background":"#0b1c30","surface-variant":"#d3e4fe","error":"#ba1a1a","surface-container":"#e5eeff","on-primary":"#ffffff","surface-container-highest":"#d3e4fe","tertiary-container":"#001e2f","primary":"#000000","on-tertiary-container":"#008cc7","on-secondary-fixed-variant":"#3323cc","on-error":"#ffffff","surface":"#f8f9ff","surface-dim":"#cbdbf5","on-secondary-fixed":"#0f0069","primary-fixed":"#dae2fd","error-container":"#ffdad6","on-primary-fixed-variant":"#3f465c","surface-container-high":"#dce9ff","on-secondary-container":"#fffbff","tertiary":"#000000","on-tertiary-fixed-variant":"#004c6e","primary-fixed-dim":"#bec6e0","on-error-container":"#93000a","secondary-fixed-dim":"#c3c0ff","tertiary-fixed-dim":"#89ceff","on-surface-variant":"#45464d","on-primary-container":"#7c839b","on-primary-fixed":"#131b2e","background":"#f8f9ff","secondary-fixed":"#e2dfff","secondary":"#4b41e1","inverse-primary":"#bec6e0","tertiary-fixed":"#c9e6ff","on-surface":"#0b1c30","on-secondary":"#ffffff","secondary-container":"#645efb","inverse-on-surface":"#eaf1ff","surface-bright":"#f8f9ff","surface-container-lowest":"#ffffff","surface-container-low":"#eff4ff","inverse-surface":"#213145","on-tertiary":"#ffffff","outline":"#76777d","on-tertiary-fixed":"#001e2f"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-lg":"1.5rem","gutter-desktop":"1.5rem","margin":"1rem","margin-desktop":"2rem","gutter":"1.25rem","space-xs":"0.25rem","space-sm":"0.5rem","space-2xl":"3rem","space-base":"1rem","space-xl":"2rem","space-2xs":"0.125rem","space-md":"0.75rem"},fontFamily:{"mono-metric":["JetBrains Mono"],"display-mobile":["Geist"],"headline-lg-mobile":["Geist"],"headline-lg":["Geist"],"label-md":["Geist"],"headline-md":["Geist"],"body-lg":["Geist"],"body-sm":["Geist"],"display":["Geist"],"headline-sm":["Geist"],"label-sm":["Geist"],"body-md":["Geist"]},fontSize:{"mono-metric":["0.875rem",{"lineHeight":"1.25rem","letterSpacing":"-0.01em","fontWeight":"500"}],"display-mobile":["2rem",{"lineHeight":"2.5rem","letterSpacing":"-0.025em","fontWeight":"600"}],"headline-lg-mobile":["1.5rem",{"lineHeight":"2rem","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-lg":["1.75rem",{"lineHeight":"2.25rem","letterSpacing":"-0.025em","fontWeight":"600"}],"label-md":["0.8125rem",{"lineHeight":"1.125rem","letterSpacing":"0.01em","fontWeight":"500"}],"headline-md":["1.25rem",{"lineHeight":"1.75rem","letterSpacing":"-0.02em","fontWeight":"600"}],"body-lg":["1rem",{"lineHeight":"1.625rem","letterSpacing":"-0.011em","fontWeight":"400"}],"body-sm":["0.8125rem",{"lineHeight":"1.25rem","letterSpacing":"0em","fontWeight":"400"}],"display":["2.5rem",{"lineHeight":"3rem","letterSpacing":"-0.035em","fontWeight":"600"}],"headline-sm":["1.125rem",{"lineHeight":"1.5rem","letterSpacing":"-0.015em","fontWeight":"500"}],"label-sm":["0.6875rem",{"lineHeight":"1rem","letterSpacing":"0.04em","fontWeight":"600"}],"body-md":["0.875rem",{"lineHeight":"1.375rem","letterSpacing":"-0.006em","fontWeight":"400"}]}}}}</script></head><body class="bg-background font-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-[260px] flex flex-col justify-between z-50 shadow-[0_1px_8px_rgba(0,0,0,0.04)] bg-surface-container-lowest border-outline-variant/30"><div class="flex flex-col flex-1 overflow-y-auto"><div class="h-16 px-space-base flex items-center gap-space-sm"><div class="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center text-on-primary"><span class="material-symbols-outlined text-[18px]">precision_manufacturing</span></div><div class="flex flex-col"><span class="font-headline-sm text-headline-sm tracking-tight text-on-surface font-semibold">Lumina Slate</span><span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Factory Operations</span></div></div><div class="px-space-base pt-space-sm pb-space-xs"><span class="font-label-sm text-label-sm uppercase tracking-wider text-outline font-semibold">Command Core</span></div><nav class="flex flex-col px-space-sm gap-space-2xs" data-active-classes="bg-surface-container-highest text-on-surface font-semibold"><div class="flex flex-col gap-space-2xs"><a class="flex items-center justify-between px-space-sm py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="factory-dashboard" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px]">dashboard</span><span class="font-body-md text-body-md">Dashboard</span></div><span class="material-symbols-outlined text-[16px] text-outline">expand_more</span></a><div class="ml-space-md pl-space-sm border-l border-outline-variant/30 flex flex-col gap-space-2xs py-space-2xs"><a aria-current="page" class="flex items-start gap-space-xs px-space-xs py-space-2xs rounded-lg transition-all bg-surface-container-highest text-on-surface font-semibold" data-path="incident-inc-a389f1" href="#"><span class="material-symbols-outlined text-[14px] text-error mt-0.5">warning</span><div class="flex flex-col"><span class="font-label-md text-label-md font-medium text-on-surface">INC-A389F1</span></div></a></div></div><a class="flex items-center justify-between px-space-sm py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="incident-log" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px]">crisis_alert</span><span class="font-body-md text-body-md">Incident Log</span></div></a><div class="pt-space-xs"><span class="px-space-xs font-label-sm text-label-sm uppercase tracking-wider text-outline font-semibold">Resources &amp; Ops</span></div><div class="flex flex-col gap-space-2xs"><a class="flex items-center justify-between px-space-sm py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="knowledge-hub" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px]">menu_book</span><span class="font-body-md text-body-md">Knowledge Hub</span></div><span class="material-symbols-outlined text-[16px] text-outline">expand_more</span></a><div class="ml-space-md pl-space-sm border-l border-outline-variant/30 flex flex-col gap-space-2xs py-space-2xs"><a class="px-space-xs py-space-2xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-all" data-path="sop-library" href="#">SOP Library</a><a class="px-space-xs py-space-2xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-all" data-path="tech-walkthroughs" href="#">Tech Walkthroughs</a></div></div><div class="flex flex-col gap-space-2xs"><a class="flex items-center justify-between px-space-sm py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="kaizen-impact" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px]">trending_up</span><span class="font-body-md text-body-md">Impact</span></div></a><div class="ml-space-md pl-space-sm border-l border-outline-variant/30 flex flex-col gap-space-2xs py-space-2xs"></div></div></nav></div><div class="p-space-base bg-surface-container/50 border-t border-outline-variant/20 flex flex-col gap-space-xs"><div class="flex items-center gap-space-sm"><div class="relative"><div class="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[20px]">person</span></div><span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-surface-container-low"></span></div><div class="flex flex-col min-w-0"><span class="font-label-md text-label-md font-semibold text-on-surface truncate">Devon Vance</span><span class="font-label-sm text-label-sm text-on-surface-variant truncate">Lead Plant Ops</span></div></div><div class="flex items-center justify-between pt-space-2xs text-on-surface-variant"><div class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span class="font-mono-metric text-[11px]">Node 04 Active</span></div><span class="font-mono-metric text-[11px] text-outline">v4.2.1</span></div></div></aside><div class="pl-[260px]"><header class="fixed top-0 left-[260px] right-0 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-base"><div class="flex-1"></div><div class="flex items-center gap-space-base"><div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-low shadow-[0_1px_4px_rgba(0,0,0,0.02)] text-on-surface-variant"><span class="material-symbols-outlined text-[18px] text-outline">search</span><span class="font-body-sm text-body-sm text-outline pr-4">Jump to asset...</span><kbd class="px-1.5 py-0.5 rounded bg-surface-container-lowest text-on-surface-variant font-mono-metric text-[10px] shadow-sm">⌘K</kbd></div><div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant"><span class="material-symbols-outlined text-[16px] text-outline">schedule</span><span class="font-mono-metric text-label-md text-on-surface">14:28:09 UTC</span></div><div class="flex items-center gap-2.5 pl-2"><div class="flex flex-col text-right"><span class="font-label-md text-label-md font-bold text-on-surface leading-tight">Devon Vance</span><span class="font-label-sm text-[11px] text-on-surface-variant leading-tight">Lead Plant Ops</span></div><div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-sm"><span class="material-symbols-outlined text-[20px]">person</span></div></div></div></header><main class="w-full pt-16 bg-surface"><div class="flex flex-col w-full pb-20">
+<!-- Sticky Quick Sub-Header / Incident Meta Banner -->
+<section class="w-full bg-surface-container-lowest border-b border-outline-variant/20 px-space-base md:px-space-xl py-space-md shadow-[0_1px_4px_rgba(0,0,0,0.02)] sticky top-16 z-30 flex flex-col gap-2.5"><div class="flex items-center gap-2 text-label-md font-body-sm text-on-surface-variant flex-wrap"><span class="hover:text-on-surface cursor-pointer">Dashboard</span><span class="text-outline-variant">/</span><span class="hover:text-on-surface cursor-pointer">Gearbox Casing</span><span class="text-outline-variant">/</span><span class="px-2 py-0.5 rounded bg-surface-container-high text-secondary font-mono-metric text-[12px] font-semibold">#INC-A389F1</span></div><div class="flex flex-col gap-1"><h1 class="text-[24px] md:text-[28px] font-bold text-on-surface tracking-tight leading-tight">Incident Command: CNC-02 Spindle Anomaly &amp; Defect Spike</h1><p class="font-body-md text-body-md text-on-surface-variant">Automated line arrest triggered by vision telemetry &amp; spindle displacement delta threshold breach.</p></div><div class="flex flex-wrap items-center gap-2 pt-1"><span class="px-3 py-1 rounded-full bg-surface-container-highest text-secondary font-mono-metric text-label-sm font-semibold tracking-wider uppercase flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-secondary"></span>ARCHIVED INCIDENT</span><span class="px-3 py-1 rounded-full bg-surface-container-high text-secondary font-label-sm text-label-sm font-medium flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-secondary">check_circle</span>Resolved &amp; Closed</span><span class="px-3 py-1 rounded-full bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-outline">precision_manufacturing</span>CNC-02 (Tool T07)</span><span class="px-3 py-1 rounded-full bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-outline">history</span>Resolved: Oct 24, 2024 · Duration: 42m 18s</span></div></section>
+<!-- Main Workspace Layout Grid with Sticky Right Step Anchor Dock -->
+<div class="w-full max-w-[1580px] mx-auto px-space-base md:px-space-xl pt-space-lg flex flex-col lg:flex-row gap-space-lg relative items-start">
+<!-- Central Progressive Resolution Track (Steps 1 to 5) -->
+<div class="flex-1 w-full min-w-0 flex flex-col gap-space-xl">
+<!-- ========================================== -->
+<!-- SECTION 1: INSPECTION (End Product Only)  -->
+<!-- ========================================== -->
+<section class="w-full bg-surface-container-lowest rounded-2xl shadow-sm p-space-base md:p-space-lg flex flex-col gap-space-md scroll-mt-28" id="step-1">
+<!-- Section Header Badge Bar -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm pb-space-xs">
+<div class="flex items-center gap-space-sm flex-wrap">
+<span class="px-2.5 py-1 rounded-full bg-primary-container text-on-primary font-mono-metric text-label-sm tracking-wider uppercase font-semibold">
+              STEP 1: END-OF-LINE INSPECTION
+            </span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">
+              End Product Only (Keyence CV-X480 CAM-EOL)
+            </span>
+</div>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 font-label-sm text-label-sm font-semibold"></span>
+</div>
+</div>
+<!-- Clarification Banner -->
+
+<!-- Defect Metric & SPC Mini Chart Grid -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-base">
+<!-- Defect Identity Card -->
+<div class="md:col-span-5 bg-surface-container-low p-space-base rounded-xl flex flex-col justify-between gap-space-sm">
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline">Classified Defect Archetype</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold mt-1">
+                Surface Micro-Blemish / Axial Chatter Runout
+              </h2>
+<div class="mt-2 inline-block px-2 py-1 rounded bg-error-container/60 text-on-error-container font-mono-metric text-label-sm font-semibold">
+                defect_type: "Face A Micro-Scoring &amp; Resonance Waviness"
+              </div>
+</div>
+<div class="grid grid-cols-2 gap-space-sm pt-space-xs">
+<div class="p-2.5 rounded-lg bg-surface-container-lowest">
+<span class="font-label-sm text-label-sm text-outline block">Defect Rate Live</span>
+<span class="font-display-mobile text-display-mobile text-error font-bold font-mono-metric">3.42%</span>
+<span class="font-label-sm text-label-sm text-error flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">arrow_upward</span>
+                  +2.98% over nominal
+                </span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-lowest">
+<span class="font-label-sm text-label-sm text-outline block">Upper Control Limit (UCL)</span>
+<span class="font-display-mobile text-display-mobile text-on-surface font-semibold font-mono-metric">3.00%</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Nominal: 0.44%</span>
+</div>
+</div>
+</div>
+<!-- Inline SPC Control Chart Visualization -->
+<div class="md:col-span-7 bg-surface-container-low p-space-base rounded-xl flex flex-col justify-between">
+<div class="flex items-center justify-between pb-2">
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md font-semibold text-on-surface">Statistical Process Control (SPC Run Chart)</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant font-mono-metric text-[11px]">N=60 Parts</span>
+</div>
+<div class="flex items-center gap-3 font-mono-metric text-label-sm text-outline">
+<span class="flex items-center gap-1"><span class="w-2.5 h-0.5 bg-error"></span> UCL (3.0%)</span>
+<span class="flex items-center gap-1"><span class="w-2.5 h-0.5 bg-secondary"></span> Mean (0.44%)</span>
+</div>
+</div>
+<!-- Inline SVG Chart -->
+<div class="w-full h-36 relative flex items-center">
+<svg class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 540 120">
+<!-- Grid Ticks -->
+<line class="text-error/40" stroke="currentColor" stroke-dasharray="3 3" stroke-width="1.5" x1="0" x2="540" y1="20" y2="20"></line>
+<line class="text-outline-variant/40" stroke="currentColor" stroke-dasharray="2 2" stroke-width="1" x1="0" x2="540" y1="95" y2="95"></line>
+<!-- Shaded Excursion Area -->
+<polygon class="text-error/10" fill="currentColor" points="380,120 380,18 480,12 510,32 510,120"></polygon>
+<!-- SPC Trend Line -->
+<polyline class="text-on-surface-variant" fill="none" points="10,98 40,92 70,96 100,89 130,94 160,95 190,91 220,93 250,88 280,90 310,85 340,78 370,62 390,26 420,18 450,14 480,24 510,38 535,42" stroke="currentColor" stroke-width="1.8"></polyline>
+<!-- Anomaly Points -->
+<circle class="fill-error stroke-surface-container-lowest" cx="390" cy="26" r="4" stroke-width="2"></circle>
+<circle class="fill-error stroke-surface-container-lowest" cx="420" cy="18" r="4" stroke-width="2"></circle>
+<circle class="fill-error stroke-surface-container-lowest" cx="450" cy="14" r="5" stroke-width="2"></circle>
+<circle class="fill-error stroke-surface-container-lowest" cx="480" cy="24" r="4" stroke-width="2"></circle>
+<!-- Callout label -->
+<text class="text-error font-bold" fill="currentColor" font-family="JetBrains Mono" font-size="10" x="400" y="8">UCL EXCURSION (3.42%)</text>
+</svg>
+</div>
+<div class="flex items-center justify-between text-outline font-mono-metric text-label-sm pt-2">
+<span class="">Lot #L8829 (Part #8320)</span>
+<span class="">14:00 UTC</span>
+<span class="text-error font-semibold">Incident Peak #8380</span>
+<span class="">14:30 UTC</span>
+</div>
+</div>
+</div>
+<!-- Vision Inspector Agent Evidence Box -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-base items-center bg-surface-container-low/40 p-space-base rounded-xl">
+<!-- Bounding Box Image Preview -->
+<div class="lg:col-span-5 relative rounded-xl overflow-hidden shadow-sm group">
+<img class="w-full h-52 object-cover object-center" data-alt="Industrial macro optical metrology scan of a titanium rotor flange aerospace component face A showing an annotated red bounding box highlighting high-frequency micro scratch blemish depth 0.14mm under cold studio quality workshop LED ring lighting with telemetry overlay." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCS0Hbvu87ksGK6hRyNDDpJMxS1ADPFGbghFW3TuIhcxnom0yxN1f4s9XQ7yRGlRzMFKFbtwBylb3hzewtq0JgeBu2bJr_lp7H0A680szaYWl8FGUdJJAko0Zf5qL6kIjkZ50wRxeG7EEiAEwd_jiAg_BA_5PJrPzEcLhMQTWAmbhk3RKjTCvie_f3OW6LpcOHAqN0sbASpQ-Kml2Zjv6AK9a-mFqNGQGfbex5l05OBsKuNKTu-XHyBAQ">
+<!-- Visual AI Annotations Overlay -->
+<div class="absolute inset-0 bg-primary/20 backdrop-blur-[0.5px] pointer-events-none p-3 flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="bg-primary/90 text-on-primary font-mono-metric text-[11px] px-2 py-0.5 rounded shadow">CAM-EOL: CAM-KEYENCE-04</span>
+<span class="bg-emerald-600 text-on-primary font-mono-metric text-[11px] px-2 py-0.5 rounded font-bold">99.4% AI CONF</span>
+</div>
+<div class="w-36 h-20 border-2 border-error bg-error/15 rounded self-center relative flex items-start justify-end p-1">
+<span class="bg-error text-on-error font-mono-metric text-[9px] px-1 py-0.2 rounded font-bold tracking-tight">DEFECT: SCRATCH Face A</span>
+</div>
+<div class="font-mono-metric text-[10px] text-surface-bright bg-primary/80 px-2 py-1 rounded">
+                Part #8380 | L: 4.2mm | D: 0.14mm | AS9100 Rev D Visual Tolerance Breach
+              </div>
+</div>
+</div>
+<!-- Quality Inspector Agent Findings Text Card -->
+<div class="lg:col-span-7 flex flex-col gap-space-xs">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[20px]">smart_toy</span>
+<span class="font-headline-sm text-headline-sm font-semibold text-on-surface">Quality Inspector Agent Evaluation</span>
+<span class="px-2 py-0.5 rounded-full bg-secondary/10 text-secondary font-mono-metric text-label-sm font-semibold ml-auto">Vision Agent v2.4</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+              "Anomalous periodic harmonic surface score observed across consecutive parts <strong class="text-on-surface">#8378 through #8382</strong>. Micro-waviness frequency aligns with 285 Hz spindle vibration harmonics. Exceeds aerospace spec <strong class="text-on-surface">AS9100 Rev D visual surface roughness limit Ra 0.8µm</strong>. Isolated to finishing bore operations on Line 04."
+            </p>
+<div class="flex flex-wrap gap-2 pt-1 font-mono-metric text-label-sm">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface">Substrate: Ti-6Al-4V Grade 5</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface">Roughness Measured: Ra 1.48µm</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface">Lot Quarantine: Lot #L8830-TI (24 pcs)</span>
+</div>
+</div>
+</div>
+</section>
+<!-- ========================================== -->
+<!-- SECTION 2: TRACEABILITY & SENSOR ISOLATION -->
+<!-- ========================================== -->
+<section class="w-full bg-surface-container-lowest rounded-2xl shadow-sm p-space-base md:p-space-lg flex flex-col gap-space-md scroll-mt-28" id="step-2">
+<div class="flex flex-wrap items-center justify-between gap-space-sm pb-space-xs">
+<div class="flex items-center gap-space-sm flex-wrap">
+<span class="px-2.5 py-1 rounded-full bg-primary-container text-on-primary font-mono-metric text-label-sm tracking-wider uppercase font-semibold">
+              STEP 2: TRACEABILITY</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">
+              Genealogy Correlation &amp; Sensor Telemetry
+            </span>
+</div>
+<span class="px-2.5 py-0.5 rounded-full bg-secondary-container/10 text-secondary font-mono-metric text-label-sm font-semibold">
+            94.2% Isolation Confidence
+          </span>
+</div>
+<!-- Upstream Line Genealogy Pipeline Diagram -->
+<div class="bg-surface-container-low p-space-base rounded-xl flex flex-col gap-space-sm">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline">Upstream Line Genealogy Route</span>
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-space-sm items-center">
+<div class="p-3 rounded-lg bg-surface-container-lowest flex flex-col gap-1">
+<span class="font-label-sm text-label-sm text-outline">Raw Stock</span>
+<span class="font-label-md text-label-md font-semibold text-on-surface">Billet #L8830-TI</span>
+<span class="font-mono-metric text-[11px] text-emerald-600 flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">check</span> Hardness Verified
+              </span>
+</div>
+<div class="p-3 rounded-lg bg-surface-container-lowest flex flex-col gap-1">
+<span class="font-label-sm text-label-sm text-outline">Station CNC-01</span>
+<span class="font-label-md text-label-md font-semibold text-on-surface">Roughing Spindle</span>
+<span class="font-mono-metric text-[11px] text-emerald-600 flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">verified</span> Cleared (Nominal)
+              </span>
+</div>
+<div class="p-3 rounded-lg bg-error-container/30 ring-1 ring-error/20 flex flex-col gap-1 shadow-sm">
+<span class="font-label-sm text-label-sm text-error font-semibold">Station CNC-02</span>
+<span class="font-label-md text-label-md font-bold text-on-surface">Finish Spindle T07</span>
+<span class="font-mono-metric text-[11px] text-error font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">crisis_alert</span> FAULT ISOLATED
+              </span>
+</div>
+<div class="p-3 rounded-lg bg-surface-container-lowest opacity-75 flex flex-col gap-1">
+<span class="font-label-sm text-label-sm text-outline">Station ST-06</span>
+<span class="font-label-md text-label-md font-semibold text-on-surface">Ultrasonic Wash</span>
+<span class="font-mono-metric text-[11px] text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">redo</span> Route Bypassed
+              </span>
+</div>
+</div>
+</div>
+<!-- Telemetry Graph: Spindle Vibration, Current & Temp -->
+<div class="bg-surface-container-low p-space-base rounded-xl flex flex-col gap-space-sm">
+<div class="flex flex-wrap items-center justify-between gap-space-xs">
+<div>
+<span class="font-label-md text-label-md font-semibold text-on-surface">Station CNC-02 Synchronized Sensor History</span>
+<span class="font-mono-metric text-[11px] text-on-surface-variant block">API Endpoint: /api/telemetry/history?window=30m&amp;resolution=1s</span>
+</div>
+<div class="flex items-center gap-3 font-mono-metric text-label-sm">
+<span class="flex items-center gap-1.5"><span class="w-3 h-1 rounded bg-error"></span> Vibration Axis-Z (2.14 mm/s)</span>
+<span class="flex items-center gap-1.5"><span class="w-3 h-1 rounded bg-secondary"></span> Current Draw (18.2 A)</span>
+<span class="flex items-center gap-1.5"><span class="w-3 h-1 rounded bg-surface-tint"></span> Bearing Temp (64.2°C)</span>
+</div>
+</div>
+<!-- Sensor Multi-line Chart SVG -->
+<div class="w-full h-48 relative bg-surface-container-lowest rounded-lg p-2">
+<svg class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 700 160">
+<!-- Baseline Reference -->
+<line class="text-outline-variant/30" stroke="currentColor" stroke-width="1" x1="0" x2="700" y1="120" y2="120"></line>
+<line class="text-outline-variant/30" stroke="currentColor" stroke-width="1" x1="0" x2="700" y1="70" y2="70"></line>
+<!-- Excursion shaded band -->
+<rect class="text-error/10" fill="currentColor" height="140" rx="4" width="140" x="420" y="10"></rect>
+<text class="text-error font-bold" fill="currentColor" font-family="JetBrains Mono" font-size="10" x="430" y="26">EXCURSION: CUT LOT #8380</text>
+<!-- Bearing Temp Line -->
+<polyline class="text-surface-tint" fill="none" points="10,130 90,132 170,128 250,131 330,127 410,124 450,105 490,95 530,90 580,102 640,118 690,122" stroke="currentColor" stroke-width="1.8"></polyline>
+<!-- Spindle Current Draw Line -->
+<polyline class="text-secondary" fill="none" points="10,110 80,112 160,108 240,111 320,109 400,105 440,65 480,55 520,60 570,88 640,106 690,108" stroke="currentColor" stroke-width="2"></polyline>
+<!-- Spindle Vibration Line (The Outlier Spike) -->
+<polyline class="text-error" fill="none" points="10,122 80,121 160,123 240,120 320,124 400,115 435,42 460,20 495,24 530,58 570,98 640,119 690,121" stroke="currentColor" stroke-width="2.5"></polyline>
+<!-- Marker dot -->
+<circle class="fill-error stroke-surface-container-lowest" cx="460" cy="20" r="5" stroke-width="2"></circle>
+</svg>
+</div>
+<div class="p-3 rounded-lg bg-surface-container flex items-start gap-space-sm text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[20px] shrink-0 mt-0.5">analytics</span>
+<div class="flex flex-col gap-0.5">
+<span class="font-label-md text-label-md font-semibold">Process Analyst Telemetry Corroboration</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                High-frequency Axis-Z spindle vibration anomaly (<strong class="text-on-surface">+35% deviation, 2.14 mm/s vs baseline 0.38 mm/s</strong>) coincided precisely with part cut cycle 482 on Tool T07. Tool lifetime registry indicates threshold overshoot (482 cycles run vs 450 cycle max allowable wear envelope).
+              </p>
+</div>
+</div>
+</div>
+<!-- Automatic Reopen Trigger Notice -->
+<div class="px-space-md py-2.5 rounded-xl bg-surface-container-low flex items-center gap-space-sm text-on-surface-variant font-label-md text-label-md">
+<span class="material-symbols-outlined text-outline text-[18px]">cached</span>
+<span class=""><b>System Guardrail:</b> In the event Step 4 post-repair verification fails, the incident workflow will automatically loop back to Step 2 with an active <span class="text-error font-semibold font-mono-metric">"Reopened"</span> status banner.</span>
+</div>
+</section>
+<!-- ========================================== -->
+<!-- SECTION 3: ANALYSIS (5-Whys & Ishikawa)   -->
+<!-- ========================================== -->
+<section class="w-full bg-surface-container-lowest rounded-2xl shadow-sm p-space-base md:p-space-lg flex flex-col gap-space-md scroll-mt-28" id="step-3">
+<div class="flex flex-wrap items-center justify-between gap-space-sm pb-space-xs">
+<div class="flex items-center gap-space-sm flex-wrap">
+<span class="px-2.5 py-1 rounded-full bg-primary-container text-on-primary font-mono-metric text-label-sm tracking-wider uppercase font-semibold">
+              STEP 3: ANALYSIS
+            </span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">
+              5-Whys, 6M Ishikawa &amp; Field Evidence Branch
+            </span>
+</div>
+<span class="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 font-mono-metric text-label-sm font-semibold">
+            91.8% Root Cause Confidence
+          </span>
+</div>
+<!-- 5-Whys Linear Chain -->
+<div class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm font-semibold text-on-surface">5-Whys Root Cause Chain</span>
+<span class="font-mono-metric text-label-sm text-outline">Deterministic Causal Sequence</span>
+</div>
+<div class="grid grid-cols-1 gap-2.5">
+<!-- Why 1 -->
+<div class="p-3.5 rounded-xl bg-surface-container-low flex flex-col md:flex-row md:items-center justify-between gap-2">
+<div class="flex items-start gap-3">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface font-mono-metric text-label-sm font-bold flex items-center justify-center shrink-0">1</span>
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline block">Surface scratch on finished bore?</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">Harmonic chatter and micro-deflection during finishing cut cycle.</span>
+</div>
+</div>
+<div class="flex items-center gap-2 font-mono-metric text-[11px] text-on-surface-variant shrink-0">
+<span class="px-2 py-0.5 rounded bg-surface-container">Ev: Keyence Cam-EOL #8380</span>
+<span class="px-2 py-0.5 rounded bg-surface-container">Ref: ISO-9001:2015 §8.7</span>
+</div>
+</div>
+<!-- Why 2 -->
+<div class="p-3.5 rounded-xl bg-surface-container-low flex flex-col md:flex-row md:items-center justify-between gap-2">
+<div class="flex items-start gap-3">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface font-mono-metric text-label-sm font-bold flex items-center justify-center shrink-0">2</span>
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline block">Harmonic chatter generated?</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">Spindle vibration spiked to 2.14 mm/s at 18,400 RPM resonant node.</span>
+</div>
+</div>
+<div class="flex items-center gap-2 font-mono-metric text-[11px] text-on-surface-variant shrink-0">
+<span class="px-2 py-0.5 rounded bg-surface-container">Ev: FFT Accelerometer /telemetry</span>
+<span class="px-2 py-0.5 rounded bg-surface-container">Ref: ISO-10816-3 Std</span>
+</div>
+</div>
+<!-- Why 3 -->
+<div class="p-3.5 rounded-xl bg-surface-container-low flex flex-col md:flex-row md:items-center justify-between gap-2">
+<div class="flex items-start gap-3">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface font-mono-metric text-label-sm font-bold flex items-center justify-center shrink-0">3</span>
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline block">Vibration resonance occurred?</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">Cutting insert T07 edge micro-chipping caused severe shearing friction.</span>
+</div>
+</div>
+<div class="flex items-center gap-2 font-mono-metric text-[11px] text-on-surface-variant shrink-0">
+<span class="px-2 py-0.5 rounded bg-surface-container">Ev: Flank Wear Scan 0.32mm</span>
+<span class="px-2 py-0.5 rounded bg-surface-container">Ref: Tooling Spec T07-CARB</span>
+</div>
+</div>
+<!-- Why 4 -->
+<div class="p-3.5 rounded-xl bg-surface-container-low flex flex-col md:flex-row md:items-center justify-between gap-2">
+<div class="flex items-start gap-3">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface font-mono-metric text-label-sm font-bold flex items-center justify-center shrink-0">4</span>
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline block">Severe wear on carbide insert?</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">Insert operated to cycle 482 without indexing (threshold 450 cycles).</span>
+</div>
+</div>
+<div class="flex items-center gap-2 font-mono-metric text-[11px] text-on-surface-variant shrink-0">
+<span class="px-2 py-0.5 rounded bg-surface-container">Ev: Fanuc PLC Register #D1042</span>
+<span class="px-2 py-0.5 rounded bg-surface-container">Ref: Cycle Threshold Log</span>
+</div>
+</div>
+<!-- Why 5 (Root Cause) -->
+<div class="p-3.5 rounded-xl bg-primary-container text-on-primary flex flex-col md:flex-row md:items-center justify-between gap-2 shadow-sm">
+<div class="flex items-start gap-3">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary font-mono-metric text-label-sm font-bold flex items-center justify-center shrink-0">5</span>
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline-variant block font-semibold">ROOT CAUSE: Exceeded threshold without changeout?</span>
+<span class="font-label-md text-label-md font-bold">Auto tool-life offset counter trigger delayed in PLC sub-routine 14B due to unacknowledged calibration flag.</span>
+</div>
+</div>
+<div class="flex items-center gap-2 font-mono-metric text-[11px] shrink-0">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-medium">PLC Log 14:02:11</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-medium">Fanuc Macro B Rev 4.1</span>
+</div>
+</div>
+</div>
+</div>
+<!-- 6M Ishikawa Grid -->
+<div class="bg-surface-container-low p-space-base rounded-xl flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md font-semibold text-on-surface">Ishikawa 6M Matrix Factors</span>
+<span class="font-mono-metric text-label-sm text-outline">Industrial Cause-and-Effect</span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+<div class="p-3 rounded-lg bg-surface-container-lowest flex flex-col gap-1">
+<span class="font-label-sm text-label-sm uppercase font-semibold text-error">1. Machine</span>
+<p class="font-body-sm text-body-sm text-on-surface">Spindle bearing preload, T07 tool holder thermal deflection.</p>
+</div>
+<div class="p-3 rounded-lg bg-surface-container-lowest flex flex-col gap-1">
+<span class="font-label-sm text-label-sm uppercase font-semibold text-error">2. Method</span>
+<p class="font-body-sm text-body-sm text-on-surface">Feed rate override at 102%, delayed PLC sub-routine 14B tool offset.</p>
+</div>
+<div class="p-3 rounded-lg bg-surface-container-lowest flex flex-col gap-1">
+<span class="font-label-sm text-label-sm uppercase font-semibold text-emerald-600">3. Material</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Ti-6Al-4V Grade 5 heat hardness batch #B77402 nominal.</p>
+</div>
+<div class="p-3 rounded-lg bg-surface-container-lowest flex flex-col gap-1">
+<span class="font-label-sm text-label-sm uppercase font-semibold text-outline">4. Man</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Shift handover technician gap at cycle 450 warning event.</p>
+</div>
+<div class="p-3 rounded-lg bg-surface-container-lowest flex flex-col gap-1">
+<span class="font-label-sm text-label-sm uppercase font-semibold text-emerald-600">5. Measurement</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Laser tool setter calibrated 14 days ago (Valid cert).</p>
+</div>
+<div class="p-3 rounded-lg bg-surface-container-lowest flex flex-col gap-1">
+<span class="font-label-sm text-label-sm uppercase font-semibold text-emerald-600">6. Milieu</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Bay 3B ambient temperature 21.4°C controlled environment.</p>
+</div>
+</div>
+</div>
+<!-- Field Evidence Branch (Technician Copilot Elevation) -->
+<div class="p-space-base rounded-xl bg-surface-container flex flex-col md:flex-row items-start gap-space-base">
+<div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-on-secondary shrink-0">
+<span class="material-symbols-outlined text-[24px]">troubleshoot</span>
+</div>
+<div class="flex-1 flex flex-col gap-1">
+<div class="flex flex-wrap items-center justify-between gap-2">
+<span class="font-label-md text-label-md font-semibold text-on-surface">Field Evidence Loop (Technician Copilot Elevation)</span>
+<span class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 font-mono-metric text-label-sm font-semibold">
+                Confidence: 68.4% → 91.8% Upgraded
+              </span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+              Initial algorithmic confidence ranked at 68.4% (&lt; 70% automated threshold). Copilot dispatched an in-situ inspection request to floor tech Marcus Vance for optical flank test. Floor dial gauge reading confirmed <strong class="text-on-surface">0.0038mm runout on T07 collet</strong>. Evidence injected back into analysis engine - hypothesis locked at 91.8% confidence without manual supervisor escalation.
+            </p>
+</div>
+</div>
+</section>
+<!-- ========================================== -->
+<!-- SECTION 4: WORK ORDER & VERIFICATION       -->
+<!-- ========================================== -->
+<section class="w-full bg-surface-container-lowest rounded-2xl shadow-sm p-space-base md:p-space-lg flex flex-col gap-space-md scroll-mt-28" id="step-4">
+<div class="flex flex-wrap items-center justify-between gap-space-sm pb-space-xs">
+<div class="flex items-center gap-space-sm flex-wrap">
+<span class="px-2.5 py-1 rounded-full bg-secondary text-on-secondary font-mono-metric text-label-sm tracking-wider uppercase font-semibold">
+              STEP 4: WORK ORDER</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">
+              Physical Rectification &amp; Statistical Proof
+            </span>
+</div>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 font-mono-metric text-label-sm font-semibold">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            50/50 Proof Complete
+          </span>
+</div>
+<!-- Work Order Meta & Assigned Specialist -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-base">
+<div class="md:col-span-6 bg-surface-container-low p-space-base rounded-xl flex flex-col justify-between gap-space-sm">
+<div class="flex items-start justify-between">
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline">Executed Work Order</span>
+<h3 class="font-headline-sm text-headline-sm font-bold text-on-surface font-mono-metric">#WO-89104</h3>
+</div>
+<span class="px-2 py-0.5 rounded bg-emerald-600 text-on-primary font-label-sm text-label-sm font-semibold">EXECUTED &amp; SEALED</span>
+</div>
+<div class="flex items-center gap-space-sm pt-2">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary font-mono-metric font-semibold text-label-md">
+                MV
+              </div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md font-semibold text-on-surface">Marcus Vance</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Senior Mill Specialist • Badge #TECH-902 (On-Site)</span>
+</div>
+</div>
+<div class="flex flex-col gap-1.5 pt-space-xs">
+<div class="flex items-center justify-between font-body-sm text-body-sm p-2 rounded bg-surface-container-lowest">
+<span class="text-on-surface-variant">Linked 8D Report Draft:</span>
+<span class="font-mono-metric font-semibold text-secondary">#8D-INC-A389F1 Ready</span>
+</div>
+<div class="flex items-center justify-between font-body-sm text-body-sm p-2 rounded bg-surface-container-lowest">
+<span class="text-on-surface-variant">SOP Updated:</span>
+<span class="font-mono-metric font-semibold text-on-surface">SOP #209 Rev 4.2</span>
+</div>
+</div>
+</div>
+<!-- Gemini Live Repair Audio/Video Stream Widget -->
+<div class="md:col-span-6 bg-surface-container-low p-space-base rounded-xl flex flex-col justify-between gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+<span class="font-label-md text-label-md font-semibold text-on-surface">Gemini Live AR Stream (Station CNC-02)</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-mono-metric text-[11px]">Recorded 02m 14s</span>
+</div>
+<!-- Video Thumbnail Mockup -->
+<div class="relative rounded-lg overflow-hidden group">
+<img class="w-full h-32 object-cover object-center" data-alt="First-person POV augmented reality stream of CNC milling machine spindle maintenance technician using torque wrench to index carbide cutting insert with live cyan HUD diagnostic vector overlay and green verification reticle." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1Z-l3i4OoAHLfYR_qwwsAKuXP7CS4mAP0Ef5Nf2wT9HytTmmiVtMAr8SmyC9vwFGMTcP87H-A1l7AThmDBrRWl_bRAPOK786sprznztbj1Y-VSJgv0DRKgUqhr8_W11V2OCzxJIwp-9c9eY5w1_FKi0V31YYzrBlTY8UQmduKsWYqSDmMg0jsCyHYqcgL6A0CRIKc_2w-4CoudeBCH0To5hn0Q1DZN_cWX5WULt_9qMc4EgBdHabOQw">
+<div class="absolute inset-0 bg-primary/40 flex items-center justify-center">
+<button class="w-10 h-10 rounded-full bg-surface-container-lowest text-primary flex items-center justify-center shadow-lg hover:scale-105 transition-transform" title="Play maintenance capture" type="button">
+<span class="material-symbols-outlined text-[24px]">play_arrow</span>
+</button>
+</div>
+<div class="absolute bottom-2 left-2 right-2 flex items-center justify-between font-mono-metric text-[10px] text-surface-bright bg-primary/75 px-2 py-0.5 rounded">
+<span class="">Torque Verified: 24.5 Nm</span>
+<span class="">Runout: 0.0012 mm (±0.0015 spec)</span>
+</div>
+</div>
+<div class="p-2 rounded bg-surface-container-lowest font-body-sm text-body-sm text-on-surface-variant">
+<strong class="text-on-surface">Technician Field Note:</strong> "Carbide insert T07 indexed to edge 2, damper tensioner torque set to 24.5 Nm, dial indicator runout re-checked at 0.0012 mm."
+            </div>
+</div>
+</div>
+<!-- 50 Consecutive Good Parts Proof Tracker -->
+<div class="p-space-base rounded-xl bg-surface-container-low flex flex-col gap-space-sm">
+<div class="flex flex-wrap items-center justify-between gap-2">
+<div>
+<span class="font-label-md text-label-md font-semibold text-on-surface">Post-Repair Verification Stream (Keyence CAM-EOL)</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant block">Target: 50 consecutive defect-free end products before line release.</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-mono-metric text-headline-sm font-bold text-emerald-700">50 / 50 PASSED</span>
+<span class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 font-mono-metric text-label-sm font-semibold">100%</span>
+</div>
+</div>
+<!-- 50-Item Dot/Cell Stream Matrix -->
+<div class="grid grid-cols-10 sm:grid-cols-25 gap-1 py-1">
+<!-- 50 Clean Green Rectangles representing 50 parts -->
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8383: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8384: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8385: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8386: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8387: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8388: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8389: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8390: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8391: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8392: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8393: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8394: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8395: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8396: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8397: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8398: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8399: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8400: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8401: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8402: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8403: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8404: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8405: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8406: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8407: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8408: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8409: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8410: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8411: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8412: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8413: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8414: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8415: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8416: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8417: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8418: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8419: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8420: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8421: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8422: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8423: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8424: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8425: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8426: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8427: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8428: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8429: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8430: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8431: Clean ✓"></div>
+<div class="h-4 rounded bg-emerald-500 shadow-sm" title="Part #8432: Clean ✓"></div>
+</div>
+<div class="flex items-center justify-between text-outline font-mono-metric text-label-sm pt-1">
+<span class="">First Clean: Part #8383 (14:38 UTC)</span>
+<span class="text-emerald-700 font-semibold">Criteria Satisfied: Zero Defect Run</span>
+<span class="">Final Proof: Part #8432 (15:02 UTC)</span>
+</div>
+</div>
+</section>
+<!-- ========================================== -->
+<!-- SECTION 5: APPROVE & RELEASE BARRIER       -->
+<!-- ========================================== -->
+<section class="w-full bg-surface-container-lowest rounded-2xl shadow-md p-space-base md:p-space-xl flex flex-col gap-space-lg scroll-mt-28" id="step-5">
+<div class="flex flex-wrap items-center justify-between gap-space-sm pb-space-xs">
+<div class="flex items-center gap-space-sm">
+<span class="px-2.5 py-1 rounded-full bg-emerald-600 text-on-primary font-mono-metric text-label-sm tracking-wider uppercase font-semibold">
+              STEP 5: APPROVAL &amp; LINE RELEASE
+            </span>
+<span class="font-headline-sm text-headline-sm font-semibold text-on-surface">
+              INCIDENT STATUS: CLOSED (Awaiting Final Sign-Off)
+            </span>
+</div>
+<span class="font-mono-metric text-label-sm text-on-surface-variant">Gatekeeper: Devon Vance</span>
+</div>
+<!-- Continuous Learning & Kaizen Impact Card -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-base">
+<!-- Continuous Learning Finding -->
+<div class="p-space-base rounded-xl bg-surface-container-low flex flex-col gap-space-xs">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[20px]">psychology</span>
+<span class="font-label-md text-label-md font-semibold text-on-surface">Continuous Learning Rule Injected</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+              Automated rule updated in <strong class="text-on-surface">PLC Macro B</strong>. Added hard tripwire interlock at <strong class="text-on-surface">cycle 440</strong> (10 cycles buffer prior to wear limit). SOP #209 updated with mandatory laser auto-offset check across all 4 CNC milling bays.
+            </p>
+<div class="mt-auto pt-2">
+<span class="font-mono-metric text-[11px] text-outline"></span>
+</div>
+</div>
+<!-- ROI Impact Telemetry -->
+<div class="p-space-base rounded-xl bg-surface-container-low flex flex-col gap-space-xs">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-emerald-600 text-[20px]">savings</span>
+<span class="font-label-md text-label-md font-semibold text-on-surface">Kaizen &amp; ROI Impact Telemetry</span>
+</div>
+<div class="grid grid-cols-2 gap-space-sm pt-2">
+<div class="p-2.5 rounded bg-surface-container-lowest">
+<span class="font-label-sm text-label-sm text-outline block">Avoided Titanium Scrap</span>
+<span class="font-headline-md text-headline-md font-bold text-on-surface font-mono-metric">142 Parts</span>
+<span class="font-label-sm text-label-sm text-emerald-600 font-semibold">$18,460 Protected</span>
+</div>
+<div class="p-2.5 rounded bg-surface-container-lowest">
+<span class="font-label-sm text-label-sm text-outline block">Avoided Line Downtime</span>
+<span class="font-headline-md text-headline-md font-bold text-on-surface font-mono-metric">3.2 Hours</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">OEE +1.8% Restored</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Release Action Execution Area -->
+<div class="p-space-base rounded-xl bg-surface-container flex flex-col sm:flex-row items-center justify-between gap-space-base">
+<div class="flex flex-col gap-1 max-w-xl">
+<span class="font-label-md text-label-md font-semibold text-on-surface">Final Lead Ops Authorization</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+              Upon clicking Approve &amp; Release, Station CNC-02 returns to full unthrottled production cadence. Incident record will archive directly into the <b>permanent </b><strong class="text-on-surface">Incident Log</strong> for regulatory compliance.
+            </p>
+</div>
+<button class="w-full sm:w-auto px-6 py-3.5 rounded-xl font-label-md text-label-md font-bold bg-primary text-on-primary hover:bg-on-background shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.98]" id="release-btn" onclick="handleApproveRelease()" type="button">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+<span class="">Approve &amp; Release Line</span>
+</button>
+</div>
+<div class="hidden p-space-base rounded-xl bg-emerald-500/10 text-emerald-900 flex items-center gap-3" id="release-confirmation">
+<span class="material-symbols-outlined text-emerald-600 text-[24px]">task_alt</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md font-bold">Line 04 Restored to Production (HTTP 200 OK)</span>
+<span class="font-body-sm text-body-sm">Incident #INC-A389F1 archived with immutable hash #9f82d1c to Incident Log.</span>
+</div>
+</div>
+</section>
+</div>
+<!-- ========================================== -->
+<!-- STICKY RIGHT SIDEBAR STEP ANCHOR DOCK      -->
+<!-- ========================================== -->
+<aside aria-label="Step Palette" class="fixed right-6 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col items-center bg-white/95 backdrop-blur-md rounded-full shadow-lg border border-outline-variant/30 py-2 px-1 gap-1.5 transition-all select-none"><button aria-label="Scroll to Top" class="w-9 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors group relative" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="Scroll to top" type="button"><span class="material-symbols-outlined text-[18px] transition-transform group-hover:-translate-y-0.5">keyboard_arrow_up</span><div class="pointer-events-none absolute right-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-md bg-primary text-on-primary font-label-sm text-[11px] whitespace-nowrap shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5"><span class="">Top of Page</span><div class="absolute left-full top-1/2 -translate-y-1/2 border-y-4 border-y-transparent border-l-4 border-l-primary"></div></div></button><div class="w-6 h-[1px] bg-outline-variant/30 my-0.5"></div><nav class="flex flex-col gap-1.5 items-center"><a aria-label="Step 1: EOL Inspection" class="group relative w-9 h-9 rounded-full flex items-center justify-center font-mono-metric text-label-md font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" href="#step-1"><span class="text-[13px]">1</span><div class="pointer-events-none absolute right-[calc(100%+12px)] top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-mono-metric text-[12px] whitespace-nowrap shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2"><span class="">Inspection</span><div class="absolute left-full top-1/2 -translate-y-1/2 border-y-[5px] border-y-transparent border-l-[6px] border-l-primary"></div></div></a><a aria-label="Step 2: Traceability &amp; Machine Isolation" class="group relative w-9 h-9 rounded-full flex items-center justify-center font-mono-metric text-label-md font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" href="#step-2"><span class="text-[13px]">2</span><div class="pointer-events-none absolute right-[calc(100%+12px)] top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-mono-metric text-[12px] whitespace-nowrap shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2"><span class="">Traceability</span><div class="absolute left-full top-1/2 -translate-y-1/2 border-y-[5px] border-y-transparent border-l-[6px] border-l-primary"></div></div></a><a aria-label="Step 3: Deep Causal Analysis" class="group relative w-9 h-9 rounded-full flex items-center justify-center font-mono-metric text-label-md font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" href="#step-3"><span class="text-[13px]">3</span><div class="pointer-events-none absolute right-[calc(100%+12px)] top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-mono-metric text-[12px] whitespace-nowrap shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2"><span class="">Analysis</span><div class="absolute left-full top-1/2 -translate-y-1/2 border-y-[5px] border-y-transparent border-l-[6px] border-l-primary"></div></div></a><a aria-label="Step 4: Work Order &amp; Verification (Current)" class="group relative w-9 h-9 rounded-full flex items-center justify-center font-mono-metric text-label-md font-bold bg-primary text-on-primary shadow-sm ring-2 ring-primary/20 transition-all scale-105" href="#step-4"><span class="text-[13px]">4</span><div class="pointer-events-none absolute right-[calc(100%+12px)] top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-mono-metric text-[12px] whitespace-nowrap shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2"><span class="">Work Order</span><div class="absolute left-full top-1/2 -translate-y-1/2 border-y-[5px] border-y-transparent border-l-[6px] border-l-primary"></div></div></a><a aria-label="Step 5: Approval &amp; Line Release" class="group relative w-9 h-9 rounded-full flex items-center justify-center font-mono-metric text-label-md font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" href="#step-5"><span class="text-[13px]">5</span><div class="pointer-events-none absolute right-[calc(100%+12px)] top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-mono-metric text-[12px] whitespace-nowrap shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2"><span class="">Decision</span><div class="absolute left-full top-1/2 -translate-y-1/2 border-y-[5px] border-y-transparent border-l-[6px] border-l-primary"></div></div></a></nav><div class="w-6 h-[1px] bg-outline-variant/30 my-0.5"></div><div class="group relative"><div class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container cursor-pointer transition-colors"><span class="material-symbols-outlined text-[17px]">precision_manufacturing</span></div><div class="pointer-events-none absolute right-[calc(100%+12px)] bottom-0 px-3 py-2 rounded-xl bg-primary text-on-primary font-body-sm text-[11px] whitespace-nowrap shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 flex flex-col gap-0.5"><div class="font-semibold flex items-center gap-1.5 text-surface-bright"><span class="">CNC Milling Line 04</span><span class="px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-mono-metric">Node #4</span></div><span class="font-mono-metric text-[10px] text-outline-variant">18,400 RPM • Fanuc 31i-B5</span><div class="absolute left-full bottom-2 border-y-[5px] border-y-transparent border-l-[6px] border-l-primary"></div></div></div></aside>
+</div>
+</div>
+<script>
+  function handleApproveRelease() {
+    const btn = document.getElementById('release-btn');
+    const confirmation = document.getElementById('release-confirmation');
+    if (!btn || !confirmation) return;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">autorenew</span><span>Archiving to Incident Log...</span>';
+    
+    setTimeout(() => {
+      btn.classList.add('hidden');
+      confirmation.classList.remove('hidden');
+    }, 900);
+  }
+
+  // Smooth scroll helper for quick anchors
+  document.querySelectorAll('a[href^="#step-"]').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+      e.preventDefault();
+      const targetId = this.getAttribute('href');
+      const targetEl = document.querySelector(targetId);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+</script></main></div>
+
+
+
+</body></html>

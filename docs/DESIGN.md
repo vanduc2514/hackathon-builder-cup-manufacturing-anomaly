@@ -1,16 +1,79 @@
 # Kaizen UI Design System — shadcn/ui Edition
 
-> **Official Design System Companion aligned with [@shadcn/ui Figma Design System by Pietro Schirano](https://www.figma.com/community/file/1203061493325953101/shadcn-ui-design-system)**  
+> **Official Design System Specification for Kaizen Agent (shadcn/ui Light Mode)**  
 > **Framework:** Radix UI primitives + Tailwind CSS + CSS Variables  
-> **Core Principles:** Light Mode, Calm Precision, Zero Clutter, Token-driven Variables, Generous Radius (`--radius: 0.75rem / 12px`).
+> **Core Principles:** Light Mode, Calm Precision, Zero Clutter, Token-driven Variables, Generous Radius Hierarchy (`--radius: 0.75rem / 12px`).
+
 
 ---
 
-## 1. Design Tokens & CSS Variables
+## 1. Design Methodology
 
-### 1.1. Color Tokens (Light Mode — Slate/Zinc Theme)
+### 1.1. Principle 1: Calm Technology & Signal-to-Noise Ratio
 
-In accordance with `shadcn/ui`, all colors are defined as semantic CSS variables that adapt effortlessly to components:
+In a manufacturing plant, production lines run nominally 90% of the time. The interface must be **exceptionally calm, quiet, and minimalist** to prevent operator eye fatigue. When an anomaly occurs, the system activates **only the single Actionable Signal**, rather than overwhelming operators with dozens of irrelevant metrics.
+
+- **Cognitive Overload Prevention (Anti-Cyberpunk):** Dark cyberpunk themes, glowing neon borders, faux-futuristic 3D dials, and cluttered metric walls are strictly banned. The canvas uses a clean white background (`#FFFFFF`) with high-contrast Slate/Zinc semantics.
+- **The 3-Second Glance Rule (Glanceability):** A Shift Leader standing 2 meters away must assess cell health in under 3 seconds without reading small text or deciphering raw telemetry graphs.
+
+### 1.2. Principle 2: Progressive Disclosure (3 Tiers)
+
+Never dump all data onto a single flat surface. All information must be partitioned across 3 cognitive tiers:
+
+| Tier | Reception Time | Displayed Content | Purpose |
+|---|---|---|---|
+| **Tier 1: Glance** | 1 second | Line health status: Nominal (Green) vs. Incident (Red) + Machine Bay (`CNC-02`). | Instantly detect whether an issue exists without reading text. |
+| **Tier 2: Focus** | 5 seconds | What the issue is (`Tool T07 Flank Wear`) + Who is assigned (`Tech Tuan`) + Immediate next action. | Decide on an immediate operational action. |
+| **Tier 3: Deep Dive** | On-demand | Detailed SPC charts, 5-Whys causal tree, vibration frequency analysis, draft 8D report, technical SOP video. | Accessed only when clicking for deep investigation (Dedicated Drawer / Modal / Tab). |
+
+### 1.3. Principle 3: Single Job-to-be-Done per Screen (Single JTBD)
+
+- **Shift Leader Screen:** Not a place to read bolt-tightening guides, but **where line health is monitored and incident approvals are signed off**.
+- **Technician Copilot Screen:** No need to see SPC control charts or formal 8D reports; rather, **focused on a 3-step physical bay checklist and a prominent "Confirm Repair Completed" button**.
+- **QC Inspector Screen:** Strictly focused on **exit product quality, defect containment, and inspection streak verification**.
+- **Plant Manager / ESG Screen:** Focused on **institutional knowledge retention (RAG), SOP evolution, and cumulative sustainability savings (scrap avoided, cost saved, CO₂ reduction)**.
+
+### 1.4. Principle 4: Shop-Floor Ergonomics & Bay-Side Usability
+
+- **Gloved Operation:** Technicians frequently wear safety gloves and operate rugged mobile terminals with one hand at the bay.
+  - Interactive tap targets have a minimum size of **44 × 44 px**.
+  - Primary completion CTA is a sticky bottom button with a minimum height of **48 px** (`h-12`) spanning full mobile width.
+- **Hands-Free Multimodal Assistance (Gemini Live):** When hands are greasy or handling tooling, technicians interact entirely via voice or camera without touching the glass.
+
+### 1.5. Principle 5: Product-Evidence Driven Incident Closure (Invariant #3)
+
+- Never close an incident solely based on verbal claims or technician manual taps.
+- The system strictly enforces **Invariant #3**: The Shift Leader's closure approval button is **hard-disabled** until the conveyor optical inspection camera validates **50 consecutive clean workpieces** (`verification_count >= 50`).
+
+### 1.6. Six-Stage Industrial Workflow
+
+```
+[Stage 1: Personas & JTBD]
+        │
+        ▼
+[Stage 2: User Stories & Acceptance Criteria]
+        │
+        ▼
+[Stage 3: Information Architecture & Functional Loops]
+        │
+        ▼
+[Stage 4: Low-Fi ASCII Wireframing & Ergonomics]
+        │
+        ▼
+[Stage 5: Design System Token Binding (shadcn/ui)]
+        │
+        ▼
+[Stage 6: Hi-Fi Stitch Prototype & Production Code]
+```
+
+---
+
+## 2. Design Tokens & CSS Variables
+
+### 2.1. Color Tokens (Light Mode — Slate/Zinc Theme)
+
+
+In accordance with `shadcn/ui`, all colors are defined as semantic CSS variables that adapt effortlessly across components:
 
 ```css
 :root {
@@ -26,7 +89,7 @@ In accordance with `shadcn/ui`, all colors are defined as semantic CSS variables
   --popover: 0 0% 100%;                /* #FFFFFF */
   --popover-foreground: 222.2 84% 4.9%;/* #020817 */
 
-  /* Primary Interactive Elements (Solid Dark) */
+  /* Primary Interactive Elements (Solid Slate Dark) */
   --primary: 222.2 47.4% 11.2%;        /* #0F172A: Primary action buttons */
   --primary-foreground: 210 40% 98%;   /* #F8FAFC: Text on primary button */
 
@@ -62,23 +125,28 @@ In accordance with `shadcn/ui`, all colors are defined as semantic CSS variables
   --input: 214.3 31.8% 91.4%;          /* #E2E8F0: Form input borders */
   --ring: 222.2 84% 4.9%;              /* #020817: High-contrast focus ring */
 
-  /* Border Radius Tokens */
+  /* Border Radius Base Token */
   --radius: 0.75rem;                   /* 12px: Base border radius */
 }
 ```
 
-### 1.2. Radius Scale Tokens
+---
 
-Following the strict shadcn/ui mathematical relationship:
-- **`rounded-full` / Badge & Status Pill:** `9999px` (Official shadcn/ui pill badge standard)
-- **`rounded-xl` / Card Radius:** `var(--radius)` = `12px` (`0.75rem`)
-- **`rounded-lg` / Banner Radius:** `calc(var(--radius) - 2px)` = `10px`
-- **`rounded-md` / Button & Input:** `calc(var(--radius) - 4px)` = `8px`
-- **`rounded-sm` / Checkbox & Code Snippet:** `calc(var(--radius) - 6px)` = `6px`
+### 3.2. Mathematical Border Radius Hierarchy
+
+Following shadcn/ui proportional scaling from `--radius` (12px / `0.75rem`):
+
+| Component Level | Tailwind Class | Computed Value | Formula | Rationale |
+|---|---|---|---|---|
+| **Badge / Status Pill** | `rounded-full` | `9999px` | Fixed pill | Pill silhouette matches official shadcn/ui spec; soft friendly status indicator. |
+| **Card / Modal Container** | `rounded-xl` | `12px` | `var(--radius)` | Generous outer container boundary; modern card silhouette. |
+| **Alert / Banner** | `rounded-lg` | `10px` | `calc(var(--radius) - 2px)` | Nested or full-width notification surface with refined inner curve. |
+| **Button / Input** | `rounded-md` | `8px` | `calc(var(--radius) - 4px)` | Standard interactive touch and click target radius. |
+| **Checkbox / Code Tag** | `rounded-sm` | `6px` | `calc(var(--radius) - 6px)` | Tight, precise inner interactive elements. |
 
 ---
 
-### 1.3. Typography Hierarchy
+### 3.3. Typography Hierarchy
 
 Utilizing **Geist / Plus Jakarta Sans** with **JetBrains Mono** for numeric telemetry:
 
@@ -89,13 +157,13 @@ Utilizing **Geist / Plus Jakarta Sans** with **JetBrains Mono** for numeric tele
 | `H3` | `text-lg font-semibold` | `18px` / `24px` | 600 | Alert banner title, machine names |
 | `Body` | `text-sm font-normal` | `14px` / `20px` | 400 | Descriptive copy, table cell content |
 | `Small` | `text-xs font-medium text-muted-foreground` | `12px` / `16px` | 500 | Metadata, timestamps, table headers |
-| `Mono Data` | `font-mono font-semibold` | `13px` / `18px` | 600 | IDs (`CNC-02`, `T07`), rates (`1.42%`) |
+| `Mono Data` | `font-mono font-semibold` | `13px` / `18px` | 600 | IDs (`CNC-02`, `T07`), rates (`1.42%`, `45 Nm`) |
 
 ---
 
-## 2. Base Components Catalog (shadcn/ui Primitives)
+## 3. Base Components Catalog (shadcn/ui Primitives)
 
-### 2.1. Alert (`components/ui/alert.tsx`)
+### 3.1. Alert (`components/ui/alert.tsx`)
 Clean, accessible notification banners with icon, title, and description:
 - **Variant `destructive` (Active Line Anomaly):**
   - Background: `hsl(var(--destructive-muted))` (`#FEF2F2`)
@@ -103,11 +171,11 @@ Clean, accessible notification banners with icon, title, and description:
   - Icon: Exclamation triangle in `hsl(var(--destructive))` (`#EF4444`)
   - Title: `AlertTitle` — `CNC-02 Anomaly Detected: Tool T07 Flank Wear`
   - Description: `AlertDescription` — `SPC Defect rate jumped to 1.42% exceeding UCL (0.25%).`
-  - Trailing Action: Button `variant="outline"` size `sm`: `View Diagnostics →`
+  - Trailing Action: Button `variant="default"` or `variant="outline"` size `sm`: `Dispatch Copilot →`
 - **Variant `default` (General System Note):**
   - Background: `hsl(var(--card))` with `1px solid hsl(var(--border))`.
 
-### 2.2. Card (`components/ui/card.tsx`)
+### 3.2. Card (`components/ui/card.tsx`)
 The foundational container for all dashboard modules:
 - **Anatomy:**
   - `Card`: `rounded-xl border bg-card text-card-foreground shadow-sm`
@@ -118,7 +186,7 @@ The foundational container for all dashboard modules:
   - `CardFooter`: `flex items-center p-6 pt-0`
 - **Application:** Machine Status Card, KPI Metric Card, Verification Progress Card.
 
-### 2.3. Badge (`components/ui/badge.tsx`)
+### 3.3. Badge (`components/ui/badge.tsx`)
 Pill badges for real-time Andon status and categories (`rounded-full px-2.5 py-0.5 text-xs font-semibold`):
 - **Radius:** Strictly `rounded-full` (`border-radius: 9999px`) for smooth modern pill silhouette.
 - **Variant `default`:** Solid black background `hsl(var(--primary))`, white text.
@@ -128,7 +196,7 @@ Pill badges for real-time Andon status and categories (`rounded-full px-2.5 py-0
 - **Variant `success`:** Muted green background with emerald text and steady green dot.
 - **Variant `warning`:** Muted amber background with amber text and steady amber dot.
 
-### 2.4. Button (`components/ui/button.tsx`)
+### 3.4. Button (`components/ui/button.tsx`)
 Tactile, accessible interactive triggers:
 - **Variants:**
   - `default`: Solid Slate `bg-primary text-primary-foreground hover:bg-primary/90`
@@ -138,49 +206,27 @@ Tactile, accessible interactive triggers:
   - `destructive`: `bg-destructive text-destructive-foreground hover:bg-destructive/90`
 - **Sizes:** `sm` (h-8 px-3 text-xs), `default` (h-9 px-4 text-sm), `lg` (h-10 px-8 text-base), `icon` (h-9 w-9).
 
-### 2.5. Table (`components/ui/table.tsx`)
+### 3.5. Table (`components/ui/table.tsx`)
 Clean, spacious tabular view for the Machine List:
 - `TableHeader` & `TableHead`: Uppercase `text-xs font-medium text-muted-foreground bg-muted/40`
 - `TableRow`: `border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted`
 - `TableCell`: `p-4 align-middle [&:has([role=checkbox])]:pr-0 text-sm`
 
-### 2.6. Progress (`components/ui/progress.tsx`)
+### 3.6. Progress (`components/ui/progress.tsx`)
 Slim verification progress bar:
 - Track: `relative h-2 w-full overflow-hidden rounded-full bg-secondary`
 - Indicator: `h-full w-full flex-1 bg-emerald-500 transition-all`
 
 ---
 
-## 3. Industrial Customization Rules
-1. **Zero Clutter:** No decorative gauges or 3D dials. Metric values sit cleanly inside `Card` with `CardHeader` label and large `font-mono` values.
-2. **Predictable Layout:** Anomaly banners sit in the top slot; machine list resides in a clean `Table` or flat `Card` grid below.
-3. **One Click to Action:** Every alert and machine row includes a dedicated shadcn `Button` triggering the exact workflow.
+## 4. Screen Architecture & Wireframe References
 
----
 
-## 4. Application Screen Architecture & User Stories
-
-The application consists of exactly 4 specialized, non-overlapping screens divided across two functional tiers:
-
-### Tier 1: Real-Time Operational Loop
-1. **Screen 1: Line Overview & Machine List (`/` — Desktop 1440px)**
-   - **Primary Persona:** Shift Leader & Quality Inspector (QC)
-   - **User Story:** *As a Shift Leader, I want to glance at the line status within 3 seconds and know if all machines are nominal or which machine is experiencing an anomaly, so that I can dispatch a technician immediately without reading raw sensor telemetry.*
-   - **Key Components:** `<Alert variant="destructive">` (anomaly banner with 1-click CTA), `<Card>` (3 high-level KPIs), `<Table>` (flat machine status rows with `rounded-full` Andon badges).
-
-2. **Screen 2: Technician Floor Copilot (`/copilot` — Mobile 390px)**
-   - **Primary Persona:** Frontline Maintenance Technician
-   - **User Story:** *As a Frontline Technician, I want to open my mobile device at the machine bay and follow a clear 3-step action checklist with torque specs, speech assistance, and a large "Confirm Repair Done" button, so that I can resolve the anomaly with one hand while wearing gloves.*
-   - **Key Components:** Target Machine Card (`CNC-02 // Tool T07`), 3-Step Action Checklist (`<Card>` with checkmarks), Voice/Camera diagnostic triggers, tactile primary `<Button>` ("BÁO CÁO: ĐÃ SỬA XONG").
-
-3. **Screen 3: Incident Workspace & 8D Approval (`/incidents/:id` — Desktop / Tablet)**
-   - **Primary Persona:** Shift Leader & Quality Engineer
-   - **User Story:** *As a Shift Leader, I want to track post-repair verification progress (50 consecutive good parts) and approve the generated 8D Report and SOP revision with one click, so that the incident is closed on product evidence and standard procedures are updated.*
-   - **Key Components:** `<Progress>` (50-streak verification gate), 5-Whys summary card, Draft 8D Report viewer, 1-click Approval `<Button>`.
-
-### Tier 2: Knowledge & Sustainability Loop
-4. **Screen 4: Kaizen Knowledge & Sustainability Hub (`/knowledge` — Desktop 1440px)**
-   - **Primary Persona:** Plant Manager, Continuous Improvement (Kaizen) Lead, ESG Lead
-   - **User Story:** *As a Plant Manager, I want to search historical defect root causes and solutions, and track aggregate sustainability savings (scrap avoided, downtime saved, CO₂ reduction), so that institutional knowledge is preserved and ESG impact is measurable.*
-   - **Key Components:** 3 Sustainability KPI `<Card>` units (Scrap avoided, kWh saved, CO₂ reduction), Search Input (`<Input>`), Knowledge Base `<Table>` (Defect symptom, Root cause, Preventive SOP, Video walkthrough link).
+For individual screen architectures, comprehensive user stories, acceptance criteria, and full ASCII wireframes, refer to:
+- [`docs/wireframes/README.md`](./wireframes/README.md) — Master Overview & UI State Transitions Matrix
+- [`docs/wireframes/00_base_layout.md`](./wireframes/00_base_layout.md) — Base Application Shell & Navigation (Desktop 1440px / Mobile 390px)
+- [`docs/wireframes/01_line_overview.md`](./wireframes/01_line_overview.md) — Screen 1: Line Overview & Machine List (Desktop 1440px)
+- [`docs/wireframes/02_technician_copilot.md`](./wireframes/02_technician_copilot.md) — Screen 2: Technician Floor Copilot & Machine Queue (Mobile 390px)
+- [`docs/wireframes/03_incident_workspace.md`](./wireframes/03_incident_workspace.md) — Screen 3: Incident Workspace & 8D Approval (Desktop / Tablet)
+- [`docs/wireframes/04_knowledge_sustainability_hub.md`](./wireframes/04_knowledge_sustainability_hub.md) — Screen 4: Kaizen Knowledge & Sustainability Hub (Desktop 1440px)
 

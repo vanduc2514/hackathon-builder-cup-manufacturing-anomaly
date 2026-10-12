@@ -66,6 +66,10 @@ run = "uvicorn backend.api.main:app --host $API_HOST --port $API_PORT --reload"
 description = "Start Vite dev server (:3000, /api proxied to backend)"
 run = "cd frontend && npm run dev"
 
+[tasks.dashboard]
+description = "Start Plant Ops dashboard Vite dev server (:3001, /api proxied to backend)"
+run = "cd dashboard_frontend && npm run dev"
+
 [tasks.adk-web]
 description = "Start ADK dev UI for the incident workflow (:8001, backend/agents/agent.py)"
 run = "adk web backend/agents --port 8001 --reload"
@@ -243,4 +247,20 @@ run = "bash scripts/deploy_cloud_run.sh"
 [tasks."deploy:backend:dry"]
 description = "Dry-run validation of backend container build and Cloud Run deployment"
 run = "bash scripts/deploy_cloud_run.sh --dry-run"
+
+# =============================================================================
+# Remotion Walkthrough Video Tasks
+# =============================================================================
+
+[tasks."video:dev"]
+description = "Launch Remotion Studio preview at http://localhost:3000"
+run = "cd video && npm run dev"
+
+[tasks."video:render"]
+description = "Render the Technician Copilot 9:16 mobile walkthrough video (MP4)"
+run = "cd video && npx remotion render TechnicianCopilotMobile walkthrough_mobile.mp4"
+
+[tasks."video:render-desktop"]
+description = "Render the Industrial Command Center 16:9 walkthrough video (MP4)"
+run = "cd video && npx remotion render IndustrialCommandCenter walkthrough_desktop.mp4"
 

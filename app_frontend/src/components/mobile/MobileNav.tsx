@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type MobileTab = 'work-list' | 'ai-helper' | 'notifications' | 'settings';
+export type MobileTab = 'work-list' | 'notifications' | 'settings';
 
 interface MobileNavProps {
   activeTab: MobileTab;
@@ -11,7 +11,6 @@ interface MobileNavProps {
 
 const TABS: { id: MobileTab; label: string; icon: string }[] = [
   { id: 'work-list', label: 'Work List', icon: 'assignment' },
-  { id: 'ai-helper', label: 'AI Helper', icon: 'auto_awesome' },
   { id: 'notifications', label: 'Notifications', icon: 'notifications' },
   { id: 'settings', label: 'Settings', icon: 'tune' },
 ];

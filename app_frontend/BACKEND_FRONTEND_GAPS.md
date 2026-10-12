@@ -146,13 +146,6 @@ Testing note: with `AI_PROVIDER=mock` the RCA confidence is always ≥ 0.88, so 
 | `processing.lead` | Profile `leadName` or `Shift Leader`; `documents.approved_by` when present | No approver identity before approval |
 | "Remind lead" button | Toast only | No notify endpoint |
 
-### AI Helper (chatbot)
-
-| Data point | Hardcoded value | Backend has |
-|---|---|---|
-| Replies | `mockReply()` keyword matching (torque, insert, runout, summary) | No chat endpoint; RAG search (`rag_search_tool.py`) is internal to agents only |
-| Citations | `OEM Manual v4.2 · §8.4`, `8D Report #8D-2291`, … | `CitationReference` exists internally |
-| Suggestions and welcome text | 4 fixed questions, welcome message | — |
 
 ### Notifications
 

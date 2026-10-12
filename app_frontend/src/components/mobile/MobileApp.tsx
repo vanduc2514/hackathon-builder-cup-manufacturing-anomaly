@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { IncidentState } from '../../types';
 import type {
-  ChatMessage,
   EvidenceItem,
   MobileNotification,
   TechnicianProfile,
@@ -17,11 +16,9 @@ import MobileEvidenceCapture from './MobileEvidenceCapture';
 import MobileFixDetail from './MobileFixDetail';
 import MobileFixLive from './MobileFixLive';
 import MobileWorkStatus from './MobileWorkStatus';
-import MobileAIChatbot from './MobileAIChatbot';
 import MobileNotifications from './MobileNotifications';
 import MobileSettings from './MobileSettings';
 import {
-  CHAT_WELCOME,
   INITIAL_NOTIFICATIONS,
   INITIAL_PROFILE,
   INITIAL_WORK_ORDERS,
@@ -128,7 +125,6 @@ export default function MobileApp({ incident }: MobileAppProps): React.ReactElem
   const [stack, setStack] = useState<Route[]>([]);
   const [baseOrders, setBaseOrders] = useState<WorkOrder[]>(INITIAL_WORK_ORDERS);
   const [notifications, setNotifications] = useState<MobileNotification[]>(INITIAL_NOTIFICATIONS);
-  const [messages, setMessages] = useState<ChatMessage[]>([CHAT_WELCOME]);
   const [profile, setProfile] = useState<TechnicianProfile>(INITIAL_PROFILE);
   const [toast, setToast] = useState<Toast | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -412,7 +408,6 @@ export default function MobileApp({ incident }: MobileAppProps): React.ReactElem
   };
 
   const unread = notifications.filter((n) => n.unread).length;
-  const activeCount = orders.filter((o) => o.stage === 'active').length;
 
   return (
     <div className="m-app">
@@ -431,16 +426,8 @@ export default function MobileApp({ incident }: MobileAppProps): React.ReactElem
         </span>
       </div>
 
-      <main ref={scrollRef} className={`m-scroll ${fullScreen ? 'is-full' : ''} ${tab === 'ai-helper' ? 'is-chat' : ''}`}>
+      <main ref={scrollRef} className={`m-scroll ${fullScreen ? 'is-full' : ''}`}>
         {tab === 'work-list' && renderWork()}
-        {tab === 'ai-helper' && (
-          <MobileAIChatbot
-            messages={messages}
-            initials={initials}
-            activeCount={activeCount}
-            onAppend={(m) => setMessages((list) => [...list, m])}
-          />
-        )}
         {tab === 'notifications' && (
           <MobileNotifications
             items={notifications}

@@ -4,7 +4,6 @@
  */
 import type {
   AiReason,
-  ChatMessage,
   EvidenceItem,
   LiveIncidentInfo,
   MobileNotification,
@@ -804,47 +803,3 @@ export const INITIAL_PROFILE: TechnicianProfile = {
   haptics: true,
 };
 
-export const CHAT_SUGGESTIONS: string[] = [
-  'What torque for the CL-40 collar?',
-  'Why does the AI want insert photos?',
-  'How do I check spindle runout?',
-  'Summarise my open work',
-];
-
-export const CHAT_WELCOME: ChatMessage = {
-  id: 'welcome',
-  role: 'assistant',
-  text: 'Hi Minh 👋 I can see your 3 active jobs, the OEM manuals and past repair reports. Ask me anything — specs, steps, or why the AI flagged something.',
-};
-
-/** Simple keyword-based mock replies until a chat endpoint is wired up. */
-export function mockReply(question: string): Pick<ChatMessage, 'text' | 'citation'> {
-  const q = question.toLowerCase();
-  if (q.includes('torque') || q.includes('nm') || q.includes('collar')) {
-    return {
-      text: 'Tighten the CL-40 collar bolts to 45 Nm ± 1.5 Nm. Use a star pattern (1-3-2-4) in two passes: first 22 Nm, then 45 Nm.',
-      citation: 'OEM Manual v4.2 · §8.4',
-    };
-  }
-  if (q.includes('insert') || q.includes('photo') || q.includes('evidence')) {
-    return {
-      text: 'The vibration peak at 172 Hz fits both a cracked insert and a loose collar. A close-up of the insert edge tells them apart — a crack shows as a bright line on the edge.',
-      citation: '8D Report #8D-2291',
-    };
-  }
-  if (q.includes('runout')) {
-    return {
-      text: 'Mount a dial indicator on the spindle nose, zero it, then turn the spindle a full 360° by hand. Max reading must be under 0.015 mm.',
-      citation: 'OEM Manual v4.2 · §9.1',
-    };
-  }
-  if (q.includes('summar') || q.includes('open work') || q.includes('job')) {
-    return {
-      text: 'You have 3 active jobs:\n• INC-8924 — take evidence on CNC Mill 04 (P1)\n• INC-8919 — replace collar on CNC Lathe 02 (P1, ~25 min)\n• INC-8927 — clear coolant nozzle on Lathe 05 (P3)\nStart with the evidence job — it unblocks the AI diagnosis.',
-    };
-  }
-  return {
-    text: 'Good question. Based on the manuals and recent repairs on this line, I’d check the spindle area first. Tell me the machine or ticket number and I can be more specific.',
-    citation: 'Knowledge base · Line 02–04',
-  };
-}

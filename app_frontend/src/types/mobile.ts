@@ -138,13 +138,6 @@ export interface MobileNotification {
   workId?: string;
 }
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  text: string;
-  citation?: string;
-}
-
 export interface TechnicianProfile {
   fullName: string;
   employeeId: string;

@@ -155,3 +155,32 @@ Slim verification progress bar:
 1. **Zero Clutter:** No decorative gauges or 3D dials. Metric values sit cleanly inside `Card` with `CardHeader` label and large `font-mono` values.
 2. **Predictable Layout:** Anomaly banners sit in the top slot; machine list resides in a clean `Table` or flat `Card` grid below.
 3. **One Click to Action:** Every alert and machine row includes a dedicated shadcn `Button` triggering the exact workflow.
+
+---
+
+## 4. Application Screen Architecture & User Stories
+
+The application consists of exactly 4 specialized, non-overlapping screens divided across two functional tiers:
+
+### Tier 1: Real-Time Operational Loop
+1. **Screen 1: Line Overview & Machine List (`/` — Desktop 1440px)**
+   - **Primary Persona:** Shift Leader & Quality Inspector (QC)
+   - **User Story:** *As a Shift Leader, I want to glance at the line status within 3 seconds and know if all machines are nominal or which machine is experiencing an anomaly, so that I can dispatch a technician immediately without reading raw sensor telemetry.*
+   - **Key Components:** `<Alert variant="destructive">` (anomaly banner with 1-click CTA), `<Card>` (3 high-level KPIs), `<Table>` (flat machine status rows with `rounded-full` Andon badges).
+
+2. **Screen 2: Technician Floor Copilot (`/copilot` — Mobile 390px)**
+   - **Primary Persona:** Frontline Maintenance Technician
+   - **User Story:** *As a Frontline Technician, I want to open my mobile device at the machine bay and follow a clear 3-step action checklist with torque specs, speech assistance, and a large "Confirm Repair Done" button, so that I can resolve the anomaly with one hand while wearing gloves.*
+   - **Key Components:** Target Machine Card (`CNC-02 // Tool T07`), 3-Step Action Checklist (`<Card>` with checkmarks), Voice/Camera diagnostic triggers, tactile primary `<Button>` ("BÁO CÁO: ĐÃ SỬA XONG").
+
+3. **Screen 3: Incident Workspace & 8D Approval (`/incidents/:id` — Desktop / Tablet)**
+   - **Primary Persona:** Shift Leader & Quality Engineer
+   - **User Story:** *As a Shift Leader, I want to track post-repair verification progress (50 consecutive good parts) and approve the generated 8D Report and SOP revision with one click, so that the incident is closed on product evidence and standard procedures are updated.*
+   - **Key Components:** `<Progress>` (50-streak verification gate), 5-Whys summary card, Draft 8D Report viewer, 1-click Approval `<Button>`.
+
+### Tier 2: Knowledge & Sustainability Loop
+4. **Screen 4: Kaizen Knowledge & Sustainability Hub (`/knowledge` — Desktop 1440px)**
+   - **Primary Persona:** Plant Manager, Continuous Improvement (Kaizen) Lead, ESG Lead
+   - **User Story:** *As a Plant Manager, I want to search historical defect root causes and solutions, and track aggregate sustainability savings (scrap avoided, downtime saved, CO₂ reduction), so that institutional knowledge is preserved and ESG impact is measurable.*
+   - **Key Components:** 3 Sustainability KPI `<Card>` units (Scrap avoided, kWh saved, CO₂ reduction), Search Input (`<Input>`), Knowledge Base `<Table>` (Defect symptom, Root cause, Preventive SOP, Video walkthrough link).
+

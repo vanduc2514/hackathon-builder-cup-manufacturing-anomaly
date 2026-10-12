@@ -1,0 +1,15 @@
+{
+  "projectId": "6385146761198201322",
+  "projectTitle": "Kaizen Agent Manufacturing Anomaly",
+  "designSystem": "shadcn/ui Design System (Pietro Schirano Figma Spec)",
+  "screens": [
+    {
+      "id": "51a4aa25ead14f3eaef209f574aa7e29",
+      "title": "shadcn/ui Design System & Component Library",
+      "deviceType": "DESKTOP",
+      "canvasUrl": "https://stitch.google.com/projects/6385146761198201322?node-id=51a4aa25ead14f3eaef209f574aa7e29",
+      "htmlPath": ".stitch/designs/shadcn_ui_design_system.html",
+      "screenshotPath": ".stitch/designs/shadcn_ui_design_system.png"
+    }
+  ]
+}

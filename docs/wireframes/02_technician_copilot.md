@@ -1,34 +1,45 @@
 # Screen 2: Technician Floor Copilot & Machine Queue
 
-> **Route:** `/copilot` (Maintenance Dispatch Queue) & `/copilot?machine=CNC-02` (In-Bay Repair Workspace)  
+> **Route:** `/copilot` (Dispatch Queue) • `/copilot?machine=CNC-02&mode=diagnostic` (Diagnostic Probe) • `/copilot?machine=CNC-02` (Repair Workspace)  
 > **Viewport:** Mobile `390 × 844 px` (iPhone 14 / Industrial Handheld Terminal)  
 > **Primary Persona:** Frontline Maintenance Technician (Tuan Le)  
-> **Single Job-to-be-Done (JTBD):** Bay-Side Machine Triage, Guided Physical Repair Execution, and Completion Sign-Off. *(Zero SPC distraction, zero administrative paperwork).*  
-> **Design Standard:** [`docs/DESIGN.md`](../DESIGN.md) (shadcn/ui Light Mode)
+> **Single Job-to-be-Done (JTBD):** Bay-Side Machine Triage, Macro Visual Metrology, Guided Physical Repair Execution, and Completion Handshake. *(Zero SPC distraction, zero administrative paperwork).*  
+> **Design Standard:** [`docs/DESIGN.md`](../DESIGN.md) (shadcn/ui Light Mode)  
+> **Terminology:** Unified **Agent Team** across all pages and documentation.
 
 ---
 
 ## 1. End-to-End User Flow & Technician Journey
 
-The mobile floor copilot accompanies the technician throughout the entire physical intervention lifecycle:
+The mobile floor copilot accompanies the frontline technician throughout the physical intervention lifecycle, including the **Evidence-Gathering Loop** (when Agent Team RCA confidence < 70%):
 
 ```mermaid
 flowchart TD
-    A["Shift Start / Mobile App Opened"] --> B{"Active Dispatch Queue? (/copilot)"}
+    A["Shift Start / Mobile App Opened (/copilot)"] --> B{"Active Dispatch Queue?"}
     B -->|"No Incidents (Nominal)"| C["State 2D: Idle Queue (All Nominal)"]
-    B -->|"Machines Need Repair"| D["State 2A: Machine Dispatch Queue"]
-    D -->|"Select High-Priority Bay"| E["State 2B: In-Bay Repair Workspace (/copilot?machine=CNC-02)"]
+    B -->|"Machines Need Action"| D["State 2A: Machine Dispatch Queue"]
+    D -->|"Select High-Priority Bay (CNC-02)"| E{"Agent Team Status?"}
     
-    subgraph S2B ["State 2B: Bay-Side Physical Repair"]
-        E1["Tier 1: Pinned Bay CNC-02 & Tool T07 Slot"] --> E2["Tier 2: 3-Step SOP Checklist (WNMG-080408, 45 Nm)"]
-        E2 -.->|"Greasy / Gloved Hands"| E3["Tier 3: Gemini Live Voice / Macro Camera Inspection"]
-        E2 --> E4["Tap Sticky Bottom CTA: CONFIRM REPAIR COMPLETED (48px)"]
+    subgraph S2_DIAG ["State 2-DIAG: In-Bay Diagnostic Probe (RCA < 70%)"]
+        E -->|"Status: awaiting_evidence"| F["State 2-DIAG: Field Evidence Capture (/copilot?machine=CNC-02&mode=diagnostic)"]
+        F --> F1["Gemini Live Voice: 'Take macro close-up of Tool T07 cutting edge to inspect flank wear'"]
+        F1 --> F2["Technician captures macro photo -> POST /api/incidents/evidence"]
+        F2 --> F3["Gemini Metrology assessment: VB = 0.42 mm (Limit 0.35 mm)"]
+        F3 --> F4["Agent Team RCA converges to 92% confidence"]
+        F4 --> G["Tap: [ START INSERT REPLACEMENT (BAY 4) -> ]"]
     end
     
-    E --> S2B
-    E4 --> F["State 2C: Post-Repair Handshake & Verification Gate Active"]
-    F -->|"Trigger Conveyor Optical Run"| G["Conveyor Optical Streak (0/50 clean parts)"]
-    F -->|"Return to Triage"| D
+    subgraph S2B ["State 2B: Bay-Side Physical Repair Execution"]
+        E -->|"Status: repairing (Confident)"| G
+        G --> H1["Tier 1: Pinned Bay CNC-02 & Tool T07 Slot"]
+        H1 --> H2["Tier 2: 3-Step SOP Checklist (WNMG-080408, 45 Nm torque)"]
+        H2 -.->|"Greasy / Gloved Hands"| H3["Tier 3: Gemini Live Hands-Free Voice Assistant"]
+        H2 --> H4["Tap Sticky Bottom CTA: [ CONFIRM REPAIR COMPLETED ] (48px)"]
+    end
+    
+    H4 --> I["State 2C: Post-Repair Handshake & Conveyor Streak Active"]
+    I -->|"Conveyor Optical Verification"| J["Optical Camera verifies 0/50 clean parts on belt"]
+    I -->|"Return to Triage"| D
 ```
 
 ---
@@ -38,99 +49,72 @@ flowchart TD
 ### 2.1. State 2A: Machine Dispatch Queue (`/copilot`)
 - **Tier 1: Glance (1s):** Header with active shift badge (`Shift A • 06:00 - 14:00`), technician identity (`Tuan Le // TECH-08`), and active queue counter (`1 Critical Anomaly | 1 Preventive Maintenance`).
 - **Tier 2: Focus (5s):** Prioritized machine dispatch cards:
-  - **Card 1 (Critical Anomaly):** Machine `CNC-02 (Bay 4)`, Tool `T07`, Flank wear symptom (`VB > 0.35mm`, SPC defect rate `1.42%`), elapsed dispatch time (`8m ago`). Primary Action CTA: `[ START REPAIR (BAY 4) → ]`.
-  - **Card 2 (Preventive Maintenance):** Machine `CNC-04 (Bay 2)`, Tool `T03` life at 85%, scheduled insert indexing. Secondary Action CTA: `[ Accept Task ]`.
-- **Tier 3: Deep Dive (On-Demand):** Filter tabs (`All (2)`, `Critical (1)`, `Preventive (1)`), quick bay status summary.
+  - **Card 1 (Critical Anomaly):** Machine `CNC-02 (Bay 4)`, Tool `T07`, Flank wear symptom (`VB > 0.35mm`, SPC defect rate `1.42%`), elapsed dispatch time (`8m ago`). Primary CTA: `[ START REPAIR (BAY 4) → ]`.
+  - **Card 2 (Preventive Task):** Machine `CNC-04 (Bay 2)`, Tool `T03` life at 85%. Secondary CTA: `[ Accept Task ]`.
+- **Tier 3: Deep Dive (On-Demand):** Filter tabs (`All (2)`, `Critical (1)`, `Preventive (1)`).
 
-### 2.2. State 2B: In-Bay Repair Workspace (`/copilot?machine=CNC-02`)
+---
+
+### 2.2. State 2-DIAG: Diagnostic Evidence Probe (`/copilot?machine=CNC-02&mode=diagnostic`)
+- **Trigger Condition:** Agent Team RCA confidence < 70% (`status: awaiting_evidence`). The Agent Team requires physical confirmation of tool flank wear VB before ordering replacement.
 - **Tier 1: Glance (1s):**
-  - Top Pinned Header: `[< Back to Queue]` button + Pinned Bay `CNC-02 // Bay 4` + Status badge `rounded-full` (`(!) REPAIR IN PROGRESS`).
-  - Target Confirmation: Workpiece `Housing-B42` and Tool Turret Slot `Tool T07 (Rough Turn)`.
+  - Top Pinned Header: `[< Back to Queue]` + Pinned Bay `CNC-02 // Bay 4` + Badge `[ (!) FIELD DIAGNOSTIC REQUIRED ]` (`rounded-full`, amber/destructive).
+  - Target Confirmation: Workpiece `Housing-B42`, Tool Turret Slot `Tool T07`. Current RCA Confidence: `65% (Awaiting Evidence)`.
+- **Tier 2: Focus (5s):**
+  - **Diagnostic Directive Card (`rounded-xl`):**
+    - Audio transcription from Gemini Live: *"Please use the macro camera to take a close-up of Tool T07 cutting edge so the system can measure flank wear VB."*
+    - Primary Camera CTA (`h-11`, Solid Slate `#0F172A`, `rounded-md`): `[ 📷 CAPTURE CUTTING EDGE / UPLOAD ]` (posts to `POST /api/incidents/evidence`).
+  - **Visual Metrology Assessment Card (`rounded-xl`, emerges post-capture):**
+    - Macro photo preview with detected bounding box on cutting edge.
+    - Metrology Measurement: `Flank Wear VB = 0.42 mm (Exceeds 0.35 mm limit)` (`font-mono`).
+    - Anomaly Confirmation: `Minor chipping at tool relief angle 0.15 mm — 100% match with workpiece scratch`.
+    - Agent Team Convergence: **RCA Confidence updated to 92%** (`rounded-full` emerald badge).
+  - **Sticky Bottom Action Button (`h-12` / 48px, Solid Slate `#0F172A`):**
+    - Text: `[ START INSERT REPLACEMENT (BAY 4) → ]` (transitions immediately to State 2B).
+
+---
+
+### 2.3. State 2B: In-Bay Active Repair Workspace (`/copilot?machine=CNC-02`)
+- **Tier 1: Glance (1s):**
+  - Top Pinned Header: `[< Back to Queue]` + Pinned Bay `CNC-02 // Bay 4` + Status badge `rounded-full` (`(!) REPAIR IN PROGRESS`).
+  - Target Specs: Workpiece `Housing-B42` (FC250 Cast Iron) and Turret Slot `Tool T07 (Rough Turn)`.
 - **Tier 2: Focus (5s):**
   - **Target Specs Card (`rounded-xl`):**
-    - Defect Symptom: `Flank Wear (VB > 0.35mm)`
+    - Defect Symptom: `Flank Wear (VB = 0.42mm > 0.35mm)`
     - Replacement Insert: `WNMG-080408` (`font-mono`) — Storage Bin: `A-14` (`font-mono`)
-    - Calibrated Tightening Torque: `45 Nm` (`font-mono`, Torque Wrench #3)
+    - Calibrated Tightening Torque: `45 Nm` (`font-mono`, Calibrated Torque Wrench #3)
   - **3-Step Action Checklist (`rounded-xl` Card, Touch Targets ≥ 44 × 44 px, Checkboxes `rounded-sm`):**
-    - Step 1: `[x] Power down spindle, engage LOTO lockout & open safety door`
-    - Step 2: `[ ] Replace worn insert with WNMG-080408 (Bin A-14)`
-    - Step 3: `[ ] Tighten clamp screw with torque wrench to exactly 45 Nm`
-  - **Sticky Full-Width Completion CTA (`h-12` / 48px, Solid Slate Dark `#0F172A`, `rounded-md`):**
+    - Step 1: `[x] Power down spindle, engage LOTO lockout & open safety door` (Tap target 44px)
+    - Step 2: `[ ] Replace worn insert with WNMG-080408 (Bin A-14)` (Tap target 44px)
+    - Step 3: `[ ] Tighten clamp screw with torque wrench to exactly 45 Nm` (Tap target 44px)
+  - **Sticky Full-Width Completion CTA (`h-12` / 48px, Solid Slate `#0F172A`, `rounded-md`):**
     - Text: `[ CONFIRM REPAIR COMPLETED ]`
-    - Ergonomics: High-contrast touch target designed for gloved thumb operation.
+    - Ergonomics: High-contrast touch target designed for one-handed operation with heavy work gloves.
 - **Tier 3: Deep Dive (On-Demand / Hands-Free):**
-  - **Gemini Live Multimodal Drawer (`<Sheet>`):** Real-time voice visualizer for hands-free queries ("Confirm torque spec for T07") and macro camera validation ("Scan insert seating and screw torque").
-  - **Technical Video Reference Modal:** `[ > Watch 30s SOP Video Walkthrough ]`.
+  - **Gemini Live Multimodal Voice Visualizer:** Hands-free queries ("Say: 'Insert torqued to 45 Nm'").
+  - **Procedural Video Reference Modal:** `[ > Watch 30s SOP Video Clip ]`.
 
-### 2.3. State 2C: Post-Repair Handshake & Verification (`/copilot?machine=CNC-02&status=verified_pending`)
+---
+
+### 2.4. State 2C: Post-Repair Handshake & Conveyor Verification (`/copilot?machine=CNC-02&status=verifying`)
 - **Tier 1: Glance (1s):** Success checkmark banner `(✓) REPAIR LOGGED SUCCESSFULLY`.
 - **Tier 2: Focus (5s):**
   - Intervention Summary: Machine `CNC-02`, Tool `T07`, Insert `WNMG-080408`, Calibrated Torque `45 Nm`, Intervention Duration `6m 40s`.
-  - **Optical Verification Gate Preview (`rounded-xl` Card):**
+  - **Conveyor Verification Gate Preview (`rounded-xl` Card):**
     - Conveyor EOL Camera status: `Initiating 50-Part Clean Streak Run`
-    - Progress Bar: `[--------------------------------] 0 / 50 Good Parts (0%)`
+    - Progress Bar (`rounded-full`): `[--------------------------------] 0 / 50 Clean Parts (0%)`
     - Strict Rule: `Automatic streak reset on any single defect: ACTIVE`
-  - Navigation Actions: `[ < Back to Machine Queue ]` and `[ Monitor Verification (Incident #42) ]`.
+  - Navigation Actions: `[ < Back to Machine Queue ]` and `[ Monitor Verification in Incident Workspace ]`.
 
-### 2.4. State 2D: All Nominal / Idle Queue (`/copilot`)
-- **Tier 1: Glance (1s):** Serene green status indicator `(✓) ALL MACHINES NOMINAL`.
+---
+
+### 2.5. State 2D: All Nominal / Idle Queue (`/copilot`)
+- **Tier 1: Glance (1s):** Serene green indicator `(✓) ALL MACHINES NOMINAL`.
 - **Tier 2: Focus (5s):** Fleet status card showing all bays operating within statistical control limits (OEE > 90%, zero uncontained defects).
 
 ---
 
-## 3. User Stories & Acceptance Criteria
-
-### User Story 2.1: Priority Dispatch Queue Triage (State 2A)
-> **As a** Frontline Maintenance Technician opening the copilot on my mobile device,  
-> **I want to** see an urgent list of machines requiring immediate physical intervention ranked by severity,  
-> **So that** I attend to critical downtime bottlenecks first without needing verbal instructions.
-
-- **Acceptance Criteria:**
-  - Navigating to `/copilot` displays all machines needing service in prioritized cards.
-  - Urgent SPC anomalies (`CNC-02`) display red `CRITICAL` badges (`rounded-full`), defect symptoms, and one-tap `[ START REPAIR → ]` action.
-  - Tapping a machine card navigates immediately to `/copilot?machine=CNC-02`.
-
-### User Story 2.2: Instant Bay & Turret Slot Confirmation (State 2B - Tier 1)
-> **As a** Technician walking up to Cell Line 1,  
-> **I want to** immediately verify that I am servicing the correct machine bay and turret slot,  
-> **So that** I never service the wrong tool holder.
-
-- **Acceptance Criteria:**
-  - Pinned header shows `CNC-02 // Bay 4` and `Tool T07`.
-  - Machine specs highlight FC250 Cast Iron workpiece and current anomaly status.
-
-### User Story 2.3: 3-Step Guided Checklist with Gloved Ergonomics (State 2B - Tier 2)
-> **As a** Maintenance Technician wearing heavy work gloves,  
-> **I want to** follow a 3-step physical checklist with exact part numbers and torque values,  
-> **So that** I complete the physical repair accurately without searching through 200-page paper binders.
-
-- **Acceptance Criteria:**
-  - Checklist item touch targets are at least **44 × 44 px**.
-  - Checkboxes use `rounded-sm` (6px) tokens.
-  - Part number (`WNMG-080408`), storage bin (`A-14`), and torque specification (`45 Nm`) are highlighted in bold monospaced text (`font-mono`).
-
-### User Story 2.4: Hands-Free Voice & Vision Assistance (State 2B - Tier 3)
-> **As a** Technician with grease on my gloves,  
-> **I want to** speak to Kaizen via voice or show the tool holder to my mobile camera,  
-> **So that** I get hands-free verification that the insert is seated correctly without touching the screen.
-
-- **Acceptance Criteria:**
-  - Voice wave indicator reflects real-time Gemini Live WebSocket connection.
-  - Camera inspection CTA provides instantaneous audio/visual confirmation ("Insert seated correctly at 45 Nm").
-
-### User Story 2.5: One-Touch Glove-Friendly Sign-Off & Verification Handshake (State 2B -> 2C)
-> **As a** Technician who has finished torqueing the insert,  
-> **I want to** tap a large sticky button `CONFIRM REPAIR COMPLETED`,  
-> **So that** the orchestrator immediately triggers post-repair conveyor verification without extra navigation.
-
-- **Acceptance Criteria:**
-  - The sticky button is pinned to the bottom of the viewport with a height of **48 px** (`h-12`).
-  - Tapping marks repair completed on the Blackboard and transitions status to `VERIFYING` (Screen 3 & State 2C).
-  - Screen transitions to State 2C showing the live 0/50 clean streak verification gate.
-
----
-
-## 4. Low-Fi ASCII Wireframes (Mobile 390px Viewport)
+## 3. Low-Fi ASCII Wireframes (Mobile 390px Viewport)
 
 ### Wireframe 2A: Machine Dispatch Queue (`/copilot`)
 
@@ -175,6 +159,46 @@ flowchart TD
 
 ---
 
+### Wireframe 2-DIAG: In-Bay Diagnostic Evidence Probe (`/copilot?machine=CNC-02&mode=diagnostic`)
+
+```text
++---------------------------------------+
+| [<] Machine Queue      CNC-02 (Bay 4) |  <-- Navigates back to State 2A
+| Status: [ (!) FIELD DIAGNOSTIC PROBE ]|  <-- Amber/Destructive Badge (rounded-full)
++---------------------------------------+
+|                                       |
+| === TIER 1 (GLANCE): TARGET PROBE === |
+| +-- INSPECTION TARGET (rounded-xl) --+ |
+| | Machine: CNC-02 (Bay 4 - Lathe)    | |
+| | Turret:  Tool T07 - Rough Turn     | |
+| | Suspect: Flank Wear (VB > 0.35 mm) | |
+| | Current RCA Confidence: 65% (Need) | |
+| +------------------------------------+ |
+|                                       |
+| === TIER 2 (FOCUS): METROLOGY CAPTURE |
+| +-- CAPTURE DIRECTIVE (rounded-xl) --+ |
+| | "Use macro camera close to the      | |
+| |  cutting edge of T07 for metrology."| |
+| |                                     | |
+| | [ 📷 OPEN CAMERA / UPLOAD PHOTO ]   | |  <-- Button 44px (Solid Slate #0F172A)
+| +------------------------------------+ |
+|                                       |
+| === GEMINI METROLOGY ASSESSMENT ===== |
+| +-- VISION ANALYSIS (rounded-xl) ----+ |
+| | [T07 Macro Photo: Bounding box]    | |
+| | • Flank Wear VB: 0.42 mm (>0.35 mm)| |  <-- font-mono (Exceeds limit)
+| | • Minor Chipping on Relief: 0.15 mm| |
+| | • Match: 100% matches part scratch | |
+| | • RCA Confidence: 92% (Converged)  | |  <-- Emerald Badge (rounded-full)
+| +------------------------------------+ |
+|                                       |
++---------------------------------------+
+| [ START INSERT REPLACEMENT (BAY 4) ->]|  <-- TIER 2: Sticky 48px Glove Button
++---------------------------------------+      Transitions to State 2B (Checklist)
+```
+
+---
+
 ### Wireframe 2B: In-Bay Active Repair Workspace (`/copilot?machine=CNC-02`)
 
 ```text
@@ -187,7 +211,7 @@ flowchart TD
 | +-- TARGET MACHINE (rounded-xl) ----+ |
 | | Machine: CNC-02 (Bay 4 - Lathe)   | |
 | | Turret:  Tool T07 - Rough Turn    | |
-| | Anomaly: Flank Wear (VB > 0.35mm) | |
+| | Anomaly: Flank Wear (VB: 0.42 mm) | |
 | | Part:    Housing-B42 (FC250 Iron) | |
 | | Insert:  WNMG-080408 (Bin A-14)   | |  <-- font-mono specs
 | | Torque:  45 Nm (Calibrated Wrench)| |  <-- font-mono torque
@@ -208,7 +232,7 @@ flowchart TD
 | +-----------------------------------+ |
 |                                       |
 | === TIER 3 (DEEP DIVE / HANDS-FREE) = |
-| +-- GEMINI LIVE VOICE & VISION -----+ |
+| +-- GEMINI LIVE VOICE ASSISTANT ----+ |
 | | (((( o )))) Voice Assistant Active| |  <-- Hands-free voice visualizer
 | | "Say: 'Insert torqued to 45 Nm'   | |
 | |                                   | |
@@ -224,7 +248,7 @@ flowchart TD
 
 ---
 
-### Wireframe 2C: Post-Repair Handshake & Verification (`/copilot?machine=CNC-02&status=verified_pending`)
+### Wireframe 2C: Post-Repair Handshake & Verification (`/copilot?machine=CNC-02&status=verifying`)
 
 ```text
 +---------------------------------------+
@@ -249,7 +273,7 @@ flowchart TD
 | +-----------------------------------+ |
 |                                       |
 | [ < Back to Machine Queue ]           |  <-- Returns to State 2A
-| [ Monitor Verification (Screen 3) ]   |  <-- Deep links to /incidents/INC-042
+| [ Monitor Verification (Workspace) ]  |  <-- Deep links to /incidents/INC-2026-042
 +---------------------------------------+
 ```
 
@@ -282,13 +306,13 @@ flowchart TD
 
 ---
 
-## 5. UI States & Edge Cases
+## 4. UI States & Edge Cases
 
 | State | UI Behavior |
 |---|---|
 | **Queue Triage (State 2A)** | Ranked by severity: `CRITICAL` (SPC breach) > `WARNING` (Drift) > `PREVENTIVE` (Scheduled tool life). |
-| **Bay In-Progress (State 2B)** | Steps 1–3 can be checked off individually by finger tap or hands-free voice command ("Insert replaced and torqued"). |
-| **Gloved / Greasy Hands** | Gemini Live voice assistant responds hands-free without requiring screen taps; camera macro lens verifies insert seat. |
-| **Completion Submitted (State 2C)** | Button triggers 500ms tactile feedback, logs repair on the Blackboard, and transitions status to `VERIFYING` (Conveyor streak starts). |
-| **Streak Reset on Defect** | If a defect occurs during post-repair conveyor run, notification alerts technician: `"Verification reset: Defect detected on part #39. Inspect bay alignment."` |
+| **Diagnostic Probe (State 2-DIAG)** | Triggered when Agent Team RCA < 70%. Focuses on macro photo capture (`POST /api/incidents/evidence`) and Gemini Metrology verification before repair starts. |
+| **Bay In-Progress (State 2B)** | Steps 1–3 checked by finger tap (44px) or hands-free voice command ("Insert replaced and torqued"). Sticky 48px button submits completion. |
+| **Completion Submitted (State 2C)** | Tactile feedback, logs repair on Blackboard, transitions status to `verifying` (conveyor optical streak begins). |
+| **Streak Reset on Defect** | If a defect occurs during conveyor streak, notification alerts technician: `"Verification reset: Defect detected on part #39. Inspect bay alignment."` |
 | **All Nominal (State 2D)** | Calm technology view; zero red banners; all indicators serene green. |

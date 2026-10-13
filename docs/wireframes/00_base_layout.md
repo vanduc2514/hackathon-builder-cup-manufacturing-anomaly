@@ -27,7 +27,7 @@ flowchart TD
         D -->|"Operational Loop"| D1["Line Overview (overview) • Incidents (incident-detail + per-incident sub-tabs)"]
         D -->|"Knowledge Loop"| D2["Tech Walkthroughs (walkthroughs) • Knowledge Base (impact) • SOP Change Log (sops)"]
         C --> E["TopHeader: crumb pill • N Active Anomaly chip • ⌘K jump palette • sound toggle • avatar"]
-        C --> F["Sidebar footer: latency dot • shift chip • John Tran card"]
+        C --> F["Sidebar footer: latency dot • shift chip • role card (icon + Shift Leader)"]
         C --> G["New Run → DemoController slide-over (Inject / Reset)"]
     end
 
@@ -60,7 +60,7 @@ Root App
 │   │   ├── NavItem: Tech Walkthroughs
 │   │   ├── NavItem: Knowledge Base
 │   │   └── NavItem: SOP Change Log
-│   └── Footer: backend latency dot (pulsing green / red) • shift chip • "JT John Tran · Shift Leader" card
+│   └── Footer: backend latency dot (pulsing green / red) • shift chip • role card (role icon avatar · "Shift Leader"; no personal name)
 │       (active NavItem: white 85% background, accent icon, weight 600)
 │
 ├── TopHeader (fixed top 12, height 56, no bar background)
@@ -89,7 +89,7 @@ Root App
 
 ```text
  AppBackdrop (pastel washes + dot grid) ─────────────────────────────────────────────────────────────────────────────────────────────────────────
-  ╭──────────────────────╮   ╭─────────────────────────────╮                     (●) 1 Active Anomaly  ╭ ⌘K Search telemetry or jump to… ╮ (♪) John Tran (JT)
+  ╭──────────────────────╮   ╭─────────────────────────────╮                     (●) 1 Active Anomaly  ╭ ⌘K Search telemetry or jump to… ╮ (♪) Shift Leader (◉)
   │ [K] KAIZEN AGENT     │   │ Cell Line 1 / Line Overview │                                           ╰──────────────────────────────────╯
   │ ╭──────────────────╮ │   ╰─────────────────────────────╯   <-- floating TopHeader pills (top 12, h 56, no bar)
   │ │Cell Line 1:      │ │
@@ -107,8 +107,8 @@ Root App
   │ ☰ SOP Change Log     │   ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
   │                      │
   │ (●) 24 ms  [Shift A] │                                                                                       ╭─ Toast (DarkGlass) ──────╮
-  │ (JT) John Tran       │                                                                                       │ ✓ Message (auto 5s)      │
-  │      Shift Leader    │                                                                                       ╰──────────────────────────╯
+  │ (◉) Shift Leader     │                                                                                       │ ✓ Message (auto 5s)      │
+  │                      │                                                                                       ╰──────────────────────────╯
   ╰──────────────────────╯
    ^-- floating Sidebar, GlassCard strong (240px, inset 12px, radius 24)    ^-- <main> Page (max 1680px)
 ```

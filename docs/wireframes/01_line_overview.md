@@ -2,7 +2,7 @@
 
 > **Tab:** `overview` (sidebar "Line Overview")  
 > **Viewport:** Desktop `1440 × 900 px`  
-> **Primary Persona:** Shift Leader (John Tran)  
+> **Primary Persona:** Shift Leader  
 > **Single Job-to-be-Done (JTBD):** Line Health Supervision & Instant 1-Click Dispatch. *(Not for physical wrenching guides or deep root cause analysis).*  
 > **Design Standard:** [`docs/DESIGN.md`](../DESIGN.md) (Lumina Slate liquid glass)  
 > **Terminology:** Unified **Agent Team** across all pages and documentation.
@@ -48,7 +48,7 @@ flowchart TD
 
 ## 2. Persona & Context
 
-- **Shift Leader (John Tran):** Manages a 12-operator shift across Cell Line 1. Must ensure high line output (OEE > 90%), zero uncontained scrap escapes, and fast response times to stoppages.
+- **Shift Leader:** Manages a 12-operator shift across Cell Line 1. Must ensure high line output (OEE > 90%), zero uncontained scrap escapes, and fast response times to stoppages.
 - **Physical Context:** Monitors from a central 27" wall-mounted monitor or supervisor desk 2–3 meters away.
 - **Cognitive Requirement:** Must assess cell health in **under 3 seconds** without parsing complex telemetry graphs.
 
@@ -119,7 +119,7 @@ Kaizen Agent supports two distinct industrial scenarios out of the box (selected
 ## 5. Low-Fi ASCII Wireframe: Page Content Slot (Desktop 1440px)
 
 ```text
- ╭──────────────────────╮  ╭─────────────────────────────╮            (●) 1 Active Anomaly  ╭ ⌘K Search telemetry or jump to… ╮ (♪) John Tran (JT)
+ ╭──────────────────────╮  ╭─────────────────────────────╮            (●) 1 Active Anomaly  ╭ ⌘K Search telemetry or jump to… ╮ (♪) Shift Leader (◉)
  │ [K] KAIZEN AGENT     │  │ Cell Line 1 / Line Overview │                                  ╰──────────────────────────────────╯
  │ ╭ Cell Line 1:     ╮ │  ╰─────────────────────────────╯
  │ ╰ Turning & Milling╯ │
@@ -147,7 +147,7 @@ Kaizen Agent supports two distinct industrial scenarios out of the box (selected
  │                      │  │▌CNC-02       Housing-B42   2.84 mm/s       78.6 %         (●) Critical  INC-…          [■ OPEN INC → ■]  │ <- hot row
  │                      │  │ CNC-01       Shaft-A12     1.46 mm/s       42.1 %         (●) Nominal   —              [ Diagnostics ]   │
  │ (●) 24 ms  [Shift A] │  ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
- │ (JT) John Tran       │
+ │ (◉) Shift Leader     │
  ╰──────────────────────╯           Tier 3: [ Diagnostics ] → DiagnosticsModal (centred glass, max 880px): 4 stats + sensor history chart
 ```
 

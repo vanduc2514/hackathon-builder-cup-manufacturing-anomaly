@@ -1,5 +1,6 @@
 // Typed read-only API helpers and a small polling hook for backend endpoints the dashboard consumes.
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { authFetch } from './auth';
 
 // The Firebase Hosting rewrite cannot carry SSE, so production builds point streams at the
 // Cloud Run origin (VITE_STREAM_ORIGIN); REST stays relative.
@@ -11,7 +12,7 @@ export function streamUrl(path: string): string {
 }
 
 export async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(url, { signal });
+  const res = await authFetch(url, { signal });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return (await res.json()) as T;
 }

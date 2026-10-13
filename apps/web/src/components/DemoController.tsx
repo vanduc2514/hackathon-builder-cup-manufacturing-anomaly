@@ -10,6 +10,7 @@ import type {
   TelemetryBaselineResponse,
 } from '../types';
 import { useApi } from '../lib/api';
+import { authFetch } from '../lib/auth';
 import type { ToastTone } from '../App';
 import { STATUS_LABEL } from '../lib/incident';
 
@@ -102,7 +103,7 @@ export default function DemoController({
     if (!s) return;
     setBusy('inject');
     try {
-      const res = await fetch('/api/simulation/inject', {
+      const res = await authFetch('/api/simulation/inject', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenario: s.id, mode, machine_id: s.machine, tool_id: s.tool }),
@@ -127,7 +128,7 @@ export default function DemoController({
     setBusy('reset');
     setInjectedDuration(null);
     try {
-      const res = await fetch('/api/simulation/reset', { method: 'POST' });
+      const res = await authFetch('/api/simulation/reset', { method: 'POST' });
       if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
       const data = (await res.json()) as ResetResponse;
       setLastReset(data);

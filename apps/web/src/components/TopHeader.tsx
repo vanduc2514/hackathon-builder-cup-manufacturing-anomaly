@@ -1,7 +1,8 @@
-// TopHeader: breadcrumb, active-anomaly pill, quick-jump palette, alert sound toggle and operator identity.
+// TopHeader: breadcrumb, active-anomaly pill, quick-jump palette, alert sound toggle, signed-in identity and sign-out.
 import React, { useEffect, useRef, useState } from 'react';
 import type { DashboardTab } from './Sidebar';
 import { LINE_NAME } from '../lib/fleet';
+import { ROLE_LABEL, initials, logout, useSession } from '../lib/auth';
 
 interface TopHeaderProps {
   crumb: string;
@@ -30,6 +31,7 @@ export default function TopHeader({
   const [paletteOpen, setPaletteOpen] = useState<boolean>(false);
   const [query, setQuery] = useState<string>('');
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const user = useSession()?.user;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -185,27 +187,41 @@ export default function TopHeader({
           <span className="material-symbols-outlined">{soundOn ? 'volume_up' : 'volume_off'}</span>
         </button>
 
-        <div className="row" style={{ gap: '0.7rem', paddingLeft: '0.4rem' }}>
-          <div className="col" style={{ textAlign: 'right' }}>
-            <span style={{ fontSize: '0.88rem', fontWeight: 650, lineHeight: 1.2 }}>John Tran</span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Shift Leader</span>
+        {user && (
+          <div className="row" style={{ gap: '0.7rem', paddingLeft: '0.4rem' }}>
+            <div className="col" style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: '0.88rem', fontWeight: 650, lineHeight: 1.2 }}>{user.display_name}</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{ROLE_LABEL[user.role]}</span>
+            </div>
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 999,
+                background: 'linear-gradient(160deg, #1f2937, #0b1220)',
+                color: '#fff',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+              }}
+            >
+              {initials(user.display_name)}
+            </div>
           </div>
-          <div
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 999,
-              background: 'linear-gradient(160deg, #1f2937, #0b1220)',
-              color: '#fff',
-              display: 'grid',
-              placeItems: 'center',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-            }}
-          >
-            JT
-          </div>
-        </div>
+        )}
+
+        <button
+          id="header-sign-out"
+          type="button"
+          className="btn glass"
+          aria-label="Sign out"
+          title="Sign out"
+          onClick={logout}
+          style={{ borderRadius: 999, width: 44, height: 44, padding: 0, color: 'var(--text)' }}
+        >
+          <span className="material-symbols-outlined">logout</span>
+        </button>
       </div>
     </header>
   );

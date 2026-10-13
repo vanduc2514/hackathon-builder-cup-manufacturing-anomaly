@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import type { ImpactMetrics } from '../../types';
 import type { EsgLedgerEntry } from '../../lib/fleet';
 import { formatCo2, sumEsg } from '../../lib/fleet';
+import { authFetch } from '../../lib/auth';
 
 interface EsgCardProps {
   ledger: EsgLedgerEntry[];
@@ -15,7 +16,7 @@ export default function EsgCard({ ledger, factoryType, onOpenHub }: EsgCardProps
 
   useEffect(() => {
     const ctrl = new AbortController();
-    fetch('/api/impact/calculate', {
+    authFetch('/api/impact/calculate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ factory_type: factoryType }),

@@ -1,5 +1,6 @@
 // Sidebar: glass navigation rail — operational loop (overview, incidents), knowledge loop, backend link and shift.
 import React, { useEffect, useState } from 'react';
+import { ROLE_LABEL, initials, useSession } from '../lib/auth';
 import { LINE_LABEL, shiftLabel } from '../lib/fleet';
 
 export type DashboardTab = 'overview' | 'incident-detail' | 'impact' | 'walkthroughs' | 'sops';
@@ -96,6 +97,7 @@ export default function Sidebar({
   }, []);
 
   const incidentsActive = currentTab === 'incident-detail';
+  const user = useSession()?.user;
 
   return (
     <aside
@@ -282,28 +284,30 @@ export default function Sidebar({
         <span className="chip" style={{ alignSelf: 'flex-start', marginLeft: '0.4rem', fontSize: '0.74rem', padding: '4px 11px' }}>
           {shiftLabel(now)}
         </span>
-        <div className="glass-inset row" style={{ padding: '0.6rem 0.7rem', borderRadius: 14, gap: '0.6rem' }}>
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 999,
-              background: 'linear-gradient(160deg, #1f2937, #0b1220)',
-              color: '#fff',
-              display: 'grid',
-              placeItems: 'center',
-              flexShrink: 0,
-              fontSize: '0.72rem',
-              fontWeight: 700,
-            }}
-          >
-            JT
+        {user && (
+          <div className="glass-inset row" style={{ padding: '0.6rem 0.7rem', borderRadius: 14, gap: '0.6rem' }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 999,
+                background: 'linear-gradient(160deg, #1f2937, #0b1220)',
+                color: '#fff',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+                fontSize: '0.72rem',
+                fontWeight: 700,
+              }}
+            >
+              {initials(user.display_name)}
+            </div>
+            <div className="col" style={{ minWidth: 0 }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 650 }}>{user.display_name}</span>
+              <span style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>{ROLE_LABEL[user.role]}</span>
+            </div>
           </div>
-          <div className="col" style={{ minWidth: 0 }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 650 }}>John Tran</span>
-            <span style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>Shift Leader</span>
-          </div>
-        </div>
+        )}
       </div>
     </aside>
   );

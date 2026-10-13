@@ -1,6 +1,7 @@
 // WhatIfCalculator: interactive ROI / sustainability model driven by /api/impact/benchmarks and /api/impact/calculate.
 import React, { useEffect, useMemo, useState } from 'react';
 import type { ImpactCalculationRequest, ImpactMetrics, ManufacturingBenchmark } from '../types';
+import { authFetch } from '../lib/auth';
 
 interface WhatIfCalculatorProps {
   benchmarks: Record<string, ManufacturingBenchmark> | null;
@@ -85,7 +86,7 @@ export default function WhatIfCalculator({ benchmarks, loading, error }: WhatIfC
       line_speed_parts_per_min: speed,
     };
     const id = window.setTimeout(() => {
-      fetch('/api/impact/calculate', {
+      authFetch('/api/impact/calculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

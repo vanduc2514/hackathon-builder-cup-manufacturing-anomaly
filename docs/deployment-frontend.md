@@ -32,4 +32,6 @@ Streaming routes therefore connect to the Cloud Run origin directly:
 
 Both read the build-time `VITE_STREAM_ORIGIN`. It is unset in dev, so URLs stay relative and go through the Vite proxy. Cross-origin `EventSource` needs CORS: Cloud Run gets `CORS_ORIGINS` (each site's `.web.app` and `.firebaseapp.com` origin, `local.cors_origins` in `infra/terraform/locals.tf`), and `backend/api/main.py` adds `CORSMiddleware` for those origins only when the setting is non-empty. WebSockets are not subject to CORS.
 
+Streams cannot send an `Authorization` header, so `withToken()` (`apps/web/src/lib/auth.ts`, `apps/mobile/src/api/auth.ts`) appends the login token as `?token=`. REST calls send `Authorization: Bearer` through the Hosting rewrite.
+
 REST calls, including the web app's `/health` ping, stay relative and go through the Hosting rewrite (Key Invariant #5).

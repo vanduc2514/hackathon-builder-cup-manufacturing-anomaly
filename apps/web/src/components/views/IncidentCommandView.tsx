@@ -16,6 +16,7 @@ import CausalTreeTabs from '../incident/CausalTreeTabs';
 import EightDReportCard from '../incident/EightDReportCard';
 import { buildCausalChain, buildSolution, rootCauseOf, type CausalChain } from '../../lib/eightD';
 import { useApi } from '../../lib/api';
+import { authFetch } from '../../lib/auth';
 import { LINE_NAME } from '../../lib/fleet';
 import {
   DEMO_INCIDENT,
@@ -183,7 +184,7 @@ export default function IncidentCommandView({ incident, product, onNavigateHome,
         throw new Error('Archived reference incident cannot release live factory lines.');
       }
       // Guard against stale tabs approving a different backend incident
-      const currentRes = await fetch('/api/incidents/current');
+      const currentRes = await authFetch('/api/incidents/current');
       if (currentRes.ok) {
         const currentData = (await currentRes.json()) as IncidentState;
         if (currentData.incident_id && currentData.incident_id !== id) {
@@ -191,7 +192,7 @@ export default function IncidentCommandView({ incident, product, onNavigateHome,
         }
       }
 
-      const res = await fetch('/api/incidents/approve', {
+      const res = await authFetch('/api/incidents/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ incident_id: id }),

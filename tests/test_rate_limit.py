@@ -1,4 +1,4 @@
-"""Tests for the per-caller rate limits, login lockout and stream cap (backend/core/rate_limit.py)."""
+"""Tests for the per-caller rate limits, anonymous pass-through and stream cap (backend/core/rate_limit.py)."""
 
 from __future__ import annotations
 
@@ -28,8 +28,6 @@ def _settings(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "auth_users", [TECH, LEAD])
     monkeypatch.setattr(settings, "rate_limit_per_minute", 3)
     monkeypatch.setattr(settings, "rate_limit_write_per_minute", 2)
-    monkeypatch.setattr(settings, "rate_limit_login_per_minute", 50)
-    monkeypatch.setattr(settings, "rate_limit_login_failures", 2)
     monkeypatch.setattr(settings, "rate_limit_max_streams", 1)
 
 
@@ -57,38 +55,14 @@ def test_bucket_refills_at_the_configured_rate() -> None:
     assert limiter.hit(rule, "k") is not None
 
 
-def test_blocked_does_not_consume() -> None:
-    limiter = RateLimiter(clock=lambda: 0.0)
-    rule = Rule("r", capacity=1, period=60.0)
-    assert limiter.blocked(rule, "k") is None
-    assert limiter.blocked(rule, "k") is None
-    assert limiter.hit(rule, "k") is None
-    assert limiter.blocked(rule, "k") is not None
-
-
-def test_anonymous_requests_are_limited_per_ip_with_retry_after(client: TestClient) -> None:
-    codes = [client.get("/health").status_code for _ in range(4)]
-    assert codes == [200, 200, 200, 429]
-    res = client.get("/health")
-    assert res.json() == {"detail": "Too many requests"}
-    assert int(res.headers["retry-after"]) >= 1
-
-
-def test_spoofed_forwarded_for_hops_do_not_buy_a_new_bucket(client: TestClient) -> None:
-    codes = [
-        client.get("/health", headers={"X-Forwarded-For": f"10.0.0.{i}, 203.0.113.7"}).status_code
-        for i in range(4)
-    ]
-    assert codes[-1] == 429
-    other = client.get("/health", headers={"X-Forwarded-For": "198.51.100.1"})
-    assert other.status_code == 200
-
-
 def test_signed_in_users_have_separate_buckets(client: TestClient) -> None:
     tech = {"Authorization": f"Bearer {_token(client, 'technician', 'pw-tech')}"}
     lead = {"Authorization": f"Bearer {_token(client, 'shiftleader', 'pw-lead')}"}
     codes = [client.get("/api/simulation/status", headers=tech).status_code for _ in range(4)]
     assert codes == [200, 200, 200, 429]
+    res = client.get("/api/simulation/status", headers=tech)
+    assert res.json() == {"detail": "Too many requests"}
+    assert int(res.headers["retry-after"]) >= 1
     assert client.get("/api/simulation/status", headers=lead).status_code == 200
 
 
@@ -103,23 +77,6 @@ def test_writes_have_a_tighter_limit_than_reads(client: TestClient) -> None:
     assert client.get("/api/simulation/status", headers=auth).status_code == 200
 
 
-def test_failed_logins_lock_the_username_even_for_the_right_password(
-    client: TestClient,
-) -> None:
-    for _ in range(2):
-        res = client.post("/api/auth/login", json={"username": "Technician", "password": "x"})
-        assert res.status_code == 401
-    res = client.post("/api/auth/login", json={"username": "technician", "password": "pw-tech"})
-    assert res.status_code == 429
-    assert int(res.headers["retry-after"]) >= 1
-    assert _token(client, "shiftleader", "pw-lead")
-
-
-def test_successful_logins_do_not_count_as_failures(client: TestClient) -> None:
-    for _ in range(4):
-        assert _token(client, "technician", "pw-tech")
-
-
 def test_open_streams_are_capped_per_caller(client: TestClient) -> None:
     token = _token(client, "technician", "pw-tech")
     url = f"/api/gemini-live/ws?mode=simulation&token={token}"
@@ -130,3 +87,13 @@ def test_open_streams_are_capped_per_caller(client: TestClient) -> None:
         assert exc.value.code == 1008
     with client.websocket_connect(url) as again:
         assert again.receive_json()["type"] == "setup_complete"
+
+
+def test_anonymous_calls_are_not_limited(client: TestClient) -> None:
+    assert {client.get("/health").status_code for _ in range(10)} == {200}
+    codes = {
+        client.post("/api/auth/login", json={"username": "technician", "password": "x"}).status_code
+        for _ in range(10)
+    }
+    assert codes == {401}
+    assert _token(client, "technician", "pw-tech")

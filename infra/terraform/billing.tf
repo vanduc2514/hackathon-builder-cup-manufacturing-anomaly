@@ -8,7 +8,7 @@ resource "google_billing_budget" "project" {
   count = var.billing_account_id == null ? 0 : 1
 
   billing_account = var.billing_account_id
-  display_name    = "kaizen-budget-${var.name_suffix}"
+  display_name    = "kaizen-budget"
 
   budget_filter {
     projects               = ["projects/${data.google_project.this.number}"]

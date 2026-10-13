@@ -33,8 +33,8 @@ MOBILE_PORT      = "{{ get_env(name='MOBILE_PORT', default='3001') }}"
 API_PROXY_TARGET = "{{ get_env(name='API_PROXY_TARGET', default='http://localhost:' ~ env.API_PORT) }}"
 AI_PROVIDER      = "mock"
 RCLONE_CONFIG    = "{{config_root}}/.rclone/rclone.conf"
-# Suffix of globally unique GCP names: kaizen-tfstate-/kaizen-kb-/kaizen-web-/kaizen-mobile-<suffix>
-TF_VAR_name_suffix = "ai-builder-cup"
+# Prefix of globally unique GCP names: <prefix>-tfstate, -kb (GCS) and -web, -mobile (Hosting)
+TF_VAR_global_prefix = "kaizen-lab"
 
 # GOOGLE_APPLICATION_CREDENTIALS = "{{config_root}}/.gcp/credentials.json"
 
@@ -302,7 +302,7 @@ run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && ter
 
 [tasks."infra:init"]
 description = "Initialise the main Terraform stack against the GCS state bucket"
-run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && terraform -chdir=infra/terraform init -backend-config="bucket=kaizen-tfstate-${TF_VAR_name_suffix}"'
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && terraform -chdir=infra/terraform init -backend-config="bucket=${TF_VAR_global_prefix}-tfstate"'
 
 [tasks."infra:plan"]
 description = "Preview GCP infrastructure changes (infra/terraform)"

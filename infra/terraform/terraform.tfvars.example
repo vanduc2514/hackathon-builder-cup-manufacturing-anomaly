@@ -1,6 +1,6 @@
 # Copy to terraform.tfvars (gitignored) to override defaults.
 # project_id and billing_account_id come from TF_VAR_project_id / TF_VAR_billing_account_id
-# in mise.local.toml; name_suffix comes from TF_VAR_name_suffix in mise.toml.
+# in mise.local.toml; global_prefix comes from TF_VAR_global_prefix in mise.toml.
 
 # region                     = "asia-southeast1"
 # service_name               = "kaizen-backend"

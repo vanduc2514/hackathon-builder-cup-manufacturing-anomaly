@@ -3,8 +3,8 @@ variable "project_id" {
   type        = string
 }
 
-variable "name_suffix" {
-  description = "Suffix for globally unique names (kaizen-<role>-<suffix>); set via TF_VAR_name_suffix in mise.toml."
+variable "global_prefix" {
+  description = "Prefix for globally unique names (<prefix>-<role>: GCS buckets, Hosting sites); set via TF_VAR_global_prefix in mise.toml."
   type        = string
 }
 

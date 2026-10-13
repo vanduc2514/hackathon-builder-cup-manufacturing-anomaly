@@ -8,10 +8,10 @@ One Firebase project (`$GCP_PROJECT_ID`) with two Hosting sites:
 
 | App | Source | Build output | Hosting site | Target |
 |---|---|---|---|---|
-| Plant Ops dashboard | `apps/web` | `apps/web/dist` | `kaizen-web-${TF_VAR_name_suffix}` | `web` |
-| Technician mobile app | `apps/mobile` | `apps/mobile/dist` | `kaizen-mobile-${TF_VAR_name_suffix}` | `mobile` |
+| Plant Ops dashboard | `apps/web` | `apps/web/dist` | `kaizen-lab-web` | `web` |
+| Technician mobile app | `apps/mobile` | `apps/mobile/dist` | `kaizen-lab-mobile` | `mobile` |
 
-Sites are created by `mise run infra:apply` (`google_firebase_hosting_site.apps`; `TF_VAR_name_suffix` in `mise.toml`, default `ai-builder-cup`). `mise run firebase:targets` writes a local, gitignored `.firebaserc` mapping the `web` / `mobile` targets to the sites from `terraform output hosting_sites`.
+Sites are created by `mise run infra:apply` (`google_firebase_hosting_site.apps`; `<TF_VAR_global_prefix>-web` / `-mobile`, prefix `kaizen-lab` set in `mise.toml`). `mise run firebase:targets` writes a local, gitignored `.firebaserc` mapping the `web` / `mobile` targets to the sites from `terraform output hosting_sites`.
 
 `firebase.json` (repo root) rewrites `/api/**` (both sites) and `/health` (web only) to Cloud Run `kaizen-backend` in `asia-southeast1`, falls back to `/index.html`, and caches `/assets/**` immutably.
 

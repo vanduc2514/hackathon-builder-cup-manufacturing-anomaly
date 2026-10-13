@@ -3,16 +3,18 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 from backend.agents.orchestrator import orchestrator
+from backend.api.routes_auth import router as auth_router
 from backend.api.routes_gemini_live import router as gemini_live_router
 from backend.api.routes_impact import router as impact_router
 from backend.api.routes_incidents import router as incidents_router
 from backend.api.routes_simulation import router as simulation_router
 from backend.api.routes_telemetry import router as telemetry_router
+from backend.core.auth import require_user
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
 
@@ -63,11 +65,14 @@ if settings.cors_origin_list:
         allow_methods=["GET"],
     )
 
-app.include_router(incidents_router)
-app.include_router(simulation_router)
-app.include_router(gemini_live_router)
-app.include_router(impact_router)
-app.include_router(telemetry_router)
+# Every /api router except login requires a signed token; a router added without it is public.
+_auth = [Depends(require_user)]
+app.include_router(auth_router)
+app.include_router(incidents_router, dependencies=_auth)
+app.include_router(simulation_router, dependencies=_auth)
+app.include_router(gemini_live_router, dependencies=_auth)
+app.include_router(impact_router, dependencies=_auth)
+app.include_router(telemetry_router, dependencies=_auth)
 
 
 @app.get("/healthz", include_in_schema=False)

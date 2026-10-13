@@ -8,6 +8,8 @@ from typing import Any, Literal
 from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings
 
+from backend.core.models import AuthAccount
+
 
 class Settings(BaseSettings):
     """Reads each field from the same-named env var (case-insensitive)."""
@@ -23,6 +25,12 @@ class Settings(BaseSettings):
     cors_origins: str = ""
     gcp_project_id: str = "kaizen-local"
     gcp_region: str = "asia-southeast1"
+
+    # Login accounts: JSON list of AuthAccount objects; empty disables login (every /api call 401s).
+    auth_users: list[AuthAccount] = []
+    # HS256 signing key for API tokens (>= 32 chars); empty disables login.
+    auth_secret: str = ""
+    auth_token_ttl_hours: int = 12
 
     # BigQuery / Emulator settings
     bigquery_emulator_host: str | None = None

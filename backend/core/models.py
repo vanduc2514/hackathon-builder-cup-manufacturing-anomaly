@@ -963,3 +963,51 @@ class QualityEventPayload(BaseModel):
             machine_id=self.machine_id,
             tool_id=self.tool_id or ("MOLD-03" if self.scenario == "im_damp_material" else "T07"),
         )
+
+
+class AuthRole(str, Enum):
+    """Display role of a login account; every role may call every API."""
+
+    TECHNICIAN = "technician"
+    SHIFT_LEADER = "shift_leader"
+
+
+class AuthAccount(BaseModel):
+    """One AUTH_USERS entry; plain-text password because these are demo accounts."""
+
+    username: str
+    password: str
+    role: AuthRole
+    display_name: str
+
+
+class AuthUser(BaseModel):
+    """Signed-in identity resolved from an API token."""
+
+    username: str
+    display_name: str
+    role: AuthRole
+
+
+class LoginRequest(BaseModel):
+    """Username/password submitted to POST /api/auth/login."""
+
+    username: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    """Signed API token plus the identity it carries."""
+
+    token: str
+    expires_at: datetime
+    user: AuthUser
+
+
+class DemoAccount(BaseModel):
+    """Login quick-pick entry; password is withheld in production."""
+
+    username: str
+    display_name: str
+    role: AuthRole
+    password: Optional[str] = None

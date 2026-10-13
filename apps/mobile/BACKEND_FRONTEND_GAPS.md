@@ -1,6 +1,6 @@
 # Technician App ↔ Backend Gap Report
 
-Compares the technician mobile app (`app_frontend/src`) with the FastAPI backend (`backend/`).
+Compares the technician mobile app (`apps/mobile/src`) with the FastAPI backend (`backend/`).
 
 **Overall:** the live incident is its own work order at the top of the Work List (badge **Live**); the mock orders below it are badged **Demo** and never call the backend. The app reads the incident (SSE + snapshot), telemetry (`/api/telemetry/*`) and the Technician Copilot (`/api/gemini-live/*`), and writes back only through `POST /api/incidents/evidence`. The AI Helper, settings and the demo work orders are still local (`components/mobile/mobileData.ts`). Section 1 is resolved on the app side, except what needs a backend change (1c).
 

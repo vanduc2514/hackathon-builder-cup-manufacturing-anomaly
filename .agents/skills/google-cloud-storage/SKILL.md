@@ -58,7 +58,7 @@ Create `cors.json`:
 ```json
 [
   {
-    "origin": ["http://localhost:3000", "https://*.web.app", "https://*.firebaseapp.com"],
+    "origin": ["http://localhost:3000", "http://localhost:3001", "https://*.web.app", "https://*.firebaseapp.com"],
     "method": ["GET", "HEAD"],
     "responseHeader": ["Content-Type", "Range"],
     "maxAgeSeconds": 3600

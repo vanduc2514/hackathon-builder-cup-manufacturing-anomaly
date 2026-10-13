@@ -33,7 +33,7 @@ MOBILE_PORT      = "{{ get_env(name='MOBILE_PORT', default='3001') }}"
 API_PROXY_TARGET = "{{ get_env(name='API_PROXY_TARGET', default='http://localhost:' ~ env.API_PORT) }}"
 AI_PROVIDER      = "mock"
 # Demo login accounts (prod: TF_VAR_auth_users in mise.local.toml) + token signing key
-AUTH_USERS       = '[{"username":"technician","password":"kaizen-tech","role":"technician","display_name":"Red Panda"},{"username":"shiftleader","password":"kaizen-lead","role":"shift_leader","display_name":"Sea Otter"}]'
+AUTH_USERS       = '[{"username":"technician","password":"4NpqbcqiOB4v9Ry6","role":"technician","display_name":"Red Panda"},{"username":"shiftleader","password":"REA5Dvx8VjGKdccg","role":"shift_leader","display_name":"Sea Otter"}]'
 AUTH_SECRET      = "kaizen-dev-auth-secret-not-for-production"
 RCLONE_CONFIG    = "{{config_root}}/.rclone/rclone.conf"
 # Prefix of globally unique GCP names: <prefix>-tfstate, -kb (GCS) and -web, -mobile (Hosting)

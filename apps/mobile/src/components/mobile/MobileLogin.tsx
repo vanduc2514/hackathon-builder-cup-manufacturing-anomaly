@@ -12,6 +12,7 @@ export default function MobileLogin(): React.ReactElement {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,17 +61,41 @@ export default function MobileLogin(): React.ReactElement {
           </div>
 
           <form className="m-col" style={{ gap: 14 }} onSubmit={submit}>
+            {/* Hidden username lets the browser save and fill the password for this account. */}
+            <input type="text" name="username" autoComplete="username" value={account?.username ?? ''} readOnly hidden />
             <section className="m-glass m-list" style={{ padding: 0 }}>
               <div className="m-field">
                 <label htmlFor="m-login-password">Password</label>
                 <input
                   id="m-login-password"
-                  type="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   autoFocus
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <button
+                  id="m-login-toggle-password"
+                  type="button"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((v) => !v)}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    margin: '-7px -10px -7px -4px',
+                    display: 'grid',
+                    placeItems: 'center',
+                    border: 0,
+                    background: 'transparent',
+                    color: 'var(--ink-3)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span className="material-symbols-outlined">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                </button>
               </div>
             </section>
 

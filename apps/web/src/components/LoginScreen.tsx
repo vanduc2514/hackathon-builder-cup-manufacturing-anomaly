@@ -35,6 +35,7 @@ export default function LoginScreen(): React.ReactElement {
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
 
   useEffect(() => {
     let alive = true;
@@ -91,17 +92,46 @@ export default function LoginScreen(): React.ReactElement {
           </div>
 
           <form className="col" style={{ gap: '0.9rem', marginTop: '1.25rem' }} onSubmit={submit}>
+            {/* Hidden username lets the browser save and fill the password for this account. */}
+            <input type="text" name="username" autoComplete="username" value={account?.username ?? ''} readOnly hidden />
             <label className="col" style={{ gap: 6 }} htmlFor="login-password">
               <span style={LABEL_STYLE}>Password</span>
-              <input
-                id="login-password"
-                type="password"
-                autoComplete="current-password"
-                autoFocus
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={INPUT_STYLE}
-              />
+              <span style={{ position: 'relative', display: 'block' }}>
+                <input
+                  id="login-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  autoFocus
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ ...INPUT_STYLE, paddingRight: 48 }}
+                />
+                <button
+                  id="login-toggle-password"
+                  type="button"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((v) => !v)}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    width: 44,
+                    height: 44,
+                    display: 'grid',
+                    placeItems: 'center',
+                    border: 0,
+                    background: 'transparent',
+                    color: 'var(--muted)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </span>
             </label>
             <button
               id="login-submit"

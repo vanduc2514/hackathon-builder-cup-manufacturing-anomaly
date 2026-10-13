@@ -36,12 +36,11 @@ export interface AuthSession {
   user: AuthUser;
 }
 
-/** Entry of `GET /api/auth/accounts`; `password` is null in production. */
+/** Entry of `GET /api/auth/accounts`; never carries a password. */
 export interface DemoAccount {
   username: string;
   display_name: string;
   role: AuthRole;
-  password: string | null;
 }
 
 export interface FiveWhysStep {

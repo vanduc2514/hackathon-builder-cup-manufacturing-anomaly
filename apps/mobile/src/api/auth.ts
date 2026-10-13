@@ -15,6 +15,11 @@ export const ROLE_LABEL: Record<AuthRole, string> = {
   shift_leader: 'Shift Leader',
 };
 
+export const ROLE_ICON: Record<AuthRole, string> = {
+  technician: 'engineering',
+  shift_leader: 'supervisor_account',
+};
+
 function loadSession(): AuthSession | null {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
@@ -86,7 +91,7 @@ export function logout(): void {
   setSession(null);
 }
 
-/** Accounts for the login quick-pick chips; empty when the server is unreachable. */
+/** Accounts the login screens can offer (no passwords); empty when the server is unreachable. */
 export async function fetchDemoAccounts(): Promise<DemoAccount[]> {
   try {
     const res = await fetch('/api/auth/accounts');
@@ -110,15 +115,4 @@ export async function authFetch(input: string, init: RequestInit = {}): Promise<
 export function withToken(url: string): string {
   if (!session) return url;
   return `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(session.token)}`;
-}
-
-/** First letter of the first two words, uppercased ("Minh Tran" → "MT"). */
-export function initials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word.charAt(0))
-    .join('')
-    .toUpperCase();
 }

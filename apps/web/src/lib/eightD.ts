@@ -151,7 +151,7 @@ export function proofComplete(s: VerifiedSolution): boolean {
   return Number.isFinite(count) && Number.isFinite(target) && target > 0 && count >= target;
 }
 
-const APPROVER = 'John Tran (Shift Leader)';
+const APPROVER = 'Shift Leader';
 
 /** D1–D8 for a solution in plain language; `done` marks which disciplines already have content. */
 export function eightDSteps(s: VerifiedSolution): EightDStep[] {

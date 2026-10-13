@@ -1005,9 +1005,8 @@ class LoginResponse(BaseModel):
 
 
 class DemoAccount(BaseModel):
-    """Login quick-pick entry; password is withheld in production."""
+    """Login screen entry; never carries a password."""
 
     username: str
     display_name: str
     role: AuthRole
-    password: Optional[str] = None

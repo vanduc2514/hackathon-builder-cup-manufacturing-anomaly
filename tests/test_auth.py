@@ -73,20 +73,16 @@ def test_login_unavailable_without_accounts(
     assert res.status_code == 503
 
 
-def test_accounts_expose_passwords_only_outside_production(
+def test_accounts_list_never_exposes_passwords(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    res = client.get("/api/auth/accounts")
-    assert res.status_code == 200
-    assert {a["username"]: a["password"] for a in res.json()} == {
-        "technician": "pw-tech",
-        "shiftleader": "pw-lead",
-    }
-
-    monkeypatch.setattr(settings, "app_env", "production")
-    accounts = client.get("/api/auth/accounts").json()
-    assert len(accounts) == 2
-    assert all(a["password"] is None for a in accounts)
+    for env in ("development", "production"):
+        monkeypatch.setattr(settings, "app_env", env)
+        res = client.get("/api/auth/accounts")
+        assert res.status_code == 200
+        accounts = res.json()
+        assert {a["username"] for a in accounts} == {"technician", "shiftleader"}
+        assert all(set(a) == {"username", "display_name", "role"} for a in accounts)
 
 
 def test_api_requires_token(client: TestClient) -> None:

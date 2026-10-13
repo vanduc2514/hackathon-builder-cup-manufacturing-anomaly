@@ -32,13 +32,8 @@ async def login(body: LoginRequest) -> LoginResponse:
 
 @router.get("/accounts", response_model=list[DemoAccount])
 async def list_accounts() -> list[DemoAccount]:
-    """Login quick-pick accounts; passwords are only exposed outside production."""
+    """Accounts the login screens can offer (no passwords)."""
     return [
-        DemoAccount(
-            username=account.username,
-            display_name=account.display_name,
-            role=account.role,
-            password=None if settings.is_production else account.password,
-        )
+        DemoAccount(username=account.username, display_name=account.display_name, role=account.role)
         for account in settings.auth_users
     ]

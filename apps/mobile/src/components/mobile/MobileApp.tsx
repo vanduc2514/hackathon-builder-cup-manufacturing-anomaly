@@ -128,9 +128,7 @@ export default function MobileApp({ incident }: MobileAppProps): React.ReactElem
   const [notifications, setNotifications] = useState<MobileNotification[]>(INITIAL_NOTIFICATIONS);
   const session = useSession();
   const [profile, setProfile] = useState<TechnicianProfile>(() =>
-    session
-      ? { ...INITIAL_PROFILE, fullName: session.user.display_name, role: ROLE_LABEL[session.user.role] }
-      : INITIAL_PROFILE,
+    session ? { ...INITIAL_PROFILE, role: ROLE_LABEL[session.user.role] } : INITIAL_PROFILE,
   );
   const [toast, setToast] = useState<Toast | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -153,15 +151,6 @@ export default function MobileApp({ incident }: MobileAppProps): React.ReactElem
     () => applyIncident(baseOrders, incident, leadName, telemetry, captures),
     [baseOrders, incident, leadName, telemetry, captures],
   );
-
-  const initials =
-    profile.fullName
-      .split(' ')
-      .filter(Boolean)
-      .map((w) => w[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase() || 'ME';
 
   const route = tab === 'work-list' ? stack[stack.length - 1] : undefined;
   const order = route ? orders.find((o) => o.id === route.id) : undefined;
@@ -359,7 +348,6 @@ export default function MobileApp({ incident }: MobileAppProps): React.ReactElem
         <MobileWorkList
           orders={orders}
           tab={workTab}
-          initials={initials}
           onTabChange={setWorkTab}
           onOpen={(o) => push(routeFor(o))}
         />
@@ -437,13 +425,12 @@ export default function MobileApp({ incident }: MobileAppProps): React.ReactElem
         {tab === 'notifications' && (
           <MobileNotifications
             items={notifications}
-            initials={initials}
             onOpen={openNotification}
             onMarkAllRead={() => setNotifications((list) => list.map((n) => ({ ...n, unread: false })))}
           />
         )}
         {tab === 'settings' && (
-          <MobileSettings profile={profile} initials={initials} onChange={setProfile} onSignOut={logout} />
+          <MobileSettings profile={profile} onChange={setProfile} onSignOut={logout} />
         )}
       </main>
 

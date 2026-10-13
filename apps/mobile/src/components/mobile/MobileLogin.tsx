@@ -1,47 +1,43 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { ROLE_LABEL, fetchDemoAccounts, login } from '../../api/auth';
-import type { DemoAccount } from '../../types';
+import React, { useEffect, useState } from 'react';
+import { ROLE_ICON, ROLE_LABEL, fetchDemoAccounts, login } from '../../api/auth';
+import type { AuthRole, DemoAccount } from '../../types';
 import './mobile.css';
 
-/** Sign-in screen shown inside the phone chassis; demo chips prefill the account. */
+const LOGIN_ROLE: AuthRole = 'technician';
+
+/** Technician sign-in inside the phone chassis; the role is fixed, so only the password is asked. */
 export default function MobileLogin(): React.ReactElement {
-  const [accounts, setAccounts] = useState<DemoAccount[]>([]);
-  const [username, setUsername] = useState('');
+  // undefined while loading, null when the server offers no technician account.
+  const [account, setAccount] = useState<DemoAccount | null | undefined>(undefined);
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
     fetchDemoAccounts().then((list) => {
-      if (!cancelled) setAccounts(list);
+      if (!cancelled) setAccount(list.find((a) => a.role === LOGIN_ROLE) ?? null);
     });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const pick = (account: DemoAccount) => {
-    setUsername(account.username);
-    setPassword(account.password ?? '');
-    setError(null);
-    // Production hides passwords: the user types it.
-    if (account.password === null) passwordRef.current?.focus();
-  };
-
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!account) return;
     setSubmitting(true);
     setError(null);
     try {
       // On success AuthGate re-renders into the app; this component unmounts.
-      await login(username.trim(), password);
+      await login(account.username, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign-in failed');
       setSubmitting(false);
     }
   };
+
+  const message = account === null ? 'Sign-in is not available' : error;
 
   return (
     <div className="m-app">
@@ -53,54 +49,25 @@ export default function MobileLogin(): React.ReactElement {
 
       <div className="m-screen" style={{ height: '100%', justifyContent: 'center' }}>
         <section className="m-glass m-card m-col" style={{ gap: 14 }}>
-          <div className="m-col" style={{ gap: 4 }}>
+          <div className="m-col" style={{ gap: 4, alignItems: 'center', textAlign: 'center' }}>
+            <div className="m-avatar lg" style={{ margin: '0 auto' }}>
+              <span className="material-symbols-outlined">{ROLE_ICON[LOGIN_ROLE]}</span>
+            </div>
             <div className="m-h2" style={{ fontSize: 30 }}>
-              Sign in
+              {ROLE_LABEL[LOGIN_ROLE]}
             </div>
             <div className="m-sub">Technician app</div>
           </div>
 
-          {accounts.length > 0 && (
-            <>
-              <div className="m-label">Demo accounts</div>
-              <div className="m-row" style={{ flexWrap: 'wrap' }}>
-                {accounts.map((account) => (
-                  <button
-                    key={account.username}
-                    type="button"
-                    className={`m-chip plain ${username === account.username ? 'indigo' : ''}`}
-                    style={{ height: 44, padding: '0 14px', border: 0, cursor: 'pointer' }}
-                    onClick={() => pick(account)}
-                  >
-                    <span className="material-symbols-outlined">
-                      {account.role === 'technician' ? 'engineering' : 'supervisor_account'}
-                    </span>
-                    {ROLE_LABEL[account.role]} · {account.display_name}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
           <form className="m-col" style={{ gap: 14 }} onSubmit={submit}>
             <section className="m-glass m-list" style={{ padding: 0 }}>
               <div className="m-field">
-                <label htmlFor="m-login-username">Username</label>
-                <input
-                  id="m-login-username"
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                />
-              </div>
-              <div className="m-field">
                 <label htmlFor="m-login-password">Password</label>
                 <input
-                  ref={passwordRef}
                   id="m-login-password"
                   type="password"
                   autoComplete="current-password"
+                  autoFocus
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -111,16 +78,16 @@ export default function MobileLogin(): React.ReactElement {
               type="submit"
               className="m-btn"
               id="m-login-submit"
-              disabled={submitting || !username.trim() || !password}
+              disabled={submitting || !account || !password}
             >
               <span className="material-symbols-outlined">login</span>
               {submitting ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
 
-          {error && (
+          {message && (
             <div className="m-sub" role="alert" style={{ color: '#d70015' }}>
-              {error}
+              {message}
             </div>
           )}
         </section>

@@ -789,11 +789,10 @@ export const INITIAL_NOTIFICATIONS: MobileNotification[] = [
 ];
 
 export const INITIAL_PROFILE: TechnicianProfile = {
-  fullName: 'Minh Tran',
   employeeId: 'TECH-0427',
   role: 'Maintenance Technician',
   phone: '+84 90 123 4567',
-  email: 'minh.tran@apex-factory.vn',
+  email: 'technician@apex-factory.vn',
   shift: 'Shift A · 06:00–14:00',
   bay: 'Bay 4',
   leadName: 'Shift Leader (Duty)',

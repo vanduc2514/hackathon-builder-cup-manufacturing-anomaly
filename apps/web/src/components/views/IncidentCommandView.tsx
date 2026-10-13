@@ -44,7 +44,7 @@ interface IncidentCommandViewProps {
 
 const NOMINAL_RATE = 0.0044;
 const STEP_LABELS = ['Inspection', 'Traceability', 'Analysis', 'Repair & Proof', 'Sign-off'];
-const APPROVER = 'John Tran (Shift Leader)';
+const APPROVER = 'Shift Leader';
 
 const ROUTE = [
   { id: 'RAW', tag: 'Raw stock', name: 'Billet lot' },

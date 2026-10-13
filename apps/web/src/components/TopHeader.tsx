@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { DashboardTab } from './Sidebar';
 import { LINE_NAME } from '../lib/fleet';
-import { ROLE_LABEL, initials, logout, useSession } from '../lib/auth';
+import { ROLE_ICON, ROLE_LABEL, logout, useSession } from '../lib/auth';
 
 interface TopHeaderProps {
   crumb: string;
@@ -190,8 +190,7 @@ export default function TopHeader({
         {user && (
           <div className="row" style={{ gap: '0.7rem', paddingLeft: '0.4rem' }}>
             <div className="col" style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: '0.88rem', fontWeight: 650, lineHeight: 1.2 }}>{user.display_name}</span>
-              <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{ROLE_LABEL[user.role]}</span>
+              <span style={{ fontSize: '0.88rem', fontWeight: 650 }}>{ROLE_LABEL[user.role]}</span>
             </div>
             <div
               style={{
@@ -202,11 +201,11 @@ export default function TopHeader({
                 color: '#fff',
                 display: 'grid',
                 placeItems: 'center',
-                fontSize: '0.8rem',
-                fontWeight: 700,
               }}
             >
-              {initials(user.display_name)}
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                {ROLE_ICON[user.role]}
+              </span>
             </div>
           </div>
         )}

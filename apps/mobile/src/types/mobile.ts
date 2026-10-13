@@ -139,7 +139,6 @@ export interface MobileNotification {
 }
 
 export interface TechnicianProfile {
-  fullName: string;
   employeeId: string;
   role: string;
   phone: string;

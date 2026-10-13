@@ -326,5 +326,4 @@ export interface DemoAccount {
   username: string;
   display_name: string;
   role: AuthRole;
-  password: string | null;
 }

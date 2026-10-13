@@ -1,6 +1,6 @@
 // Sidebar: glass navigation rail — operational loop (overview, incidents), knowledge loop, backend link and shift.
 import React, { useEffect, useState } from 'react';
-import { ROLE_LABEL, initials, useSession } from '../lib/auth';
+import { ROLE_ICON, ROLE_LABEL, useSession } from '../lib/auth';
 import { LINE_LABEL, shiftLabel } from '../lib/fleet';
 
 export type DashboardTab = 'overview' | 'incident-detail' | 'impact' | 'walkthroughs' | 'sops';
@@ -296,15 +296,14 @@ export default function Sidebar({
                 display: 'grid',
                 placeItems: 'center',
                 flexShrink: 0,
-                fontSize: '0.72rem',
-                fontWeight: 700,
               }}
             >
-              {initials(user.display_name)}
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                {ROLE_ICON[user.role]}
+              </span>
             </div>
             <div className="col" style={{ minWidth: 0 }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 650 }}>{user.display_name}</span>
-              <span style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>{ROLE_LABEL[user.role]}</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 650 }}>{ROLE_LABEL[user.role]}</span>
             </div>
           </div>
         )}

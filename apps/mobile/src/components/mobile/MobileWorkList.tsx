@@ -6,7 +6,6 @@ import WorkOrderCard from './WorkOrderCard';
 interface MobileWorkListProps {
   orders: WorkOrder[];
   tab: WorkStage;
-  initials: string;
   onTabChange: (tab: WorkStage) => void;
   onOpen: (order: WorkOrder) => void;
 }
@@ -27,7 +26,6 @@ const TAB_HINT: Record<WorkStage, string> = {
 export default function MobileWorkList({
   orders,
   tab,
-  initials,
   onTabChange,
   onOpen,
 }: MobileWorkListProps): React.ReactElement {
@@ -42,7 +40,6 @@ export default function MobileWorkList({
       <MobileHeader
         title="Work List"
         subtitle={`${count('active')} jobs need you · Bay 4`}
-        initials={initials}
       />
       <div className="m-screen">
         <div className="m-seg" role="tablist">

@@ -7,6 +7,13 @@ resource "google_discovery_engine_data_store" "kb" {
   solution_types              = ["SOLUTION_TYPE_SEARCH"]
   create_advanced_site_search = false
 
+  # The API fills in the digital parser default; declaring it avoids a forced replacement.
+  document_processing_config {
+    default_parsing_config {
+      digital_parsing_config {}
+    }
+  }
+
   depends_on = [time_sleep.apis_ready]
 }
 

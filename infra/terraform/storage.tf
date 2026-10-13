@@ -16,8 +16,12 @@ resource "google_project_service_identity" "discoveryengine" {
   depends_on = [time_sleep.apis_ready]
 }
 
+# The Discovery Engine service agent is provisioned lazily, on the first data store;
+# binding it earlier fails with "service account ... does not exist".
 resource "google_storage_bucket_iam_member" "kb_discoveryengine_reader" {
   bucket = google_storage_bucket.kb.name
   role   = "roles/storage.objectViewer"
   member = "serviceAccount:${google_project_service_identity.discoveryengine.email}"
+
+  depends_on = [google_discovery_engine_data_store.kb]
 }

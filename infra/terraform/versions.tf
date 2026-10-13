@@ -14,6 +14,10 @@ terraform {
       source  = "hashicorp/time"
       version = "~> 0.13"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
   }
 
   # Bucket supplied at init: -backend-config="bucket=<global_prefix>-tfstate" (mise run infra:init).

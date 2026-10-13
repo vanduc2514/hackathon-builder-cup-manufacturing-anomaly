@@ -24,6 +24,12 @@ locals {
   }
 }
 
+# HS256 signing key for login tokens; rotating it (taint) signs everyone out.
+resource "random_password" "auth_secret" {
+  length  = 48
+  special = false
+}
+
 resource "google_cloud_run_v2_service" "backend" {
   name                = var.service_name
   location            = var.region
@@ -100,6 +106,17 @@ resource "google_cloud_run_v2_service" "backend" {
           name  = "GDRIVE_FOLDER_ID"
           value = env.value
         }
+      }
+
+      # Sensitive values stay out of local.backend_env: they cannot feed a for_each.
+      env {
+        name  = "AUTH_USERS"
+        value = var.auth_users
+      }
+
+      env {
+        name  = "AUTH_SECRET"
+        value = random_password.auth_secret.result
       }
     }
   }

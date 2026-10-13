@@ -1,0 +1,630 @@
+<!DOCTYPE html><html lang="en" style="width: 1280px; height: 2099px; overflow: hidden; position: relative;"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"outline":"#76777d","secondary":"#4b41e1","on-primary-fixed-variant":"#3f465c","inverse-on-surface":"#eaf1ff","on-primary-fixed":"#131b2e","secondary-fixed-dim":"#c3c0ff","outline-variant":"#c6c6cd","surface-bright":"#f8f9ff","surface-dim":"#cbdbf5","primary-fixed-dim":"#bec6e0","error":"#ba1a1a","on-surface":"#0b1c30","primary":"#000000","on-secondary":"#ffffff","on-tertiary":"#ffffff","on-surface-variant":"#45464d","surface-container":"#e5eeff","primary-fixed":"#dae2fd","surface-tint":"#565e74","error-container":"#ffdad6","background":"#f8f9ff","secondary-fixed":"#e2dfff","on-tertiary-fixed":"#001e2f","on-error-container":"#93000a","tertiary-container":"#001e2f","surface-container-highest":"#d3e4fe","surface-container-high":"#dce9ff","surface-container-low":"#eff4ff","inverse-surface":"#213145","primary-container":"#131b2e","on-background":"#0b1c30","surface-container-lowest":"#ffffff","on-tertiary-fixed-variant":"#004c6e","tertiary-fixed":"#c9e6ff","on-tertiary-container":"#008cc7","on-primary-container":"#7c839b","tertiary":"#000000","on-primary":"#ffffff","inverse-primary":"#bec6e0","on-secondary-container":"#fffbff","on-secondary-fixed-variant":"#3323cc","secondary-container":"#645efb","surface":"#f8f9ff","on-secondary-fixed":"#0f0069","surface-variant":"#d3e4fe","on-error":"#ffffff","tertiary-fixed-dim":"#89ceff"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"margin":"1rem","space-lg":"1.5rem","space-md":"0.75rem","gutter":"1.25rem","space-2xl":"3rem","space-xl":"2rem","space-base":"1rem","space-xs":"0.25rem","space-sm":"0.5rem","gutter-desktop":"1.5rem","margin-desktop":"2rem","space-2xs":"0.125rem"},"fontFamily":{"headline-lg-mobile":["Geist"],"headline-sm":["Geist"],"headline-lg":["Geist"],"label-md":["Geist"],"display-mobile":["Geist"],"mono-metric":["JetBrains Mono"],"display":["Geist"],"label-sm":["Geist"],"body-md":["Geist"],"headline-md":["Geist"],"body-lg":["Geist"],"body-sm":["Geist"]},"fontSize":{"headline-lg-mobile":["1.5rem",{"lineHeight":"2rem","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-sm":["1.125rem",{"lineHeight":"1.5rem","letterSpacing":"-0.015em","fontWeight":"500"}],"headline-lg":["1.75rem",{"lineHeight":"2.25rem","letterSpacing":"-0.025em","fontWeight":"600"}],"label-md":["0.8125rem",{"lineHeight":"1.125rem","letterSpacing":"0.01em","fontWeight":"500"}],"display-mobile":["2rem",{"lineHeight":"2.5rem","letterSpacing":"-0.025em","fontWeight":"600"}],"mono-metric":["0.875rem",{"lineHeight":"1.25rem","letterSpacing":"-0.01em","fontWeight":"500"}],"display":["2.5rem",{"lineHeight":"3rem","letterSpacing":"-0.035em","fontWeight":"600"}],"label-sm":["0.6875rem",{"lineHeight":"1rem","letterSpacing":"0.04em","fontWeight":"600"}],"body-md":["0.875rem",{"lineHeight":"1.375rem","letterSpacing":"-0.006em","fontWeight":"400"}],"headline-md":["1.25rem",{"lineHeight":"1.75rem","letterSpacing":"-0.02em","fontWeight":"600"}],"body-lg":["1rem",{"lineHeight":"1.625rem","letterSpacing":"-0.011em","fontWeight":"400"}],"body-sm":["0.8125rem",{"lineHeight":"1.25rem","letterSpacing":"0em","fontWeight":"400"}]}}}};</script></head><body class="bg-background font-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between p-space-base"><div class="flex flex-col gap-1"><div class="flex items-center gap-3 px-3 py-2 mb-2"><div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-sm"><span class="material-symbols-outlined text-[22px]">precision_manufacturing</span></div><div class="flex flex-col"><span class="font-bold text-lg text-slate-900 leading-tight tracking-tight">Lumina Slate</span><span class="font-semibold text-[11px] uppercase tracking-wider text-slate-500">FACTORY OPERATIONS</span></div></div><div class="mt-4 mb-2 px-3"><span class="font-bold text-xs uppercase tracking-wider text-slate-400">COMMAND CORE</span></div><nav class="flex flex-col gap-1"><a class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors font-medium text-sm" href="#"><span class="material-symbols-outlined text-[20px] text-slate-600">grid_view</span><span class="">Dashboard</span></a><a class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors font-medium text-sm" href="#"><span class="material-symbols-outlined text-[20px] text-slate-600">track_changes</span><span class="">Incident Log</span></a></nav><div class="mt-6 mb-2 px-3"><span class="font-bold text-xs uppercase tracking-wider text-slate-400">RESOURCES &amp; OPS</span></div><div class="flex flex-col gap-1"><div class="flex items-center justify-between px-3 py-2 rounded-xl text-slate-800 font-medium text-sm hover:bg-slate-50 cursor-pointer"><div class="flex items-center gap-3"><span class="material-symbols-outlined text-[20px] text-slate-600">menu_book</span><span class="">Knowledge Hub</span></div><span class="material-symbols-outlined text-[18px] text-slate-500">expand_more</span></div><div class="ml-5 pl-4 flex flex-col gap-1 border-l border-slate-200"><a class="px-2 py-1.5 rounded-lg text-sm text-slate-600 hover:text-slate-900 transition-colors" href="#">SOP Library</a><a class="px-2 py-1.5 rounded-lg text-sm font-semibold text-slate-900 hover:text-slate-900 transition-colors" href="#">Tech Walkthroughs</a></div><a class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors font-medium text-sm mt-1" href="#"><span class="material-symbols-outlined text-[20px] text-slate-600">trending_up</span><span class="">Impact</span></a></div></div><div class="p-3 bg-slate-50 rounded-xl flex items-center justify-between"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span><span class="font-semibold text-xs text-slate-500 uppercase tracking-wider">Node 04 Active</span></div><span class="font-mono-metric text-xs text-slate-400">v4.2.1</span></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 px-space-lg flex items-center justify-between"><div class="flex items-center gap-space-md"></div><div class="flex items-center gap-space-md"><button class="flex items-center justify-between gap-space-lg px-space-md py-space-xs bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface rounded-xl transition-colors" type="button"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[18px]">search</span><span class="font-body-sm text-body-sm">Jump to asset...</span></div><kbd class="px-space-xs py-space-2xs bg-surface-container-lowest rounded text-on-surface-variant font-mono-metric text-mono-metric">⌘K</kbd></button><div class="flex items-center gap-space-xs px-space-sm py-space-xs bg-surface-container-low rounded-xl text-on-surface-variant"><span class="material-symbols-outlined text-[18px]">schedule</span><span class="font-mono-metric text-mono-metric text-on-surface">14:28:09 UTC</span></div><div class="flex items-center gap-space-sm"><div class="flex flex-col text-right"><span class="font-headline-sm text-headline-sm text-on-surface leading-tight">Devon Vance</span><span class="font-label-sm text-label-sm text-on-surface-variant leading-tight">Lead Plant Ops</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-16 bg-background px-space-lg"><div class="flex flex-col w-full">
+<!-- Interactive Navigation State Sync (Modifies Left Sidebar context on screen load) -->
+<script>
+    (function alignSidebarState() {
+      // Find Knowledge Hub sub-links in the shell sidebar and highlight Tech Walkthroughs
+      const subLinks = document.querySelectorAll('aside nav a');
+      subLinks.forEach(link => {
+        if (link.textContent.includes('Tech Walkthroughs')) {
+          link.classList.add('bg-secondary/10', 'text-secondary', 'font-semibold');
+          link.classList.remove('text-on-surface-variant');
+          // Add verified badge pill if absent
+          if (!link.querySelector('.tech-badge')) {
+            const badge = document.createElement('span');
+            badge.className = 'tech-badge ml-auto text-[10px] font-mono-metric px-1.5 py-0.5 rounded-full bg-secondary text-on-secondary font-bold';
+            badge.textContent = 'ACTIVE';
+            link.appendChild(badge);
+          }
+        }
+        if (link.textContent.includes('SOP Library') && !link.querySelector('.sop-count')) {
+          const sopCount = document.createElement('span');
+          sopCount.className = 'sop-count ml-auto text-[10px] font-mono-metric px-1.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant';
+          sopCount.textContent = '48';
+          link.appendChild(sopCount);
+        }
+      });
+    })();
+  </script>
+<!-- Top Hero Header Area -->
+<div class="flex flex-col gap-space-lg mb-space-xl">
+<!-- Category & Breadcrumb Strip -->
+<div class="flex flex-wrap items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-sm">
+<span class="inline-flex items-center gap-1.5 px-space-sm py-space-2xs rounded-full bg-secondary/10 text-secondary font-label-sm text-label-sm uppercase tracking-wider font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+          Knowledge Hub // On-Demand Micro-Learning &amp; Shopfloor Captures
+        </span>
+<span class="font-mono-metric text-mono-metric text-outline-variant">•</span>
+<span class="font-mono-metric text-mono-metric text-on-surface-variant">24 Active Tutorials</span>
+</div>
+<!-- Action Cluster -->
+<div class="flex items-center gap-space-sm">
+<button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-body-sm text-body-sm font-medium transition-all shadow-sm">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">bookmark_added</span>
+<span class="">Watchlist</span>
+<span class="px-1.5 py-0.2 bg-surface-container-highest rounded-full text-on-surface font-mono-metric text-label-sm ml-1 font-semibold">3</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm transition-all shadow-sm">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+<span class="">Recording Guidelines</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-xl bg-primary text-on-primary hover:bg-primary-container font-body-sm text-body-sm font-medium shadow-md transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">videocam</span>
+<span class="">+ Upload Tech Capture</span>
+</button>
+</div>
+</div>
+<!-- Title & Description Matrix -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-space-md pb-space-sm">
+<div class="flex flex-col gap-space-2xs max-w-3xl">
+<h1 class="font-display text-display text-on-surface tracking-tight leading-none font-semibold">Tech Walkthroughs</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Bite-sized, 2-minute master technician video guides, real repair captures from past incidents, and interactive equipment teardowns.</p>
+</div>
+<!-- Learning Velocity Micro-Card -->
+
+</div>
+</div>
+<!-- Featured Masterclass Spotlight Banner (Large Bento Anchor) -->
+<div class="relative w-full rounded-2xl bg-surface-container-lowest shadow-md overflow-hidden p-space-lg mb-space-xl">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-center">
+<!-- Media Player & Thumbnail Preview (7 cols) -->
+<div class="lg:col-span-7 flex flex-col gap-space-sm">
+<div class="relative w-full aspect-video rounded-xl overflow-hidden group shadow-inner bg-inverse-surface">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="Close up precision shot of CNC milling machine arbor with a technician gloved hand positioning a digital dial indicator against an indexable tungsten carbide insert, industrial blue LED lighting with high sharpness and depth of field" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC1UY9tDq5lrHfZaHmSZruAMvzC-myelE44UrLGQqbOJUcuNxPnM5gmGPcRHVEh4eKcbE2bDUCNz6AXH_YG0twobleE-Nz5KneIkSwp_bwuCNtluWDDK-v4pZH_2bIrDaiKEG5cArcYJRjOncCt8JRgHh2Zc0PsHrMZHiVPbbIf7vZT37Z60K0nW3mBOvvkUYwss8ArKphQx095wJYimR1ZJb34Oz7_RdC0pAzT40NxchKfgCBNjg0deQ')"></div>
+<!-- Gradient Scrim -->
+<div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/90 via-inverse-surface/30 to-transparent"></div>
+<!-- Video Badges Top Overlay -->
+<div class="absolute top- space-base left-space-base right-space-base flex items-center justify-between pointer-events-none p-3">
+<span class="px-space-sm py-1 rounded-md bg-inverse-surface/80 backdrop-blur-md text-on-secondary font-mono-metric text-label-sm font-semibold tracking-wider flex items-center gap-1.5 shadow-sm">
+<span class="w-2 h-2 rounded-full bg-error animate-pulse"></span>
+              MASTERCLASS #08
+            </span>
+<span class="px-space-sm py-1 rounded-md bg-inverse-surface/80 backdrop-blur-md text-inverse-on-surface font-mono-metric text-label-sm flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[14px] text-tertiary-fixed-dim">verified</span>
+              Quality Guild Certified
+            </span>
+</div>
+<!-- Central Play Trigger Button -->
+<button aria-label="Play Walkthrough #08" class="absolute inset-0 m-auto w-16 h-16 rounded-full bg-secondary/95 hover:bg-secondary text-on-secondary flex items-center justify-center shadow-xl backdrop-blur-md transition-all transform hover:scale-110 active:scale-95 group-hover:ring-4 group-hover:ring-secondary/30">
+<span class="material-symbols-outlined text-[34px] translate-x-0.5 leading-none">play_arrow</span>
+</button>
+<!-- Floating Scrubber / Live Timeline Bar -->
+<div class="absolute bottom-3 left-3 right-3 flex flex-col gap-1.5 p-space-sm rounded-xl bg-inverse-surface/85 backdrop-blur-md">
+<div class="flex items-center justify-between font-mono-metric text-label-sm text-inverse-on-surface">
+<div class="flex items-center gap-space-sm">
+<span class="text-secondary font-semibold">00:55</span>
+<span class="text-outline-variant">/</span>
+<span class="">02:14</span>
+</div>
+<div class="flex items-center gap-space-sm text-outline-variant">
+<span class="">1080p 60fps</span>
+<span class="">•</span>
+<span class="">418 Plant Views</span>
+</div>
+</div>
+<!-- Progress Line with Chapter Pins -->
+<div class="relative w-full h-1.5 bg-outline/40 rounded-full overflow-hidden cursor-pointer">
+<div class="absolute left-0 top-0 h-full w-[41%] bg-secondary rounded-full"></div>
+<!-- Chapter Mark Indicators -->
+<span class="absolute left-[11%] top-0 w-0.5 h-full bg-inverse-on-surface/80"></span>
+<span class="absolute left-[41%] top-0 w-0.5 h-full bg-on-secondary shadow-sm"></span>
+<span class="absolute left-[75%] top-0 w-0.5 h-full bg-inverse-on-surface/80"></span>
+</div>
+</div>
+</div>
+<!-- Quick Scrub Step Indexers -->
+<div class="grid grid-cols-3 gap-space-xs text-on-surface-variant font-body-sm">
+<div class="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer flex flex-col">
+<span class="font-mono-metric text-label-sm text-secondary font-semibold">0:15 Phase 1</span>
+<span class="text-label-md font-medium text-on-surface truncate">Torque Feel &amp; Anti-Backlash</span>
+</div>
+<div class="p-2 rounded-lg bg-secondary/10 border-l-2 border-secondary transition-colors cursor-pointer flex flex-col">
+<span class="font-mono-metric text-label-sm text-secondary font-semibold">0:55 Phase 2 [Current]</span>
+<span class="text-label-md font-medium text-on-surface truncate">Dial Indicator Runout Sync</span>
+</div>
+<div class="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer flex flex-col">
+<span class="font-mono-metric text-label-sm text-secondary font-semibold">1:40 Phase 3</span>
+<span class="text-label-md font-medium text-on-surface truncate">PLC Zero-Offset Calibration</span>
+</div>
+</div>
+</div>
+<!-- Content Synopsis & Checklist Trailing (5 cols) -->
+<div class="lg:col-span-5 flex flex-col justify-between h-full gap-space-md">
+<div class="flex flex-col gap-space-sm">
+<div class="flex items-center gap-space-sm">
+<span class="px-space-sm py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm uppercase font-bold">Standard Routine</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Asset: OKUMA-MILL-04</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface font-semibold tracking-tight">Master Walkthrough #08: Rapid Tool T07 Insert Replacement &amp; Dial Indicator Runout Check</h2>
+<!-- Author Credential Strip -->
+<div class="flex items-center gap-space-sm p-space-sm rounded-xl bg-surface-container-low">
+<div class="w-10 h-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-headline-sm font-semibold">
+              SJ
+            </div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">Sarah Jenkins</span>
+<span class="material-symbols-outlined text-[16px] text-secondary">verified</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Tooling Bay 3B • 18 yrs exp • Master Guild Lead</span>
+</div>
+</div>
+<!-- Key Learnings Bulleted Section -->
+<div class="flex flex-col gap-space-xs mt-space-xs">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant font-semibold tracking-wider">Critical Quality Gates in this video</span>
+<ul class="flex flex-col gap-1.5 text-body-sm text-on-surface">
+<li class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-secondary mt-0.5">check_circle</span>
+<span class=""><strong class="font-semibold">0:15</strong> Tactile torque feel and anti-backlash seating on tungsten inserts.</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-secondary mt-0.5">check_circle</span>
+<span class=""><strong class="font-semibold">0:55</strong> 30-second dial indicator runout verification without arbor detachment.</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-secondary mt-0.5">check_circle</span>
+<span class=""><strong class="font-semibold">1:40</strong> Micro-gauge zero-offset synchronization with Fanuc 31i PLC.</span>
+</li>
+</ul>
+</div>
+</div>
+<!-- Integrated CTA Toolbar -->
+<div class="flex flex-wrap items-center gap-space-sm pt-space-sm">
+<button class="flex-1 flex items-center justify-center gap-space-xs px-space-md py-space-sm rounded-xl bg-primary text-on-primary hover:bg-primary-container font-body-sm text-body-sm font-semibold transition-all shadow-sm">
+<span class="material-symbols-outlined text-[18px]">fullscreen</span>
+<span class="">Watch in Fullscreen</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-body-sm text-body-sm font-medium transition-all shadow-sm">
+<span class="material-symbols-outlined text-[18px]">checklist</span>
+<span class="">Step Checklist</span>
+</button>
+<a class="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-secondary/10 hover:bg-secondary/20 text-secondary font-body-sm text-body-sm font-semibold transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">link</span>
+<span class="">Link to SOP #209</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+<!-- Search Filter & Category Controls -->
+<div class="flex flex-col gap-space-md mb-space-lg">
+<!-- Search Bar with Embedded Shortcuts -->
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-space-md top-1/2 -translate-y-1/2 text-[20px] text-outline">search</span>
+<input class="w-full h-12 pl-12 pr-28 rounded-xl bg-surface-container-lowest text-on-surface placeholder:text-outline text-body-md shadow-sm outline-none focus:ring-2 focus:ring-secondary/30 transition-all" placeholder="Search video guides by tool, technician, technique, or equipment model..." type="text">
+<div class="absolute right-space-sm top-1/2 -translate-y-1/2 flex items-center gap-space-xs">
+<kbd class="px-space-xs py-1 rounded bg-surface-container font-mono-metric text-label-sm text-on-surface-variant font-medium">ESC Clear</kbd>
+<button class="w-8 h-8 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+</button>
+</div>
+</div>
+<!-- Filter Pill Strip -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm">
+<!-- Filter Chips -->
+<div class="flex flex-wrap items-center gap-space-xs">
+<button class="px-space-md py-1.5 rounded-full bg-primary text-on-primary font-label-md text-label-md font-semibold shadow-sm">
+          All Videos (24)
+        </button>
+<button class="px-space-md py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors shadow-sm">
+          2-Min Micro-Walkthroughs
+        </button>
+<button class="px-space-md py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors shadow-sm">
+          Spindle &amp; Tooling
+        </button>
+<button class="px-space-md py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors shadow-sm">
+          Hydraulics &amp; Pressure
+        </button>
+<button class="px-space-md py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors shadow-sm">
+          Optics &amp; Camera Alignment
+        </button>
+<button class="px-space-md py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors shadow-sm">
+          Safety &amp; Interlocks
+        </button>
+<button class="px-space-md py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container text-secondary font-label-md text-label-md font-semibold transition-colors shadow-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px]">verified</span>
+          Master Tech Verified
+        </button>
+</div>
+<!-- Series Sort Selectors -->
+<div class="flex items-center gap-1 p-1 bg-surface-container rounded-xl">
+<button class="px-space-sm py-1 rounded-lg bg-surface-container-lowest text-on-surface font-label-sm text-label-sm font-semibold shadow-xs">
+          Latest Uploads
+        </button>
+<button class="px-space-sm py-1 rounded-lg text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm transition-colors">
+          Most Watched
+        </button>
+<button class="px-space-sm py-1 rounded-lg text-secondary font-label-sm text-label-sm font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+          Required Shift 2
+        </button>
+</div>
+</div>
+</div>
+<!-- Video Gallery Grid (6 High-Fidelity Technical Video Cards) -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-space-lg mb-space-2xl">
+<!-- Video Card 1 -->
+<div class="flex flex-col bg-surface-container-lowest rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group">
+<!-- Thumbnail -->
+<div class="relative aspect-video w-full overflow-hidden bg-inverse-surface">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="High precision machine tool repair, technician hand wrench adjusting tension screws on a multi-axis CNC spindle damper block with metallic reflection under industrial plant lighting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCgsDrmewqBh4yMn2n0NPYoKML1iHTq9RKGOKMfnF_L7Z98AI6JxecZbZhj_WvRsw_QWudsakkOtJNezen3Kw8qsjlkyYPgQr0z-K1ucd84SUTdOMLVnRt3fqsMbvBvxxpl2135-nXZLKjWiHUyZe2OK_jIQrJX6cL1Ww-PJnnpU9NYONjq4xHPmnuB7onh9fuviDTlonf8B6zlrI1DMZ3QBxnqp_rZ0IuGUk8SR4i_fFM5JD5B5boo4w')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/80 via-transparent to-transparent"></div>
+<!-- Duration & Category Tags -->
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-inverse-surface/80 backdrop-blur-md text-on-secondary font-mono-metric text-label-sm font-medium">
+          Spindle Maintenance
+        </span>
+<span class="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md bg-primary-container text-on-primary font-mono-metric text-label-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">timer</span>
+          2m 45s
+        </span>
+<!-- Play Hover Overlay -->
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface/30 backdrop-blur-xs">
+<span class="w-12 h-12 rounded-full bg-secondary text-on-secondary flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+<span class="material-symbols-outlined text-[28px] translate-x-0.5">play_arrow</span>
+</span>
+</div>
+</div>
+<!-- Card Body -->
+<div class="flex flex-col flex-1 p-space-md justify-between gap-space-md">
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between text-on-surface-variant font-mono-metric text-label-sm">
+<span class="">Asset: CNC-02</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container text-secondary font-semibold">Linked to INC-A389F1</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-secondary transition-colors line-clamp-1">
+            CNC-02 Spindle Damper Zero-Set Under 3 Minutes
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+            Real repair capture from Incident INC-A389F1 showing damper tensioner adjustment and vibration dampening.
+          </p>
+</div>
+<!-- Footer Meta -->
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<div class="flex items-center gap-space-xs">
+<div class="w-6 h-6 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-mono-metric text-label-sm font-bold">
+              MV
+            </div>
+<span class="font-label-md text-label-md text-on-surface font-medium truncate">Marcus Vance (Badge #TECH-902)</span>
+</div>
+<div class="flex items-center justify-between font-mono-metric text-label-sm text-outline pt-1">
+<div class="flex items-center gap-2">
+<span class="">312 views</span>
+<span class="">•</span>
+<span class="text-secondary font-semibold">98% helpful</span>
+</div>
+<button class="text-on-surface-variant hover:text-secondary p-1 rounded transition-colors" title="Add to Quick Queue">
+<span class="material-symbols-outlined text-[18px]">playlist_add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Video Card 2 -->
+<div class="flex flex-col bg-surface-container-lowest rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group">
+<!-- Thumbnail -->
+<div class="relative aspect-video w-full overflow-hidden bg-inverse-surface">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="High-tech optical machine vision camera lens being cleaned with specialized microfiber tip by an engineer wearing static gloves in a clean automated factory room" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDUoLpP9oOR6CA16ao0uLqkbhTAXA5uPy5_S4gZEGm3jOv7hrmAJUjhiyR78Zlwh00AUGUDsMiri6bI05ycdTySWcDeoUWX4sX05VqhNZ80SIqDA13zlImoNXLMktetkEoS0Vsq4XrOoGzUeyXw2KellxUuHkUb1dZqgzawrh3P5dSSrc9Dd74CWQYu8eOyfWoJwYlvK8wiYSuQPMOyzY3yS94cLvk7gSOhGfoQXiGljvQw3we3j7tzzg')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/80 via-transparent to-transparent"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-inverse-surface/80 backdrop-blur-md text-on-secondary font-mono-metric text-label-sm font-medium">
+          Vision AI &amp; Metrology
+        </span>
+<span class="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md bg-primary-container text-on-primary font-mono-metric text-label-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">timer</span>
+          1m 50s
+        </span>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface/30 backdrop-blur-xs">
+<span class="w-12 h-12 rounded-full bg-secondary text-on-secondary flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+<span class="material-symbols-outlined text-[28px] translate-x-0.5">play_arrow</span>
+</span>
+</div>
+</div>
+<!-- Card Body -->
+<div class="flex flex-col flex-1 p-space-md justify-between gap-space-md">
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between text-on-surface-variant font-mono-metric text-label-sm">
+<span class="">Asset: CV-X480-OPTIC</span>
+<span class="px-1.5 py-0.5 rounded bg-secondary/10 text-secondary font-semibold">Essential QA</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-secondary transition-colors line-clamp-1">
+            Keyence CV-X480 Camera Lens Cleaning &amp; Polarization Angle Calibration
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+            Correct lint-free wipe technique and polarizing filter rotation to eliminate specular glare on machined titanium faces.
+          </p>
+</div>
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<div class="flex items-center gap-space-xs">
+<div class="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center font-mono-metric text-label-sm font-bold">
+              ER
+            </div>
+<span class="font-label-md text-label-md text-on-surface font-medium truncate">Elena Rostova (Lead Optical Eng)</span>
+</div>
+<div class="flex items-center justify-between font-mono-metric text-label-sm text-outline pt-1">
+<div class="flex items-center gap-2">
+<span class="">540 views</span>
+<span class="">•</span>
+<span class="text-secondary font-semibold">100% helpful</span>
+</div>
+<button class="text-on-surface-variant hover:text-secondary p-1 rounded transition-colors" title="Add to Quick Queue">
+<span class="material-symbols-outlined text-[18px]">playlist_add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Video Card 3 -->
+<div class="flex flex-col bg-surface-container-lowest rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group">
+<!-- Thumbnail -->
+<div class="relative aspect-video w-full overflow-hidden bg-inverse-surface">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="Heavy industrial hydraulic pressure relief valve spool disassembly with heavy chrome fittings and Viton rubber O-ring seal placement in a manufacturing workshop setting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB2EftfTmhvyakdlEGmgiv5IdX5Lo4DQ8iILAY0duCx3kMoRa6Mew3A5OpeD5B581dKfayWFzkuTxnA8Dfab6DjRjYqfBL7pPKdMdNxPO4gbMwNG1D_51SV-myk6BdWW3RzT9uvYJuQZqPQz_PCX9xVCmOxY6_3t6qJBOkTYnZLbDoCoyFLkZCZkEVR0jNmZt3xmmChma9ojHA7aODDT8chgswi6qY1rzeEwQE5QJz9Lz-zB4nz2pkIFg')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/80 via-transparent to-transparent"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-inverse-surface/80 backdrop-blur-md text-on-secondary font-mono-metric text-label-sm font-medium">
+          Extrusion &amp; Hydraulics
+        </span>
+<span class="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md bg-primary-container text-on-primary font-mono-metric text-label-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">timer</span>
+          3m 10s
+        </span>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface/30 backdrop-blur-xs">
+<span class="w-12 h-12 rounded-full bg-secondary text-on-secondary flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+<span class="material-symbols-outlined text-[28px] translate-x-0.5">play_arrow</span>
+</span>
+</div>
+</div>
+<!-- Card Body -->
+<div class="flex flex-col flex-1 p-space-md justify-between gap-space-md">
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between text-on-surface-variant font-mono-metric text-label-sm">
+<span class="">Asset: IM-05 PRESS</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container text-on-surface font-semibold">Safety Certified</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-secondary transition-colors line-clamp-1">
+            IM-05 Hydraulic Pressure Relief Valve Inspection &amp; O-Ring Swap
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+            Depressurizing line safely, valve spool extraction, and high-temp Viton seal placement without fluid leakage.
+          </p>
+</div>
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<div class="flex items-center gap-space-xs">
+<div class="w-6 h-6 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-mono-metric text-label-sm font-bold">
+              DK
+            </div>
+<span class="font-label-md text-label-md text-on-surface font-medium truncate">Dave Kowalski (Master Millwright)</span>
+</div>
+<div class="flex items-center justify-between font-mono-metric text-label-sm text-outline pt-1">
+<div class="flex items-center gap-2">
+<span class="">219 views</span>
+<span class="">•</span>
+<span class="text-secondary font-semibold">96% helpful</span>
+</div>
+<button class="text-on-surface-variant hover:text-secondary p-1 rounded transition-colors" title="Add to Quick Queue">
+<span class="material-symbols-outlined text-[18px]">playlist_add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Video Card 4 -->
+<div class="flex flex-col bg-surface-container-lowest rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group">
+<!-- Thumbnail -->
+<div class="relative aspect-video w-full overflow-hidden bg-inverse-surface">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="Maintenance engineer holding digital oscilloscope probe inside stainless steel ultrasonic degreaser cleaning bath measuring cavitation acoustic resonance ripples" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDZNhjmqJ6RahvuaN3eY0j2opZGMwy7OVr6cDU7IZNiyfY3G-Yd7z4iyGae7oNxYe8voonopTL6oNhqSOx1deY7gYNTW1hfsIw55u_IybrZSDQ2ClPg2yTVMeSvaWiw1-4keRwl34zJSQYBYu_JcwczsNxg2vNC3M35ibh7wFRBgc6hH0tySD9e8FK5bKOESnvnBUIcu0WDn4DApYRFlBDoWWvRfBGbOttNwqcdDlnhvPln80I6vxDwhA')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/80 via-transparent to-transparent"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-inverse-surface/80 backdrop-blur-md text-on-secondary font-mono-metric text-label-sm font-medium">
+          Chemical &amp; Wash
+        </span>
+<span class="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md bg-primary-container text-on-primary font-mono-metric text-label-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">timer</span>
+          2m 05s
+        </span>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface/30 backdrop-blur-xs">
+<span class="w-12 h-12 rounded-full bg-secondary text-on-secondary flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+<span class="material-symbols-outlined text-[28px] translate-x-0.5">play_arrow</span>
+</span>
+</div>
+</div>
+<!-- Card Body -->
+<div class="flex flex-col flex-1 p-space-md justify-between gap-space-md">
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between text-on-surface-variant font-mono-metric text-label-sm">
+<span class="">Asset: WASH-LINE-02</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container text-secondary font-semibold">SOP #082 Companion</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-secondary transition-colors line-clamp-1">
+            Ultrasonic Degreaser Frequency Sweep &amp; Transducer Test
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+            Using handheld oscilloscope probe to check cavitation resonance across the 40 kHz bath.
+          </p>
+</div>
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<div class="flex items-center gap-space-xs">
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-mono-metric text-label-sm font-bold">
+              SJ
+            </div>
+<span class="font-label-md text-label-md text-on-surface font-medium truncate">Sarah Jenkins (Lead Maintenance)</span>
+</div>
+<div class="flex items-center justify-between font-mono-metric text-label-sm text-outline pt-1">
+<div class="flex items-center gap-2">
+<span class="">184 views</span>
+<span class="">•</span>
+<span class="text-secondary font-semibold">95% helpful</span>
+</div>
+<button class="text-on-surface-variant hover:text-secondary p-1 rounded transition-colors" title="Add to Quick Queue">
+<span class="material-symbols-outlined text-[18px]">playlist_add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Video Card 5 -->
+<div class="flex flex-col bg-surface-container-lowest rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group">
+<!-- Thumbnail -->
+<div class="relative aspect-video w-full overflow-hidden bg-inverse-surface">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="High precision red laser calibration beam aligned along the z-axis of a titanium milling lathe tool carriage in an aerospace manufacturing plant" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDrKzeuUYpZZjZ-nFZtqa8z6CGHNmMMEYAI9QzvgjGF7P9PduUp_IKc2t_Wt0zJbMg1FqoQCjipouXcHfbSRjESCfPRG1oT3b1OxKEpTZD2kU_GGufLZKwVJcGoE0rHfjbtfuMdtLUUmomPeNp9fJ8NB8WYM9kitkd3NZiqtS27ffcE8tUWuk0d3oV9mX_7zHm5NihHwnKxAY8zF3P6akJtCN691w9S7PwLnWlZr8BEKS1ZbcRHVA4eIA')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/80 via-transparent to-transparent"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-inverse-surface/80 backdrop-blur-md text-on-secondary font-mono-metric text-label-sm font-medium">
+          Tooling &amp; Precision
+        </span>
+<span class="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md bg-primary-container text-on-primary font-mono-metric text-label-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">timer</span>
+          2m 30s
+        </span>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface/30 backdrop-blur-xs">
+<span class="w-12 h-12 rounded-full bg-secondary text-on-secondary flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+<span class="material-symbols-outlined text-[28px] translate-x-0.5">play_arrow</span>
+</span>
+</div>
+</div>
+<!-- Card Body -->
+<div class="flex flex-col flex-1 p-space-md justify-between gap-space-md">
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between text-on-surface-variant font-mono-metric text-label-sm">
+<span class="">Asset: TITAN-MILL-AXIS</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container text-secondary font-semibold">Highly Rated</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-secondary transition-colors line-clamp-1">
+            Laser Micro-Gauge Zero-Offset Calibration for Axis-Z
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+            Thermal cycle compensation and laser reflection beam calibration on high-speed titanium milling arbors.
+          </p>
+</div>
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<div class="flex items-center gap-space-xs">
+<div class="w-6 h-6 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-mono-metric text-label-sm font-bold">
+              MV
+            </div>
+<span class="font-label-md text-label-md text-on-surface font-medium truncate">Marcus Vance (Senior Mill Spec)</span>
+</div>
+<div class="flex items-center justify-between font-mono-metric text-label-sm text-outline pt-1">
+<div class="flex items-center gap-2">
+<span class="">405 views</span>
+<span class="">•</span>
+<span class="text-secondary font-semibold">99% helpful</span>
+</div>
+<button class="text-on-surface-variant hover:text-secondary p-1 rounded transition-colors" title="Add to Quick Queue">
+<span class="material-symbols-outlined text-[18px]">playlist_add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Video Card 6 -->
+<div class="flex flex-col bg-surface-container-lowest rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group">
+<!-- Thumbnail -->
+<div class="relative aspect-video w-full overflow-hidden bg-inverse-surface">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="Industrial safety lock out tag out protocol, bright yellow padlock attached to high-voltage 480V electric cabinet disconnect switch with danger tag clearly visible" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC7Odip9ea4wes9HBLII2inzS3_MkcVBJELUtSUvFu5CvbPGSY3-9oe5VXhqyJsd506S6vcKVeijkWjqRWYE1exPHe-miWtHdfcZLhKK_AvxrQphhAM7BI4Vjvpjas7eOO_IIXJvDkyRrwRrXgHDnB-nkmzXh0cRrF2ODZ15Pm_1KoAZdmQkZ123RHccoquif6vOJou6OxdaHsF--QsLsxFYbNimOREEITeXw6W88w3v6_uAO8iID3xXQ')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/80 via-transparent to-transparent"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-inverse-surface/80 backdrop-blur-md text-on-secondary font-mono-metric text-label-sm font-medium">
+          Safety Protocol
+        </span>
+<span class="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md bg-primary-container text-on-primary font-mono-metric text-label-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">timer</span>
+          1m 40s
+        </span>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface/30 backdrop-blur-xs">
+<span class="w-12 h-12 rounded-full bg-secondary text-on-secondary flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+<span class="material-symbols-outlined text-[28px] translate-x-0.5">play_arrow</span>
+</span>
+</div>
+</div>
+<!-- Card Body -->
+<div class="flex flex-col flex-1 p-space-md justify-between gap-space-md">
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between text-on-surface-variant font-mono-metric text-label-sm">
+<span class="">Asset: FEEDER-DIST-04</span>
+<span class="px-1.5 py-0.5 rounded bg-error-container text-on-error-container font-semibold">Annual Mandatory</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-secondary transition-colors line-clamp-1">
+            Lockout / Tagout (LOTO) Physical Verification for 480V Feeder Disconnect
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+            Mandatory zero-voltage test procedure with calibrated multimeter before cabinet entry.
+          </p>
+</div>
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<div class="flex items-center gap-space-xs">
+<div class="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center font-mono-metric text-label-sm font-bold">
+              DP
+            </div>
+<span class="font-label-md text-label-md text-on-surface font-medium truncate">Chief Safety Officer Dan Perez</span>
+</div>
+<div class="flex items-center justify-between font-mono-metric text-label-sm text-outline pt-1">
+<div class="flex items-center gap-2">
+<span class="">1,120 views</span>
+<span class="">•</span>
+<span class="text-secondary font-semibold">100% compliant</span>
+</div>
+<button class="text-on-surface-variant hover:text-secondary p-1 rounded transition-colors" title="Add to Quick Queue">
+<span class="material-symbols-outlined text-[18px]">playlist_add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Operator Learning Hub Widget & Interactive Skill Tracker -->
+<div class="w-full bg-surface-container-lowest rounded-2xl shadow-sm p-space-lg mb-space-2xl">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-center">
+<!-- Operator Progress Visual (5 cols) -->
+<div class="lg:col-span-5 flex flex-col gap-space-sm border-r-0 lg:border-r border-surface-container pr-0 lg:pr-space-lg">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary font-headline-sm font-semibold">
+              DV
+            </div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">Devon Vance</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant font-mono-metric text-label-sm">Station L04</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Lead Plant Operator • Shift 02 Active</span>
+</div>
+</div>
+<span class="px-space-sm py-1 rounded-full bg-secondary/10 text-secondary font-label-sm text-label-sm font-bold">Level 4 Metrology</span>
+</div>
+<div class="flex flex-col gap-1.5 mt-space-xs">
+<div class="flex items-center justify-between text-body-sm">
+<span class="font-medium text-on-surface">Monthly Micro-Learning Recertification</span>
+<span class="font-mono-metric font-semibold text-secondary">4 of 5 Completed</span>
+</div>
+<!-- Progress Bar -->
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-secondary rounded-full" style="width: 80%"></div>
+</div>
+<span class="text-label-sm text-on-surface-variant">Next required module: Spindle Dynamic Calibration (Due in 4 days)</span>
+</div>
+</div>
+<!-- Action & Skill Certificate Links (7 cols) -->
+<div class="lg:col-span-7 flex flex-col md:flex-row items-center justify-between gap-space-md pl-0 lg:pl-space-md">
+<div class="flex flex-col gap-1 max-w-md">
+<div class="flex items-center gap-1.5 text-on-surface font-headline-sm text-headline-sm font-semibold">
+<span class="material-symbols-outlined text-[20px] text-secondary">workspace_premium</span>
+<span class="">Skill Verification &amp; Walkthrough Requests</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            Completed all mandatory walkthroughs? Export your updated Quality Guild endorsement or record an in-situ video capture directly from the floor terminal.
+          </p>
+</div>
+<div class="flex flex-col sm:flex-row items-center gap-space-sm w-full md:w-auto">
+<button class="w-full sm:w-auto flex items-center justify-center gap-space-xs px-space-md py-space-sm rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-body-sm text-body-sm font-semibold transition-all shadow-xs">
+<span class="material-symbols-outlined text-[18px]">card_membership</span>
+<span class="">Skill Certificate</span>
+</button>
+<button class="w-full sm:w-auto flex items-center justify-center gap-space-xs px-space-md py-space-sm rounded-xl bg-secondary text-on-secondary hover:bg-secondary-container font-body-sm text-body-sm font-semibold transition-all shadow-sm">
+<span class="material-symbols-outlined text-[18px]">add_to_queue</span>
+<span class="">Request Walkthrough</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div></main></div>
+
+
+</body></html>

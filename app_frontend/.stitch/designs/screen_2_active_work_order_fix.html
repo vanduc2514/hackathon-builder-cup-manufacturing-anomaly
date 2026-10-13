@@ -1,0 +1,138 @@
+<!DOCTYPE html><html class="h-full bg-background" lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_tab" name="shell-type"><title>Apex Field Copilot</title><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "secondary": "#4b41e1", "error-container": "#ffdad6", "surface-variant": "#d3e4fe", "inverse-on-surface": "#eaf1ff", "primary-fixed-dim": "#bec6e0", "on-primary-container": "#7c839b", "secondary-fixed-dim": "#c3c0ff", "surface-bright": "#f8f9ff", "primary-container": "#131b2e", "outline-variant": "#c6c6cd", "on-secondary-container": "#fffbff", "surface-container-highest": "#d3e4fe", "surface-container-low": "#eff4ff", "on-error-container": "#93000a", "surface-dim": "cbdbf5", "surface-tint": "#565e74", "primary": "#000000", "on-surface-variant": "#45464d", "tertiary": "#000000", "on-error": "#ffffff", "outline": "#76777d", "background": "#f8f9ff", "on-tertiary-fixed-variant": "#004c6e", "primary-fixed": "#dae2fd", "inverse-surface": "#213145", "surface-container": "#e5eeff", "on-background": "#0b1c30", "on-primary-fixed-variant": "#3f465c", "tertiary-fixed-dim": "#89ceff", "on-secondary-fixed-variant": "#3323cc", "surface": "#f8f9ff", "tertiary-container": "#001e2f", "on-surface": "#0b1c30", "error": "#ba1a1a", "secondary-container": "#645efb", "on-tertiary-container": "#008cc7", "secondary-fixed": "#e2dfff", "on-secondary": "#ffffff", "on-tertiary": "#ffffff", "inverse-primary": "#bec6e0", "surface-container-lowest": "#ffffff", "surface-container-high": "#dce9ff", "tertiary-fixed": "#c9e6ff", "on-primary-fixed": "#131b2e", "on-secondary-fixed": "#0f0069", "on-tertiary-fixed": "#001e2f", "on-primary": "#ffffff" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "margin-desktop": "2.5rem", "margin-tablet": "1.5rem", "gutter": "1rem", "space-md": "1rem", "margin": "1rem", "space-xs": "0.25rem", "space-sm": "0.5rem", "space-lg": "1.5rem", "gutter-tablet": "1.25rem", "gutter-desktop": "1.5rem", "space-xl": "2.25rem" }, fontFamily: { "label-md": ["Geist"], "label-lg": ["Geist"], "headline-lg-mobile": ["Geist"], "headline-sm": ["Geist"], "body-md": ["Geist"], "headline-xl-mobile": ["Geist"], "body-lg": ["Geist"], "headline-md": ["Geist"], "body-sm": ["Geist"], "headline-lg": ["Geist"], "label-sm": ["Geist"], "headline-xl": ["Geist"] }, fontSize: { "label-md": ["13px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "label-lg": ["15px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }], "headline-lg-mobile": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "headline-sm": ["17px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "body-md": ["15px", { "lineHeight": "22px", "letterSpacing": "0em", "fontWeight": "400" }], "headline-xl-mobile": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.025em", "fontWeight": "700" }], "body-lg": ["17px", { "lineHeight": "26px", "letterSpacing": "-0.005em", "fontWeight": "400" }], "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" }], "body-sm": ["13px", { "lineHeight": "18px", "letterSpacing": "0.005em", "fontWeight": "400" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "700" }], "headline-xl": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.03em", "fontWeight": "700" }] } } } };</script><style>@layer base{html,body{width:100%;margin:0;padding:0;min-height:100%;}body{overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style></head><body class="bg-surface font-body-md text-on-surface antialiased flex flex-col min-h-full selection:bg-secondary/20"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/80 backdrop-blur-2xl shadow-[0_1px_12px_rgba(11,28,48,0.04)]"><div class="h-20 px-margin flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0"><div class="flex items-center justify-center p-space-xs rounded-xl bg-surface-container-lowest/80 backdrop-blur-md shadow-[0_2px_8px_rgba(11,28,48,0.06)] shrink-0"><img alt="Apex Industrial Copilot Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1WEW_QiB8b1506KUbhGDwTqnPcfMWl21zsmH0KxebrcFqSzoIxcT3mTznJqeNKqOD277OQLUBb4q3wH8eIxQtHFHP_z65iIrhsC6AbxPjjDORKNBcYI1cOtYtcb5-DoYGumZoeTWXNr51KzAfAwGZpglxBgbQkYzqITayTmghVX8LhsFagi4fQ99LrVfExJrTEyvncFXtxjgEYPGUR-PrbqKeNEGBbbLWaMODelnO0oMsQ8V04IxXZF0QY9"></div><div class="flex flex-col min-w-0"><div class="flex items-center gap-space-xs"><h1 class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight truncate">Apex Field Copilot</h1></div><div class="flex items-center gap-1.5"><span class="flex h-2 w-2 relative shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span></span><span class="font-label-sm text-label-sm text-secondary truncate font-bold tracking-wider uppercase">Gemini Live · vi-VN active</span></div></div></div><div class="flex items-center gap-space-sm shrink-0"><div class="flex items-center gap-space-xs pl-space-sm pr-space-xs py-space-xs rounded-full bg-surface-container/70 backdrop-blur-lg shadow-[0_2px_10px_rgba(15,23,42,0.05)]"><div class="hidden sm:flex flex-col text-right mr-1"><span class="font-label-sm text-label-sm text-on-surface font-bold leading-none">Tuan Nguyen</span><span class="font-label-sm text-label-sm text-on-surface-variant font-medium leading-none">L3 Tech</span></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-2 ring-surface-container-lowest shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvI6p4nPYRsHT0cY4XEg8zY3ChO5yGirRNXlN5ZJg4mRQOjkpW_NdZ1T7Li2pWNvJ6LCUoneFc9g89NBuWqHF66BtNQ3J6fqjRDbC-Fxz36skyfSy-VCODsxNVmJMxfJXlfysoNGb3OmceU1RqVApWl8GS1ps3us-URha6lG2SbQ4RNuSN0owkAi5DNvLS8qvaKZq93CU0qsuou-YOOWhxtXDPySxxRrVYjWCaZxtzugoRIvItYztyaQ"></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-20 pb-28 bg-surface px-margin"><div class="flex flex-col w-full space-y-space-md">
+<!-- Top Navigation & Breadcrumb -->
+<div class="flex items-center justify-between w-full">
+<a class="inline-flex items-center gap-space-xs px-space-sm py-2 rounded-full bg-surface-container-lowest/80 shadow-sm text-on-surface transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+<span class="font-label-md text-label-md">Back to Work Orders</span>
+</a>
+<div class="flex items-center gap-space-xs px-3 py-1.5 rounded-full bg-surface-container shadow-sm">
+<span class="material-symbols-outlined text-[16px] text-secondary">satellite_alt</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold tracking-wider">BAY C · CNC-02</span>
+</div>
+</div>
+<!-- Primary Job Focus Glass Card -->
+<div class="relative w-full rounded-[28px] bg-surface-container-lowest/90 backdrop-blur-2xl shadow-[0_16px_40px_-8px_rgba(11,28,48,0.08),0_2px_12px_rgba(11,28,48,0.04)] p-5 flex flex-col gap-space-md overflow-hidden">
+<!-- Ambient Precision Rim Radial Gradient -->
+<div class="absolute -top-24 -right-24 w-52 h-52 rounded-full bg-secondary-container/10 blur-3xl pointer-events-none"></div>
+<!-- Card Top Header: Status & Incident Tag -->
+<div class="flex items-center justify-between w-full gap-2">
+<!-- Status Badge -->
+<div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface-container-highest text-secondary shadow-sm">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+</span>
+<span class="font-label-sm text-label-sm tracking-wider uppercase font-bold">Repairing · In Progress</span>
+</div>
+<span class="font-label-sm text-label-sm px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant tracking-wider font-semibold">
+        #INC-8919
+      </span>
+</div>
+<!-- Machine & Issue Headline -->
+<div class="flex flex-col gap-1">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface font-semibold tracking-tight">
+        CNC High-Precision Lathe 02
+      </h2>
+<div class="flex items-center gap-1.5 text-error">
+<span class="material-symbols-outlined text-[18px]">warning</span>
+<span class="font-body-md text-body-md font-medium text-on-surface-variant">Excessive toolhead chatter detected</span>
+</div>
+</div>
+<!-- Diagnostic Visual Graphic -->
+<div class="relative w-full h-36 rounded-2xl overflow-hidden bg-surface-container shadow-inner">
+<img class="w-full h-full object-cover" data-alt="High precision industrial Haas CNC machine toolholder undergoing automated optical telemetry diagnostics in a spotless modern high tech aerospace factory with blue rim lighting and ambient industrial tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxuxVFD9m0_VqeJiuaPXss8lFebyaTOmclIKZI4bhMx8eFTd213cDy9LZzwZFD0YVP1SuTWBEF80gA08woF4mlSDz_QxKYKKNUv7lTXGuRRUtHAlg5_ewzIeFMVL_IDzsI2ljeD1WtaQIq3DIZRgdNzuX5gDA0RWeG-iTizDocYF3x_mSu6fk5etx578kRbN0NdoEK0n0Tb1NMb375tIfz1Jj6lQjwxN8Lzse7c12EBjJAFGHQmPtJ2w">
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container/80 via-primary-container/20 to-transparent flex items-end p-3 justify-between">
+<div class="flex items-center gap-2 text-surface-container-lowest">
+<span class="material-symbols-outlined text-[20px] text-tertiary-fixed">precision_manufacturing</span>
+<span class="font-label-sm text-label-sm font-semibold tracking-wide">Haas ST-20Y (Bay C)</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-lowest/20 backdrop-blur-md text-surface-container-lowest font-label-sm text-label-sm">
+          Runout: +0.042mm
+        </span>
+</div>
+</div>
+<!-- AI Diagnostic Work Order Box -->
+<div class="p-4 rounded-2xl bg-secondary/5 shadow-sm flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-secondary">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+<span class="font-label-md text-label-md tracking-tight font-bold">AI Diagnosed Directive</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">99.2% match</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface leading-snug">
+        Replace collar clamp O-ring, torque bolts to 45 Nm, calibrate optical datum.
+      </p>
+</div>
+<!-- Suspect Equipment & Root Cause Breakdown -->
+<div class="flex flex-col gap-space-xs p-4 rounded-2xl bg-surface-container/60 shadow-sm">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold">Investigation Telemetry</span>
+<div class="flex flex-col gap-2.5 mt-1">
+<div class="flex items-start gap-2.5">
+<div class="p-1 rounded-lg bg-surface-container-lowest text-secondary shrink-0 shadow-xs mt-0.5">
+<span class="material-symbols-outlined text-[16px]">troubleshoot</span>
+</div>
+<div class="min-w-0 flex-1">
+<span class="block font-label-sm text-label-sm text-on-surface-variant">Root Cause</span>
+<span class="font-body-sm text-body-sm text-on-surface font-semibold">Micro-fracture in clamping collar causing runout</span>
+</div>
+</div>
+<div class="flex items-start gap-2.5">
+<div class="p-1 rounded-lg bg-surface-container-lowest text-secondary shrink-0 shadow-xs mt-0.5">
+<span class="material-symbols-outlined text-[16px]">hardware</span>
+</div>
+<div class="min-w-0 flex-1">
+<span class="block font-label-sm text-label-sm text-on-surface-variant">Suspect Tool</span>
+<span class="font-body-sm text-body-sm text-on-surface font-semibold">Carbide Insert T-410 &amp; ISO 40 Toolholder</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Gemini Live Language Active Badge -->
+<div class="flex items-center justify-between px-3.5 py-2 rounded-xl bg-surface-container shadow-xs">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-secondary">mic</span>
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">Copilot Ready: Gemini Live</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-lowest text-secondary font-label-sm text-label-sm font-bold tracking-wide shadow-xs">
+        vi-VN / EN
+      </span>
+</div>
+<!-- Glove-Accessible Dominant Action Trigger -->
+<button class="w-full h-11 rounded-xl bg-primary text-on-primary shadow-sm flex items-center justify-center gap-2 px-5 transition-all active:scale-[0.98] select-none touch-manipulation" id="start-repair-btn" type="button"><span class="font-label-lg text-label-lg font-semibold tracking-tight">Start Repair</span><span class="material-symbols-outlined text-[18px] opacity-80">arrow_forward</span></button>
+</div>
+<!-- Auxiliary Telemetry Strip -->
+<div class="w-full grid grid-cols-2 gap-space-sm pb-2">
+<div class="p-3 rounded-2xl bg-surface-container-lowest/70 backdrop-blur-md shadow-sm flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">schedule</span>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Est. Downtime</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate">28 Minutes</span>
+</div>
+</div>
+<div class="p-3 rounded-2xl bg-surface-container-lowest/70 backdrop-blur-md shadow-sm flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[20px] text-secondary">inventory_2</span>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Spares in Cart</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate">3 Reserved</span>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Glove-friendly tactile feedback microinteraction
+  const repairBtn = document.getElementById('start-repair-btn');
+  if (repairBtn) {
+    repairBtn.addEventListener('click', () => {
+      if (window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate([40, 30, 60]);
+      }
+      repairBtn.classList.add('opacity-90');
+      setTimeout(() => repairBtn.classList.remove('opacity-90'), 150);
+    });
+  }
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe pointer-events-none" data-active-classes="bg-primary text-on-primary shadow-[0_4px_16px_rgba(15,23,42,0.18)]"><div class="max-w-md mx-auto px-margin pb-space-sm pt-space-xs pointer-events-auto"><div class="h-20 bg-surface-container-lowest/85 backdrop-blur-2xl rounded-full shadow-[0_12px_36px_-6px_rgba(15,23,42,0.12),0_4px_16px_rgba(15,23,42,0.04)] px-space-xs flex items-center justify-around gap-1"><a aria-current="page" class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 transition-all active:scale-95 bg-primary text-on-primary shadow-[0_4px_16px_rgba(15,23,42,0.18)]" data-path="work-list" href="#"><span class="material-symbols-outlined text-[22px]">fact_check</span><span class="font-label-sm text-label-sm tracking-tight">Work List</span></a><a class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 text-on-surface-variant transition-all active:scale-95" data-path="ai-helper" href="#"><div class="relative flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">mic</span><span class="material-symbols-outlined text-[12px] absolute -top-1 -right-2 text-secondary">auto_awesome</span></div><span class="font-label-sm text-label-sm tracking-tight">AI Helper</span></a><a class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 text-on-surface-variant transition-all active:scale-95 relative" data-path="notifications" href="#"><div class="relative flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute -top-1 -right-2 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-error text-on-error font-label-sm text-[10px] leading-none shadow-sm">2</span></div><span class="font-label-sm text-label-sm tracking-tight">Notifications</span></a><a class="flex-1 h-14 min-h-[56px] min-w-[56px] rounded-full flex flex-col items-center justify-center gap-1 text-on-surface-variant transition-all active:scale-95" data-path="settings" href="#"><span class="material-symbols-outlined text-[22px]">tune</span><span class="font-label-sm text-label-sm tracking-tight">Settings</span></a></div></div></nav>
+
+</body></html>

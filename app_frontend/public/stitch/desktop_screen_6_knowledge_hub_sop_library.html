@@ -1,0 +1,571 @@
+<!DOCTYPE html><html lang="en" style="width: 1280px; height: 1970px; overflow: hidden; position: relative;"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"outline":"#76777d","secondary":"#4b41e1","on-primary-fixed-variant":"#3f465c","inverse-on-surface":"#eaf1ff","on-primary-fixed":"#131b2e","secondary-fixed-dim":"#c3c0ff","outline-variant":"#c6c6cd","surface-bright":"#f8f9ff","surface-dim":"#cbdbf5","primary-fixed-dim":"#bec6e0","error":"#ba1a1a","on-surface":"#0b1c30","primary":"#000000","on-secondary":"#ffffff","on-tertiary":"#ffffff","on-surface-variant":"#45464d","surface-container":"#e5eeff","primary-fixed":"#dae2fd","surface-tint":"#565e74","error-container":"#ffdad6","background":"#f8f9ff","secondary-fixed":"#e2dfff","on-tertiary-fixed":"#001e2f","on-error-container":"#93000a","tertiary-container":"#001e2f","surface-container-highest":"#d3e4fe","surface-container-high":"#dce9ff","surface-container-low":"#eff4ff","inverse-surface":"#213145","primary-container":"#131b2e","on-background":"#0b1c30","surface-container-lowest":"#ffffff","on-tertiary-fixed-variant":"#004c6e","tertiary-fixed":"#c9e6ff","on-tertiary-container":"#008cc7","on-primary-container":"#7c839b","tertiary":"#000000","on-primary":"#ffffff","inverse-primary":"#bec6e0","on-secondary-container":"#fffbff","on-secondary-fixed-variant":"#3323cc","secondary-container":"#645efb","surface":"#f8f9ff","on-secondary-fixed":"#0f0069","surface-variant":"#d3e4fe","on-error":"#ffffff","tertiary-fixed-dim":"#89ceff"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"margin":"1rem","space-lg":"1.5rem","space-md":"0.75rem","gutter":"1.25rem","space-2xl":"3rem","space-xl":"2rem","space-base":"1rem","space-xs":"0.25rem","space-sm":"0.5rem","gutter-desktop":"1.5rem","margin-desktop":"2rem","space-2xs":"0.125rem"},"fontFamily":{"headline-lg-mobile":["Geist"],"headline-sm":["Geist"],"headline-lg":["Geist"],"label-md":["Geist"],"display-mobile":["Geist"],"mono-metric":["JetBrains Mono"],"display":["Geist"],"label-sm":["Geist"],"body-md":["Geist"],"headline-md":["Geist"],"body-lg":["Geist"],"body-sm":["Geist"]},"fontSize":{"headline-lg-mobile":["1.5rem",{"lineHeight":"2rem","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-sm":["1.125rem",{"lineHeight":"1.5rem","letterSpacing":"-0.015em","fontWeight":"500"}],"headline-lg":["1.75rem",{"lineHeight":"2.25rem","letterSpacing":"-0.025em","fontWeight":"600"}],"label-md":["0.8125rem",{"lineHeight":"1.125rem","letterSpacing":"0.01em","fontWeight":"500"}],"display-mobile":["2rem",{"lineHeight":"2.5rem","letterSpacing":"-0.025em","fontWeight":"600"}],"mono-metric":["0.875rem",{"lineHeight":"1.25rem","letterSpacing":"-0.01em","fontWeight":"500"}],"display":["2.5rem",{"lineHeight":"3rem","letterSpacing":"-0.035em","fontWeight":"600"}],"label-sm":["0.6875rem",{"lineHeight":"1rem","letterSpacing":"0.04em","fontWeight":"600"}],"body-md":["0.875rem",{"lineHeight":"1.375rem","letterSpacing":"-0.006em","fontWeight":"400"}],"headline-md":["1.25rem",{"lineHeight":"1.75rem","letterSpacing":"-0.02em","fontWeight":"600"}],"body-lg":["1rem",{"lineHeight":"1.625rem","letterSpacing":"-0.011em","fontWeight":"400"}],"body-sm":["0.8125rem",{"lineHeight":"1.25rem","letterSpacing":"0em","fontWeight":"400"}]}}}};</script></head><body class="bg-background font-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between p-space-base"><div class="flex flex-col gap-2 p-2"><div class="flex items-center gap-3 px-1 py-1 mb-4"><div class="w-10 h-10 rounded-xl bg-[#0f172a] flex items-center justify-center text-white shrink-0 shadow-sm"><span class="material-symbols-outlined text-[22px]">precision_manufacturing</span></div><div class="flex flex-col min-w-0"><span class="font-bold text-[18px] text-slate-900 leading-tight tracking-tight">Lumina Slate</span><span class="font-semibold text-[11px] uppercase tracking-wider text-slate-500 leading-tight mt-0.5">FACTORY OPERATIONS</span></div></div><div class="px-2 pt-2 pb-1"><span class="font-bold text-[11px] uppercase tracking-wider text-slate-400">COMMAND CORE</span></div><nav class="flex flex-col gap-1"><a class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors font-medium text-[14px]" href="#"><span class="material-symbols-outlined text-[20px] text-slate-600">grid_view</span><span class="">Dashboard</span></a><a class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors font-medium text-[14px]" href="#"><span class="material-symbols-outlined text-[20px] text-slate-600">radar</span><span class="">Incident Log</span></a></nav><div class="px-2 pt-4 pb-1"><span class="font-bold text-[11px] uppercase tracking-wider text-slate-400">RESOURCES &amp; OPS</span></div><div class="flex flex-col gap-1"><div class="flex items-center justify-between px-3 py-2 rounded-xl text-slate-700 font-medium text-[14px]"><div class="flex items-center gap-3"><span class="material-symbols-outlined text-[20px] text-slate-600">menu_book</span><span class="">Knowledge Hub</span></div><span class="material-symbols-outlined text-[18px] text-slate-500">expand_more</span></div><div class="pl-6 pr-2 ml-4 border-l-2 border-slate-200 flex flex-col gap-1 py-1"><a class="py-1.5 px-3 rounded-lg font-semibold text-[14px] text-slate-900 bg-blue-50/70 text-blue-700 transition-colors" href="#">SOP Library</a><a class="py-1.5 px-3 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium text-[14px] transition-colors" href="#">Tech Walkthroughs</a></div><a class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors font-medium text-[14px]" href="#"><span class="material-symbols-outlined text-[20px] text-slate-600">trending_up</span><span class="">Impact</span></a></div></div><div class="p-3 bg-surface-container-low rounded-xl flex items-center justify-between mx-2 mb-2"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span><span class="font-semibold text-[11px] text-on-surface-variant uppercase tracking-wider">Node 04 Active</span></div><span class="font-mono-metric text-xs text-on-surface-variant">v4.2.1</span></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 px-space-lg flex items-center justify-between"><div class="flex items-center justify-end w-full gap-space-md"><div class="flex items-center justify-between gap-space-md px-space-md py-1.5 bg-surface-container-low hover:bg-surface-container text-on-surface-variant rounded-full border border-slate-200 transition-colors"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[18px] text-slate-500">search</span><input class="bg-transparent border-none outline-none font-body-sm text-body-sm text-on-surface placeholder:text-slate-500 w-28" placeholder="Jump to asset..." type="text"></div><kbd class="px-1.5 py-0.5 bg-surface-container-lowest rounded shadow-xs text-slate-600 font-mono-metric text-xs">⌘K</kbd></div><div class="flex items-center gap-space-xs px-space-md py-1.5 bg-surface-container-low rounded-full text-on-surface-variant"><span class="material-symbols-outlined text-[18px] text-slate-600">schedule</span><span class="font-mono-metric text-body-sm text-on-surface">14:28:09 UTC</span></div><div class="flex items-center gap-space-sm pl-2"><div class="flex flex-col text-right"><span class="font-bold text-[16px] text-slate-900 leading-tight">Devon Vance</span><span class="text-[11px] font-medium text-slate-500 leading-tight mt-0.5">Lead Plant Ops</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 shadow-sm"><span class="material-symbols-outlined text-white text-[18px]">person</span></div></div></div></header><main class="w-full pt-16 bg-background px-space-lg"><div class="flex flex-col w-full pb-16">
+<!-- Top Ambient Glow Layer (Contained) -->
+<div class="relative w-full overflow-hidden pointer-events-none">
+<div class="absolute -top-24 right-1/4 w-96 h-96 rounded-full bg-secondary/5 blur-3xl"></div>
+<div class="absolute -top-12 left-1/3 w-72 h-72 rounded-full bg-surface-container-high/60 blur-2xl"></div>
+</div>
+<!-- Header Area -->
+<section class="flex flex-col gap-space-md mb-space-xl">
+
+<div class="flex flex-col lg:flex-row lg:items-end justify-between gap-space-base">
+<div class="flex flex-col max-w-3xl">
+<h1 class="font-display text-display text-on-surface tracking-tight">SOP Library</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-1">
+          Auto-vectorized technical runbooks, machine calibration procedures, and AI-verified countermeasures across operational lines.
+        </p>
+</div>
+<div class="flex items-center gap-space-xs flex-wrap">
+<button class="inline-flex items-center gap-space-xs px-space-md py-space-xs bg-surface-container-low hover:bg-surface-container text-on-surface rounded-xl shadow-sm transition-all duration-150" type="button">
+<span class="material-symbols-outlined text-[18px]">fact_check</span>
+<span class="font-label-md text-label-md">Audit Matrix</span>
+</button>
+<button class="inline-flex items-center gap-space-xs px-space-md py-space-xs bg-surface-container-low hover:bg-surface-container text-on-surface rounded-xl shadow-sm transition-all duration-150" type="button">
+<span class="material-symbols-outlined text-[18px]">file_download</span>
+<span class="font-label-md text-label-md">Export (PDF/SCORM)</span>
+</button>
+<button class="inline-flex items-center gap-space-xs px-space-md py-space-xs bg-primary text-on-primary rounded-xl shadow-md hover:bg-surface-tint transition-all duration-150" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span class="font-label-md text-label-md font-medium">New Procedure</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Critical Banner Callout -->
+<section class="relative w-full rounded-2xl bg-surface-container-lowest p-space-lg shadow-sm mb-space-xl overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-secondary"></div>
+<div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-lg">
+<div class="flex items-start gap-space-md">
+<div class="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center shrink-0 text-secondary">
+<span class="material-symbols-outlined text-[26px]">precision_manufacturing</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-space-xs flex-wrap">
+<span class="inline-flex items-center gap-1 px-space-xs py-space-2xs rounded-md bg-secondary text-on-secondary font-label-sm text-label-sm uppercase tracking-wide">
+              Action Required
+            </span>
+<span class="font-mono-metric text-mono-metric text-secondary font-semibold">SOP #209</span>
+<span class="text-on-surface-variant font-body-sm text-body-sm">//</span>
+<span class="inline-flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+              Linked Incident: <code class="font-mono-metric text-mono-metric text-on-surface font-medium">INC-A389F1</code>
+</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface">CNC-02 Spindle Damper Zero-Set &amp; Dynamic Balancing</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-3xl">
+            AI-assisted parameter revision generated from Root Cause 8D investigation. Spindle radial harmonic runout tolerance tightened from <span class="font-mono-metric text-mono-metric text-on-surface font-medium">±0.004mm</span> to <span class="font-mono-metric text-mono-metric text-on-surface font-medium">±0.0015mm</span>.
+          </p>
+</div>
+</div>
+<div class="flex items-center gap-space-xs shrink-0 self-end lg:self-center">
+<button class="inline-flex items-center gap-space-xs px-space-md py-space-xs bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-xl transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">visibility</span>
+<span class="">Diff Log</span>
+</button>
+<button class="inline-flex items-center gap-space-xs px-space-md py-space-xs bg-secondary hover:bg-secondary-container text-on-secondary font-label-md text-label-md rounded-xl shadow-sm transition-all duration-150" type="button">
+<span class="">Review Revised Tolerances</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Filter, Search & Display Controls -->
+<section class="flex flex-col gap-space-base mb-space-lg">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-sm items-center">
+<!-- Search Input Container -->
+<div class="lg:col-span-8 relative">
+<div class="flex items-center px-space-md bg-surface-container-lowest rounded-xl shadow-sm h-11 transition-all focus-within:ring-2 focus-within:ring-primary/10">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px] mr-space-sm">search</span>
+<input class="w-full bg-transparent border-none outline-none font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/70" id="sop-search-input" placeholder="Search procedures by title, machine code (CNC-02), error code (ERR-402), author,..." type="text">
+<div class="flex items-center gap-1 shrink-0 ml-space-sm">
+<kbd class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface-variant font-mono-metric text-mono-metric text-xs">⌘K</kbd>
+</div>
+</div>
+</div>
+<!-- View and Sort Actions -->
+<div class="lg:col-span-4 flex items-center justify-between lg:justify-end gap-space-xs">
+
+<div class="relative inline-flex items-center bg-surface-container-lowest rounded-xl px-space-md h-11 shadow-sm">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] mr-1.5">sort</span>
+<select class="bg-transparent text-on-surface font-body-sm text-body-sm outline-none cursor-pointer pr-space-xs">
+<option>Recently Updated</option>
+<option>Highest Monthly Usage</option>
+<option>Compliance Status</option>
+<option>Numerical Index</option>
+</select>
+</div>
+</div>
+</div>
+<!-- Quick Filter Chips -->
+<div class="flex items-center gap-space-xs overflow-x-auto pb-1 scrollbar-none" id="filter-container">
+<button class="filter-chip active shrink-0 px-space-md py-1.5 rounded-full bg-primary text-on-primary font-label-sm text-label-sm shadow-xs transition-all" type="button">
+        All Procedures (48)
+      </button>
+<button class="filter-chip shrink-0 px-space-md py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm shadow-xs transition-all" type="button">
+        CNC Milling (14)
+      </button>
+<button class="filter-chip shrink-0 px-space-md py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm shadow-xs transition-all" type="button">
+        Injection Molding (9)
+      </button>
+<button class="filter-chip shrink-0 px-space-md py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm shadow-xs transition-all" type="button">
+        Optical Metrology (7)
+      </button>
+<button class="filter-chip shrink-0 px-space-md py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm shadow-xs transition-all" type="button">
+        Hydraulics &amp; Cooling (8)
+      </button>
+<button class="filter-chip shrink-0 px-space-md py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm shadow-xs transition-all" type="button">
+        Preventative Maint. (6)
+      </button>
+<button class="filter-chip shrink-0 px-space-md py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm shadow-xs transition-all" type="button">
+        Emergency Interlock (4)
+      </button>
+</div>
+</section>
+<!-- SOP Procedures Grid (Bento Arrangement) -->
+<section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-space-lg mb-space-2xl">
+<!-- CARD 1 -->
+<article class="flex flex-col justify-between rounded-2xl bg-surface-container-lowest p-space-lg shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+<div class="flex flex-col gap-space-md">
+<!-- Top Metadata & Tags -->
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="font-mono-metric text-mono-metric font-semibold text-secondary">SOP #209</span>
+<span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Rev 4.2</span>
+</div>
+<span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">history</span>
+            2h ago
+          </span>
+</div>
+<!-- Tags -->
+<div class="flex flex-wrap gap-1.5">
+<span class="px-space-xs py-0.5 rounded-md bg-surface-container-low text-on-surface font-label-sm text-label-sm">Milling Line 04</span>
+<span class="px-space-xs py-0.5 rounded-md bg-secondary-fixed text-on-secondary-fixed-variant font-label-sm text-label-sm inline-flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">view_in_ar</span> 3D Ready
+          </span>
+<span class="px-space-xs py-0.5 rounded-md bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm">AI Verified</span>
+</div>
+<!-- Title & Spec Description -->
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-secondary transition-colors">
+            CNC-02 Spindle Damper Calibration &amp; Zero-Set
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+            Step-by-step laser micro-gauge sequence, axial runout dampening, and automated torque sensor calibration.
+          </p>
+</div>
+<!-- Telemetry Data Ring / Metric Row -->
+<div class="grid grid-cols-3 gap-space-xs py-space-sm px-space-md bg-surface-container-low/70 rounded-xl">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Run Time</span>
+<span class="font-mono-metric text-mono-metric text-on-surface font-semibold">4m 15s</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Adherence</span>
+<span class="font-mono-metric text-mono-metric text-secondary font-semibold">99.8%</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Cycles (M)</span>
+<span class="font-mono-metric text-mono-metric text-on-surface font-semibold">142</span>
+</div>
+</div>
+<!-- Visual Spark Graphic / SVG Mini Metric -->
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-1">
+<span class="">Axial Tolerance Target: ±0.0015mm</span>
+<svg class="w-20 h-4 text-secondary" fill="none" viewBox="0 0 80 16">
+<path d="M0 8h24l4-6 6 12 6-8 4 4h36" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"></path>
+</svg>
+</div>
+</div>
+<!-- Action Footer -->
+<div class="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container">
+<button class="inline-flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">schema</span>
+          Schematic
+        </button>
+<button class="inline-flex items-center gap-1 font-label-md text-label-md font-medium text-secondary hover:text-secondary-container transition-colors" type="button">
+<span class="">Launch Procedure</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</article>
+<!-- CARD 2 -->
+<article class="flex flex-col justify-between rounded-2xl bg-surface-container-lowest p-space-lg shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="font-mono-metric text-mono-metric font-semibold text-secondary">SOP #114</span>
+<span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Rev 3.0</span>
+</div>
+<span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">history</span>
+            5d ago
+          </span>
+</div>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-space-xs py-0.5 rounded-md bg-surface-container-low text-on-surface font-label-sm text-label-sm">Quality Gate</span>
+<span class="px-space-xs py-0.5 rounded-md bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm">Vision AI</span>
+<span class="px-space-xs py-0.5 rounded-md bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm">Key-X480</span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-secondary transition-colors">
+            Optical Defect Scan Recalibration for CAM-EOL
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+            Chromatic aberration compensation and illumination balance to neutralize false micro-scratch flags.
+          </p>
+</div>
+<div class="grid grid-cols-3 gap-space-xs py-space-sm px-space-md bg-surface-container-low/70 rounded-xl">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Run Time</span>
+<span class="font-mono-metric text-mono-metric text-on-surface font-semibold">8m 00s</span>
+</div>
+<div class="flex flex-col col-span-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">False Positives Delta</span>
+<span class="font-mono-metric text-mono-metric text-secondary font-semibold">2.8% → 0.04%</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-1">
+<span class="">Strobe Flux: 18,200 Lux calibrated</span>
+<span class="inline-flex items-center gap-1 text-on-surface">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Synchronized
+          </span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container">
+<button class="inline-flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">history_edu</span>
+          View History
+        </button>
+<button class="inline-flex items-center gap-1 font-label-md text-label-md font-medium text-secondary hover:text-secondary-container transition-colors" type="button">
+<span class="">Launch Checklist</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</article>
+<!-- CARD 3 -->
+<article class="flex flex-col justify-between rounded-2xl bg-surface-container-lowest p-space-lg shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="font-mono-metric text-mono-metric font-semibold text-secondary">SOP #305</span>
+<span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Rev 5.1</span>
+</div>
+<span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">history</span>
+            1w ago
+          </span>
+</div>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-space-xs py-0.5 rounded-md bg-surface-container-low text-on-surface font-label-sm text-label-sm">Injection Molding</span>
+<span class="px-space-xs py-0.5 rounded-md bg-surface-container-low text-on-surface font-label-sm text-label-sm">Hydraulics</span>
+<span class="px-space-xs py-0.5 rounded-md bg-secondary-fixed text-on-secondary-fixed-variant font-label-sm text-label-sm">Scrap Minimization</span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-secondary transition-colors">
+            IM-05 Barrel Purge &amp; Polymer Changeover
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+            Standardized dual-stage barrel thermal cycle flush and nozzle tip inspection before high-temp polyetherimide runs.
+          </p>
+</div>
+<div class="grid grid-cols-3 gap-space-xs py-space-sm px-space-md bg-surface-container-low/70 rounded-xl">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Run Time</span>
+<span class="font-mono-metric text-mono-metric text-on-surface font-semibold">12m 30s</span>
+</div>
+<div class="flex flex-col col-span-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Purge Material Saved</span>
+<span class="font-mono-metric text-mono-metric text-secondary font-semibold">42 kg / cycle</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-1">
+<span class="">Target Purge Temp: 340°C</span>
+<span class="font-mono-metric text-mono-metric text-on-surface">PEI-1000 grade</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container">
+<button class="inline-flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">description</span>
+          Material Sheet
+        </button>
+<button class="inline-flex items-center gap-1 font-label-md text-label-md font-medium text-secondary hover:text-secondary-container transition-colors" type="button">
+<span class="">Launch Procedure</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</article>
+<!-- CARD 4 -->
+<article class="flex flex-col justify-between rounded-2xl bg-surface-container-lowest p-space-lg shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="font-mono-metric text-mono-metric font-semibold text-secondary">SOP #082</span>
+<span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Rev 2.4</span>
+</div>
+<span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">history</span>
+            2w ago
+          </span>
+</div>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-space-xs py-0.5 rounded-md bg-surface-container-low text-on-surface font-label-sm text-label-sm">Cleaning Bay</span>
+<span class="px-space-xs py-0.5 rounded-md bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm">Frequency Sweep</span>
+<span class="px-space-xs py-0.5 rounded-md bg-surface-container-low text-on-surface font-label-sm text-label-sm">Preventative</span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-secondary transition-colors">
+            Ultrasonic ST-06 Transducer Calibration
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+            40 kHz piezoelectric transducer impedance tuning and surfactant degreaser concentration measurement.
+          </p>
+</div>
+<div class="grid grid-cols-3 gap-space-xs py-space-sm px-space-md bg-surface-container-low/70 rounded-xl">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Run Time</span>
+<span class="font-mono-metric text-mono-metric text-on-surface font-semibold">6m 10s</span>
+</div>
+<div class="flex flex-col col-span-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Cleanliness Pass Rate</span>
+<span class="font-mono-metric text-mono-metric text-secondary font-semibold">100.0% ISO-16232</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-1">
+<span class="">Resonant Point: 39.92 kHz</span>
+<span class="font-mono-metric text-mono-metric text-on-surface">Z=24.1Ω</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container">
+<button class="inline-flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">edit_note</span>
+          Log Test
+        </button>
+<button class="inline-flex items-center gap-1 font-label-md text-label-md font-medium text-secondary hover:text-secondary-container transition-colors" type="button">
+<span class="">Launch Procedure</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</article>
+<!-- CARD 5 (Safety Critical Highlight) -->
+<article class="flex flex-col justify-between rounded-2xl bg-surface-container-lowest p-space-lg shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+<div class="absolute top-0 right-0 w-24 h-24 bg-error/5 rounded-bl-full pointer-events-none"></div>
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="font-mono-metric text-mono-metric font-semibold text-error">SOP #419</span>
+<span class="px-space-xs py-0.5 rounded bg-error-container text-on-error-container font-label-sm text-label-sm">Rev 1.9</span>
+</div>
+<span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">lock</span>
+            Tier 3 Safety
+          </span>
+</div>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-space-xs py-0.5 rounded-md bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold">Safety Critical</span>
+<span class="px-space-xs py-0.5 rounded-md bg-surface-container-low text-on-surface font-label-sm text-label-sm">Interlock</span>
+<span class="px-space-xs py-0.5 rounded-md bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm">Line Lead Auth</span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-error transition-colors">
+            Spindle Thermal Lockout Override &amp; Diagnostic Trace
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+            Two-man interlock release protocol for Axis-Z overtemp tripwire with automated telemetry blackbox dump.
+          </p>
+</div>
+<div class="grid grid-cols-3 gap-space-xs py-space-sm px-space-md bg-surface-container-low/70 rounded-xl">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Execution</span>
+<span class="font-mono-metric text-mono-metric text-error font-semibold">Immediate</span>
+</div>
+<div class="flex flex-col col-span-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Authorization Required</span>
+<span class="font-mono-metric text-mono-metric text-on-surface font-semibold">2-Factor Phys. Key</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-1">
+<span class="">Dual Physical Key Interlock</span>
+<span class="text-error font-medium">OSHA 1910.147</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container">
+<button class="inline-flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">verified_user</span>
+          Auth Guidelines
+        </button>
+<button class="inline-flex items-center gap-1 font-label-md text-label-md font-medium text-error hover:text-on-error-container transition-colors" type="button">
+<span class="">Review Protocol</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</article>
+<!-- CARD 6 -->
+<article class="flex flex-col justify-between rounded-2xl bg-surface-container-lowest p-space-lg shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="font-mono-metric text-mono-metric font-semibold text-secondary">SOP #164</span>
+<span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Rev 2.0</span>
+</div>
+<span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">history</span>
+            Jan 14
+          </span>
+</div>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-space-xs py-0.5 rounded-md bg-secondary-fixed text-on-secondary-fixed-variant font-label-sm text-label-sm">8D Kaizen Proven</span>
+<span class="px-space-xs py-0.5 rounded-md bg-surface-container-low text-on-surface font-label-sm text-label-sm">Automated Purge</span>
+<span class="px-space-xs py-0.5 rounded-md bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm">Post-Resolution</span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-secondary transition-colors">
+            Coolant Micro-Filtration Manifold Flush
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+            Differential pressure sensor trigger check and dual-cartridge replacement procedure to prevent cavitation.
+          </p>
+</div>
+<div class="grid grid-cols-3 gap-space-xs py-space-sm px-space-md bg-surface-container-low/70 rounded-xl">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Run Time</span>
+<span class="font-mono-metric text-mono-metric text-on-surface font-semibold">18m 00s</span>
+</div>
+<div class="flex flex-col col-span-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Cost Reduction (QTD)</span>
+<span class="font-mono-metric text-mono-metric text-secondary font-semibold">$21,400 Saved</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-1">
+<span class="">Zero pump cavitation in 90 days</span>
+<svg class="w-20 h-4 text-secondary" fill="none" viewBox="0 0 80 16">
+<path d="M0 12h20l8-10 12 12 10-6 10 4h20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"></path>
+</svg>
+</div>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container">
+<button class="inline-flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">folder_open</span>
+          8D Archive
+        </button>
+<button class="inline-flex items-center gap-1 font-label-md text-label-md font-medium text-secondary hover:text-secondary-container transition-colors" type="button">
+<span class="">Launch Procedure</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</article>
+</section>
+<!-- Visual Asset Showcase Section: Interactive Work Instruction Preview -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg mb-space-2xl bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm">
+<div class="lg:col-span-5 flex flex-col justify-between">
+<div class="flex flex-col gap-space-sm">
+<div class="inline-flex items-center gap-1.5 px-space-sm py-space-2xs rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase w-fit">
+<span class="material-symbols-outlined text-[14px] text-secondary">view_in_ar</span>
+          Spatial Engineering Engine
+        </div>
+<h3 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">
+          Spatial Runbook AR Walkthroughs
+        </h3>
+<p class="font-body-md text-body-md text-on-surface-variant">
+          Field technicians on Line 04 can overlay 3D holographic step indicators directly onto CNC tooling heads using paired optical tablets or AR visors.
+        </p>
+<div class="flex flex-col gap-space-xs mt-space-sm">
+<div class="flex items-center gap-space-sm p-space-sm rounded-xl bg-surface-container-low">
+<span class="material-symbols-outlined text-secondary text-[20px]">check_circle</span>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface">Sub-Millimeter Step Guidance</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Real-time torque wrench sync over Bluetooth Mesh</span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm p-space-sm rounded-xl bg-surface-container-low">
+<span class="material-symbols-outlined text-secondary text-[20px]">bolt</span>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface">Automatic Zero-Error Capture</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Computer vision verification stamps ISO sign-off</span>
+</div>
+</div>
+</div>
+</div>
+<div class="pt-space-md flex items-center gap-space-sm">
+<button class="inline-flex items-center gap-space-xs px-space-md py-space-xs bg-primary text-on-primary rounded-xl font-label-md text-label-md" type="button">
+<span class="material-symbols-outlined text-[18px]">play_circle</span>
+          Launch Simulator
+        </button>
+<span class="font-mono-metric text-mono-metric text-on-surface-variant">Compatible with Lumina Slate Tab v2</span>
+</div>
+</div>
+<div class="lg:col-span-7 flex flex-col justify-center">
+<div class="relative w-full h-80 rounded-xl overflow-hidden bg-surface-container-high shadow-inner">
+<img class="w-full h-full object-cover" data-alt="An industrial high-tech CNC machine shop in crisp daylight showing high precision 5-axis robotic milling spindle, illuminated by blue laser guide calibration lines and clean modern telemetry diagnostic indicators on translucent slate panels, hyper-clean factory floor, shot with a professional lens." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAycidPabB8cwoqEClDpL-LswlP1aCo9-g6eyKio7YhBeZHC8Dpjf5KvzYS9opeq3MI_MHbvA1u4y4UHSq1ZPpt_Lvvv-LXH4bEm-EM6vRC_XVfrBAAcKu22MsIxZgVLszuenRQIC72TFn7q2Pn-Ko1R8WKFyNUavBWOQ1tJ70hF9LdjV9dGmF1Kvc_6phbcceEE1IC7eOGkNxPDTvcZzVZIGqP6XWx8ygTspi63vG35W2ncxs1juntg">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/90 via-surface-container-lowest/20 to-transparent"></div>
+<div class="absolute bottom-space-md left-space-md right-space-md flex items-center justify-between p-space-sm bg-surface-container-lowest/80 backdrop-blur-md rounded-xl">
+<div class="flex items-center gap-space-sm">
+<div class="w-2.5 h-2.5 rounded-full bg-secondary animate-pulse"></div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">Active Runbook Feed // Spindle Head 04-A</span>
+<span class="font-mono-metric text-mono-metric text-on-surface-variant text-xs">Target Bearing Tolerance 0.0015mm</span>
+</div>
+</div>
+<span class="px-space-sm py-1 bg-surface-container text-on-surface font-mono-metric text-mono-metric text-xs rounded-lg">FPS: 60.0</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Compliance & Audit Summary Status Bar -->
+<footer class="w-full rounded-2xl bg-surface-container-lowest p-space-lg shadow-sm">
+<div class="flex flex-col lg:flex-row items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md flex-wrap justify-center lg:justify-start">
+<div class="flex items-center gap-space-xs">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+<span class="font-headline-sm text-headline-sm text-on-surface">48 Active Procedures</span>
+</div>
+<span class="text-on-surface-variant font-body-sm text-body-sm hidden sm:inline">•</span>
+<div class="flex items-center gap-1 font-body-sm text-body-sm text-on-surface">
+<span class="material-symbols-outlined text-[18px] text-secondary">verified</span>
+<span class="font-medium">100% OSHA &amp; ISO-9001 Compliant</span>
+</div>
+<span class="text-on-surface-variant font-body-sm text-body-sm hidden sm:inline">•</span>
+<div class="flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant">
+<span class="">First-Pass Adherence:</span>
+<span class="font-mono-metric text-mono-metric font-semibold text-on-surface">94.2%</span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm">
+<span class="inline-flex items-center gap-1 px-space-sm py-1 rounded-lg bg-surface-container text-on-surface font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[14px]">event_repeat</span>
+          6 Scheduled for Q2 Review
+        </span>
+<button class="font-label-sm text-label-sm text-secondary hover:underline font-semibold" type="button">
+          View Audit Schedule →
+        </button>
+</div>
+</div>
+</footer>
+</div>
+<script>
+  // Filter chips selection micro-interaction
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', function() {
+      document.querySelectorAll('.filter-chip').forEach(c => {
+        c.classList.remove('bg-primary', 'text-on-primary');
+        c.classList.add('bg-surface-container-lowest', 'text-on-surface-variant');
+      });
+      this.classList.remove('bg-surface-container-lowest', 'text-on-surface-variant');
+      this.classList.add('bg-primary', 'text-on-primary');
+    });
+  });
+
+  // Simple keyboard shortcut listener for search focus
+  window.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      const searchInput = document.getElementById('sop-search-input');
+      if (searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+      }
+    }
+  });
+</script></main></div>
+</body></html>

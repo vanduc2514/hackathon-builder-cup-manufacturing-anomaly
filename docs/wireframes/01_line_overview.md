@@ -1,10 +1,11 @@
-# Screen 1: Line Overview & Machine List
+# Screen 1: Line Overview & Machine Fleet
 
-> **Route:** `/`  
+> **Tab:** `overview` (sidebar "Line Overview")  
 > **Viewport:** Desktop `1440 × 900 px`  
 > **Primary Persona:** Shift Leader (John Tran)  
 > **Single Job-to-be-Done (JTBD):** Line Health Supervision & Instant 1-Click Dispatch. *(Not for physical wrenching guides or deep root cause analysis).*  
-> **Design Standard:** [`docs/DESIGN.md`](../DESIGN.md) (shadcn/ui Light Mode)  
+> **Design Standard:** [`docs/DESIGN.md`](../DESIGN.md) (Lumina Slate liquid glass)  
+> **Source:** PR #105 `dashboard_frontend/src/components/views/LineOverviewView.tsx` + `components/overview/*`  
 > **Terminology:** Unified **Agent Team** across all pages and documentation.
 
 ---
@@ -15,36 +16,32 @@ The Line Overview screen serves as the primary operational cockpit for the Shift
 
 ```mermaid
 flowchart TD
-    A["Shift Leader at Desk / Wall Display (/)"] --> B{"Line Health Status via SSE"}
-    
+    A["Shift Leader at Desk / Wall Display (tab: overview)"] --> B{"Line Health Status via SSE"}
+
     subgraph Nominal ["Nominal Production (90% of shift)"]
-        B -->|"All Metrics Within UCL"| C["Serene Canvas: 0 Alert Banners"]
-        C --> C1["Line OEE: 88.4% | Defect Rate: 0.04% < 0.25% UCL"]
-        C --> C2["All Fleet Machine Badges: Nominal (Emerald Green)"]
-        C -->|"On-Demand Investigation"| D["Click [ ⚡ Agent Diagnostics ] on any row"]
-        D --> D1["Slide-over Sheet: 10-min Rolling FFT Spindle Vibration + Agent Team Telemetry Snapshot"]
-        D1 -->|"Close Drawer"| C
+        B -->|"All Metrics Within UCL"| C["Calm glass canvas: no AnomalyBanner"]
+        C --> C1["4 KPI cards: OEE • Defect rate vs UCL • Active incidents • ESG CO₂"]
+        C --> C2["MachineFleetTable: green Nominal chips"]
+        C -->|"On-Demand Investigation"| D["Click [ Diagnostics ] on a row"]
+        D --> D1["DiagnosticsModal: centred glass modal (max 880px), 4 stats + sensor history chart"]
+        D1 -->|"Close"| C
     end
-    
+
     subgraph Anomaly ["Active Anomaly Event (SPC Breach)"]
-        B -->|"Defect Rate 1.42% > 0.25% UCL"| E["Real-Time SSE Alert Triggered (<1s)"]
-        E --> F["Destructive Alert Banner Slides in at Top (rounded-lg)"]
-        E --> G["CNC-02 Row Highlighted with Red CRITICAL Badge"]
-        
+        B -->|"Defect rate > UCL"| E["Real-Time SSE update"]
+        E --> F["AnomalyBanner (.glass.tone-red) appears above the KPI row"]
+        E --> G["Fleet row gets row-hot + red status chip • header shows 'N Active Anomaly' chip"]
+
         F --> H{"Shift Leader Decision"}
-        H -->|"1-Click Immediate Dispatch"| I["Click [ Dispatch Floor Copilot -> ]"]
-        I --> I1["Navigate to /copilot?machine=CNC-02 (Preloaded Context)"]
-        
-        H -->|"Investigate Full Incident Evidence"| J["Click [ View Incident Workspace ]"]
-        J --> J1["Navigate to /incidents/INC-2026-042 (Screen 3)"]
-        
-        H -->|"Dismiss Banner"| K["Banner dismissed to background indicator"]
+        H -->|"Open the incident"| I["Click [ Open INC → ] (banner or row)"]
+        I --> I1["Opens tab incident-detail + sidebar sub-tab (Screen 3)"]
+        H -->|"Dismiss"| K["Banner hidden; header anomaly chip remains"]
     end
-    
-    subgraph Actions ["Operational Shift Actions & Demo Simulation"]
-        C --> L["Click [ (↻) Refresh Line ] -> Manual Telemetry Sync"]
-        C --> M["Click [ Export Shift Report ] -> Download Shift Summary (PDF/CSV)"]
-        C --> N["Demo Control Bar: Click [⚡ Inject Defect] -> Triggers Scenario 1 or 2"]
+
+    subgraph Actions ["Page Actions & Demo Simulation"]
+        C --> L["[ Refresh Line ]"]
+        C --> M["[ Export Shift Report ] → downloads JSON"]
+        C --> N["[ New Run ] (.btn-dark) → DemoController slide-over: Inject / Reset"]
     end
 ```
 
@@ -61,52 +58,52 @@ flowchart TD
 ## 3. Progressive Disclosure Architecture (3 Tiers)
 
 ```
-[Tier 1: Glance (1s)]   --> Line Status Pill Badge + 3 Summary KPI Cards + Affected Machine ID
+[Tier 1: Glance (1s)]   --> TopHeader "N Active Anomaly" chip + 4 KPI cards
         │
         ▼
-[Tier 2: Focus (5s)]    --> Top Anomaly Alert Banner + Actionable Dispatch CTAs + Machine Row Highlight
+[Tier 2: Focus (5s)]    --> AnomalyBanner (Open INC →) + MachineFleetTable row-hot
         │
         ▼
-[Tier 3: Deep Dive]     --> Slide-over Agent Diagnostics Drawer (FFT Spectrum + Agent Team Snapshot)
+[Tier 3: Deep Dive]     --> DiagnosticsModal (4 stats + sensor history chart)
 ```
 
-### Page Header Component (Slot Top)
-- **Title:** `Cell Line 1 Overview` (`text-2xl font-bold tracking-tight`)
-- **Subtitle:** `Real-time machine fleet telemetry, statistical process control (SPC), and instant dispatch.` (`text-sm text-muted-foreground`)
-- **Trailing Action Slot:**
-  - `[ (↻) Refresh Line ]` (Ghost button, `rounded-md`)
-  - `[ Export Shift Report ]` (Outline button, `rounded-md`)
+### Page Header
+- **Title:** `Cell Line 1 Overview` (`.page-title`, Geist 1.85rem / 700)
+- **Subtitle:** `Real-time machine fleet telemetry, statistical process control (SPC), and instant dispatch` (muted, 0.9rem)
+- **Buttons:**
+  - `[ Refresh Line ]` (`.btn`)
+  - `[ Export Shift Report ]` (`.btn`, downloads JSON)
+  - `[ New Run ]` (`.btn-dark`, opens DemoController)
 
 ### Tier 1: Glance (1-Second Reception)
-- **Global Status Badge:** `(o) 1 Active Anomaly` in destructive red (`rounded-full`) or `(o) Nominal` in emerald green.
-- **Top KPI Cards (3 Units, `rounded-xl`):**
-  - **Line OEE:** `88.4%` (Target: 90%)
-  - **Defect Rate vs UCL:** `1.42%` (UCL: `0.25%` — Flagged in red)
-  - **Active Incidents:** `1 Critical` (`INC-2026-042`)
+- **TopHeader chip:** red `.chip` with pulsing `.dot`: `N Active Anomaly` (only while an incident is open).
+- **4 KPI cards** (`.glass.kpi-card`, grid 4 columns → 2 below 1280px → 1 below 720px):
+  1. **OEE** (`OeeCard`): eyebrow + delta chip, mono KPI, 3 thin 6px ink bars for availability, performance, quality.
+  2. **Defect rate vs UCL** (`DefectRateCard`): rate vs UCL, ratio chip, 6px SPC bar coloured by tone with a UCL tick mark.
+  3. **Active incidents** (`ActiveIncidentsCard`): count by severity, SLA countdown chip, inset incident chip with a `P1 Critical` / `P2 Minor` chip, target MTTR `< 15 mins`.
+  4. **ESG CO₂** (`EsgCard`): `.tone-green-soft` card, CO₂e avoided, energy/material split bar (`#12a150` / `#7dd3a8`), scrap and kWh, link `Open Knowledge Base →`.
 
 ### Tier 2: Focus (5-Second Reception)
-- **Actionable Anomaly Banner (`<Alert variant="destructive">`, `rounded-lg`):**
-  - Problem: `CNC-02 (Bay 4): Severe Flank Wear on Tool T07 Exceeding SPC Limit`
-  - Evidence: `Defect rate jumped to 1.42% (5.6x UCL) | Spindle Vibration: 2.84 mm/s (+35% vs 1.50 mm/s baseline)`
-  - Recommended Fix: `Replace insert with WNMG-080408, torque 45 Nm`
-  - Actionable CTAs:
-    - Primary Button (`rounded-md`, Slate `#0F172A`): `[ Dispatch Floor Copilot → ]` (opens `/copilot?machine=CNC-02`)
-    - Secondary Outline Button: `[ View Incident Workspace ]` (opens `/incidents/INC-2026-042`)
-- **Machine Fleet Table (`rounded-xl` Card):**
-  - Machine `CNC-02` row highlighted with soft red background (`bg-destructive-muted/30`) and red badge `CRITICAL`.
-  - Direct row CTA: `[ OPEN COPILOT ]`.
+- **AnomalyBanner** (`.glass.tone-red`; shown only while an incident is open; dismissible):
+  - 40px red-outlined icon tile, `.anomaly-title` (e.g. `CNC-02: Tool T07 Flank Wear`), uppercase `.sev-chip`, pulsing status chip.
+  - Mono SPC meta in `#9f1d22` (e.g. `Defect rate 1.42% · UCL 0.25%`).
+  - Actions: `[ Open INC → ]` (`.btn-dark`) and a `Dismiss` link.
+- **MachineFleetTable** (`.glass` card + `.fleet-table`):
+  - Toolbar: `.pill` tabs `Anomaly` / `Nominal` / `All` (default `Anomaly`; active Anomaly pill is solid red) + inset search.
+  - Columns: Machine ID · Part Model · Vibration RMS · Spindle Load · Status chip (with dot) · Incident ID (red underlined link) · Actions.
+  - Actions: `[ OPEN INC → ]` (`.btn-dark .btn-sm`) on rows with an incident, otherwise `[ Diagnostics ]` (`.btn-sm`).
+  - Critical rows use `row-hot` (pink background + 3px red inset left edge).
 
-### Tier 3: Deep Dive (On-Demand / Slide-Over Sheet Drawer)
-- Clicking `[ ⚡ Agent Diagnostics ]` on any machine row slides in a right-side Sheet (`Drawer`):
-  - **Rolling 10-min Spindle Vibration Waveform & FFT Spectrum:** Real-time RMS vibration in `mm/s` (ISO 10816).
-  - **Spindle Motor Current & Load:** Real-time amperage curves.
-  - **Agent Team Telemetry Findings:** Quick summary from Process Analyst (`Vibration surge onset at 09:30 (+35%)`) and Traceability Agent (`Suspect Correlation: 0.95`).
+### Tier 3: Deep Dive (On-Demand Modal)
+- **DiagnosticsModal:** centred glass modal (max-width 880px) opened from `[ Diagnostics ]`:
+  - 4 stats.
+  - Sensor history chart (hand-built SVG).
 
 ---
 
 ## 4. Dual Scenarios Adaptation Note
 
-Kaizen Agent supports two distinct industrial scenarios out of the box:
+Kaizen Agent supports two distinct industrial scenarios out of the box (selected in the DemoController):
 
 1. **Scenario 1: CNC Tool Wear (Default)**
    - Machine: `CNC-02` (Bay 4, Turning Lathe) • Tool: `T07 (Rough Turn)` • Workpiece: `Housing-B42` (FC250 Iron).
@@ -116,56 +113,43 @@ Kaizen Agent supports two distinct industrial scenarios out of the box:
    - Machine: `IM-05` (Bay 5, Injection Molding) • Mold Cavity: `MOLD-03` (Cavity #3).
    - Telemetry Anomaly: Material dryer dew point surges from `-40 °C` to `-18 °C`.
    - Defect: Short fill & sink marks on Cavity #3 (`8.1%` defect rate).
-   - *UI Behavior:* Machine Fleet Table displays `IM-05` with `Dryer Dew Point: -18 °C` in red warning badge, and the Anomaly Banner recommends inspecting the dryer desiccant filter.
+   - *UI Behavior:* MachineFleetTable shows `IM-05` as a `row-hot` row with a red status chip, and the AnomalyBanner names the IM-05 defect.
 
 ---
 
 ## 5. Low-Fi ASCII Wireframe: Page Content Slot (Desktop 1440px)
 
 ```text
-+-----------------------+--------------------------------------------------------------------------------------------------------------------------------+
-|  KAIZEN AGENT         | Cell Line 1 / Line Overview        [ Scenario: CNC Tool Wear (90s) v ] [⚡ Inject Defect] [↺ Reset] [⏱ 12.4s]  [John Tran (Lead) v]  |
-|  Cell Line 1: Turning | <-- TOP HEADER BAR (h-14) ----------------------------------------------------------------------------------------------------+ |
-+-----------------------+                                                                                                                                |
-|                       | +-- PAGE HEADER (<div class="flex items-center justify-between pb-4 border-b">) ---------------------------------------------+ |
-|  OPERATIONAL LOOP     | | Cell Line 1 Overview                                                                 [ (↻) Refresh ] [ Export Shift Report ] | |
-|  [#] Line Overview *  | | Real-time machine fleet telemetry, statistical process control (SPC), and instant dispatch                                  | |
-|  [T] Tech Copilot     | +----------------------------------------------------------------------------------------------------------------------------+ |
-|  [!] Incidents (1)    |                                                                                                                                |
-|                       | === TIER 2 (FOCUS): ACTIONABLE ANOMALY ALERT BANNER (rounded-lg) ============================================================ |
-|  KNOWLEDGE LOOP       | +----------------------------------------------------------------------------------------------------------------------------+ |
-|  [?] Knowledge & ESG  | | (!) CNC-02 (Bay 4): Tool T07 Severe Flank Wear Exceeding SPC Limit                                                         | |
-|  [@] SOP Change Log   | |     Defect Rate: 1.42% (UCL: 0.25%) | Spindle Vibration: 2.84 mm/s (Base: 1.50 mm/s) | Part: Housing-B42 (FC250)           | |
-|                       | |     Recommended Action: Replace insert with WNMG-080408, calibrate torque 45 Nm.                                           | |
-|                       | |                                                                                                                            | |
-|                       | |     [ Dispatch Floor Copilot -> ]           [ View Incident Workspace ]           [ Dismiss Banner ]                       | |
-|                       | +----------------------------------------------------------------------------------------------------------------------------+ |
-|                       |                                                                                                                                |
-|                       | === TIER 1 (GLANCE): 3 HIGH-LEVEL KPI METRICS (rounded-xl) ================================================================== |
-|                       | +-- LINE OEE ------------+  +-- DEFECT RATE VS UCL -+  +-- ACTIVE INCIDENTS ----+                                              |
-|                       | | Availability & Output  |  | SPC vs UCL Limit      |  | Resolution Pipeline    |                                              |
-|                       | |   88.4%                |  |   1.42% (UCL: 0.25%)  |  |   1 Critical           |                                              |
-|                       | |   -2.1% from target    |  |   (!) 5.6x UCL Breach |  |   INC-2026-042 (CNC-02)|                                              |
-|                       | +------------------------+  +-----------------------+  +------------------------+                                              |
-|                       |                                                                                                                                |
-|                       | === TIER 2 (FOCUS): MACHINE FLEET TABLE (rounded-xl) ======================================================================== |
-|                       | +----------------------------------------------------------------------------------------------------------------------------+ |
-|                       | | Filter: [All (5)] [Nominal (4)] [Anomaly (1)] | Search: [ Q Filter bay or machine ID...                                  ] | |
-|                       | +----------------------------------------------------------------------------------------------------------------------------+ |
-|                       | | Machine ID  | Part Model  | Vibration (RMS) | Spindle Load | Status Badge   | Active Incident | Contextual Action          | |
-|                       | +-------------+-------------+-----------------+--------------+----------------+-----------------+----------------------------+ |
-|                       | | CNC-01      | Shaft-A12   | 1.46 mm/s       | 42.1 %       | (o) Nominal    | None            | [ ⚡ Agent Diagnostics ]   | |
-|                       | | CNC-02      | Housing-B42 | 2.84 mm/s (!)   | 78.6 %       | (*) CRITICAL   | INC-2026-042    | [ OPEN COPILOT → ]         | |
-|                       | | CNC-03      | Flange-F09  | 1.48 mm/s       | 45.0 %       | (o) Nominal    | None            | [ ⚡ Agent Diagnostics ]   | |
-|                       | | CNC-04      | Gear-G15    | 1.41 mm/s       | 39.8 %       | (o) Nominal    | None            | [ ⚡ Agent Diagnostics ]   | |
-|                       | | CONVEYOR-01 | Discrete    | 0.12 mm/s       | 18.2 %       | (o) Nominal    | None            | [ ⚡ Agent Diagnostics ]   | |
-|                       | +----------------------------------------------------------------------------------------------------------------------------+ |
-|-----------------------|                                                                                                                                |
-| (o) Live Connected    | === TIER 3 (DEEP DIVE): ON-DEMAND AGENT DIAGNOSTICS DRAWER (Opens on clicking "[ ⚡ Agent Diagnostics ]") =================== |
-| Shift A (06:00-14:00) | | [Slide-over Sheet]: Rolling 10-min FFT Spindle Vibration Spectrum + Agent Team Telemetry Correlation Snapshot (Off-canvas) | |
-| John Tran (Lead)      | +----------------------------------------------------------------------------------------------------------------------------+ |
-+-----------------------+--------------------------------------------------------------------------------------------------------------------------------+
-  ^--- PERSISTENT LEFT SIDEBAR                               ^--- PAGE CONTENT SLOT (<main class="p-6">)
+ ╭──────────────────────╮  ╭─────────────────────────────╮            (●) 1 Active Anomaly  ╭ ⌘K Search telemetry or jump to… ╮ (♪) John Tran (JT)
+ │ [K] KAIZEN AGENT     │  │ Cell Line 1 / Line Overview │                                  ╰──────────────────────────────────╯
+ │ ╭ Cell Line 1:     ╮ │  ╰─────────────────────────────╯
+ │ ╰ Turning & Milling╯ │
+ │                      │  Cell Line 1 Overview                                         [ Refresh Line ] [ Export Shift Report ] [■ New Run ■]
+ │ OPERATIONAL LOOP     │  Real-time machine fleet telemetry, statistical process control (SPC), and instant dispatch
+ │ ▣ Line Overview  *   │
+ │ ⚠ Incidents          │  ╭── AnomalyBanner (.glass.tone-red) ─────────────────────────────────────────────────────────────────────────╮
+ │   │ #INC-… ×         │  │ ╭──╮ CNC-02: Tool T07 Flank Wear  [CRITICAL]  (●) Investigating                                              │
+ │                      │  │ │⚠ │ Defect rate 1.42% · UCL 0.25% · Housing-B42                        [■ Open INC → ■]   Dismiss       │
+ │ KNOWLEDGE LOOP       │  │ ╰──╯                                                                                                         │
+ │ ▶ Tech Walkthroughs  │  ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ │ ▤ Knowledge Base     │
+ │ ☰ SOP Change Log     │  ╭─ OEE ───────────────╮ ╭─ DEFECT RATE VS UCL ╮ ╭─ ACTIVE INCIDENTS ──╮ ╭─ ESG CO₂ (tone-green-soft)╮
+ │                      │  │ OEE        [-2.1%]  │ │ DEFECT RATE  [5.6×] │ │ 1 CRITICAL  [SLA ⏱] │ │ CO₂e avoided              │
+ │                      │  │ 88.4 %              │ │ 1.42 %              │ │ ╭ #INC-…  [P1 Crit] ╮│ │ {n} kg                    │
+ │                      │  │ Avail  ▬▬▬▬▬▬▬▬▬▭   │ │ ▬▬▬▬▬▬▬▬▬▬▬▬|▬▬▬▬   │ │ ╰───────────────────╯│ │ ▬▬▬▬▬▬▬▬▭▭ energy/material│
+ │                      │  │ Perf   ▬▬▬▬▬▬▬▬▭▭   │ │            UCL tick │ │ Target MTTR < 15 mins│ │ Open Knowledge Base →     │
+ │                      │  │ Qual   ▬▬▬▬▬▬▬▭▭▭   │ │                     │ │                      │ │                           │
+ │                      │  ╰─────────────────────╯ ╰─────────────────────╯ ╰──────────────────────╯ ╰───────────────────────────╯
+ │                      │
+ │                      │  ╭── MachineFleetTable (.glass) ──────────────────────────────────────────────────────────────────────────────╮
+ │                      │  │ (■Anomaly■) ( Nominal ) ( All )                                     ╭ 🔍 Search machine or part…       ╮ │
+ │                      │  │                                                                     ╰──────────────────────────────────╯ │
+ │                      │  │ MACHINE ID   PART MODEL    VIBRATION RMS   SPINDLE LOAD   STATUS        INCIDENT ID    ACTIONS           │
+ │                      │  │▌CNC-02       Housing-B42   2.84 mm/s       78.6 %         (●) Critical  INC-…          [■ OPEN INC → ■]  │ <- row-hot
+ │                      │  │ CNC-01       Shaft-A12     1.46 mm/s       42.1 %         (●) Nominal   —              [ Diagnostics ]   │
+ │ (●) 24 ms  [Shift A] │  ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ │ (JT) John Tran       │
+ ╰──────────────────────╯           Tier 3: [ Diagnostics ] → DiagnosticsModal (centred glass, max 880px): 4 stats + sensor history chart
 ```
 
 ---
@@ -174,7 +158,8 @@ Kaizen Agent supports two distinct industrial scenarios out of the box:
 
 | State | UI Behavior |
 |---|---|
-| **All Nominal (90% of shift)** | No alert banner displayed. All machine badges green `(o) Nominal`. KPI card shows `Defect Rate: 0.04%` (well below UCL 0.25%). Canvas is completely serene. |
-| **Active Anomaly (SPC Breach)** | Destructive alert slides in at top within 1 second via SSE. `CNC-02` row highlighted with soft red background. Primary CTA "Dispatch Floor Copilot" active. |
-| **SSE Stream Disconnected** | Top header displays amber pill `[● Reconnecting...]`. Cached telemetry data remains readable with a muted informative banner. |
-| **Dual Scenario Switch** | When Scenario 2 is triggered via header demo controls, table dynamically reflects `IM-05` injection molding telemetry and dew point alerts. |
+| **Nominal** | No AnomalyBanner; no header anomaly chip. Fleet table rows show green Nominal chips; no `row-hot` rows. |
+| **Anomaly (SPC breach)** | AnomalyBanner appears above the KPI row; header shows red `N Active Anomaly` chip; the affected machine row gets `row-hot` and `[ OPEN INC → ]`. |
+| **Banner dismissed** | AnomalyBanner hidden for the current incident; header chip and `row-hot` row remain so the incident stays discoverable. |
+| **Backend offline** | Sidebar footer latency dot turns red; last fetched values stay visible. |
+| **Dual scenario switch** | When Scenario 2 is injected from the DemoController, the fleet table and banner reflect `IM-05` instead of `CNC-02`. |

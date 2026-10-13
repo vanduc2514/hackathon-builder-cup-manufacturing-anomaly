@@ -1,49 +1,39 @@
-# Screen 4: Kaizen Knowledge & Sustainability Hub
+# Screen 4: Knowledge Loop — Tech Walkthroughs, Knowledge Base & SOP Library
 
-> **Route:** `/knowledge` (Knowledge & ESG Hub) & `/knowledge?tab=sops` (SOP Change Log)  
+> **Tabs:** `walkthroughs` (sidebar "Tech Walkthroughs") • `impact` (sidebar "Knowledge Base") • `sops` (sidebar "SOP Change Log")  
 > **Viewport:** Desktop `1440 × 900 px`  
 > **Primary Personas:** Plant Manager (David Vu), Continuous Improvement (Kaizen) Lead, ESG Lead  
 > **Single Job-to-be-Done (JTBD):** Institutional Memory Search & ESG Sustainability Quantification. *(Not for active line control; dedicated to long-term organizational learning and ESG reporting).*  
-> **Design Standard:** [`docs/DESIGN.md`](../DESIGN.md) (shadcn/ui Light Mode)  
+> **Design Standard:** [`docs/DESIGN.md`](../DESIGN.md) (Lumina Slate liquid glass)  
+> **Source:** PR #105 `dashboard_frontend/src/components/views/TechWalkthroughsView.tsx`, `KaizenImpactView.tsx`, `SopLibraryView.tsx` + `components/knowledge/*`  
 > **Terminology:** Unified **Agent Team** across all pages and documentation.
+
+**Label notes (as implemented in PR #105):**
+- The sidebar label "SOP Change Log" opens a page titled **"SOP Library"**.
+- Tab id `impact` is labelled **"Knowledge Base"** (sidebar and page title).
 
 ---
 
 ## 1. End-to-End User Flow & UI Workflow
 
-The Knowledge & Sustainability Hub powers organizational learning, hybrid RAG defect queries, and verifiable ESG auditing:
-
 ```mermaid
 flowchart TD
-    A["Plant Manager / CI Lead Enters Hub (/knowledge)"] --> B["State 4A: Sustainability Dashboard (Tier 1 Glance)"]
-    
-    subgraph ESG ["Phase 1: ESG & Sustainability Audit"]
-        B --> B1["Card 1: Raw Cast Iron Scrap Saved (1.28 Tons / 428 Pcs)"]
-        B --> B2["Card 2: Unscheduled Downtime Saved (18.5 Hours / $24,050)"]
-        B --> B3["Card 3: Carbon Emissions Offset (3,840 kg CO2e / 160 Trees)"]
-        B --> B4["Click [ Export ESG Audit Report ] -> Download Audit Dossier"]
-    end
-    
-    subgraph RAG ["Phase 2: Hybrid RAG Knowledge Search & Triage"]
-        B --> C["State 4B: Query Institutional Memory (Tier 2 Focus)"]
-        C --> C1["Natural Language Search: 'WNMG-080408 flank wear' or 'dew point'"]
-        C --> C2["Click Sub-tabs: [ Verified 8D Solutions (RAG)* ] ↔ [ SOP Change Registry ]"]
-        C --> C3["Results display verifiable Google Drive & 8D report citation badges"]
-    end
-    
-    subgraph DeepDive ["Phase 3: Deep 8D Dossier Inspection & Video Training"]
-        C3 --> D{"User Interaction"}
-        D -->|"Click Table Row"| E["State 4C: Slide-over Historical 8D Dossier Sheet (Drawer)"]
-        E --> E1["Inspect Complete Agent Team 5-Whys Causal Tree & Ingot Lot Data"]
-        E --> E2["Review BigQuery Sensor Telemetry & Spindle Load Curves"]
-        E --> E3["Direct Clickable Link: [ 💻 Open Document in Google Drive ]"]
-        
-        D -->|"Click [ > Video (30s) ]"| F["State 4D: Expert Repair Video Modal Dialog"]
-        F --> F1["Stream 30s Procedural Technician Walkthrough (Tool Seating & Torque)"]
-        
-        D -->|"Click [ + Propose New Kaizen SOP ]"| G["State 4E: SOP Revision Proposal Modal Dialog"]
-        G --> G1["Submit Proposed Parameter Revision -> Routes to Shift Leader Sign-Off"]
-    end
+    A["Sidebar › Knowledge Loop"] --> W["4A Tech Walkthroughs (walkthroughs)"]
+    A --> K["4B Knowledge Base (impact)"]
+    A --> S["4C SOP Library (sops)"]
+
+    W --> W1["Search • Required / Watchlist pills • station pill tabs"]
+    W1 --> W2["WalkthroughRow click → 1040px drawer: WalkthroughPlayer"]
+
+    K --> K1["3 KPI cards: Scrap saved • Downtime saved • CO₂ offset"]
+    K --> K2["KnowledgeSearch: Ask the knowledge base"]
+    K --> K3["Signed-off 8D fixes table → row click → EightDSheet drawer"]
+    K --> K4["Benchmark assumptions → 640px drawer"]
+    K --> K5["Model a scenario → 1000px drawer: WhatIfCalculator"]
+
+    S --> S1["Needs review action strip → Review changes →"]
+    S --> S2["Table toolbar: search • category • sort"]
+    S2 --> S3["Row click → SopDetailDrawer (revision diff)"]
 ```
 
 ---
@@ -52,105 +42,122 @@ flowchart TD
 
 - **Plant Manager (David Vu):** Reports manufacturing productivity, safety, and ESG compliance to executive management. Needs concrete figures on scrap reduced, downtime saved, and carbon emissions avoided.
 - **Continuous Improvement (Kaizen) Lead:** Ensures the factory continuously learns from defects. Needs to query verified fixes and prevent recurring mistakes across machine cells.
-- **Cognitive Requirement:** Must instantly communicate measurable ESG impact (Tier 1) while providing powerful semantic RAG search into historical 8D dossiers (Tier 2 & 3).
+- **Cognitive Requirement:** Must instantly communicate measurable ESG impact (Tier 1) while providing semantic search into historical 8D fixes (Tier 2 & 3).
 
 ---
 
 ## 3. Progressive Disclosure Architecture (3 Tiers)
 
 ```
-[Tier 1: Glance (1s)]   --> 3 Sustainability KPI Metric Cards (Scrap Saved, Downtime Saved, CO₂ Offset)
+[Tier 1: Glance (1s)]   --> Knowledge Base 3 KPI cards • Walkthrough recertification strip • SOP "Needs review" strip
         │
         ▼
-[Tier 2: Focus (5s)]    --> RAG Search Input & Category Chips + Verified Solutions Table & Drive Badges
+[Tier 2: Focus (5s)]    --> KnowledgeSearch + Signed-off 8D fixes table • station sections • SOP table
         │
         ▼
-[Tier 3: Deep Dive]     --> Slide-over Historical 8D Dossier Drawer + SOP Video Walkthrough Modal
+[Tier 3: Deep Dive]     --> SideDrawers: EightDSheet • WalkthroughPlayer • SopDetailDrawer • WhatIfCalculator • Benchmark assumptions
 ```
-
-### Page Header Component (Slot Top)
-- **Title:** `Kaizen Knowledge & Sustainability Hub` (`text-2xl font-bold tracking-tight`)
-- **Subtitle:** `Institutional 8D organizational memory, SOP registry, and cumulative ESG footprint.` (`text-sm text-muted-foreground`)
-- **Trailing Action Slot:**
-  - `[ Export ESG Audit Report ]` (Ghost button, `rounded-md`)
-  - `[ + Propose New Kaizen SOP ]` (Outline button, `rounded-md`)
-
-### Tier 1: Glance (1-Second Reception)
-- **Top 3 Sustainability KPI Cards (`rounded-xl`, `border bg-card shadow-sm`):**
-  - **Raw Cast Iron Saved:** `1.28 Tons` (`428 Parts avoided`) — `+34% vs prior month`.
-  - **Unscheduled Downtime Saved:** `18.5 Hours` (`+$24,050 financial value`) — `94.2% availability`.
-  - **Carbon Emissions Offset:** `3,840 kg CO₂e` avoided from scrap remelting — `Equivalent to 160 trees`.
-
-### Tier 2: Focus (5-Second Reception)
-- **Sub-tab Navigation (`rounded-lg`, `bg-muted p-1`):**
-  - `[ Verified 8D Solutions (RAG) * ]` (`/knowledge`)
-  - `[ SOP Revision Registry (Change Log) ]` (`/knowledge?tab=sops`)
-- **RAG Knowledge Search Bar (`rounded-xl` Card, `p-4`):**
-  - Search Input: `"Q Search past anomalies, tooling codes (e.g. WNMG), 5-Whys, or SOPs..."`
-  - Category Filter Chips (`rounded-full`): `[All (24)]`, `[Tool Wear (11)]`, `[Thermal Drift (6)]`, `[Spindle Alignment (4)]`, `[Supplier Lots (3)]`.
-- **Verified Solutions Table (`rounded-xl` Card):**
-  - Columns: Defect Symptom, Machine & Tool, Validated Root Cause, Permanent Fix / SOP, Source Provenance, Impact / Video.
-  - Source Badges: `[ 💻 Google Drive ]` (Direct link) or `[ 8D Archive ]`.
-  - Quick Video Walkthrough CTA: `[ > Video (30s) ]`.
-
-### Tier 3: Deep Dive (On-Demand / Slide-Over Sheet & Modal)
-- **Historical 8D Dossier Drawer (`<Sheet>`):**
-  - Clicking any table row opens a full slide-over panel containing:
-    - Original incident metadata (`INC-2026-042`, date, shift leader sign-off).
-    - Full Agent Team 5-Whys deduction tree with Agent Team evidence logs.
-    - Attached raw BigQuery telemetry snapshots.
-    - Updated Standard Operating Procedure link (`SOP-CNC-042 v2.1`).
-    - Direct Google Drive file link: `💻 Competition | AI Builder Cup / Manuals / CNC_Lathe_Operation.docx`.
-- **ESG Calculation Methodology Dialog:**
-  - Explains carbon emissions conversion factor (`3.0 kg CO₂e per kg scrap cast iron avoided`).
 
 ---
 
-## 4. Low-Fi ASCII Wireframe: Knowledge & ESG Hub (Desktop 1440px)
+## 4A. Tech Walkthroughs (`walkthroughs`)
+
+- **Page header:** `.page-title` `Tech Walkthroughs`; subtitle `Short repair videos grouped by machine station · tap a video to play`; button `[ Upload Tech Capture ]` (`.btn-dark`).
+- **Tier 1:** monthly recertification strip (progress `4/5`, next item due).
+- **Tier 2:**
+  - 48px search field; `Required` and `Watchlist` toggle pills (`.pill-lg`); station pill tabs with icons (CNC Milling, Vision QA · CAM-EOL, Injection Molding · IM-05, Wash Line, Electrical & Safety).
+  - One `.glass` section per station: header (34px icon tile, title, count and total duration) + `WalkthroughRow`s (104×58 thumbnail with play overlay, title 650 / 0.95rem, meta, duration, 52px save toggle).
+- **Tier 3:** a row opens a 1040px `SideDrawer` with `WalkthroughPlayer` (16:9 stage radius 18, play button, progress track with chapter ticks, chapter buttons — active = white with accent left border — and gate rows).
 
 ```text
-+-----------------------+--------------------------------------------------------------------------------------------------------------------------------+
-|  KAIZEN AGENT         | Cell Line 1 / Knowledge & ESG Hub  [ Scenario: CNC Tool Wear v ]  [⚡ Inject Defect]  [↺ Reset]  [⏱ Baseline]  [David Vu (Mgr) v]      |
-|  Cell Line 1: Turning | <-- TOP HEADER BAR (h-14) ----------------------------------------------------------------------------------------------------+ |
-+-----------------------+                                                                                                                                |
-|                       | +-- PAGE HEADER (<div class="flex items-center justify-between pb-4 border-b">) ---------------------------------------------+ |
-|  OPERATIONAL LOOP     | | Kaizen Knowledge & ESG Hub                                                [ Export ESG Report ] [ + Propose Kaizen SOP ]     | |
-|  [#] Line Overview    | | Institutional 8D organizational memory, SOP registry, and cumulative ESG footprint                                         | |
-|  [T] Tech Copilot     | +----------------------------------------------------------------------------------------------------------------------------+ |
-|  [!] Incidents (1)    |                                                                                                                                |
-|                       | === TIER 1 (GLANCE): 3 SUSTAINABILITY KPI METRIC CARDS (rounded-xl) ========================================================== |
-|  KNOWLEDGE LOOP       | +-- ESG: SCRAP AVOIDED --+  +-- ESG: DOWNTIME SAVED -+  +-- ESG: CO2 REDUCED -----+                                            |
-|  [?] Knowledge & ESG* | | Raw Cast Iron Saved    |  | Stoppages Saved        |  | Prevented Remelt        |                                            |
-|  [@] SOP Change Log   | |   1.28 Tons (428 Pcs)  |  |   18.5 Hours ($24,050) |  |   3,840 kg CO2e         |                                            |
-|                       | |   (^) +34% vs prior mo |  |   (^) 94.2% avail      |  |   Equiv. 160 trees      |                                            |
-|                       | +------------------------+  +------------------------+  +-------------------------+                                            |
-|                       |                                                                                                                                |
-|                       | === TIER 2 (FOCUS): SUB-TABS & RAG KNOWLEDGE SEARCH (rounded-xl) ============================================================ |
-|                       | Sub-tabs: [ (•) Verified 8D Solutions (RAG) ]  [ ( ) SOP Revision Registry (Change Log) ]                                      |
-|                       | +----------------------------------------------------------------------------------------------------------------------------+ |
-|                       | | [ Q Search past anomalies, tooling codes (e.g. WNMG-080408), 5-Whys, or SOPs...                                 ] [Search] | |
-|                       | | Filters: (x) All (24)  ( ) Tool Wear (11)  ( ) Thermal (6)  ( ) Spindle (4)  ( ) Material (3)                              | |
-|                       | +----------------------------------------------------------------------------------------------------------------------------+ |
-|                       |                                                                                                                                |
-|                       | === TIER 2 (FOCUS): VERIFIED KAIZEN SOLUTIONS TABLE (rounded-xl) ============================================================ |
-|                       | +----------------------------------------------------------------------------------------------------------------------------+ |
-|                       | | Anomaly Symptom  | Machine/Tool | Validated Root Cause  | Permanent Fix / SOP  | Source Provenance     | Video / Actions     | |
-|                       | +------------------+--------------+-----------------------+----------------------+-----------------------+---------------------+ |
-|                       | | Flank Wear VB>0.3| CNC-02 / T07 | Lot hardness HB 240   | WNMG-080408 (45 Nm)  | [💻 Google Drive Doc] | [> 30s SOP Video]   | |
-|                       | | High Roughness   | Lathe Cell   | Lack of feed scaling  | SOP-CNC-042 v2.1     | INC-2026-042 Dossier  | [ View 8D Sheet ]   | |
-|                       | +------------------+--------------+-----------------------+----------------------+-----------------------+---------------------+ |
-|                       | | Thermal Drift    | CNC-01 / Main| Coolant chiller flow  | Threshold set 14L/min| [💻 Google Drive Doc] | [> 30s SOP Video]   | |
-|                       | | Z-axis Drift     | Mill Cell    | Filter debris buildup | SOP-CHL-008 v1.4     | INC-2026-038 Dossier  | [ View 8D Sheet ]   | |
-|                       | +------------------+--------------+-----------------------+----------------------+-----------------------+---------------------+ |
-|                       | | Short Fill Cav #3| IM-05 / M03  | Material dryer dew pt | Replace dryer filter | [💻 Google Drive Doc] | [> 30s SOP Video]   | |
-|                       | | Sink Marks ABS   | Molding Cell | Dew pt rose to -18 °C | SOP-IM-019 v2.0      | INC-2026-029 Dossier  | [ View 8D Sheet ]   | |
-|                       | +----------------------------------------------------------------------------------------------------------------------------+ |
-|-----------------------|                                                                                                                                |
-| (o) Live Connected    | === TIER 3 (DEEP DIVE): HISTORICAL 8D DOSSIER SLIDE-OVER SHEET (Opens on row click) ========================================= |
-| Shift A (06:00-14:00) | | [Slide-over Sheet]: Complete 5-Whys tree + BigQuery telemetry + Google Drive link + Full SOP Document                      | |
-| David Vu (Plant Mgr)  | +----------------------------------------------------------------------------------------------------------------------------+ |
-+-----------------------+--------------------------------------------------------------------------------------------------------------------------------+
-  ^--- PERSISTENT LEFT SIDEBAR                               ^--- PAGE CONTENT SLOT (<main class="p-6">)
+ Tech Walkthroughs                                                                                     [■ Upload Tech Capture ■]
+ Short repair videos grouped by machine station · tap a video to play
+
+ ╭─ Recertification ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │ Monthly recertification   ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▭▭▭▭  4/5   · next item due …                                                     │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ ╭ 🔍 Search walkthroughs…                                                       ╮  ( Required )  ( Watchlist )
+ ╰───────────────────────────────────────────────────────────────────────────────╯
+ (■ CNC Milling ■) ( Vision QA · CAM-EOL ) ( Injection Molding · IM-05 ) ( Wash Line ) ( Electrical & Safety )
+
+ ╭─ [▣] CNC Milling · N videos · total mm:ss ────────────────────────────────────────────────────────────────────────────────────╮
+ │ ╭────────╮ Insert change & torque check                                                          mm:ss   ( ☆ )               │
+ │ │  ▶     │ meta…                                                                                                              │
+ │ ╰────────╯                                                                                                                    │
+ │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
+ │ ╭────────╮ …                                                                                     mm:ss   ( ☆ )               │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+        Tier 3: row → SideDrawer 1040px → WalkthroughPlayer (16:9, chapters, gate rows)
+```
+
+---
+
+## 4B. Knowledge Base (`impact`)
+
+- **Page header:** `.page-title` `Knowledge Base`; subtitle `Past 8D fixes signed off on Cell Line 1 — and the scrap, downtime and CO₂ they saved.`
+  - `[ Benchmark assumptions ]` (`.btn`) → 640px drawer (`<details>` with a definition grid).
+  - `[ Model a scenario ]` (`.btn-dark`) → 1000px drawer with `WhatIfCalculator` (`/api/impact/*`).
+- **Tier 1:** 3 KPI cards, values in mono and coloured:
+  - Scrap saved (accent).
+  - Downtime saved (amber `#b4710a`).
+  - CO₂ offset (green `#0e8a43`).
+- **Tier 2:**
+  - `KnowledgeSearch` glass card: `Ask the knowledge base`, inset chat input, dark Search button, suggestion pills, result rows with source chips — green = Verified 8D fix, accent = SOP, neutral = Walkthrough.
+  - Table **`Signed-off 8D fixes`**: 8D · Problem · Root cause · Fix · Proof · CO₂ · Signed off (chip).
+- **Tier 3:** a row opens the `EightDSheet` drawer (past 8D).
+- **Data:** ESG ledger stored in `localStorage`.
+
+```text
+ Knowledge Base                                                              [ Benchmark assumptions ] [■ Model a scenario ■]
+ Past 8D fixes signed off on Cell Line 1 — and the scrap, downtime and CO₂ they saved.
+
+ ╭─ SCRAP SAVED ───────────────────╮ ╭─ DOWNTIME SAVED ────────────────╮ ╭─ CO₂ OFFSET ────────────────────╮
+ │ {n} parts   (mono, accent)      │ │ {n} h   (mono, amber #b4710a)   │ │ {n} kg  (mono, green #0e8a43)   │
+ ╰─────────────────────────────────╯ ╰─────────────────────────────────╯ ╰─────────────────────────────────╯
+
+ ╭─ Ask the knowledge base ──────────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │ ╭ Ask about a defect, part code or SOP…                                                                  ╮ [■ Search ■]       │
+ │ ╰────────────────────────────────────────────────────────────────────────────────────────────────────────╯                    │
+ │ ( suggestion ) ( suggestion ) ( suggestion )                                                                                  │
+ │ [Verified 8D fix]  result…        [SOP]  result…        [Walkthrough]  result…                                                │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ ╭─ Signed-off 8D fixes ─────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │ 8D        PROBLEM              ROOT CAUSE              FIX                    PROOF            CO₂       SIGNED OFF          │
+ │ INC-…     Tool T07 flank wear  …                       Insert WNMG-080408     50/50 parts      {n} kg    (● Signed off)      │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+        Tier 3: row → EightDSheet drawer
+```
+
+---
+
+## 4C. SOP Library (`sops`)
+
+- **Page header:** `.page-title` `SOP Library`; subtitle `{N} active procedures · click a row…`; buttons `[ Export CSV ]` (`.btn`), `[ New Procedure ]` (`.btn-dark`).
+- **Tier 1:** `Needs review` action strip: solid accent chip, SOP code, revision reason, `Review changes →`.
+- **Tier 2:** glass table card with toolbar (search, category select, sort select). Columns:
+  - SOP (mono; red if safety-critical)
+  - Procedure (lock icon if safety, plus category)
+  - Machine/Station
+  - Rev
+  - Updated
+  - chevron
+- **Tier 3:** a row opens `SopDetailDrawer`: SOP summary, metrics, tags (`TagChip`), revision diff (additions green, deletions red strikethrough).
+
+```text
+ SOP Library                                                                                  [ Export CSV ] [■ New Procedure ■]
+ {N} active procedures · click a row…
+
+ ╭─ action-strip ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │ [■ Needs review ■]  SOP-CNC-…  revision reason…                                                         Review changes →     │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ ╭─ .glass table ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │ ╭ 🔍 Search procedures… ╮   [ Category ▾ ]   [ Sort ▾ ]                                                                       │
+ │ SOP            PROCEDURE                          MACHINE/STATION      REV      UPDATED                                       │
+ │ SOP-CNC-…      Insert change & torque  · Tooling  CNC-02               v…       …                                       ›     │
+ │ SOP-…(red)     🔒 Lockout procedure    · Safety   All                  v…       …                                       ›     │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+        Tier 3: row → SopDetailDrawer: summary • metrics • tags • revision diff (+ green / ~~− red~~)
 ```
 
 ---
@@ -159,7 +166,10 @@ flowchart TD
 
 | State | UI Behavior |
 |---|---|
-| **Query Search In-Flight** | Search input displays subtle animated spinner; results table dims slightly during hybrid vector retrieval. |
-| **No Exact Semantic Match** | Table displays nearest neighbor matches with similarity confidence score (e.g., `"No exact match for 'T99'. Showing closest tool: 'T07'"`). |
-| **New 8D Solution Indexed** | When an incident is approved in Screen 3, gentle toast notification alerts the hub: `"SOP-CNC-042 v2.1 has been indexed into the Knowledge Hub."` |
-| **Google Drive File Access** | Clicking Google Drive badge opens the live document in Google Workspace preview with read-only permissions. |
+| **Ledger source** | Knowledge Base KPIs and the Signed-off 8D fixes table read from the browser's `localStorage` ESG ledger, so values are per browser, not shared across users. |
+| **New 8D signed off** | After approval on Screen 3, the ledger gains a row in `Signed-off 8D fixes` and the 3 KPI cards increment. |
+| **Knowledge search results** | Result rows carry a source chip: green Verified 8D fix, accent SOP, neutral Walkthrough. |
+| **Walkthrough filters** | `Required` / `Watchlist` pills and station tabs narrow the station sections; below 640px the walkthrough duration is hidden. |
+| **SOP needs review** | The `Needs review` strip links to the SOP's revision diff in `SopDetailDrawer`. |
+| **Safety-critical SOP** | SOP code shown in red; procedure carries a lock icon. |
+| **Narrow window** | Below 1100px impact two-column layouts collapse to one column; below 900px ESG KPIs stack 3 → 1. |

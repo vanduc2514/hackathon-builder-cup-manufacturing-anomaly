@@ -51,5 +51,5 @@ async def incident_stream(request: Request):
     return EventSourceResponse(event_generator())
 ```
 
-## Frontend Connection (`frontend/src/`)
+## Frontend Connection (`apps/web/src/`, `apps/mobile/src/`)
 The React dashboard consumes the stream using `EventSource('/api/incidents/stream')` with automatic backoff reconnection.

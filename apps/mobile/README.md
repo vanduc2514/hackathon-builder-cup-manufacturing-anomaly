@@ -1,18 +1,19 @@
 # Kaizen Agent — Technician Mobile App
 
-React + Vite + TypeScript mobile app for the specialist who repairs the machine. It is the technician-side companion to the plant dashboard in `frontend/`.
+React + Vite + TypeScript mobile app for the specialist who repairs the machine. It is the technician-side companion to the plant dashboard in `apps/web/`.
 
 ## Development
 
 ```bash
-cd app_frontend
-npm install
-npm run dev        # Vite dev server on :3000
-npm run typecheck  # tsc --noEmit
-npm run build      # tsc + vite build -> dist/
+mise run install:mobile && mise run mobile   # Vite dev server on :3001
+mise run mobile:typecheck                    # tsc --noEmit
+mise run mobile:build                        # tsc + vite build -> dist/
+
+# or with plain npm
+cd apps/mobile && npm install && npm run dev
 ```
 
-`/api/*` is proxied to the FastAPI backend at `http://localhost:8000` (see `vite.config.ts`). Always use relative URLs in code. Start the backend first (`mise run backend`) to get live incident updates.
+`/api/*` is proxied to the FastAPI backend at `$API_PROXY_TARGET` (default `http://localhost:8000`, see `vite.config.ts`). Always use relative URLs in code. Start the backend first (`mise run backend`) to get live incident updates.
 
 ## Layout
 

@@ -55,7 +55,7 @@ git clone https://github.com/your-org/kaizen-agent.git
 cd kaizen-agent
 
 mise install          # provisions Python 3.11 + Node 22 + .venv
-mise run install      # pip install backend deps + npm install frontend deps
+mise run install      # pip install backend deps + npm install apps/web and apps/mobile
 ```
 
 ### 2. Configure environment
@@ -86,18 +86,21 @@ mise automatically merges `mise.local.toml` on top of `mise.toml` when you `cd` 
 
 Local development works without GCP credentials — start the local BigQuery emulator (`mise run emulator`) or leave it unset to automatically fall back to mock data.
 
+Frontend dev ports come from `WEB_PORT` (3000) and `MOBILE_PORT` (3001), and the Vite `/api` proxy target from `API_PROXY_TARGET` (defaults to `http://localhost:$API_PORT`), all in `mise.toml`; override them in `mise.local.toml`.
+
 ### 3. Run the full stack
 
 ```bash
-# Backend (FastAPI :8000) + Frontend (Vite :3000) + ADK dev UI (:8001) in parallel
-mise run dev -j3
+# Backend (FastAPI :8000) + web dashboard (Vite :3000) + mobile app (Vite :3001) + ADK dev UI (:8001) in parallel
+mise run dev -j4
 ```
 
 Or run each side independently:
 
 ```bash
 mise run backend    # FastAPI with auto-reload
-mise run frontend   # Vite dev server
+mise run web        # Plant Ops dashboard (apps/web, :3000)
+mise run mobile     # Technician mobile app (apps/mobile, :3001)
 mise run adk-web    # ADK dev UI: incident workflow graph + per-node events (app "agents")
 ```
 
@@ -109,7 +112,7 @@ With the backend running, inject a synthetic defect to see the full 90-second mu
 mise run demo
 ```
 
-Then open `http://localhost:3000` (frontend) or `http://localhost:8000` (FastAPI backend) to watch the live dashboard.
+Then open `http://localhost:3000` (Plant Ops dashboard), `http://localhost:3001` (technician mobile app) or `http://localhost:8000` (FastAPI backend).
 
 ### Other useful commands
 
@@ -120,7 +123,16 @@ mise run emulator       # start local BigQuery emulator (:9050)
 mise run emulator:down  # stop BigQuery emulator
 mise run docker:up      # start full stack via docker compose
 adk run backend/agents '{}'  # run one incident workflow in the terminal
+mise run build          # production build of apps/web + apps/mobile
+mise run typecheck      # tsc --noEmit for both apps
+mise run web:preview    # serve apps/web/dist on :3000
+mise run mobile:preview # serve apps/mobile/dist on :3001
 ```
+
+### Deployment
+
+- Backend: `mise run deploy:backend` builds the container and deploys it to Cloud Run.
+- Frontend hosting (`apps/web`, `apps/mobile`) is documented in [`docs/deployment-frontend.md`](docs/deployment-frontend.md) (not yet automated).
 
 ---
 

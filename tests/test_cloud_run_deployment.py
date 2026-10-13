@@ -51,7 +51,7 @@ def test_dockerignore_exclusions():
         line.strip() for line in content.splitlines() if line.strip() and not line.startswith("#")
     ]
 
-    expected_ignored = [".git", ".venv", "tests/", "frontend/", ".cache/", "__pycache__/"]
+    expected_ignored = [".git", ".venv", "tests/", "apps/", ".cache/", "__pycache__/"]
     for pattern in expected_ignored:
         assert any(pattern in line for line in ignored_patterns), (
             f"{pattern} should be in .dockerignore"

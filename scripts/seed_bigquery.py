@@ -220,7 +220,8 @@ def seed_bigquery() -> None:
 
     if os.path.exists(SCHEMA_SQL_PATH):
         with open(SCHEMA_SQL_PATH, encoding="utf-8") as f:
-            ddl = f.read()
+            # The DDL names the default `manufacturing` dataset; target the configured one.
+            ddl = f.read().replace("`manufacturing.", f"`{settings.bigquery_dataset}.")
             for statement in ddl.split(";"):
                 stmt = statement.strip()
                 if stmt:

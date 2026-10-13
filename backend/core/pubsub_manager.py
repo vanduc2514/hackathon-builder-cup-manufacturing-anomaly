@@ -282,7 +282,10 @@ class PubSubManager:
             return False
 
         try:
-            self.ensure_topics_and_subscriptions()
+            # Real projects get topics/subscriptions from Terraform (infra/terraform/pubsub.tf),
+            # so the runtime only needs publish/subscribe rights; the emulator starts empty.
+            if self.is_emulator:
+                self.ensure_topics_and_subscriptions()
             subscriber = self.get_subscriber_client()
 
             handlers = [

@@ -42,3 +42,6 @@ docs/
 docker-compose*.yml
 mise.local.toml
 .env*
+
+# Infrastructure as code
+infra/

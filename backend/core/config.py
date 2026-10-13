@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     app_env: str = "development"
     host: str = "0.0.0.0"
     port: int = 8000
+    # Comma-separated browser origins allowed to call the API cross-origin (the Firebase
+    # Hosting sites open SSE directly against Cloud Run); empty disables CORS.
+    cors_origins: str = ""
     gcp_project_id: str = "kaizen-local"
     gcp_region: str = "asia-southeast1"
 
@@ -106,6 +109,11 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         """Indicates whether running in a production deployment environment."""
         return self.app_env.lower() == "production"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """CORS_ORIGINS split on commas, blanks dropped."""
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     @computed_field
     @property

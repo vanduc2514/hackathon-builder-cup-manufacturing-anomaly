@@ -4,6 +4,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 from backend.agents.orchestrator import orchestrator
@@ -52,6 +53,15 @@ app = FastAPI(
     description="Kaizen Agent: Product-first AI Team for Manufacturing Anomaly Detection and Root-Cause Tracing",
     lifespan=lifespan,
 )
+
+# The Hosting rewrite cannot carry SSE, so the frontends open streams straight against Cloud
+# Run; only those origins may read responses cross-origin.
+if settings.cors_origin_list:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origin_list,
+        allow_methods=["GET"],
+    )
 
 app.include_router(incidents_router)
 app.include_router(simulation_router)

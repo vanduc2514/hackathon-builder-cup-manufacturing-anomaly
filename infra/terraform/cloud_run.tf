@@ -67,9 +67,11 @@ resource "google_cloud_run_v2_service" "backend" {
           path = "/healthz"
           port = 8080
         }
+        # Cold start imports ADK + Google clients and reloads Firestore state on 1 vCPU;
+        # allow up to ~2 min before Cloud Run gives up on the revision.
         initial_delay_seconds = 5
         period_seconds        = 10
-        failure_threshold     = 3
+        failure_threshold     = 12
         timeout_seconds       = 5
       }
 
@@ -112,7 +114,7 @@ resource "google_cloud_run_v2_service" "backend" {
   }
 
   depends_on = [
-    google_project_service.apis,
+    time_sleep.apis_ready,
     google_project_iam_member.runtime,
     google_bigquery_dataset_iam_member.runtime_editor,
     google_pubsub_topic_iam_member.runtime_publisher,

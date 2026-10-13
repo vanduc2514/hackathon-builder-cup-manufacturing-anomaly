@@ -7,7 +7,7 @@ resource "google_discovery_engine_data_store" "kb" {
   solution_types              = ["SOLUTION_TYPE_SEARCH"]
   create_advanced_site_search = false
 
-  depends_on = [google_project_service.apis]
+  depends_on = [time_sleep.apis_ready]
 }
 
 # Standard tier, no add-ons: the app requests snippets only (no LLM summaries).
@@ -23,5 +23,5 @@ resource "google_discovery_engine_search_engine" "kb" {
     search_tier = "SEARCH_TIER_STANDARD"
   }
 
-  depends_on = [google_project_service.apis]
+  depends_on = [time_sleep.apis_ready]
 }

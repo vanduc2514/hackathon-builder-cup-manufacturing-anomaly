@@ -2,7 +2,7 @@ resource "google_service_account" "backend" {
   account_id   = "kaizen-backend-sa"
   display_name = "Kaizen Agent Backend (Cloud Run)"
 
-  depends_on = [google_project_service.apis]
+  depends_on = [time_sleep.apis_ready]
 }
 
 # Project-level runtime roles for the Cloud Run service account (least privilege; the app
@@ -26,5 +26,5 @@ resource "google_project_iam_member" "runtime" {
   role    = each.value
   member  = local.runtime_member
 
-  depends_on = [google_project_service.apis]
+  depends_on = [time_sleep.apis_ready]
 }

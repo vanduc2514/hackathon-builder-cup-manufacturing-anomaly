@@ -3,5 +3,5 @@ resource "google_firestore_database" "default" {
   location_id = var.region
   type        = "FIRESTORE_NATIVE"
 
-  depends_on = [google_project_service.apis]
+  depends_on = [time_sleep.apis_ready]
 }

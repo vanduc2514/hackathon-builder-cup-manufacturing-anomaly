@@ -3,7 +3,7 @@ resource "google_firebase_project" "default" {
 
   project = var.project_id
 
-  depends_on = [google_project_service.apis]
+  depends_on = [time_sleep.apis_ready]
 }
 
 # One Hosting site per frontend app; firebase.json maps targets web/mobile to these sites.

@@ -1,5 +1,3 @@
-data "google_project" "this" {}
-
 # Alert-only: GCP budgets never stop spending. EXCLUDE_ALL_CREDITS tracks gross spend,
 # i.e. how fast the free-trial credit burns. No all_updates_rule: without one, alerts are
 # emailed to the billing account admins (the provider rejects the block unless a Pub/Sub
@@ -10,8 +8,10 @@ resource "google_billing_budget" "project" {
   billing_account = var.billing_account_id
   display_name    = "kaizen-budget"
 
+  # Project number from the Firebase project resource (no plan-time data source call before
+  # the APIs are enabled on a fresh project).
   budget_filter {
-    projects               = ["projects/${data.google_project.this.number}"]
+    projects               = ["projects/${google_firebase_project.default.project_number}"]
     credit_types_treatment = "EXCLUDE_ALL_CREDITS"
   }
 
@@ -37,5 +37,5 @@ resource "google_billing_budget" "project" {
     spend_basis       = "CURRENT_SPEND"
   }
 
-  depends_on = [google_project_service.apis]
+  depends_on = [time_sleep.apis_ready]
 }

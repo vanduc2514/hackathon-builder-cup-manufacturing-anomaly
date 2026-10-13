@@ -3,7 +3,7 @@ resource "google_pubsub_topic" "topics" {
 
   name = each.key
 
-  depends_on = [google_project_service.apis]
+  depends_on = [time_sleep.apis_ready]
 }
 
 resource "google_pubsub_subscription" "subs" {
@@ -12,7 +12,7 @@ resource "google_pubsub_subscription" "subs" {
   name  = each.value
   topic = google_pubsub_topic.topics[each.key].id
 
-  depends_on = [google_project_service.apis]
+  depends_on = [time_sleep.apis_ready]
 }
 
 # The backend publishes (simulation inject) and streaming-pulls only these resources.

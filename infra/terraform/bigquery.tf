@@ -5,7 +5,7 @@ resource "google_bigquery_dataset" "manufacturing" {
   location                   = var.region
   delete_contents_on_destroy = false
 
-  depends_on = [google_project_service.apis]
+  depends_on = [time_sleep.apis_ready]
 }
 
 # Table create/insert/query inside the dataset (DDL in seed_bigquery, streaming inserts).

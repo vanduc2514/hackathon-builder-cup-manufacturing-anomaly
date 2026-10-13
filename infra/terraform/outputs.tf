@@ -39,5 +39,5 @@ output "hosting_sites" {
 }
 
 output "hosting_urls" {
-  value = { for target, site in local.hosting_sites : target => "https://${site}.web.app" }
+  value = local.hosting_urls
 }

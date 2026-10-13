@@ -80,3 +80,31 @@ def test_config_cloud_run_environment_resolution(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setenv("GOOGLE_GENAI_USE_VERTEXAI", "true")
     prod_settings = Settings(ai_provider="gemini")
     assert prod_settings.ai_provider == "gemini"
+
+
+def test_cors_allows_only_configured_hosting_origins(monkeypatch: pytest.MonkeyPatch):
+    """CORS_ORIGINS (comma-separated, blanks ignored) gates cross-origin reads; empty disables CORS."""
+    import importlib
+
+    from fastapi.testclient import TestClient
+
+    import backend.api.main as main_module
+    from backend.core.config import settings
+
+    web, mobile = "https://kaizen-lab-web.web.app", "https://kaizen-lab-mobile.web.app"
+    monkeypatch.setattr(settings, "cors_origins", f" {web} , ,{mobile}")
+    try:
+        client = TestClient(importlib.reload(main_module).app)
+        for origin in (web, mobile):
+            res = client.get("/health", headers={"Origin": origin})
+            assert res.headers.get("access-control-allow-origin") == origin
+        denied = client.get("/health", headers={"Origin": "https://evil.example"})
+        assert "access-control-allow-origin" not in denied.headers
+
+        monkeypatch.setattr(settings, "cors_origins", "")
+        client = TestClient(importlib.reload(main_module).app)
+        res = client.get("/health", headers={"Origin": web})
+        assert "access-control-allow-origin" not in res.headers
+    finally:
+        monkeypatch.undo()
+        importlib.reload(main_module)

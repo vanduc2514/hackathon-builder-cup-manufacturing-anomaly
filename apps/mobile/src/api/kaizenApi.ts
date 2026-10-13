@@ -1,6 +1,7 @@
 /**
- * Thin fetch wrappers for the FastAPI backend. All URLs are relative (`/api/...`) so the
- * Vite proxy (dev) and the server (prod) route them.
+ * Thin fetch wrappers for the FastAPI backend. REST URLs are relative (`/api/...`) so the
+ * Vite proxy (dev) and Firebase Hosting rewrite (prod) route them; SSE and WebSocket go to
+ * VITE_STREAM_ORIGIN when set, because the Hosting rewrite cannot carry streams.
  */
 import type {
   EvidenceUploadResponse,
@@ -10,6 +11,13 @@ import type {
   MultiMachineTelemetryResponse,
   TelemetryBaselineResponse,
 } from '../types';
+
+const STREAM_ORIGIN = (import.meta.env.VITE_STREAM_ORIGIN ?? '').replace(/\/+$/, '');
+
+/** URL for a streaming endpoint: Cloud Run origin in production builds, relative in dev. */
+export function streamUrl(path: string): string {
+  return `${STREAM_ORIGIN}${path}`;
+}
 
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
@@ -63,14 +71,17 @@ export function listGeminiLiveSessions(): Promise<GeminiLiveSessionStatus[]> {
   return getJson<GeminiLiveSessionStatus[]>('/api/gemini-live/sessions');
 }
 
-/** Absolute ws:// or wss:// URL for the Gemini Live socket on the current host. */
+/** Absolute ws:// or wss:// URL for the Gemini Live socket (stream origin, else current host). */
 export function geminiLiveSocketUrl(sessionId?: string, resumptionHandle?: string): string {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const base = STREAM_ORIGIN
+    ? STREAM_ORIGIN.replace(/^http/, 'ws')
+    : `${proto}//${window.location.host}`;
   const params = new URLSearchParams();
   if (sessionId) params.set('session_id', sessionId);
   if (resumptionHandle) params.set('resumption_handle', resumptionHandle);
   const q = params.toString();
-  return `${proto}//${window.location.host}/api/gemini-live/ws${q ? `?${q}` : ''}`;
+  return `${base}/api/gemini-live/ws${q ? `?${q}` : ''}`;
 }
 
 /** Turns a data: URL (from a canvas capture) into a Blob for upload. */

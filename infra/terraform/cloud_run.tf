@@ -14,6 +14,7 @@ locals {
     LOG_LEVEL                   = "INFO"
     MQTT_BROKER_HOST            = "broker.emqx.io"
     MQTT_BROKER_PORT            = "1883"
+    CORS_ORIGINS                = local.cors_origins
     PUBSUB_TELEMETRY_TOPIC      = "kaizen-telemetry"
     PUBSUB_TELEMETRY_SUB        = local.pubsub["kaizen-telemetry"]
     PUBSUB_TRACEABILITY_TOPIC   = "kaizen-traceability"

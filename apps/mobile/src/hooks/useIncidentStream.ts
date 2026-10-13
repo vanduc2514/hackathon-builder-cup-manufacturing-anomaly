@@ -3,10 +3,10 @@
  * so a dropped stream is visible instead of looking like "nothing is happening".
  */
 import { useEffect, useState } from 'react';
-import { fetchCurrentIncident } from '../api/kaizenApi';
+import { fetchCurrentIncident, streamUrl } from '../api/kaizenApi';
 import type { IncidentState, StreamStatus } from '../types';
 
-const STREAM_URLS = ['/api/incidents/stream', '/api/incidents/events'];
+const STREAM_URLS = ['/api/incidents/stream', '/api/incidents/events'].map(streamUrl);
 const MAX_BACKOFF_MS = 15000;
 // A dev proxy can keep the browser side of the stream open after the backend dies, so the
 // stream alone cannot detect an outage; a periodic snapshot fetch does.

@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import { ACTIVE_PRODUCT, productIncidents } from './lib/incident';
 import { isIncidentOpen, type EsgLedgerEntry } from './lib/fleet';
 import { buildSolution } from './lib/eightD';
+import { streamUrl } from './lib/api';
 import type { IncidentState, SimulationStatusResponse } from './types';
 
 export type ToastTone = 'success' | 'error' | 'info';
@@ -120,11 +121,11 @@ export default function App(): React.ReactElement {
       }
     };
 
-    const initEventSource = (url: string): EventSource => {
-      const es = new EventSource(url);
+    const initEventSource = (path: string): EventSource => {
+      const es = new EventSource(streamUrl(path));
       es.addEventListener('incident_update', handleMessage);
       es.onerror = () => {
-        if (!fallbackAttempted && url === '/api/incidents/stream') {
+        if (!fallbackAttempted && path === '/api/incidents/stream') {
           fallbackAttempted = true;
           es.close();
           eventSource = initEventSource('/api/incidents/events');

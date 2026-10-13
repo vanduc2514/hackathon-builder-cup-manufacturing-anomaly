@@ -34,5 +34,12 @@ locals {
     web    = "${var.global_prefix}-web"
     mobile = "${var.global_prefix}-mobile"
   }
+  hosting_urls = { for target, site in local.hosting_sites : target => "https://${site}.web.app" }
+
+  # Browser origins that open SSE/WebSocket directly against Cloud Run (CORS_ORIGINS).
+  cors_origins = join(",", flatten([
+    for site in values(local.hosting_sites) : ["https://${site}.web.app", "https://${site}.firebaseapp.com"]
+  ]))
+
   runtime_member = "serviceAccount:${google_service_account.backend.email}"
 }

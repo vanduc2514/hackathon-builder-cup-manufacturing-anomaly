@@ -329,20 +329,20 @@ run = [
 ]
 
 [tasks."deploy:web"]
-description = "Build apps/web and deploy it to Firebase Hosting (target web)"
+description = "Build apps/web against the Cloud Run stream origin and deploy it to Firebase Hosting (target web)"
 depends = ["firebase:targets"]
 run = [
   { task = "install:web" },
-  { task = "web:build" },
+  'origin="$(terraform -chdir=infra/terraform output -raw service_url)" && cd apps/web && VITE_STREAM_ORIGIN="$origin" npm run build',
   'firebase deploy --only hosting:web --project "$TF_VAR_project_id"',
 ]
 
 [tasks."deploy:mobile"]
-description = "Build apps/mobile and deploy it to Firebase Hosting (target mobile)"
+description = "Build apps/mobile against the Cloud Run stream origin and deploy it to Firebase Hosting (target mobile)"
 depends = ["firebase:targets"]
 run = [
   { task = "install:mobile" },
-  { task = "mobile:build" },
+  'origin="$(terraform -chdir=infra/terraform output -raw service_url)" && cd apps/mobile && VITE_STREAM_ORIGIN="$origin" npm run build',
   'firebase deploy --only hosting:mobile --project "$TF_VAR_project_id"',
 ]
 

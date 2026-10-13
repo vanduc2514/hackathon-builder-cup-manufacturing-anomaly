@@ -62,6 +62,11 @@ This file is the authoritative reference for AI coding agents and human contribu
 │   ├── knowledge_base/         # PDFs, maintenance logs, 8D reports for RAG
 │   └── schemas/                # BigQuery DDL and Firestore schema definitions
 │
+├── infra/                      # Terraform: all GCP resources (mise run infra:*)
+│   ├── bootstrap/              # One-time GCS state bucket (local state)
+│   └── terraform/              # Main stack: Cloud Run, IAM, BigQuery, Pub/Sub, Firestore, Vertex Search, Firebase Hosting, budget
+│
+├── firebase.json               # Firebase Hosting for frontend/dist; /api/** rewritten to Cloud Run
 ├── docs/                       # Architecture diagrams (.mmd + rendered .svg)
 ├── tests/                      # pytest test suite (mirrors backend/ structure)
 ├── mise.toml                   # Tool versions + all dev tasks (canonical runner)

@@ -99,11 +99,14 @@ storybook-static/
 application_default_credentials.json
 .gcloud/
 
-# Terraform state (if infra is added later)
+# Terraform / Firebase
 *.tfstate
 *.tfstate.*
 .terraform/
-.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+.firebaserc
+.firebase/
 
 # -----------------------------------------------------------------------------
 # Data & Models (large binary / generated files)

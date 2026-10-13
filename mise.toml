@@ -9,6 +9,7 @@
 python   = "3.11"    # backend: FastAPI / ADK agents
 node     = "22"      # apps/web + apps/mobile: Vite / React
 gcloud   = "580.0.0" # Google Cloud SDK (gcloud & BigQuery bq CLI)
+terraform = "1.16.5" # Infrastructure as code (infra/)
 firebase = "15.32.1" # Firebase CLI (hosting & emulators)
 ruff     = "0.16.10" # PEP 8 fast linter & code formatter (per AGENTS.md)
 jq       = "1.8.2"   # JSON query utility for scripts & simulation payloads
@@ -287,15 +288,47 @@ description = "Upload cached changes to a Drive folder (copy only, never deletes
 run = 'rclone copy .cache/gdrive/{{arg(name="folder")}} gdrive:{{arg(name="folder")}} --drive-shared-with-me -v'
 
 # =============================================================================
-# Cloud Run & Workload Identity Deployment
+# GCP Infrastructure (Terraform, infra/) & Deployment
+# Set TF_VAR_project_id (and optionally TF_VAR_billing_account_id) in mise.local.toml.
+# Order: infra:bootstrap → infra:init → infra:apply → deploy:backend → infra:seed
+#        → kb:import → deploy:frontend
 # =============================================================================
 
-[tasks."deploy:iam"]
-description = "Provision least-privileged IAM roles & Cloud Run service account"
-run = "bash scripts/setup_workload_identity.sh"
+[tasks."infra:bootstrap"]
+description = "One-time: create the GCS bucket holding Terraform state (infra/bootstrap, local state)"
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && terraform -chdir=infra/bootstrap init && terraform -chdir=infra/bootstrap apply'
+
+[tasks."infra:init"]
+description = "Initialise the main Terraform stack against the GCS state bucket"
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && terraform -chdir=infra/terraform init -backend-config="bucket=${TF_VAR_project_id}-tfstate"'
+
+[tasks."infra:plan"]
+description = "Preview GCP infrastructure changes (infra/terraform)"
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && terraform -chdir=infra/terraform plan'
+
+[tasks."infra:apply"]
+description = "Provision / update GCP infrastructure (infra/terraform)"
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && terraform -chdir=infra/terraform apply'
+
+[tasks."infra:seed"]
+description = "Create BigQuery tables (data/schemas/bigquery_tables.sql) and baseline rows in the real project"
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && env -u BIGQUERY_EMULATOR_HOST GCP_PROJECT_ID="$TF_VAR_project_id" python scripts/seed_bigquery.py'
+
+[tasks."kb:import"]
+description = "Upload data/knowledge_base to GCS and import it into the Vertex AI Search datastore"
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && python scripts/import_knowledge_base.py --project "$TF_VAR_project_id" --bucket "$(terraform -chdir=infra/terraform output -raw kb_bucket)"'
+
+[tasks."deploy:frontend"]
+description = "Build the dashboard and deploy it to the Terraform-managed Firebase Hosting site"
+run = [
+  ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && cd frontend && npm install && npm run build',
+  'rm -f .firebaserc',
+  'firebase target:apply hosting dashboard "$(terraform -chdir=infra/terraform output -raw hosting_site_id)" --project "$TF_VAR_project_id"',
+  'firebase deploy --only hosting:dashboard --project "$TF_VAR_project_id"',
+]
 
 [tasks."deploy:backend"]
-description = "Build container and deploy FastAPI backend to Google Cloud Run"
+description = "Build the backend image, push it and roll the Terraform-managed Cloud Run service"
 run = "bash scripts/deploy_cloud_run.sh"
 
 [tasks."deploy:backend:dry"]

@@ -823,10 +823,6 @@ class VertexAISearchClient:
                 snippet_spec=discoveryengine.SearchRequest.ContentSearchSpec.SnippetSpec(
                     return_snippet=True
                 ),
-                summary_spec=discoveryengine.SearchRequest.ContentSearchSpec.SummarySpec(
-                    summary_result_count=1,
-                    include_citations=True,
-                ),
             ),
         )
 

@@ -3,6 +3,7 @@
  * so a dropped stream is visible instead of looking like "nothing is happening".
  */
 import { useEffect, useState } from 'react';
+import { withToken } from '../api/auth';
 import { fetchCurrentIncident, streamUrl } from '../api/kaizenApi';
 import type { IncidentState, StreamStatus } from '../types';
 
@@ -40,7 +41,8 @@ export function useIncidentStream(): IncidentStream {
       if (disposed) return;
       // Alternate between the two stream aliases in case one is blocked by a proxy.
       const url = STREAM_URLS[attempt % STREAM_URLS.length];
-      const es = new EventSource(url);
+      // EventSource cannot send headers; the token rides in the query on every connect.
+      const es = new EventSource(withToken(url));
       source = es;
 
       es.onopen = () => {

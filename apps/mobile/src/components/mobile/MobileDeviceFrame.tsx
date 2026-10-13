@@ -12,10 +12,12 @@ function fitScale(top: number): number {
 
 interface MobileDeviceFrameProps {
   incident?: IncidentState | null;
+  /** Screen content; defaults to the technician app (the login screen passes its own). */
+  children?: React.ReactNode;
 }
 
 /** Presents the technician app inside an iPhone-style chassis on the desktop demo page. */
-export default function MobileDeviceFrame({ incident }: MobileDeviceFrameProps): React.ReactElement {
+export default function MobileDeviceFrame({ incident, children }: MobileDeviceFrameProps): React.ReactElement {
   const [scale, setScale] = useState<number>(0.8);
   const holderRef = useRef<HTMLDivElement>(null);
 
@@ -69,7 +71,7 @@ export default function MobileDeviceFrame({ incident }: MobileDeviceFrameProps):
             transform: 'translateZ(0)',
           }}
         >
-          <MobileApp incident={incident} />
+          {children ?? <MobileApp incident={incident} />}
           <div
             aria-hidden
             style={{

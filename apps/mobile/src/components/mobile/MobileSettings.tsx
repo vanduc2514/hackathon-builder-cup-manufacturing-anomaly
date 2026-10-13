@@ -6,13 +6,19 @@ interface MobileSettingsProps {
   profile: TechnicianProfile;
   initials: string;
   onChange: (profile: TechnicianProfile) => void;
+  onSignOut: () => void;
 }
 
 type TextKey = 'fullName' | 'phone' | 'email' | 'leadName';
 type ToggleKey = 'voiceGuidance' | 'pushAlerts' | 'haptics';
 
 /** Personal information and a few preferences. Kept deliberately small. */
-export default function MobileSettings({ profile, initials, onChange }: MobileSettingsProps): React.ReactElement {
+export default function MobileSettings({
+  profile,
+  initials,
+  onChange,
+  onSignOut,
+}: MobileSettingsProps): React.ReactElement {
   const set = <K extends keyof TechnicianProfile>(key: K, value: TechnicianProfile[K]) =>
     onChange({ ...profile, [key]: value });
 
@@ -96,7 +102,7 @@ export default function MobileSettings({ profile, initials, onChange }: MobileSe
           ))}
         </section>
 
-        <button className="m-btn glass" style={{ color: '#d70015' }} id="m-sign-out">
+        <button className="m-btn glass" style={{ color: '#d70015' }} id="m-sign-out" onClick={onSignOut}>
           <span className="material-symbols-outlined">logout</span>
           Sign out
         </button>

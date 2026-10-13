@@ -20,6 +20,30 @@ export type IncidentStatus =
 /** Live connection state of the incident SSE stream. */
 export type StreamStatus = 'connecting' | 'live' | 'reconnecting' | 'offline';
 
+/** Display-only role of a signed-in account (mirrors backend `AuthRole`). */
+export type AuthRole = 'technician' | 'shift_leader';
+
+export interface AuthUser {
+  username: string;
+  display_name: string;
+  role: AuthRole;
+}
+
+/** Response of `POST /api/auth/login`, persisted in localStorage. */
+export interface AuthSession {
+  token: string;
+  expires_at: string;
+  user: AuthUser;
+}
+
+/** Entry of `GET /api/auth/accounts`; `password` is null in production. */
+export interface DemoAccount {
+  username: string;
+  display_name: string;
+  role: AuthRole;
+  password: string | null;
+}
+
 export interface FiveWhysStep {
   level: number;
   why: string;

@@ -7,6 +7,7 @@ import type {
   WorkOrder,
   WorkStage,
 } from '../../types/mobile';
+import { ROLE_LABEL, logout, useSession } from '../../api/auth';
 import { dataUrlToBlob, uploadIncidentEvidence } from '../../api/kaizenApi';
 import { useTelemetry } from '../../hooks/useTelemetry';
 import MobileNav, { type MobileTab } from './MobileNav';
@@ -125,7 +126,12 @@ export default function MobileApp({ incident }: MobileAppProps): React.ReactElem
   const [stack, setStack] = useState<Route[]>([]);
   const [baseOrders, setBaseOrders] = useState<WorkOrder[]>(INITIAL_WORK_ORDERS);
   const [notifications, setNotifications] = useState<MobileNotification[]>(INITIAL_NOTIFICATIONS);
-  const [profile, setProfile] = useState<TechnicianProfile>(INITIAL_PROFILE);
+  const session = useSession();
+  const [profile, setProfile] = useState<TechnicianProfile>(() =>
+    session
+      ? { ...INITIAL_PROFILE, fullName: session.user.display_name, role: ROLE_LABEL[session.user.role] }
+      : INITIAL_PROFILE,
+  );
   const [toast, setToast] = useState<Toast | null>(null);
   const [submitting, setSubmitting] = useState(false);
   // Photos taken for the live incident, keyed by incident so a new incident starts clean.
@@ -436,7 +442,9 @@ export default function MobileApp({ incident }: MobileAppProps): React.ReactElem
             onMarkAllRead={() => setNotifications((list) => list.map((n) => ({ ...n, unread: false })))}
           />
         )}
-        {tab === 'settings' && <MobileSettings profile={profile} initials={initials} onChange={setProfile} />}
+        {tab === 'settings' && (
+          <MobileSettings profile={profile} initials={initials} onChange={setProfile} onSignOut={logout} />
+        )}
       </main>
 
       {toast && (

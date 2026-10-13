@@ -90,6 +90,15 @@ Frontend dev ports come from `WEB_PORT` (3000) and `MOBILE_PORT` (3001), and the
 
 Both apps open on a login screen. Every `/api/*` route needs a token from `POST /api/auth/login`; only `/health`, `/` and `/api/auth/*` are public. The web dashboard signs in the shift leader and the mobile app signs in the technician: each screen shows the role and asks only for the password (with a show/hide toggle; the browser can save it). Accounts and passwords come from `AUTH_USERS` in `mise.toml` (dev: `technician` / `4NpqbcqiOB4v9Ry6`, `shiftleader` / `REA5Dvx8VjGKdccg`); `/api/auth/accounts` never returns passwords. Each account keeps a `display_name` on the backend, but the apps only show the role name. Roles are display-only. The `demo*` and `sim:*` curl tasks fetch a token via `scripts/dev_token.py`. In production the passwords come from the private `TF_VAR_auth_users` (same JSON shape) in `mise.local.toml`, followed by `mise run infra:apply`. If it is unset, login returns 503.
 
+Every request, including `/health`, login and the SSE/WebSocket streams, is rate limited in-process (`backend/core/rate_limit.py`). The key is the signed-in user, or the client IP when there is no valid token. The limits:
+- 300 requests/min overall (`RATE_LIMIT_PER_MINUTE`).
+- 30 writes/min for POST/PUT/PATCH/DELETE (`RATE_LIMIT_WRITE_PER_MINUTE`).
+- 20 login attempts/min (`RATE_LIMIT_LOGIN_PER_MINUTE`).
+- 5 failed logins per username per 5 min. After that the username is refused with 429 even for the right password (`RATE_LIMIT_LOGIN_FAILURES`).
+- 10 concurrent streams (`RATE_LIMIT_MAX_STREAMS`).
+
+Over-limit calls get `429` with `Retry-After`; over-limit WebSockets are closed with code 1008. `RATE_LIMIT_ENABLED=false` turns limiting off. Counters live in the process, which is correct only while Cloud Run keeps `max_instances = 1`.
+
 ### 3. Run the full stack
 
 ```bash

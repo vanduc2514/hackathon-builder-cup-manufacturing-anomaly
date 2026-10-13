@@ -76,7 +76,8 @@ def decode_token(token: str) -> AuthUser:
     return _to_user(account)
 
 
-def _token_from(conn: HTTPConnection) -> str | None:
+def token_from(conn: HTTPConnection) -> str | None:
+    """Bearer token from the Authorization header, else the ?token= query parameter."""
     header = conn.headers.get("authorization", "")
     if header[:7].lower() == "bearer ":
         return header[7:].strip() or None
@@ -87,7 +88,7 @@ def _token_from(conn: HTTPConnection) -> str | None:
 async def require_user(conn: HTTPConnection) -> AuthUser:
     """FastAPI dependency: resolves the caller from a Bearer header or ?token= query."""
     try:
-        token = _token_from(conn)
+        token = token_from(conn)
         if token is None:
             raise AuthError(status.HTTP_401_UNAUTHORIZED, "Missing token")
         return decode_token(token)

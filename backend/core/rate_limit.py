@@ -1,4 +1,4 @@
-"""In-process rate limiting: token buckets per caller plus a concurrent-stream cap, as ASGI middleware."""
+"""In-process rate limiting: token buckets per signed-in user plus a concurrent-stream cap, as ASGI middleware."""
 
 from __future__ import annotations
 
@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 # Long-lived routes counted against the concurrent-stream cap (SSE + Gemini Live WebSocket).
 STREAM_PATHS = frozenset({"/api/incidents/stream", "/api/incidents/events", "/api/gemini-live/ws"})
-LOGIN_PATH = "/api/auth/login"
 _WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 # Buckets idle long enough to be full again carry no state; drop them past this many keys.
 _PRUNE_ABOVE = 10_000
@@ -62,11 +61,6 @@ class RateLimiter:
             bucket.tokens -= 1
             return None
         return (1 - bucket.tokens) / rule.rate
-
-    def blocked(self, rule: Rule, key: str) -> float | None:
-        """Like hit, without consuming: seconds to wait when the bucket is empty, else None."""
-        bucket = self._refill(rule, key)
-        return None if bucket.tokens >= 1 else (1 - bucket.tokens) / rule.rate
 
     def _refill(self, rule: Rule, key: str) -> _Bucket:
         now = self._clock()
@@ -111,19 +105,15 @@ class RateLimiter:
 
 
 def rules() -> dict[str, Rule]:
-    """Current rules by name, read from settings per call so env overrides and tests apply.
+    """Current rules by name (default: any request; write: POST/PUT/PATCH/DELETE).
 
-    - default: any request; write: POST/PUT/PATCH/DELETE; login: login attempts per caller.
-    - login_failure: failed logins per username in 5 minutes; caps password guessing
-      whatever the source IP (consumed by the login route, not the middleware).
+    Read from settings per call so env overrides and tests apply.
     """
     return {
         rule.name: rule
         for rule in (
             Rule("default", settings.rate_limit_per_minute, 60.0),
             Rule("write", settings.rate_limit_write_per_minute, 60.0),
-            Rule("login", settings.rate_limit_login_per_minute, 60.0),
-            Rule("login_failure", settings.rate_limit_login_failures, 300.0),
         )
     }
 
@@ -131,43 +121,27 @@ def rules() -> dict[str, Rule]:
 rate_limiter = RateLimiter()
 
 
-def client_ip(scope: Scope) -> str:
-    """Address that connected to Google's front end: the right-most X-Forwarded-For hop.
+def caller_key(scope: Scope) -> str | None:
+    """``user:<name>`` for a valid token, else None.
 
-    Earlier hops are client-supplied and spoofable. Behind Firebase Hosting this is the CDN
-    edge, so anonymous limits are shared per edge; per-user and per-username limits are not.
+    Anonymous calls are not limited: behind Firebase Hosting the client IP is not reliably
+    known, and an IP key there would let one caller throttle everyone on the same egress.
     """
-    for name, value in scope.get("headers", []):
-        if name == b"x-forwarded-for":
-            hops = [hop.strip() for hop in value.decode("latin-1").split(",") if hop.strip()]
-            if hops:
-                return hops[-1]
-    client = scope.get("client")
-    return client[0] if client else "unknown"
-
-
-def caller_key(scope: Scope) -> str:
-    """``user:<name>`` for a valid token, else ``ip:<addr>``."""
     token = token_from(HTTPConnection(scope))
-    if token:
-        try:
-            return f"user:{decode_token(token).username}"
-        except AuthError:
-            pass
-    return f"ip:{client_ip(scope)}"
+    if not token:
+        return None
+    try:
+        return f"user:{decode_token(token).username}"
+    except AuthError:
+        return None
 
 
-def _rule_for(method: str, path: str) -> Rule:
-    current = rules()
-    if path == LOGIN_PATH:
-        return current["login"]
-    if method in _WRITE_METHODS:
-        return current["write"]
-    return current["default"]
+def _rule_for(method: str) -> Rule:
+    return rules()["write" if method in _WRITE_METHODS else "default"]
 
 
 class RateLimitMiddleware:
-    """Applies the request-rate rules to every HTTP/WebSocket call and caps open streams per caller."""
+    """Applies the request-rate rules per signed-in user and caps their open streams."""
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
@@ -176,11 +150,14 @@ class RateLimitMiddleware:
         if scope["type"] not in ("http", "websocket") or not settings.rate_limit_enabled:
             await self.app(scope, receive, send)
             return
+        key = caller_key(scope)
+        if key is None:
+            await self.app(scope, receive, send)
+            return
 
         path = scope.get("path", "")
         method = scope.get("method", "GET") if scope["type"] == "http" else "GET"
-        key = caller_key(scope)
-        rule = _rule_for(method, path)
+        rule = _rule_for(method)
         retry_after = rate_limiter.hit(rule, key)
         if retry_after is not None:
             logger.warning("Rate limit %s exceeded by %s on %s %s", rule.name, key, method, path)

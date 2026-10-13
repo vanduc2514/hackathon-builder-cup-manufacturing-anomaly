@@ -104,7 +104,7 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 ## 5. Screen 3: Incident Command
 
 > **Full Specification:** [`03_incident_workspace.md`](./03_incident_workspace.md)  
-> **Target Personas:** Shift Leader & QA Engineer (Huong Pham)  
+> **Target Personas:** Shift Leader & QA Engineer (Hannah Parker)  
 > **Single JTBD:** Follow the 5-step Agent Team investigation, watch the 50-good-part streak gate, and sign off the 8D.
 
 ```text

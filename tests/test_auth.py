@@ -17,13 +17,13 @@ pytestmark = pytest.mark.real_auth
 
 SECRET = "test-auth-secret-0123456789-abcdefghijkl"
 TECH = AuthAccount(
-    username="technician", password="pw-tech", role=AuthRole.TECHNICIAN, display_name="Minh Tran"
+    username="technician", password="pw-tech", role=AuthRole.TECHNICIAN, display_name="Mike Turner"
 )
 LEAD = AuthAccount(
     username="shiftleader",
     password="pw-lead",
     role=AuthRole.SHIFT_LEADER,
-    display_name="John Tran",
+    display_name="John Taylor",
 )
 
 
@@ -50,7 +50,7 @@ def test_login_matches_username_case_insensitively(client: TestClient) -> None:
     body = res.json()
     assert body["user"] == {
         "username": "technician",
-        "display_name": "Minh Tran",
+        "display_name": "Mike Turner",
         "role": "technician",
     }
     assert body["token"]

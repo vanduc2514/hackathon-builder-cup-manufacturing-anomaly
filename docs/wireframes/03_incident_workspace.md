@@ -2,7 +2,7 @@
 
 > **Tab:** `incident-detail` (sidebar "Incidents"; one closable sub-tab per opened incident)  
 > **Viewport:** Desktop `1440 × 900 px`  
-> **Primary Personas:** Shift Leader & Quality Assurance Engineer (Huong Pham)  
+> **Primary Personas:** Shift Leader & Quality Assurance Engineer (Hannah Parker)  
 > **Single Job-to-be-Done (JTBD):** Product-Evidence Verification & 8D Incident Sign-Off. *(Ensures incidents close exclusively on physical product evidence, enforcing Invariant #3).*  
 > **Design Standard:** [`docs/DESIGN.md`](../DESIGN.md) (Lumina Slate liquid glass)  
 > **Terminology:** Unified **Agent Team** across all pages and documentation.
@@ -42,7 +42,7 @@ flowchart TD
 ## 2. Persona & Context
 
 - **Shift Leader:** Authorizes production line resumption. Must verify that finished workpieces are physically conforming before signing off on 8D closure.
-- **Quality Assurance Engineer (Huong Pham):** Audits Agent Team findings (Quality Inspector, Traceability, Process Analyst, Root Cause) and standardizes corrective actions into permanent SOPs.
+- **Quality Assurance Engineer (Hannah Parker):** Audits Agent Team findings (Quality Inspector, Traceability, Process Analyst, Root Cause) and standardizes corrective actions into permanent SOPs.
 - **Core Governance Rule (Invariant #3):** **Incidents close on product evidence only.** The approval button stays locked until `verification_count >= verification_target` (50 consecutive clean workpieces).
 
 ---

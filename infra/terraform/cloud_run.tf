@@ -114,6 +114,9 @@ resource "google_cloud_run_v2_service" "backend" {
   depends_on = [
     google_project_service.apis,
     google_project_iam_member.runtime,
+    google_bigquery_dataset_iam_member.runtime_editor,
+    google_pubsub_topic_iam_member.runtime_publisher,
+    google_pubsub_subscription_iam_member.runtime_subscriber,
   ]
 }
 

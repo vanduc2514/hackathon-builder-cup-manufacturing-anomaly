@@ -8,6 +8,7 @@ resource "google_bigquery_dataset" "manufacturing" {
   depends_on = [google_project_service.apis]
 }
 
+# Table create/insert/query inside the dataset (DDL in seed_bigquery, streaming inserts).
 resource "google_bigquery_dataset_iam_member" "runtime_editor" {
   dataset_id = google_bigquery_dataset.manufacturing.dataset_id
   role       = "roles/bigquery.dataEditor"

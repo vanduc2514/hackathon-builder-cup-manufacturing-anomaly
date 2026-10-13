@@ -5,20 +5,20 @@ resource "google_service_account" "backend" {
   depends_on = [google_project_service.apis]
 }
 
-# Runtime roles for the Cloud Run service account:
+# Project-level runtime roles for the Cloud Run service account (least privilege; the app
+# creates no resources, Terraform owns them):
 # - aiplatform.user        Gemini on Vertex AI
 # - discoveryengine.viewer Vertex AI Search servingConfigs.search
-# - bigquery.user          query jobs + datasets.create (seed_bigquery create_dataset exists_ok)
+# - bigquery.jobUser       run query/DDL jobs (dataset access: bigquery.tf)
 # - datastore.user         Firestore incidents collection
-# - pubsub.editor          pubsub_manager creates topics/subscriptions at startup
 # - logging.logWriter      Cloud Logging
+# Pub/Sub publish/subscribe rights are granted per topic/subscription in pubsub.tf.
 resource "google_project_iam_member" "runtime" {
   for_each = toset([
     "roles/aiplatform.user",
     "roles/discoveryengine.viewer",
-    "roles/bigquery.user",
+    "roles/bigquery.jobUser",
     "roles/datastore.user",
-    "roles/pubsub.editor",
     "roles/logging.logWriter",
   ])
 

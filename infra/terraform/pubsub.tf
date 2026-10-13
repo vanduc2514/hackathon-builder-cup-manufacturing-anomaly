@@ -14,3 +14,20 @@ resource "google_pubsub_subscription" "subs" {
 
   depends_on = [google_project_service.apis]
 }
+
+# The backend publishes (simulation inject) and streaming-pulls only these resources.
+resource "google_pubsub_topic_iam_member" "runtime_publisher" {
+  for_each = google_pubsub_topic.topics
+
+  topic  = each.value.name
+  role   = "roles/pubsub.publisher"
+  member = local.runtime_member
+}
+
+resource "google_pubsub_subscription_iam_member" "runtime_subscriber" {
+  for_each = google_pubsub_subscription.subs
+
+  subscription = each.value.name
+  role         = "roles/pubsub.subscriber"
+  member       = local.runtime_member
+}

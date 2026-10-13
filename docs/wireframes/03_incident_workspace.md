@@ -5,7 +5,6 @@
 > **Primary Personas:** Shift Leader (John Tran) & Quality Assurance Engineer (Huong Pham)  
 > **Single Job-to-be-Done (JTBD):** Product-Evidence Verification & 8D Incident Sign-Off. *(Ensures incidents close exclusively on physical product evidence, enforcing Invariant #3).*  
 > **Design Standard:** [`docs/DESIGN.md`](../DESIGN.md) (Lumina Slate liquid glass)  
-> **Source:** PR #105 `dashboard_frontend/src/components/views/IncidentCommandView.tsx` + `components/incident/*` (`StepSection`, `StepRail`, `StreakGate`, `CausalTreeTabs`, `EightDReportCard`, `AgentAttribution`)  
 > **Terminology:** Unified **Agent Team** across all pages and documentation.
 
 ---
@@ -32,7 +31,7 @@ flowchart TD
     end
 
     subgraph Signoff ["Step 5: Sign-off"]
-        C --> U["Approve 8D & Release Line unlocks (.btn-dark)"]
+        C --> U["Approve 8D & Release Line unlocks (Button, variant primary)"]
         U --> AP["Shift Leader approves → approved"]
         AP --> K["Signed-off 8D appears in Knowledge Base (Screen 4)"]
     end
@@ -62,7 +61,7 @@ flowchart TD
 
 ### Page Header
 - **Breadcrumb:** `Line Overview / #INC-…` (accent mono chip).
-- **Title:** `{Defect} on {machine}` (`.page-title`, 1.6rem on this page).
+- **Title:** `{Defect} on {machine}` (`PageTitle`, 24px on this page).
 - **Meta line:** product, end-of-line, opened time, open/resolved duration.
 - **StatusReasonBanner** (escalated / error / dismissed only; tones in DESIGN §3.4).
 - **Section header:** `Investigation steps` with an `Expand all` / `Collapse all` link.
@@ -82,21 +81,21 @@ Each step is a collapsible `StepSection` (DESIGN §3.9). Only the current step i
    - `TelemetryAlertsPanel` (threshold alerts).
 3. **Analysis**
    - Dark ink `Cause` callout.
-   - `CausalTreeTabs` (`.seg`: 5-Whys / Ishikawa 6M / Evidence, each with a mono count). Why-tree: numbered 26px dots on an accent connector, red ★ dot on the root cause.
+   - `CausalTreeTabs` (`SegmentedControl`: 5-Whys / Ishikawa 6M / Evidence, each with a mono count). Why-tree: numbered 24px dots on an accent connector, red ★ dot on the root cause.
    - Confidence chip.
 4. **Repair & Proof**
    - Repair inset with `Done` / `In progress` chip.
    - `StreakGate`: 25-column proof grid, target 50 consecutive good parts, mono `count/target`, red reset notice.
    - `Documents` (work order, SOP proposal) in a `<details>`.
 5. **Sign-off**
-   - Pinned **`Approve 8D & Release Line`** (`.btn-dark`). Locked state (`.btn-locked`) with `count/target` until `verification_count >= 50` (Invariant #3).
-   - `EightDReportCard`: 36px accent icon tile, 8 mini progress ticks, D1–D8 list (dark `eightd-d` tags; done items get a green tick), download button.
+   - Pinned **`Approve 8D & Release Line`** (`Button`, variant `primary`). `locked` state with `count/target` until `verification_count >= 50` (Invariant #3).
+   - `EightDReportCard`: 36px accent icon tile, 8 mini progress ticks, D1–D8 list (`Tag` variant `inverse`; done items get a green tick), download button.
    - Lesson learned.
    - Impact stats: cost, scrap, CO₂e, downtime.
    - Product-evidence rule note.
 
 ### StepRail
-- Fixed right-side 26px glass pill with one state-coloured dot per step; the step in view stretches to 18px; dark tooltip on hover. Hidden below 760px.
+- Fixed right-side 28px glass pill with one state-coloured dot per step; the step in view stretches to 16px; dark tooltip on hover. Hidden below 768px.
 
 ---
 
@@ -108,14 +107,14 @@ Each step is a collapsible `StepSection` (DESIGN §3.9). Only the current step i
  │ ╭ Cell Line 1 …    ╮ │  ╰────────────────────────────╯
  │ ╰──────────────────╯ │
  │ OPERATIONAL LOOP     │  Line Overview / [#INC-…]                                                                                     ╭─╮
- │ ▣ Line Overview      │  Tool wear scratch on CNC-02                         <-- .page-title 1.6rem                                   │●│ 1
+ │ ▣ Line Overview      │  Tool wear scratch on CNC-02                         <-- PageTitle 24px                                       │●│ 1
  │ ⚠ Incidents      *   │  Housing-B42 · end-of-line CAM-EOL · opened 09:40 · open 12m                                                  │●│ 2
  │   │ #INC-… ×         │                                                                                                               │●│ 3
  │                      │  INVESTIGATION STEPS                                                              Expand all                  │█│ 4 <- in view
  │ KNOWLEDGE LOOP       │  ╭─(✓)─ Inspection ── summary… ───────────────────────────────────────────── [Done] ⌄ ╮                       │○│ 5
  │ ▶ Tech Walkthroughs  │  ╰────────────────────────────────────────────────────────────────────────────────────╯                       ╰─╯
  │ ▤ Knowledge Base     │  ╭─(✓)─ Traceability ── summary… ──────────────────────────────────────────── [Done] ⌄ ╮                    StepRail
- │ ☰ SOP Change Log     │  ╰────────────────────────────────────────────────────────────────────────────────────╯                    (26px)
+ │ ☰ SOP Change Log     │  ╰────────────────────────────────────────────────────────────────────────────────────╯                    (28px)
  │                      │  ╭─(✓)─ Analysis ── summary… ─────────────────────────────────────────────── [Done] ⌄ ╮
  │                      │  ╰────────────────────────────────────────────────────────────────────────────────────╯
  │                      │  ╔═(④)═ Repair & Proof ── summary… ───────────────────────── (●) Verifying ⌃ ═╗  <-- active: accent border + 4px ring
@@ -128,7 +127,7 @@ Each step is a collapsible `StepSection` (DESIGN §3.9). Only the current step i
  │                      │  ║ ▸ Agent trail                                                                            ║
  │                      │  ╚════════════════════════════════════════════════════════════════════════════════════════╝
  │                      │  ╭─(5┄)─ Sign-off ── summary… ──────────────────────────────────────── [🔒 Waiting] ⌄ ╮  <-- pending: dashed, .7 opacity
- │                      │  │  [ 🔒 Approve 8D & Release Line · 38/50 ]  (.btn-locked → .btn-dark at 50/50)       │
+ │                      │  │  [ 🔒 Approve 8D & Release Line · 38/50 ]  (Button locked → primary at 50/50)       │
  │                      │  │  ╭ 8D report  ▮▮▮▮▮▯▯▯   D1 … D8                                     [↓] ╮              │
  │                      │  │  ╰──────────────────────────────────────────────────────────────────────╯              │
  │ (●) 24 ms  [Shift A] │  │  Lesson learned · Impact: cost · scrap · CO₂e · downtime · product-evidence rule note │
@@ -145,7 +144,7 @@ Each step is a collapsible `StepSection` (DESIGN §3.9). Only the current step i
 | **Investigating (steps 1–3)** | Current step open with accent ring and pulsing active label; later steps pending (dashed circle, 0.7 opacity, `Waiting` + lock). |
 | **Verifying (`count < 50`)** | Step 4 open; StreakGate fills done cells, next cell pulses; Step 5 button locked showing `count/target`. |
 | **Defect during verification** | Streak resets to 0; StreakGate shows the red reset notice. Invariant #3 still holds. |
-| **Closed (`count >= 50`)** | Status `closed`; Step 4 marked Done; `Approve 8D & Release Line` unlocks as `.btn-dark`. |
+| **Closed (`count >= 50`)** | Status `closed`; Step 4 marked Done; `Approve 8D & Release Line` unlocks as `Button` variant `primary`. |
 | **Approved** | Shift Leader approval accepted only on a `closed` incident; the signed-off 8D appears in the Knowledge Base (Screen 4). |
 | **Escalated / error / dismissed** | `StatusReasonBanner` shows the reason with its tone (escalated amber-brown, error dark red, dismissed slate). |
-| **Narrow window (< 760px)** | StepRail hidden; steps remain a single column. |
+| **Narrow window (< 768px)** | StepRail hidden; steps remain a single column. |

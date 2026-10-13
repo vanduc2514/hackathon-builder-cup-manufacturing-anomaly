@@ -5,12 +5,11 @@
 > **Primary Personas:** Plant Manager (David Vu), Continuous Improvement (Kaizen) Lead, ESG Lead  
 > **Single Job-to-be-Done (JTBD):** Institutional Memory Search & ESG Sustainability Quantification. *(Not for active line control; dedicated to long-term organizational learning and ESG reporting).*  
 > **Design Standard:** [`docs/DESIGN.md`](../DESIGN.md) (Lumina Slate liquid glass)  
-> **Source:** PR #105 `dashboard_frontend/src/components/views/TechWalkthroughsView.tsx`, `KaizenImpactView.tsx`, `SopLibraryView.tsx` + `components/knowledge/*`  
 > **Terminology:** Unified **Agent Team** across all pages and documentation.
 
-**Label notes (as implemented in PR #105):**
+**Label notes:**
 - The sidebar label "SOP Change Log" opens a page titled **"SOP Library"**.
-- Tab id `impact` is labelled **"Knowledge Base"** (sidebar and page title).
+- The `impact` tab is labelled **"Knowledge Base"** (sidebar and page title).
 
 ---
 
@@ -62,12 +61,12 @@ flowchart TD
 
 ## 4A. Tech Walkthroughs (`walkthroughs`)
 
-- **Page header:** `.page-title` `Tech Walkthroughs`; subtitle `Short repair videos grouped by machine station · tap a video to play`; button `[ Upload Tech Capture ]` (`.btn-dark`).
+- **Page header:** `PageTitle` `Tech Walkthroughs`; subtitle `Short repair videos grouped by machine station · tap a video to play`; button `[ Upload Tech Capture ]` (`Button`, variant `primary`).
 - **Tier 1:** monthly recertification strip (progress `4/5`, next item due).
 - **Tier 2:**
-  - 48px search field; `Required` and `Watchlist` toggle pills (`.pill-lg`); station pill tabs with icons (CNC Milling, Vision QA · CAM-EOL, Injection Molding · IM-05, Wash Line, Electrical & Safety).
-  - One `.glass` section per station: header (34px icon tile, title, count and total duration) + `WalkthroughRow`s (104×58 thumbnail with play overlay, title 650 / 0.95rem, meta, duration, 52px save toggle).
-- **Tier 3:** a row opens a 1040px `SideDrawer` with `WalkthroughPlayer` (16:9 stage radius 18, play button, progress track with chapter ticks, chapter buttons — active = white with accent left border — and gate rows).
+  - 48px search field; `Required` and `Watchlist` toggle pills (`PillTab`, size `lg` 48); station pill tabs with icons (CNC Milling, Vision QA · CAM-EOL, Injection Molding · IM-05, Wash Line, Electrical & Safety).
+  - One `GlassCard` section per station: header (32px icon tile, title, count and total duration) + `WalkthroughRow`s (104×56 thumbnail with play overlay, title 16px / 600, meta, duration, 52px save toggle).
+- **Tier 3:** a row opens a 1040px `SideDrawer` with `WalkthroughPlayer` (16:9 stage radius 16, play button, progress track with chapter ticks, chapter buttons — active = white with accent left border — and gate rows).
 
 ```text
  Tech Walkthroughs                                                                                     [■ Upload Tech Capture ■]
@@ -94,9 +93,9 @@ flowchart TD
 
 ## 4B. Knowledge Base (`impact`)
 
-- **Page header:** `.page-title` `Knowledge Base`; subtitle `Past 8D fixes signed off on Cell Line 1 — and the scrap, downtime and CO₂ they saved.`
-  - `[ Benchmark assumptions ]` (`.btn`) → 640px drawer (`<details>` with a definition grid).
-  - `[ Model a scenario ]` (`.btn-dark`) → 1000px drawer with `WhatIfCalculator` (`/api/impact/*`).
+- **Page header:** `PageTitle` `Knowledge Base`; subtitle `Past 8D fixes signed off on Cell Line 1 — and the scrap, downtime and CO₂ they saved.`
+  - `[ Benchmark assumptions ]` (`Button`, variant `secondary`) → 640px drawer (`<details>` with a definition grid).
+  - `[ Model a scenario ]` (`Button`, variant `primary`) → 1000px drawer with `WhatIfCalculator` (`/api/impact/*`).
 - **Tier 1:** 3 KPI cards, values in mono and coloured:
   - Scrap saved (accent).
   - Downtime saved (amber `#b4710a`).
@@ -133,8 +132,8 @@ flowchart TD
 
 ## 4C. SOP Library (`sops`)
 
-- **Page header:** `.page-title` `SOP Library`; subtitle `{N} active procedures · click a row…`; buttons `[ Export CSV ]` (`.btn`), `[ New Procedure ]` (`.btn-dark`).
-- **Tier 1:** `Needs review` action strip: solid accent chip, SOP code, revision reason, `Review changes →`.
+- **Page header:** `PageTitle` `SOP Library`; subtitle `{N} active procedures · click a row…`; buttons `[ Export CSV ]` (`Button`, variant `secondary`), `[ New Procedure ]` (`Button`, variant `primary`).
+- **Tier 1:** `Needs review` action strip: `Chip` (`solid`, `accent`), SOP code, revision reason, `Review changes →`.
 - **Tier 2:** glass table card with toolbar (search, category select, sort select). Columns:
   - SOP (mono; red if safety-critical)
   - Procedure (lock icon if safety, plus category)
@@ -142,7 +141,7 @@ flowchart TD
   - Rev
   - Updated
   - chevron
-- **Tier 3:** a row opens `SopDetailDrawer`: SOP summary, metrics, tags (`TagChip`), revision diff (additions green, deletions red strikethrough).
+- **Tier 3:** a row opens `SopDetailDrawer`: SOP summary, metrics, tags (`Tag` variant `outline`), revision diff (additions green, deletions red strikethrough).
 
 ```text
  SOP Library                                                                                  [ Export CSV ] [■ New Procedure ■]
@@ -151,7 +150,7 @@ flowchart TD
  ╭─ action-strip ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
  │ [■ Needs review ■]  SOP-CNC-…  revision reason…                                                         Review changes →     │
  ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
- ╭─ .glass table ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+ ╭─ GlassCard table ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
  │ ╭ 🔍 Search procedures… ╮   [ Category ▾ ]   [ Sort ▾ ]                                                                       │
  │ SOP            PROCEDURE                          MACHINE/STATION      REV      UPDATED                                       │
  │ SOP-CNC-…      Insert change & torque  · Tooling  CNC-02               v…       …                                       ›     │
@@ -172,4 +171,4 @@ flowchart TD
 | **Walkthrough filters** | `Required` / `Watchlist` pills and station tabs narrow the station sections; below 640px the walkthrough duration is hidden. |
 | **SOP needs review** | The `Needs review` strip links to the SOP's revision diff in `SopDetailDrawer`. |
 | **Safety-critical SOP** | SOP code shown in red; procedure carries a lock icon. |
-| **Narrow window** | Below 1100px impact two-column layouts collapse to one column; below 900px ESG KPIs stack 3 → 1. |
+| **Narrow window** | Below 1024px impact two-column layouts collapse to one column and ESG KPIs stack 3 → 1. |

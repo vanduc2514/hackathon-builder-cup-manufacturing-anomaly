@@ -1,3 +1,16 @@
 {
-  "projectId": "6385146761198201322"
+  "projectId": "6385146761198201322",
+  "designMd": {
+    "path": "DESIGN.md",
+    "uploadId": "12471298971175807402"
+  },
+  "screens": [
+    {
+      "id": "10522686389259534993",
+      "title": "Kaizen UI — Lumina Slate Design System",
+      "file": "designs/kaizen_ui_design_system.html",
+      "screenshot": "designs/kaizen_ui_design_system.png",
+      "deviceType": "DESKTOP"
+    }
+  ]
 }

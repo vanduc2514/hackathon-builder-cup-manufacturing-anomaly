@@ -3,8 +3,8 @@
 > **Document Version:** 2.0.0  
 > **Target Design System:** [`docs/DESIGN.md`](../DESIGN.md) (Lumina Slate liquid glass, light)  
 > **Terminology:** Unified **Agent Team** across all screens and documentation.  
-> **Key Architecture Rules:** Calm Technology, 3-Tier Progressive Disclosure, Single JTBD per Screen, Radius Scale (pill chips 999px, glass cards 22px (mobile 24px), insets 14–16px, buttons 12px (mobile 16px)).  
-> **Surfaces:** Desktop Plant Ops dashboard (`dashboard_frontend/`, PR #105) and Technician mobile app (`app_frontend/`, PR #106).
+> **Key Architecture Rules:** Calm Technology, 3-Tier Progressive Disclosure, Single JTBD per Screen, Radius Scale (pill chips 999px, glass cards 24px on both surfaces, insets 16px, buttons 12px (mobile 16px)).  
+> **Surfaces:** Desktop Plant Ops dashboard and Technician mobile app.
 
 ---
 
@@ -22,7 +22,7 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 | Module / Screen | Single Job-to-be-Done (JTBD) | Tier 1: Glance (1s) | Tier 2: Focus (5s) | Tier 3: Deep Dive (On-Demand) | Dedicated Spec |
 |---|---|---|---|---|---|
 | **Base Shells** | Navigation, demo controls, SSE connectivity | Desktop: glass Sidebar + header anomaly chip · Mobile: header stream status | Desktop: Operational / Knowledge Loop nav, incident sub-tabs · Mobile: 3-tab dock | DemoController slide-over (Inject / Reset), ⌘K jump palette | [`00_base_layout.md`](./00_base_layout.md) |
-| **Screen 1: Line Overview (`overview`)** | Line health monitoring & instant dispatch | `N Active Anomaly` chip + 4 KPI cards (OEE, Defect rate vs UCL, Active incidents, ESG CO₂) | AnomalyBanner (`Open INC →`) + MachineFleetTable `row-hot` | DiagnosticsModal (4 stats + sensor history chart) | [`01_line_overview.md`](./01_line_overview.md) |
+| **Screen 1: Line Overview (`overview`)** | Line health monitoring & instant dispatch | `N Active Anomaly` chip + 4 KPI cards (OEE, Defect rate vs UCL, Active incidents, ESG CO₂) | AnomalyBanner (`Open INC →`) + MachineFleetTable hot row | DiagnosticsModal (4 stats + sensor history chart) | [`01_line_overview.md`](./01_line_overview.md) |
 | **Screen 2: Technician Mobile App** | Evidence capture, guided repair, verification hand-off | Work List segmented Active / Processing / Completed | WorkOrderCards → Collect evidence / Repair brief | Evidence capture camera, Gemini Live guided repair, Finish sheet, Work status | [`02_technician_copilot.md`](./02_technician_copilot.md) |
 | **Screen 3: Incident Command (`incident-detail`)** | Product-evidence verification & 8D sign-off | `#INC` chip + title + step circles + StepRail | Current StepSection + `Approve 8D & Release Line` (locked until 50/50) | CausalTreeTabs, sensor history, documents, EightDReportCard, AgentAttribution | [`03_incident_workspace.md`](./03_incident_workspace.md) |
 | **Screen 4: Knowledge Loop (`walkthroughs` / `impact` / `sops`)** | Institutional memory search & ESG savings quantification | Recertification strip · 3 KPI cards (Scrap, Downtime, CO₂) · Needs review strip | Station sections · KnowledgeSearch + Signed-off 8D fixes · SOP table | WalkthroughPlayer, EightDSheet, WhatIfCalculator, SopDetailDrawer | [`04_knowledge_sustainability_hub.md`](./04_knowledge_sustainability_hub.md) |
@@ -32,19 +32,19 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 ## 2. Base Shells
 
 > **Full Specification:** [`00_base_layout.md`](./00_base_layout.md)  
-> **Desktop:** floating `.glass-strong` Sidebar (236px, inset 12px, radius 24) + floating TopHeader pills (top 12, h 56) + `<main>` `.page` (max 1680px).  
-> **Mobile:** 396×852 device frame, 44px status bar, floating 66px dock (Work List / Notifications / Settings).
+> **Desktop:** floating Sidebar (`GlassCard` variant `strong`, 240px, inset 12px, radius 24) + floating TopHeader pills (top 12, h 56) + `<main>` `Page` (max 1680px).
+> **Mobile:** 396×852 device frame, 44px status bar, floating 64px `Dock` (Work List / Notifications / Settings).
 
 ```text
  ╭──────────────────────╮  ╭─────────────────────────────╮        (●) 1 Active Anomaly  ╭ ⌘K Search… ╮ (♪) John Tran (JT)
  │ [K] KAIZEN AGENT     │  │ Cell Line 1 / Line Overview │                              ╰────────────╯
  │ ╭ Cell Line 1 …    ╮ │  ╰─────────────────────────────╯
- │ OPERATIONAL LOOP     │  .page-title                                             [ .btn ] [■ .btn-dark ■]
- │ ▣ Line Overview  *   │  ╭── .glass card (22) ──────────────────────────────────────────────────────────╮
+ │ OPERATIONAL LOOP     │  PageTitle                                         [ Button ] [■ Button primary ■]
+ │ ▣ Line Overview  *   │  ╭── GlassCard (24) ────────────────────────────────────────────────────────────╮
  │ ⚠ Incidents          │  │  {tab content: overview · incident-detail · walkthroughs · impact · sops}    │
  │ KNOWLEDGE LOOP       │  ╰──────────────────────────────────────────────────────────────────────────────╯
  │ ▶ Tech Walkthroughs  │
- │ ▤ Knowledge Base     │                                                          ╭─ toast.glass-dark ─╮
+ │ ▤ Knowledge Base     │                                                          ╭─ Toast (DarkGlass) ╮
  │ ☰ SOP Change Log     │                                                          ╰────────────────────╯
  │ (●) 24 ms  [Shift A] │
  │ (JT) John Tran       │
@@ -61,7 +61,7 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 
 ```text
  Cell Line 1 Overview                                         [ Refresh Line ] [ Export Shift Report ] [■ New Run ■]
- ╭── AnomalyBanner (.glass.tone-red) ──────────────────────────────────────────────────────────────────────────╮
+ ╭── AnomalyBanner (GlassCard, tone red) ──────────────────────────────────────────────────────────────────────╮
  │ [⚠] CNC-02: Tool T07 Flank Wear [CRITICAL] (●)  Defect rate 1.42% · UCL 0.25%   [■ Open INC → ■]  Dismiss │
  ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
  ╭─ OEE ──────────╮ ╭─ DEFECT RATE VS UCL ╮ ╭─ ACTIVE INCIDENTS ─╮ ╭─ ESG CO₂ ───────────╮
@@ -87,16 +87,16 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 [Work List]                              [Collect evidence]                       [Guided repair (Gemini Live)]
 ╭──────────────────────────────────╮     ╭──────────────────────────────────╮     ╭──────────────────────────────────╮
 │ kAIgen (●) Live             (AV) │     │ ( ‹ )  Collect evidence    [P1]  │     │ ( ‹ ) [● Copilot Live] [vi-VN]   │
-│ Work List                        │     │ ╭ .m-ai  AI needs your eyes ╭──╮╮│     │ ╭ [2/3] Replace insert         ╮ │
+│ Work List                        │     │ ╭ AiCard  AI needs your eyes ╭──╮╮│     │ ╭ [2/3] Replace insert         ╮ │
 │ (█Active█) Processing  Completed │     │ │ "Take a close-up…"        │65│││     │ │ Target 45 Nm │ Check ± tol   │ │
 │ COLLECT EVIDENCE                 │     │ ╰───────────────────────────╰──╯╯│     │ ╰──────────────────────────────╯ │
 │ ▌[NEEDS EVIDENCE][P1][LIVE]      │     │ ALREADY COLLECTED · 2 ITEMS      │     │ ╭ You … / ✦ Copilot … ∿∿∿      ╮ │
 │ ▌ Evidence collected 1 of 3      │     │ STILL NEEDED · 1 LEFT            │     │ ╰──────────────────────────────╯ │
-│ REPAIRS                          │     │                                  │     │ [(ϟ)(↶)] (🔊58) [Done · next]    │
+│ REPAIRS                          │     │                                  │     │ [(ϟ)(↶)] (🔊56) [Done · next]    │
 │ ▌[READY TO FIX][P2][DEMO]        │     │ [■ Capture 1 more to submit ■]   │     │                                  │
 │ [█WorkList█]  Notifs  Settings   │     │ [█WorkList█]  Notifs  Settings   │     │ [WorkList] [Notifs] [Settings]   │
 ╰──────────────────────────────────╯     ╰──────────────────────────────────╯     ╰──────────────────────────────────╯
-  ^-- floating 66px dock                    ^-- 50px black .m-btn CTA                ^-- 58px voice button, on-dark dock
+  ^-- floating 64px Dock                    ^-- 48px Button primary lg CTA           ^-- 56px voice button, on-dark Dock
 ```
 
 ---
@@ -135,7 +135,7 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 [walkthroughs] Tech Walkthroughs                                     [■ Upload Tech Capture ■]
  Recertification ▬▬▬▬▬▬▬▬▭ 4/5 · ╭ 🔍 Search… ╮ (Required) (Watchlist) · (■CNC Milling■) (Vision QA) (IM-05) …
  ╭─ CNC Milling · N videos ─────────────────────────────────────────────╮
- │ [▶ 104×58] Insert change & torque check                 mm:ss  (☆)  │  → 1040px drawer: WalkthroughPlayer
+ │ [▶ 104×56] Insert change & torque check                 mm:ss  (☆)  │  → 1040px drawer: WalkthroughPlayer
  ╰──────────────────────────────────────────────────────────────────────╯
 
 [impact] Knowledge Base                         [ Benchmark assumptions ] [■ Model a scenario ■]
@@ -157,10 +157,10 @@ How UI components change across both surfaces through an incident lifecycle:
 | State | UI change |
 |---|---|
 | **Nominal** | No AnomalyBanner, no header anomaly chip; fleet table shows green Nominal chips. |
-| **Anomaly** | AnomalyBanner + `row-hot` + header anomaly chip (Screen 1). |
+| **Anomaly** | AnomalyBanner + hot row in the fleet table + header anomaly chip (Screen 1). |
 | **`awaiting_evidence`** | Mobile: Active › Collect evidence card (`Needs evidence`); evidence detail with orange confidence ring. |
 | **`repairing`** | Mobile: Active › Repairs card → Repair brief → guided repair (Gemini Live). |
 | **`verifying`** | Mobile: Processing `Verifying parts n/50`. Desktop: Step 4 StreakGate fills; Step 5 button locked. Any defect resets the streak (Invariant #3). |
-| **`closed`** | Desktop: Step 5 `Approve 8D & Release Line` unlocks (`.btn-dark`). Mobile: `Awaiting lead`. |
+| **`closed`** | Desktop: Step 5 `Approve 8D & Release Line` unlocks (`Button` variant `primary`). Mobile: `Awaiting lead`. |
 | **approved** | Mobile: order moves to Completed. Knowledge Base gains a signed-off 8D row and its KPI cards increment. |
-| **`escalated` / `error`** | Desktop: StatusReasonBanner. Mobile: red `Escalated` chip + `Incident Notice` card. |
+| **`escalated` / `error`** | Desktop: StatusReasonBanner. Mobile: `Chip` tone `danger` `Escalated` + `Incident Notice` card. |

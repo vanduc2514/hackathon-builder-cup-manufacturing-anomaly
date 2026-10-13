@@ -1,675 +1,1056 @@
 <!DOCTYPE html>
-
-<html class="light" lang="en"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>shadcn/ui — Design System Documentation</title>
-<!-- Google Fonts: Geist & JetBrains Mono -->
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
-<!-- Material Symbols Outlined -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<!-- Tailwind CSS -->
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<script id="tailwind-config">
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          "colors": {
-            "inverse-on-surface": "#f0f1f1",
-            "on-primary-fixed": "#1b1b1e",
-            "on-tertiary-fixed": "#1a1b22",
-            "secondary": "#5d5e60",
-            "primary-fixed-dim": "#c8c5ca",
-            "secondary-fixed-dim": "#c6c6c7",
-            "on-primary-container": "#858387",
-            "error-container": "#ffdad6",
-            "surface-dim": "#dadada",
-            "tertiary-container": "#1a1b22",
-            "primary-container": "#1b1b1e",
-            "surface-bright": "#f9f9f9",
-            "secondary-fixed": "#e2e2e3",
-            "surface": "#f9f9f9",
-            "primary-fixed": "#e4e1e6",
-            "inverse-surface": "#2f3131",
-            "on-secondary-fixed-variant": "#454748",
-            "surface-container-lowest": "#ffffff",
-            "on-background": "#1a1c1c",
-            "on-tertiary-container": "#83838c",
-            "on-surface-variant": "#47464b",
-            "on-tertiary": "#ffffff",
-            "secondary-container": "#dfdfe0",
-            "tertiary-fixed-dim": "#c6c5cf",
-            "on-secondary-container": "#616364",
-            "outline-variant": "#c8c5cb",
-            "surface-container-highest": "#e2e2e2",
-            "on-secondary-fixed": "#1a1c1d",
-            "inverse-primary": "#c8c5ca",
-            "primary": "#000000",
-            "on-surface": "#1a1c1c",
-            "surface-container-low": "#f3f3f4",
-            "on-secondary": "#ffffff",
-            "surface-variant": "#e2e2e2",
-            "error": "#ba1a1a",
-            "surface-container": "#eeeeee",
-            "on-error": "#ffffff",
-            "surface-container-high": "#e8e8e8",
-            "on-tertiary-fixed-variant": "#46464e",
-            "outline": "#77767b",
-            "background": "#f9f9f9",
-            "surface-tint": "#5f5e61",
-            "on-primary": "#ffffff",
-            "tertiary": "#000000",
-            "on-error-container": "#93000a",
-            "on-primary-fixed-variant": "#47464a",
-            "tertiary-fixed": "#e3e1ec"
-          },
-          "borderRadius": {
-            "DEFAULT": "0.125rem",
-            "lg": "0.25rem",
-            "xl": "0.5rem",
-            "full": "0.75rem"
-          },
-          "spacing": {
-            "gutter-desktop": "1.5rem",
-            "space-lg": "1rem",
-            "margin": "1rem",
-            "margin-desktop": "2rem",
-            "space-md": "0.75rem",
-            "gutter": "1rem",
-            "space-xl": "1.5rem",
-            "space-sm": "0.5rem",
-            "space-xs": "0.25rem"
-          },
-          "fontFamily": {
-            "body-base": ["Geist"],
-            "headline-xl-mobile": ["Geist"],
-            "headline-xl": ["Geist"],
-            "headline-lg": ["Geist"],
-            "headline-lg-mobile": ["Geist"],
-            "label-xs": ["Geist"],
-            "code-base": ["JetBrains Mono"],
-            "code-metric": ["JetBrains Mono"],
-            "label-base": ["Geist"],
-            "label-sm": ["Geist"],
-            "body-lg": ["Geist"],
-            "headline-md": ["Geist"],
-            "body-sm": ["Geist"]
-          },
-          "fontSize": {
-            "body-base": ["14px", { "lineHeight": "20px", "letterSpacing": "-0.005em", "fontWeight": "400" }],
-            "headline-xl-mobile": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
-            "headline-xl": ["30px", { "lineHeight": "36px", "letterSpacing": "-0.025em", "fontWeight": "600" }],
-            "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
-            "headline-lg-mobile": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
-            "label-xs": ["11px", { "lineHeight": "14px", "letterSpacing": "0.01em", "fontWeight": "500" }],
-            "code-base": ["13px", { "lineHeight": "18px", "letterSpacing": "0em", "fontWeight": "400" }],
-            "code-metric": ["12px", { "lineHeight": "16px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
-            "label-base": ["14px", { "lineHeight": "20px", "letterSpacing": "-0.005em", "fontWeight": "500" }],
-            "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "500" }],
-            "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "400" }],
-            "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
-            "body-sm": ["13px", { "lineHeight": "18px", "letterSpacing": "0em", "fontWeight": "400" }]
-          }
-        }
-      }
-    }
-  </script>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaizen UI — Lumina Slate Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Inter:wght@300..700&family=JetBrains+Mono:wght@400..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
 <style>
-    .material-symbols-outlined {
-      font-family: 'Material Symbols Outlined';
-      font-weight: normal;
-      font-style: normal;
-      font-size: 18px;
-      line-height: 1;
-      display: inline-block;
-      white-space: nowrap;
-      word-wrap: normal;
-      direction: ltr;
-      -webkit-font-feature-settings: 'liga';
-      -webkit-font-smoothing: antialiased;
-    }
-  </style>
+/* Lumina Slate tokens — values mirror docs/DESIGN.md §2.3 (colours), §2.5 (radius), §2.7 (motion). */
+:root {
+  --bg-app: #eef1fb;
+
+  --ink: #0b1220;
+  --ink-2: #1e2638;
+  --text: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+
+  --hair: rgba(15, 23, 42, .07);
+  --hair-strong: rgba(15, 23, 42, .12);
+
+  --accent: #5b5bf0;
+  --accent-2: #7c6cff;
+  --accent-soft: rgba(91, 91, 240, .1);
+  --accent-ring: rgba(91, 91, 240, .28);
+
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, .1);
+  --warning: #f5a524;
+  --warning-soft: rgba(245, 165, 36, .12);
+  --success: #12a150;
+  --success-soft: rgba(18, 161, 80, .1);
+  --info: #3b82f6;
+
+  --glass-bg: rgba(255, 255, 255, .58);
+  --glass-bg-strong: rgba(255, 255, 255, .78);
+  --glass-border: rgba(255, 255, 255, .75);
+
+  --glass-shadow: 0 1px 1px rgba(15, 23, 42, .03), 0 8px 24px -6px rgba(30, 41, 90, .1),
+    0 24px 48px -24px rgba(30, 41, 90, .12);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 0 0 1px rgba(255, 255, 255, .35);
+
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Geist', 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-full: 999px;
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --ease-spring: cubic-bezier(.34, 1.4, .5, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  position: relative;
+  min-height: 100vh;
+  font-family: var(--font-main);
+  font-feature-settings: 'cv11', 'ss01';
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* §2.4 AppBackdrop: gradient + 4 radial washes + 24px dot grid with a fade mask.
+   Absolute (not fixed) so it spans the full page in full-page captures. */
+.app-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 18% at 12% 4%, rgba(139, 132, 255, .28) 0%, transparent 70%),
+    radial-gradient(35% 16% at 88% 8%, rgba(96, 165, 250, .22) 0%, transparent 70%),
+    radial-gradient(45% 20% at 70% 55%, rgba(244, 170, 210, .2) 0%, transparent 70%),
+    radial-gradient(40% 18% at 25% 88%, rgba(125, 211, 252, .18) 0%, transparent 70%),
+    linear-gradient(180deg, #f4f6fd 0%, #eceffa 100%);
+}
+.app-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(15, 23, 42, .07) 1px, transparent 1px);
+  background-size: 24px 24px;
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, .6), rgba(0, 0, 0, .15));
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, .6), rgba(0, 0, 0, .15));
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: 20px;
+  line-height: 1;
+  vertical-align: middle;
+}
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
+
+/* ---------- Layout ---------- */
+.wrapper {
+  position: relative;
+  z-index: 1;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 12px 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.row { display: flex; align-items: center; }
+.between { justify-content: space-between; }
+.wrap { flex-wrap: wrap; }
+.col { display: flex; flex-direction: column; }
+.grid { display: grid; gap: 20px; }
+.gap-4 { gap: 4px; }
+.gap-8 { gap: 8px; }
+.gap-12 { gap: 12px; }
+.gap-16 { gap: 16px; }
+.card-pad { padding: 20px 24px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+
+/* ---------- Surfaces (§2.4) ---------- */
+.glass {
+  position: relative;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  transition: box-shadow .35s var(--ease), transform .35s var(--ease);
+}
+.glass-hover:hover {
+  box-shadow: 0 1px 1px rgba(15, 23, 42, .03), 0 14px 32px -8px rgba(30, 41, 90, .16),
+    0 30px 60px -30px rgba(30, 41, 90, .18), var(--glass-highlight);
+  transform: translateY(-1px);
+}
+.glass-strong { background: var(--glass-bg-strong); }
+.inset {
+  background: rgba(244, 246, 255, .7);
+  border: 1px solid #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 2px rgba(30, 41, 90, .04);
+}
+.glass-dark {
+  background: linear-gradient(160deg, rgba(17, 24, 39, .92), rgba(30, 27, 75, .9));
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 30px -10px rgba(17, 24, 39, .45), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+.tone-danger {
+  background: linear-gradient(160deg, rgba(255, 241, 242, .85), rgba(255, 228, 230, .7));
+  border-color: rgba(229, 72, 77, .28);
+}
+.tone-accent {
+  background: linear-gradient(160deg, rgba(240, 240, 255, .9), rgba(229, 231, 255, .75));
+  border-color: rgba(91, 91, 240, .3);
+}
+.tone-success {
+  background: linear-gradient(160deg, rgba(236, 253, 243, .9), rgba(220, 252, 231, .7));
+  border-color: rgba(18, 161, 80, .25);
+}
+
+/* ---------- Text styles (§2.6) ---------- */
+.t-display, .kpi-value {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -.04em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.kpi-value.mono { font-family: var(--font-mono); }
+.page-title {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  line-height: 1.15;
+}
+.drawer-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+.anomaly-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  line-height: 1.35;
+}
+.card-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.step-title { font-family: var(--font-display); font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.body-m { font-size: 14px; color: var(--text); }
+.body-s { font-size: 13px; color: var(--text); }
+.card-sub { font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.label-xs { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.kpi-unit { font-family: var(--font-display); font-size: 16px; font-weight: 600; color: var(--muted); margin-left: 4px; letter-spacing: -.01em; }
+.kpi-hint { font-size: 12px; font-weight: 500; color: var(--muted); }
+.kpi-line { font-size: 13px; color: var(--text); gap: 8px; }
+
+/* ---------- Header pill bar ---------- */
+.top-header { padding: 8px 12px 8px 8px; border-radius: var(--radius-full); }
+.logo-tile {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  background: linear-gradient(160deg, #1f2937, #0b1220);
+  box-shadow: 0 6px 14px -6px rgba(11, 18, 32, .55);
+}
+.brand-name { font-family: var(--font-display); font-weight: 700; letter-spacing: .06em; font-size: 14px; }
+.brand-sub { font-size: 12px; color: var(--muted); }
+
+/* ---------- Chip & Tag (§3.1) ---------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, .7);
+  border: 1px solid var(--hair);
+  color: var(--text);
+}
+.chip-sm { height: 20px; padding: 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.chip .dot, .pill .dot { width: 6px; height: 6px; border-radius: var(--radius-full); background: currentColor; }
+.chip-accent { background: var(--accent-soft); color: var(--accent); border-color: rgba(91, 91, 240, .18); }
+.chip-danger { background: var(--danger-soft); color: #c9343a; border-color: rgba(229, 72, 77, .2); }
+.chip-success { background: var(--success-soft); color: #0e8a43; border-color: rgba(18, 161, 80, .2); }
+.chip-warning { background: var(--warning-soft); color: #b4710a; border-color: rgba(245, 165, 36, .25); }
+.chip-info { color: var(--info); }
+.chip-inverse { background: var(--ink); color: #fff; border-color: var(--ink); }
+/* appearance solid: filled tone, white uppercase Label XS */
+.chip-solid { height: 20px; padding: 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #fff; }
+.chip-solid.chip-danger { background: #c9343a; border-color: #c9343a; }
+.dot.live { animation: pulseGlow 1.8s var(--ease) infinite; }
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, .8);
+  border: 1px solid var(--hair-strong);
+  color: var(--ink-2);
+}
+.tag-inverse { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+/* ---------- Button (§3.2) ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  font: 600 13px var(--font-main);
+  border: 1px solid var(--hair-strong);
+  background: rgba(255, 255, 255, .75);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .05), inset 0 1px 0 #fff;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn .material-symbols-outlined { font-size: 16px; }
+.btn-primary {
+  background: linear-gradient(180deg, #1f2937, #0b1220);
+  color: #fff;
+  border-color: #0b1220;
+  box-shadow: 0 6px 16px -6px rgba(11, 18, 32, .55), inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+.btn-accent {
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 6px 16px -6px rgba(91, 91, 240, .6), inset 0 1px 0 rgba(255, 255, 255, .2);
+}
+.btn-destructive { background: var(--danger-soft); color: #c9343a; border-color: rgba(229, 72, 77, .28); box-shadow: none; }
+.btn-ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--muted); }
+.btn-sm { height: 32px; padding: 0 12px; font-size: 12px; border-radius: var(--radius-sm); }
+.btn-lg { height: 48px; padding: 0 20px; font-size: 14px; border-radius: var(--radius-lg); }
+.btn-locked {
+  background: rgba(118, 128, 160, .12);
+  color: var(--muted);
+  border-color: var(--hair-strong);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* PillTab */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, .6);
+  border: 1px solid var(--hair);
+  color: var(--muted);
+}
+.pill-on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.pill-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+/* ---------- SegmentedControl (§3.6) ---------- */
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: rgba(118, 128, 160, .12);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, .06);
+}
+.seg > span {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background .3s var(--ease-spring);
+}
+.seg > span.active {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .12), 0 0 0 .5px rgba(15, 23, 42, .04);
+}
+.seg .count { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+
+/* ---------- Progress & bars ---------- */
+.progress { width: 100%; height: 6px; border-radius: var(--radius-full); background: rgba(118, 128, 160, .14); overflow: hidden; }
+.progress > span { display: block; height: 100%; border-radius: var(--radius-full); background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+.bar-ink > span { background: var(--ink); }
+.bar-danger > span { background: var(--danger); }
+.spc-bar { position: relative; overflow: visible; }
+.ucl-tick { position: absolute; top: -4px; width: 2px; height: 14px; border-radius: 2px; background: var(--ink); }
+.split-bar { display: flex; height: 6px; border-radius: var(--radius-full); overflow: hidden; }
+
+/* ---------- Section frame ---------- */
+.section-head { margin-bottom: 16px; }
+.section-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+}
+.sub-label { margin: 20px 0 12px; }
+
+/* Tokens */
+.swatch-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.swatch { padding: 8px; }
+.swatch-chip {
+  height: 48px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hair);
+  margin-bottom: 8px;
+  background-image: linear-gradient(45deg, rgba(15, 23, 42, .05) 25%, transparent 25%, transparent 75%, rgba(15, 23, 42, .05) 75%),
+    linear-gradient(45deg, rgba(15, 23, 42, .05) 25%, transparent 25%, transparent 75%, rgba(15, 23, 42, .05) 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 6px 6px;
+  position: relative;
+  overflow: hidden;
+}
+.swatch-chip i { position: absolute; inset: 0; }
+.swatch-name { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--ink); }
+.swatch-val { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+.status-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.status-tile { padding: 12px; }
+.status-base { width: 100%; height: 32px; border-radius: var(--radius-md); margin-bottom: 8px; }
+.status-soft { height: 24px; border-radius: var(--radius-sm); margin-bottom: 8px; font-size: 11px; font-weight: 600; display: flex; align-items: center; padding: 0 8px; }
+
+.radius-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.radius-box {
+  height: 64px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, .9), rgba(240, 242, 255, .72));
+  border: 1.5px solid rgba(91, 91, 240, .35);
+}
+.radius-label { font-family: var(--font-mono); font-size: 11px; font-weight: 700; margin-top: 8px; }
+.radius-use { font-size: 11px; color: var(--muted); }
+
+.type-row { display: grid; grid-template-columns: 120px 1fr 300px; align-items: baseline; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--hair); }
+.type-row:last-child { border-bottom: none; }
+.type-token { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--accent); }
+.type-spec { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+/* Banners & KPI (§3.3–§3.4) */
+.anomaly-banner { display: flex; align-items: flex-start; gap: 16px; padding: 20px 24px; }
+.anomaly-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+  color: var(--danger);
+  background: rgba(255, 255, 255, .7);
+  border: 1px solid rgba(229, 72, 77, .28);
+}
+.anomaly-meta { font-size: 13px; color: #9f1d22; }
+.anomaly-actions { gap: 12px; align-self: center; flex-shrink: 0; margin-left: auto; }
+
+.kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.kpi-card { display: flex; flex-direction: column; gap: 16px; padding: 20px 24px; min-height: 224px; }
+.kpi-bars { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+.kpi-bar-row { display: grid; grid-template-columns: 80px 1fr 40px; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+
+.reason { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; border-radius: var(--radius-lg); font-size: 13px; border: 1px solid var(--hair); }
+.reason strong { display: block; font-weight: 700; }
+.reason-warning { color: #92400e; background: rgba(255, 247, 237, .97); border-color: rgba(245, 165, 36, .3); }
+.reason-danger { color: #991b1b; background: rgba(255, 241, 242, .85); border-color: rgba(229, 72, 77, .28); }
+.reason-neutral { color: #334155; background: var(--glass-bg-strong); }
+
+/* Components */
+.comp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.comp-tile { padding: 16px 20px; }
+.comp-tile > .eyebrow { margin-bottom: 12px; }
+.fleet-toolbar { padding: 16px 20px; border-bottom: 1px solid var(--hair); }
+.search {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  min-width: 220px;
+  font-size: 13px;
+  color: var(--faint);
+}
+.fleet-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.fleet-table th {
+  text-align: left;
+  padding: 12px 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--hair);
+}
+.fleet-table td { padding: 16px 20px; border-bottom: 1px solid var(--hair); color: var(--text); }
+.fleet-table tbody tr:last-child td { border-bottom: none; }
+.fleet-table tr.row-hot { background: rgba(255, 241, 242, .55); box-shadow: inset 4px 0 0 var(--danger); }
+.machine-id { font-family: var(--font-mono); font-weight: 700; color: var(--ink); }
+.inc-link { font-family: var(--font-mono); color: #c9343a; text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
+
+.streak { display: grid; grid-template-columns: repeat(25, 1fr); gap: 4px; }
+.streak i { aspect-ratio: 1; border-radius: 4px; background: rgba(118, 128, 160, .14); }
+.streak i.done { background: #22b573; }
+.streak i.next { background: #fff; outline: 2px solid var(--accent); outline-offset: -1px; animation: pulseGlow 1.8s var(--ease) infinite; }
+
+.step { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.step.active { border-color: rgba(91, 91, 240, .45); box-shadow: 0 0 0 4px var(--accent-soft), var(--glass-shadow); }
+.step.pending { opacity: .7; }
+.step-num {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.step-num.done { background: var(--success); color: #fff; }
+.step-num.active { background: var(--accent); color: #fff; box-shadow: 0 0 0 4px var(--accent-soft); }
+.step-num.pending { border: 1.5px dashed var(--faint); color: var(--muted); }
+.step-summary { font-size: 12px; color: var(--muted); }
+
+.toast { display: flex; align-items: center; gap: 12px; padding: 12px 16px; font-size: 13px; font-weight: 500; max-width: 420px; }
+
+/* Mobile surface (§4) — colour deltas (§4.1) scoped under .m-app; components are shared */
+.m-app {
+  --m-bg: #eef1f8;
+  --m-ink-2: #3b4357;
+  --m-ink-3: #7b8398;
+  --m-ink-4: #a9b0c0;
+  --m-accent: #5b4cf5;
+  --m-accent-2: #8b7bff;
+  --m-accent-soft: rgba(91, 76, 245, .12);
+  --m-danger: #ff3b30;
+  --m-warning: #ff9500;
+  --m-success: #30c25a;
+  --m-info: #0a84ff;
+  --m-glass: rgba(255, 255, 255, .56);
+  font-family: var(--font-main);
+  color: var(--ink);
+}
+.mobile-layout { display: grid; grid-template-columns: 360px 1fr; gap: 32px; align-items: start; }
+.device-slot { width: 360px; height: 775px; }
+/* Device frame geometry is hardware (not rounded): 396×852, bezel 10, radius 58/48. */
+.device {
+  width: 396px;
+  height: 852px;
+  transform: scale(.909);
+  transform-origin: top left;
+  border-radius: 58px;
+  padding: 10px;
+  background: #0d0f17;
+  box-shadow: 0 30px 60px -20px rgba(30, 41, 90, .35);
+}
+.screen {
+  position: relative;
+  height: 100%;
+  border-radius: 48px;
+  overflow: hidden;
+  background: var(--m-bg);
+}
+.blob { position: absolute; border-radius: var(--radius-full); filter: blur(48px); opacity: .6; }
+.status-bar { position: relative; height: 44px; padding: 0 28px; font-size: 13px; font-weight: 600; }
+.island { position: absolute; left: 50%; top: 10px; width: 112px; height: 32px; margin-left: -56px; border-radius: var(--radius-full); background: #0d0f17; }
+.m-content { position: relative; padding: 4px 16px 0; display: flex; flex-direction: column; gap: 16px; }
+.m-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--m-accent), var(--m-accent-2));
+}
+.m-brand { width: 40px; height: 40px; border-radius: var(--radius-md); display: grid; place-items: center; background: var(--m-glass); border: 1px solid var(--glass-border); }
+.m-app .card-sub { color: var(--m-ink-3); margin-top: 0; }
+.m-app .eyebrow { color: var(--m-ink-3); }
+.m-app .card-title { font-family: var(--font-main); }
+.m-app .body-m { color: var(--m-ink-2); }
+.m-app .seg { display: flex; height: 40px; }
+.m-app .seg > span { flex: 1; height: 36px; justify-content: center; color: var(--m-ink-2); }
+.m-app .seg > span.active { color: var(--ink); }
+.m-app .seg .count { font-weight: 700; padding: 0 6px; border-radius: var(--radius-full); background: var(--m-accent-soft); color: var(--m-accent); }
+.m-app .glass {
+  background: var(--m-glass);
+  overflow: hidden;
+}
+.m-app .chip-danger { background: rgba(255, 59, 48, .12); color: #d70015; border-color: transparent; }
+.m-app .chip-warning { background: rgba(255, 149, 0, .14); color: #b25000; border-color: transparent; }
+.m-app .chip-accent { background: var(--m-accent-soft); color: var(--m-accent); border-color: transparent; }
+.m-app .chip { color: var(--m-ink-2); }
+.m-app .chip-danger { color: #d70015; }
+.m-app .chip-warning { color: #b25000; }
+.m-app .chip-accent { color: var(--m-accent); }
+.m-app .btn-primary { background: #0d0f17; border-color: #0d0f17; }
+.m-app .btn-accent { background: linear-gradient(135deg, #5b4cf5, #8b7bff); border-color: #5b4cf5; box-shadow: none; }
+.wo-card { padding: 16px 16px 12px 20px; display: flex; flex-direction: column; gap: 12px; }
+.wo-card .bar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+.m-thumb { width: 64px; height: 64px; border-radius: var(--radius-lg); flex-shrink: 0; display: grid; place-items: center; color: var(--m-ink-3); background: linear-gradient(135deg, rgba(196, 188, 255, .5), rgba(166, 220, 255, .5)); }
+.m-progress { height: 6px; border-radius: var(--radius-full); background: rgba(118, 128, 160, .14); overflow: hidden; }
+.m-progress span { display: block; height: 100%; border-radius: var(--radius-full); background: linear-gradient(90deg, var(--m-warning), var(--m-danger)); }
+.dock {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 16px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  padding: 4px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: rgba(255, 255, 255, .62);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.dock-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 56px; border-radius: var(--radius-full); font-size: 11px; font-weight: 600; color: var(--m-ink-2); }
+.dock-cell.on { background: #0d0f17; color: #fff; }
+.badge { position: absolute; top: 4px; right: 28px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: var(--radius-full); background: var(--m-danger); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+.home-ind { position: absolute; bottom: 4px; left: 50%; width: 128px; height: 5px; margin-left: -64px; border-radius: var(--radius-full); background: #0d0f17; opacity: .85; }
+
+.spec-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.spec-table th { text-align: left; padding: 8px 12px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--hair); }
+.spec-table td { padding: 8px 12px; border-bottom: 1px solid var(--hair); color: var(--text); }
+.spec-table tr:last-child td { border-bottom: none; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 4px; vertical-align: -2px; margin-right: 6px; border: 1px solid var(--hair); }
+.spec-table td.ok { color: #0e8a43; font-weight: 700; }
+
+.footer { padding: 12px 20px; border-radius: var(--radius-full); font-size: 12px; color: var(--muted); text-align: center; }
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+  50% { box-shadow: 0 0 0 4px transparent; opacity: .55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
 </head>
-<body class="bg-background text-on-surface antialiased min-h-screen flex flex-col font-body-base selection:bg-surface-container selection:text-primary">
-<!-- TopNavBar (Shared Component Execution) -->
-<header class="w-full border-b border-outline-variant bg-surface-container-lowest sticky top-0 z-50 px-gutter-desktop max-w-[1440px] mx-auto flex items-center justify-between h-14">
-<!-- Brand / Product Name -->
-<div class="flex items-center gap-space-xl">
-<div class="flex items-center gap-space-sm cursor-pointer">
-<span class="w-5 h-5 rounded-lg bg-primary text-on-primary flex items-center justify-center font-code-metric text-label-xs font-semibold">/</span>
-<span class="font-headline-md text-headline-md font-semibold text-primary tracking-tight">shadcn/ui</span>
-</div>
-<!-- Primary Navigation Links -->
-<nav class="hidden md:flex items-center gap-space-lg">
-<a class="text-on-surface-variant font-label-base text-label-base hover:text-primary hover:bg-surface-container transition-colors duration-150 px-space-sm py-1 rounded" href="#docs">Docs</a>
-<a class="text-primary font-label-base text-label-base hover:text-primary hover:bg-surface-container transition-colors duration-150 px-space-sm py-1 rounded" href="#components">Components</a>
-<a class="text-on-surface-variant font-label-base text-label-base hover:text-primary hover:bg-surface-container transition-colors duration-150 px-space-sm py-1 rounded" href="#blocks">Blocks</a>
-<a class="text-on-surface-variant font-label-base text-label-base hover:text-primary hover:bg-surface-container transition-colors duration-150 px-space-sm py-1 rounded" href="#themes">Themes</a>
-<a class="text-on-surface-variant font-label-base text-label-base hover:text-primary hover:bg-surface-container transition-colors duration-150 px-space-sm py-1 rounded" href="#figma">Figma Kit</a>
-</nav>
-</div>
-<!-- Right Utility Cluster: Search + Secondary/Primary Trailing Actions + Icons -->
-<div class="flex items-center gap-space-md">
-<!-- Search Bar -->
-<div class="relative hidden sm:flex items-center w-52 md:w-64">
-<span class="material-symbols-outlined absolute left-2.5 text-secondary text-[16px] pointer-events-none" data-icon="search">search</span>
-<input class="w-full h-8 pl-8 pr-12 rounded border border-outline-variant bg-surface-container-low text-body-sm font-body-sm placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all duration-150 text-primary" placeholder="Search documentation..." type="text"/>
-<kbd class="absolute right-2 px-1.5 py-0.5 text-[10px] font-code-metric font-medium text-secondary bg-surface-container-lowest border border-outline-variant rounded">⌘K</kbd>
-</div>
-<!-- Action Links -->
-<a class="hidden lg:inline-flex items-center text-body-sm font-label-sm text-secondary hover:text-primary px-space-sm py-1 transition-colors duration-150" href="#radix">Radix UI</a>
-<a class="inline-flex items-center gap-space-xs text-body-sm font-label-sm bg-primary text-on-primary px-space-md py-1.5 rounded hover:bg-on-surface-variant transition-colors duration-150" href="#github">
-<span class="material-symbols-outlined text-[16px]" data-icon="terminal">terminal</span>
-<span>GitHub</span>
-</a>
-<!-- Icon Action Buttons -->
-<div class="flex items-center border-l border-outline-variant pl-space-sm gap-1 text-secondary">
-<button aria-label="Toggle terminal" class="p-1.5 rounded hover:text-primary hover:bg-surface-container transition-colors duration-150" type="button">
-<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
-</button>
-<button aria-label="Toggle theme" class="p-1.5 rounded hover:text-primary hover:bg-surface-container transition-colors duration-150" type="button">
-<span class="material-symbols-outlined" data-icon="dark_mode">dark_mode</span>
-</button>
-</div>
-</div>
-</header>
-<!-- Main Canvas -->
-<main class="w-full max-w-[1440px] mx-auto px-gutter-desktop py-space-xl flex-1 flex flex-col gap-space-xl">
-<!-- Page Context Title & Meta Badges Strip -->
-<div class="flex flex-col md:flex-row md:items-end justify-between gap-space-md pb-space-lg border-b border-outline-variant">
-<div>
-<div class="flex items-center gap-space-sm mb-1.5">
-<span class="font-code-metric text-label-xs text-secondary tracking-tight">DESIGN SYSTEM MANIFEST</span>
-<span class="w-1 h-1 rounded-full bg-outline"></span>
-<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-code-metric font-medium bg-surface-container-low text-secondary border border-outline-variant">v1.2.0</span>
-<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-code-metric font-medium bg-surface-container-low text-secondary border border-outline-variant">Theme: Slate / Zinc</span>
-</div>
-<h1 class="font-headline-xl text-headline-xl text-primary tracking-tight">@shadcn/ui — Design System</h1>
-<p class="font-body-base text-body-base text-secondary mt-1">Radix UI Primitives • Tailwind CSS • CSS Variables • SCADA Technical Rigor</p>
-</div>
-<!-- State Beacons & Mode Preview -->
-<div class="flex items-center gap-space-sm self-start md:self-auto">
-<div class="flex items-center gap-1.5 px-space-md py-1 rounded bg-surface-container-lowest border border-outline-variant">
-<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-<span class="font-code-metric text-label-xs text-primary font-medium">Light Mode Active</span>
-</div>
-<div class="flex items-center gap-1.5 px-space-md py-1 rounded bg-surface-container-lowest border border-outline-variant">
-<span class="font-code-metric text-label-xs text-secondary">Viewport:</span>
-<span class="font-code-metric text-label-xs text-primary font-medium">1440px Fixed Spec</span>
-</div>
-</div>
-</div>
-<!-- Section 2: Token Architecture & Variables Grid -->
-<section class="flex flex-col gap-space-lg">
-<div class="flex items-center justify-between">
-<div class="flex items-center gap-space-sm">
-<span class="w-2 h-2 bg-primary rounded-full"></span>
-<h2 class="font-headline-md text-headline-md text-primary">Token Architecture &amp; CSS Variables</h2>
-</div>
-<span class="font-code-metric text-label-xs text-secondary">hsl() / hex spectrum • 1px border delimitations</span>
-</div>
-<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-space-md">
-<!-- Swatches Card (Span 2 cols on lg) -->
-<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-outline-variant p-space-lg flex flex-col justify-between">
-<div>
-<div class="flex items-center justify-between pb-space-md border-b border-outline-variant mb-space-md">
-<span class="font-label-base text-label-base text-primary font-semibold">CSS Variable Color Tokens</span>
-<span class="font-code-metric text-label-xs text-secondary">Zinc Spectral Anchors</span>
-</div>
-<!-- Grid of Color Tokens -->
-<div class="grid grid-cols-3 gap-space-sm">
-<div class="p-2 rounded border border-outline-variant bg-surface-container-low flex flex-col gap-1.5">
-<div class="w-full h-7 rounded border border-outline-variant bg-[#ffffff]"></div>
-<div class="flex flex-col">
-<span class="font-code-metric text-label-xs text-primary font-semibold">--background</span>
-<span class="font-code-metric text-[10px] text-secondary">#ffffff (0 0% 100%)</span>
-</div>
-</div>
-<div class="p-2 rounded border border-outline-variant bg-surface-container-low flex flex-col gap-1.5">
-<div class="w-full h-7 rounded border border-outline-variant bg-[#09090b]"></div>
-<div class="flex flex-col">
-<span class="font-code-metric text-label-xs text-primary font-semibold">--foreground</span>
-<span class="font-code-metric text-[10px] text-secondary">#09090b (240 10% 3.9%)</span>
-</div>
-</div>
-<div class="p-2 rounded border border-outline-variant bg-surface-container-low flex flex-col gap-1.5">
-<div class="w-full h-7 rounded border border-outline-variant bg-[#ffffff] shadow-sm"></div>
-<div class="flex flex-col">
-<span class="font-code-metric text-label-xs text-primary font-semibold">--card</span>
-<span class="font-code-metric text-[10px] text-secondary">#ffffff (0 0% 100%)</span>
-</div>
-</div>
-<div class="p-2 rounded border border-outline-variant bg-surface-container-low flex flex-col gap-1.5">
-<div class="w-full h-7 rounded border border-outline-variant bg-[#18181b]"></div>
-<div class="flex flex-col">
-<span class="font-code-metric text-label-xs text-primary font-semibold">--primary</span>
-<span class="font-code-metric text-[10px] text-secondary">#18181b (240 5.9% 10%)</span>
-</div>
-</div>
-<div class="p-2 rounded border border-outline-variant bg-surface-container-low flex flex-col gap-1.5">
-<div class="w-full h-7 rounded border border-outline-variant bg-[#f4f4f5]"></div>
-<div class="flex flex-col">
-<span class="font-code-metric text-label-xs text-primary font-semibold">--secondary</span>
-<span class="font-code-metric text-[10px] text-secondary">#f4f4f5 (240 4.8% 95.9%)</span>
-</div>
-</div>
-<div class="p-2 rounded border border-outline-variant bg-surface-container-low flex flex-col gap-1.5">
-<div class="w-full h-7 rounded border border-outline-variant bg-[#f4f4f5]"></div>
-<div class="flex flex-col">
-<span class="font-code-metric text-label-xs text-primary font-semibold">--muted</span>
-<span class="font-code-metric text-[10px] text-secondary">#71717a (240 3.8% 46.1%)</span>
-</div>
-</div>
-<div class="p-2 rounded border border-outline-variant bg-surface-container-low flex flex-col gap-1.5">
-<div class="w-full h-7 rounded border border-outline-variant bg-[#ef4444]"></div>
-<div class="flex flex-col">
-<span class="font-code-metric text-label-xs text-primary font-semibold">--destructive</span>
-<span class="font-code-metric text-[10px] text-secondary">#ef4444 (0 84.2% 60.2%)</span>
-</div>
-</div>
-<div class="p-2 rounded border border-outline-variant bg-surface-container-low flex flex-col gap-1.5">
-<div class="w-full h-7 rounded border border-outline-variant bg-[#e4e4e7]"></div>
-<div class="flex flex-col">
-<span class="font-code-metric text-label-xs text-primary font-semibold">--border</span>
-<span class="font-code-metric text-[10px] text-secondary">#e4e4e7 (240 5.9% 90%)</span>
-</div>
-</div>
-<div class="p-2 rounded border border-outline-variant bg-surface-container-low flex flex-col gap-1.5">
-<div class="w-full h-7 rounded border-2 border-[#18181b] bg-white"></div>
-<div class="flex flex-col">
-<span class="font-code-metric text-label-xs text-primary font-semibold">--ring</span>
-<span class="font-code-metric text-[10px] text-secondary">#18181b (Mechanical Halo)</span>
-</div>
-</div>
-</div>
-</div>
-<div class="mt-space-md pt-space-sm border-t border-outline-variant flex justify-between items-center text-secondary">
-<span class="font-code-metric text-label-xs">Strict Tabular Alignment</span>
-<span class="font-code-metric text-label-xs">WCAG AAA Contrast Validated</span>
-</div>
-</div>
-<!-- Radius Tokens Card -->
-<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-space-lg flex flex-col justify-between">
-<div>
-<div class="flex items-center justify-between pb-space-md border-b border-outline-variant mb-space-md">
-<span class="font-label-base text-label-base text-primary font-semibold">Radius Primitives</span>
-<span class="font-code-metric text-label-xs text-secondary">--radius: 0.75rem</span>
-</div>
-<div class="flex flex-col gap-space-md">
-<!-- xl (Card) -->
-<div class="flex items-center justify-between p-2 rounded-xl border border-outline-variant bg-surface-container-low">
-<div class="flex flex-col">
-<span class="font-label-sm text-label-sm font-semibold text-primary">rounded-xl (12px)</span>
-<span class="font-code-metric text-label-xs text-secondary">Cards, Panels, Dialogs</span>
-</div>
-<span class="w-8 h-8 rounded-xl border border-primary bg-white flex items-center justify-center font-code-metric text-[10px] text-primary">12</span>
-</div>
-<!-- lg (Banner/Popovers) -->
-<div class="flex items-center justify-between p-2 rounded-lg border border-outline-variant bg-surface-container-low">
-<div class="flex flex-col">
-<span class="font-label-sm text-label-sm font-semibold text-primary">rounded-lg (10px)</span>
-<span class="font-code-metric text-label-xs text-secondary">Alerts, Select Popovers</span>
-</div>
-<span class="w-8 h-8 rounded-lg border border-primary bg-white flex items-center justify-center font-code-metric text-[10px] text-primary">10</span>
-</div>
-<!-- md (Button) -->
-<div class="flex items-center justify-between p-2 rounded-md border border-outline-variant bg-surface-container-low">
-<div class="flex flex-col">
-<span class="font-label-sm text-label-sm font-semibold text-primary">rounded-md (8px)</span>
-<span class="font-code-metric text-label-xs text-secondary">Buttons, Inputs, Tooltips</span>
-</div>
-<span class="w-8 h-8 rounded-md border border-primary bg-white flex items-center justify-center font-code-metric text-[10px] text-primary">8</span>
-</div>
-<!-- full (Badge) -->
-<div class="flex items-center justify-between p-2 rounded-full border border-outline-variant bg-surface-container-low">
-<div class="flex flex-col pl-2">
-<span class="font-label-sm text-label-sm font-semibold text-primary">rounded-full</span>
-<span class="font-code-metric text-label-xs text-secondary">Pills, Status Beacons</span>
-</div>
-<span class="w-8 h-8 rounded-full border border-primary bg-white flex items-center justify-center font-code-metric text-[10px] text-primary">∞</span>
-</div>
-</div>
-</div>
-<div class="mt-space-md pt-space-sm border-t border-outline-variant">
-<span class="font-code-metric text-label-xs text-secondary">Nested: parent = child + padding</span>
-</div>
-</div>
-<!-- Typography Hierarchy Card -->
-<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-space-lg flex flex-col justify-between">
-<div>
-<div class="flex items-center justify-between pb-space-md border-b border-outline-variant mb-space-md">
-<span class="font-label-base text-label-base text-primary font-semibold">Typography Scale</span>
-<span class="font-code-metric text-label-xs text-secondary">Geist + JetBrains</span>
-</div>
-<div class="flex flex-col gap-space-sm">
-<div class="pb-2 border-b border-outline-variant/60">
-<span class="font-code-metric text-[10px] text-secondary block">H1 DISPLAY — 30px / 36px</span>
-<span class="font-headline-xl text-headline-xl text-primary">Display Title</span>
-</div>
-<div class="pb-2 border-b border-outline-variant/60">
-<span class="font-code-metric text-[10px] text-secondary block">H2 SECTION — 24px / 32px</span>
-<span class="font-headline-lg text-headline-lg text-primary">Section Header</span>
-</div>
-<div class="pb-2 border-b border-outline-variant/60">
-<span class="font-code-metric text-[10px] text-secondary block">H3 COMPONENT — 18px / 24px</span>
-<span class="font-headline-md text-headline-md text-primary">Component Title</span>
-</div>
-<div class="pb-2 border-b border-outline-variant/60">
-<span class="font-code-metric text-[10px] text-secondary block">BODY TEXT — 14px / 20px</span>
-<span class="font-body-base text-body-base text-secondary">Clean technical paragraph copy.</span>
-</div>
-<div>
-<span class="font-code-metric text-[10px] text-secondary block">TELEMETRY SCADA — 12px Mono</span>
-<span class="font-code-metric text-code-metric text-primary">SPC_UCL: 0.25000ms // NOMINAL</span>
-</div>
-</div>
-</div>
-<div class="mt-space-md pt-space-sm border-t border-outline-variant">
-<span class="font-code-metric text-label-xs text-secondary">Negative letter-spacing (-0.025em)</span>
-</div>
-</div>
-</div>
-</section>
-<!-- Section 3: Primary Content Area (Two Columns) -->
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-start">
-<!-- COLUMN 1: Alerts, Cards, and Metrics (5 cols) -->
-<div class="lg:col-span-5 flex flex-col gap-space-lg">
-<div class="flex items-center gap-space-sm">
-<span class="w-2 h-2 bg-primary rounded-full"></span>
-<h2 class="font-headline-md text-headline-md text-primary">Alerts &amp; Telemetry Cards</h2>
-</div>
-<!-- Destructive Alert (Subtle red tint, alert triangle icon, Title, Desc, Diagnose button) -->
-<div class="p-4 rounded-xl border border-rose-200 bg-rose-50/70 text-rose-950 flex items-start justify-between gap-space-md shadow-sm">
-<div class="flex items-start gap-space-sm">
-<span class="material-symbols-outlined text-rose-600 mt-0.5" data-icon="warning">warning</span>
-<div class="flex flex-col">
-<span class="font-headline-md text-body-base font-semibold text-rose-900 tracking-tight">Critical Anomaly Detected — Machine CNC-02</span>
-<p class="font-body-sm text-body-sm text-rose-700 mt-0.5">Tool T07 flank wear exceeding SPC UCL threshold (1.42% defect rate)</p>
-</div>
-</div>
-<button class="shrink-0 h-8 px-3 rounded-md border border-rose-300 bg-white font-label-sm text-label-sm text-rose-800 hover:bg-rose-100 hover:border-rose-400 transition-colors shadow-xs" type="button">
-            Diagnose
-          </button>
-</div>
-<!-- Default System Alert (Neutral border alert with info icon) -->
-<div class="p-4 rounded-xl border border-outline-variant bg-surface-container-lowest text-primary flex items-start gap-space-sm shadow-sm">
-<span class="material-symbols-outlined text-secondary mt-0.5" data-icon="info">info</span>
-<div class="flex flex-col">
-<span class="font-label-base text-body-base font-semibold text-primary tracking-tight">System Operational Status</span>
-<p class="font-body-sm text-body-sm text-secondary mt-0.5">All 12 telemetry edge nodes syncing normally with zero dropped frames.</p>
-</div>
-</div>
-<!-- Metric Card: CNC Defect Rate -->
-<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-space-lg shadow-sm flex flex-col justify-between">
-<div class="flex items-center justify-between pb-space-sm border-b border-outline-variant">
-<span class="font-code-metric text-label-xs text-secondary tracking-wider font-semibold">CURRENT DEFECT RATE</span>
-<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-code-metric font-medium bg-rose-50 text-rose-700 border border-rose-200">
-<span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
-              FAULT
-            </span>
-</div>
-<div class="my-space-md flex items-baseline justify-between">
-<span class="font-code-metric text-[38px] font-semibold tracking-tight text-primary">1.42%</span>
-<div class="flex flex-col items-end">
-<span class="font-code-metric text-label-xs text-rose-600 font-medium">+1.17% vs baseline</span>
-<span class="font-body-sm text-[11px] text-secondary">38 outliers in 2,500 parts</span>
-</div>
-</div>
-<!-- Dynamic capacity warning bar -->
-<div class="w-full h-2 bg-surface-container-low rounded-full overflow-hidden mb-space-md border border-outline-variant">
-<div class="h-full bg-rose-600 w-[84%] transition-all duration-300"></div>
-</div>
-<div class="pt-space-sm border-t border-outline-variant flex items-center justify-between">
-<span class="font-code-metric text-label-xs text-secondary">UCL Limit: 0.25%</span>
-<span class="font-code-metric text-label-xs text-primary font-medium">Sensor: SPC-ACC-09</span>
-</div>
-</div>
-<!-- Progress Card: Post-Repair Verification Gate -->
-<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-space-lg shadow-sm flex flex-col justify-between">
-<div>
-<div class="flex items-center justify-between mb-1">
-<span class="font-label-base text-label-base font-semibold text-primary">Post-Repair Verification Gate</span>
-<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-code-metric font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
-                ACTIVE
-              </span>
-</div>
-<p class="font-body-sm text-body-sm text-secondary mb-space-md">38 / 50 consecutive good parts (76%)</p>
-<!-- Slim Emerald Progress Bar -->
-<div class="w-full h-2 rounded-full bg-surface-container-low overflow-hidden border border-outline-variant">
-<div class="h-full bg-emerald-600 w-[76%] transition-all duration-500"></div>
-</div>
-</div>
-<div class="mt-space-lg pt-space-sm border-t border-outline-variant flex items-center justify-between text-secondary">
-<span class="font-code-metric text-label-xs">12 cycles remaining to clear gate</span>
-<span class="font-code-metric text-label-xs font-semibold text-primary">Target: 100%</span>
-</div>
-</div>
-</div>
-<!-- COLUMN 2: Badges, Buttons, and Data Table (7 cols) -->
-<div class="lg:col-span-7 flex flex-col gap-space-lg">
-<div class="flex items-center justify-between">
-<div class="flex items-center gap-space-sm">
-<span class="w-2 h-2 bg-primary rounded-full"></span>
-<h2 class="font-headline-md text-headline-md text-primary">Components &amp; Data Tables</h2>
-</div>
-<span class="font-code-metric text-label-xs text-secondary">Radix UI Compatible</span>
-</div>
-<!-- Badge Matrix Card -->
-<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-space-lg shadow-sm">
-<div class="flex items-center justify-between pb-space-sm border-b border-outline-variant mb-space-md">
-<span class="font-label-base text-label-base font-semibold text-primary">Badge Variants Matrix</span>
-<span class="font-code-metric text-label-xs text-secondary">Height 20px • 6px Pip</span>
-</div>
-<div class="flex flex-wrap items-center gap-space-sm">
-<!-- Default -->
-<span class="inline-flex items-center h-5 px-2 rounded-sm bg-primary text-on-primary font-code-metric text-[11px] font-medium tracking-tight">
-              Default
-            </span>
-<!-- Secondary -->
-<span class="inline-flex items-center h-5 px-2 rounded-sm bg-surface-container text-on-surface-variant border border-outline-variant font-code-metric text-[11px] font-medium tracking-tight">
-              Secondary
-            </span>
-<!-- Outline -->
-<span class="inline-flex items-center h-5 px-2 rounded-sm bg-transparent text-primary border border-primary font-code-metric text-[11px] font-medium tracking-tight">
-              Outline
-            </span>
-<!-- Destructive with Pulse Dot -->
-<span class="inline-flex items-center h-5 px-2 rounded-sm bg-rose-50 text-rose-700 border border-rose-200 font-code-metric text-[11px] font-medium tracking-tight">
-<span class="inline-block w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5 animate-pulse"></span>
-              Destructive
-            </span>
-<!-- Success with Dot -->
-<span class="inline-flex items-center h-5 px-2 rounded-sm bg-emerald-50 text-emerald-700 border border-emerald-200 font-code-metric text-[11px] font-medium tracking-tight">
-<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
-              Success
-            </span>
-<!-- Alert Badge -->
-<span class="inline-flex items-center h-5 px-2 rounded-sm bg-amber-50 text-amber-700 border border-amber-200 font-code-metric text-[11px] font-medium tracking-tight">
-<span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
-              Warning
-            </span>
-</div>
-</div>
-<!-- Button Matrix Card -->
-<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-space-lg shadow-sm">
-<div class="flex items-center justify-between pb-space-sm border-b border-outline-variant mb-space-md">
-<span class="font-label-base text-label-base font-semibold text-primary">Button Matrix</span>
-<span class="font-code-metric text-label-xs text-secondary">Default (h-9) &amp; Small (h-7)</span>
-</div>
-<div class="flex flex-col gap-space-md">
-<!-- Default Size Row -->
-<div class="flex items-center justify-between flex-wrap gap-2">
-<span class="font-code-metric text-label-xs text-secondary w-20">Size: md (h-9)</span>
-<div class="flex items-center flex-wrap gap-2">
-<button class="h-9 px-4 py-2 rounded-md bg-primary text-on-primary hover:bg-neutral-800 font-label-base text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-xs" type="button">
-                  Primary
-                </button>
-<button class="h-9 px-4 py-2 rounded-md bg-surface-container text-primary border border-outline-variant hover:bg-surface-container-high font-label-base text-sm font-medium transition-colors" type="button">
-                  Secondary
-                </button>
-<button class="h-9 px-4 py-2 rounded-md bg-transparent text-primary border border-outline-variant hover:bg-surface-container-low font-label-base text-sm font-medium transition-colors" type="button">
-                  Outline
-                </button>
-<button class="h-9 px-3 rounded-md bg-transparent text-primary hover:bg-surface-container-low font-label-base text-sm font-medium transition-colors" type="button">
-                  Ghost
-                </button>
-<button class="h-9 px-4 py-2 rounded-md bg-rose-600 text-white hover:bg-rose-700 font-label-base text-sm font-medium transition-colors shadow-xs" type="button">
-                  Destructive
-                </button>
-</div>
-</div>
-<!-- Compact Metrics Size Row -->
-<div class="flex items-center justify-between flex-wrap gap-2 pt-space-sm border-t border-outline-variant">
-<span class="font-code-metric text-label-xs text-secondary w-20">Size: sm (h-7)</span>
-<div class="flex items-center flex-wrap gap-2">
-<button class="h-7 px-2.5 rounded-md bg-primary text-on-primary hover:bg-neutral-800 font-code-metric text-xs font-medium transition-colors" type="button">
-                  Run Batch
-                </button>
-<button class="h-7 px-2.5 rounded-md bg-surface-container text-primary border border-outline-variant hover:bg-surface-container-high font-code-metric text-xs font-medium transition-colors" type="button">
-                  Audit
-                </button>
-<button class="h-7 px-2.5 rounded-md bg-transparent text-primary border border-outline-variant hover:bg-surface-container-low font-code-metric text-xs font-medium transition-colors" type="button">
-                  Export
-                </button>
-<button class="h-7 px-2 rounded-md bg-transparent text-primary hover:bg-surface-container-low font-code-metric text-xs font-medium transition-colors" type="button">
-                  Logs
-                </button>
-<button class="h-7 px-2.5 rounded-md bg-rose-600 text-white hover:bg-rose-700 font-code-metric text-xs font-medium transition-colors" type="button">
-                  Kill CNC
-                </button>
-</div>
-</div>
-</div>
-</div>
-<!-- Machine Data Table (Clean Table Component) -->
-<div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden shadow-sm">
-<div class="p-space-lg flex items-center justify-between border-b border-outline-variant">
-<div>
-<span class="font-label-base text-label-base font-semibold text-primary">SCADA Machine Telemetry Fleet</span>
-<p class="font-body-sm text-body-sm text-secondary">Real-time edge spindle metrics &amp; tool wear classification</p>
-</div>
-<span class="font-code-metric text-label-xs text-secondary">Sampling: 100ms</span>
-</div>
-<div class="overflow-x-auto">
-<table class="w-full text-left border-collapse">
-<thead>
-<tr class="bg-surface-container-low text-secondary font-code-metric text-label-xs border-b border-outline-variant">
-<th class="py-2.5 px-4 font-medium">Machine ID</th>
-<th class="py-2.5 px-4 font-medium">Location</th>
-<th class="py-2.5 px-4 font-medium">Active Tool</th>
-<th class="py-2.5 px-4 font-medium">Status</th>
-<th class="py-2.5 px-4 font-medium">Defect Rate</th>
-<th class="py-2.5 px-4 font-medium text-right">Action</th>
-</tr>
-</thead>
-<tbody class="divide-y divide-outline-variant text-body-sm font-body-sm">
-<!-- Row 1: CNC-01 (Nominal) -->
-<tr class="hover:bg-surface-container-low/70 transition-colors">
-<td class="py-2.5 px-4 font-code-metric font-semibold text-primary">CNC-01</td>
-<td class="py-2.5 px-4 text-secondary">Bay A-04</td>
-<td class="py-2.5 px-4 font-code-metric text-primary">T04 End Mill</td>
-<td class="py-2.5 px-4">
-<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-code-metric font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
-                      Nominal
-                    </span>
-</td>
-<td class="py-2.5 px-4 font-code-metric text-secondary">0.04%</td>
-<td class="py-2.5 px-4 text-right">
-<button class="h-7 px-2.5 text-xs font-code-metric font-medium rounded border border-outline-variant bg-surface-container-lowest hover:bg-surface-container text-primary transition-colors" type="button">
-                      Inspect
-                    </button>
-</td>
-</tr>
-<!-- Row 2: CNC-02 (Anomaly Active with red badge) -->
-<tr class="bg-rose-50/30 hover:bg-rose-50/50 transition-colors">
-<td class="py-2.5 px-4 font-code-metric font-semibold text-rose-900">CNC-02</td>
-<td class="py-2.5 px-4 text-rose-950">Bay B-12</td>
-<td class="py-2.5 px-4 font-code-metric text-rose-900 font-medium">T07 Flank Mill</td>
-<td class="py-2.5 px-4">
-<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-code-metric font-medium bg-rose-100 text-rose-800 border border-rose-300">
-<span class="w-1.5 h-1.5 rounded-full bg-rose-600 mr-1.5 animate-pulse"></span>
-                      Anomaly Active
-                    </span>
-</td>
-<td class="py-2.5 px-4 font-code-metric font-semibold text-rose-700">1.42% (UCL)</td>
-<td class="py-2.5 px-4 text-right">
-<button class="h-7 px-2.5 text-xs font-code-metric font-medium rounded border border-rose-300 bg-rose-600 text-white hover:bg-rose-700 transition-colors shadow-xs" type="button">
-                      Lock Spindle
-                    </button>
-</td>
-</tr>
-<!-- Row 3: CNC-03 (Standby) -->
-<tr class="hover:bg-surface-container-low/70 transition-colors">
-<td class="py-2.5 px-4 font-code-metric font-semibold text-primary">CNC-03</td>
-<td class="py-2.5 px-4 text-secondary">Bay C-01</td>
-<td class="py-2.5 px-4 font-code-metric text-secondary">T01 Face Mill</td>
-<td class="py-2.5 px-4">
-<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-code-metric font-medium bg-surface-container text-secondary border border-outline-variant">
-<span class="w-1.5 h-1.5 rounded-full bg-secondary mr-1.5"></span>
-                      Standby
-                    </span>
-</td>
-<td class="py-2.5 px-4 font-code-metric text-secondary">0.00%</td>
-<td class="py-2.5 px-4 text-right">
-<button class="h-7 px-2.5 text-xs font-code-metric font-medium rounded border border-outline-variant bg-surface-container-lowest hover:bg-surface-container text-primary transition-colors" type="button">
-                      Engage
-                    </button>
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="px-space-lg py-2.5 bg-surface-container-low border-t border-outline-variant flex items-center justify-between text-secondary">
-<span class="font-code-metric text-label-xs">Showing 3 of 12 units connected</span>
-<div class="flex items-center gap-space-sm">
-<button class="px-2 py-1 rounded border border-outline-variant bg-white font-code-metric text-xs text-primary hover:bg-surface-container-low disabled:opacity-50" disabled="" type="button">Previous</button>
-<button class="px-2 py-1 rounded border border-outline-variant bg-white font-code-metric text-xs text-primary hover:bg-surface-container-low" type="button">Next</button>
-</div>
-</div>
-</div>
-</div>
-</div>
-<!-- Extra Design System Utility Strip: Code snippet & Keyboard shortcuts -->
-<div class="p-space-lg rounded-xl border border-outline-variant bg-surface-container-lowest flex flex-col md:flex-row items-start md:items-center justify-between gap-space-md">
-<div class="flex items-center gap-space-md">
-<span class="w-8 h-8 rounded bg-surface-container-low border border-outline-variant flex items-center justify-center text-primary font-code-metric text-xs">CLI</span>
-<div class="flex flex-col">
-<span class="font-label-base text-label-base font-semibold text-primary">Add components via terminal</span>
-<span class="font-code-metric text-code-base text-secondary">npx shadcn-ui@latest add alert button card table badge</span>
-</div>
-</div>
-<div class="flex items-center gap-space-sm">
-<button class="h-8 px-3 rounded-md border border-outline-variant bg-white hover:bg-surface-container font-code-metric text-xs text-primary flex items-center gap-1 transition-colors" type="button">
-<span class="material-symbols-outlined text-[14px]" data-icon="terminal">terminal</span>
-          Copy Command
-        </button>
-</div>
-</div>
-</main>
-<!-- Footer (Shared Component Execution) -->
-<footer class="w-full border-t border-outline-variant bg-surface-container-lowest px-gutter-desktop py-space-xl max-w-[1440px] mx-auto flex flex-col md:flex-row justify-between items-center gap-space-md">
-<!-- Brand Reference & Copyright Text -->
-<div class="flex flex-col md:flex-row md:items-center gap-2 text-center md:text-left">
-<span class="font-label-base text-label-base font-semibold text-primary">shadcn/ui</span>
-<span class="hidden md:inline text-outline-variant">•</span>
-<p class="font-body-sm text-body-sm text-secondary">
-        Built by shadcn. Crafted on Pietro Schirano's Figma Design System. Open-source under MIT.
-      </p>
-</div>
-<!-- Navigation Links -->
-<div class="flex flex-wrap items-center justify-center gap-space-md">
-<a class="text-secondary font-label-sm text-label-sm hover:text-primary transition-colors duration-150" href="#documentation">Documentation</a>
-<a class="text-secondary font-label-sm text-label-sm hover:text-primary transition-colors duration-150" href="#figma-community">Figma Community</a>
-<a class="text-secondary font-label-sm text-label-sm hover:text-primary transition-colors duration-150" href="#radix">Radix UI</a>
-<a class="text-secondary font-label-sm text-label-sm hover:text-primary transition-colors duration-150" href="#tailwind">Tailwind CSS</a>
-<a class="text-secondary font-label-sm text-label-sm hover:text-primary transition-colors duration-150" href="#releases">Releases</a>
-<a class="text-primary font-label-sm text-label-sm hover:text-primary transition-colors duration-150 font-medium" href="#github-repo">GitHub</a>
-</div>
-</footer>
-</body></html>
+<body>
+<div class="app-backdrop" aria-hidden="true"></div>
+
+<div class="wrapper">
+
+  <!-- 1. Header: floating glass pill bar -->
+  <header class="glass top-header row between">
+    <div class="row gap-12">
+      <div class="logo-tile">K</div>
+      <div class="col">
+        <span class="brand-name">KAIZEN UI</span>
+        <span class="brand-sub">Lumina Slate · Liquid Glass (Light)</span>
+      </div>
+    </div>
+    <div class="row gap-8">
+      <span class="chip chip-accent"><span class="material-symbols-outlined" style="font-size:16px">desktop_windows</span>Desktop · Plant Ops</span>
+      <span class="chip chip-inverse"><span class="material-symbols-outlined" style="font-size:16px">smartphone</span>Mobile · Technician</span>
+    </div>
+  </header>
+
+  <!-- 2. Hero -->
+  <section class="col gap-8" style="padding: 12px 4px 0">
+    <span class="eyebrow">Design System · v2.0.0</span>
+    <h1 class="page-title">Kaizen UI — Lumina Slate Design System</h1>
+    <p class="muted" style="font-size:14px">Plain CSS custom properties · 4px grid · Inter / Geist / JetBrains Mono · Material Symbols</p>
+  </section>
+
+  <!-- 3. Tokens & Surfaces -->
+  <section class="glass card-pad">
+    <div class="row between section-head">
+      <div>
+        <div class="card-title"><span class="section-num">01</span>Tokens &amp; Surfaces</div>
+        <div class="card-sub">Shared <span class="mono">:root</span> tokens (docs/DESIGN.md §2.2–§2.6).</div>
+      </div>
+      <span class="chip"><span class="material-symbols-outlined" style="font-size:16px">palette</span>22 colour tokens</span>
+    </div>
+
+    <div class="grid swatch-grid">
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:#eef1fb"></i></div><div class="swatch-name">--bg-app</div><div class="swatch-val">#eef1fb</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:#0b1220"></i></div><div class="swatch-name">--ink</div><div class="swatch-val">#0b1220</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:#1e2638"></i></div><div class="swatch-name">--ink-2</div><div class="swatch-val">#1e2638</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:#334155"></i></div><div class="swatch-name">--text</div><div class="swatch-val">#334155</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:#64748b"></i></div><div class="swatch-name">--muted</div><div class="swatch-val">#64748b</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:#94a3b8"></i></div><div class="swatch-name">--faint</div><div class="swatch-val">#94a3b8</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:rgba(15,23,42,.07)"></i></div><div class="swatch-name">--hair</div><div class="swatch-val">rgba(15,23,42,.07)</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:rgba(15,23,42,.12)"></i></div><div class="swatch-name">--hair-strong</div><div class="swatch-val">rgba(15,23,42,.12)</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:#5b5bf0"></i></div><div class="swatch-name">--accent</div><div class="swatch-val">#5b5bf0</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:#7c6cff"></i></div><div class="swatch-name">--accent-2</div><div class="swatch-val">#7c6cff</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:rgba(91,91,240,.1)"></i></div><div class="swatch-name">--accent-soft</div><div class="swatch-val">rgba(91,91,240,.1)</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:rgba(91,91,240,.28)"></i></div><div class="swatch-name">--accent-ring</div><div class="swatch-val">rgba(91,91,240,.28)</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:#e5484d"></i></div><div class="swatch-name">--danger</div><div class="swatch-val">#e5484d</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:rgba(229,72,77,.1)"></i></div><div class="swatch-name">--danger-soft</div><div class="swatch-val">rgba(229,72,77,.1)</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:#f5a524"></i></div><div class="swatch-name">--warning</div><div class="swatch-val">#f5a524</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:rgba(245,165,36,.12)"></i></div><div class="swatch-name">--warning-soft</div><div class="swatch-val">rgba(245,165,36,.12)</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:#12a150"></i></div><div class="swatch-name">--success</div><div class="swatch-val">#12a150</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:rgba(18,161,80,.1)"></i></div><div class="swatch-name">--success-soft</div><div class="swatch-val">rgba(18,161,80,.1)</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:#3b82f6"></i></div><div class="swatch-name">--info</div><div class="swatch-val">#3b82f6</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:rgba(255,255,255,.58)"></i></div><div class="swatch-name">--glass-bg</div><div class="swatch-val">rgba(255,255,255,.58)</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:rgba(255,255,255,.78)"></i></div><div class="swatch-name">--glass-bg-strong</div><div class="swatch-val">rgba(255,255,255,.78)</div></div>
+      <div class="swatch inset"><div class="swatch-chip"><i style="background:rgba(255,255,255,.75)"></i></div><div class="swatch-name">--glass-border</div><div class="swatch-val">rgba(255,255,255,.75)</div></div>
+    </div>
+
+    <div class="eyebrow sub-label">Status semantics</div>
+    <div class="grid status-grid">
+      <div class="inset status-tile">
+        <div class="status-base" style="background:#e5484d"></div>
+        <div class="status-soft" style="background:var(--danger-soft);color:#c9343a">#c9343a on soft</div>
+        <div class="row between"><span class="chip chip-danger"><span class="dot live"></span>danger</span><span class="swatch-val">#e5484d</span></div>
+        <div class="radius-use" style="margin-top:8px">Anomaly / critical · banner meta <span class="mono">#9f1d22</span></div>
+      </div>
+      <div class="inset status-tile">
+        <div class="status-base" style="background:#f5a524"></div>
+        <div class="status-soft" style="background:var(--warning-soft);color:#b4710a">#b4710a on soft</div>
+        <div class="row between"><span class="chip chip-warning"><span class="dot"></span>warning</span><span class="swatch-val">#f5a524</span></div>
+        <div class="radius-use" style="margin-top:8px">Investigating / drift</div>
+      </div>
+      <div class="inset status-tile">
+        <div class="status-base" style="background:#12a150"></div>
+        <div class="status-soft" style="background:var(--success-soft);color:#0e8a43">#0e8a43 on soft</div>
+        <div class="row between"><span class="chip chip-success"><span class="dot"></span>success</span><span class="swatch-val">#12a150</span></div>
+        <div class="radius-use" style="margin-top:8px">Nominal / verified · streak <span class="mono">#22b573</span></div>
+      </div>
+      <div class="inset status-tile">
+        <div class="status-base" style="background:#5b5bf0"></div>
+        <div class="status-soft" style="background:var(--accent-soft);color:#5b5bf0">accent on soft</div>
+        <div class="row between"><span class="chip chip-accent"><span class="dot"></span>accent</span><span class="swatch-val">#5b5bf0</span></div>
+        <div class="radius-use" style="margin-top:8px">Active step / selection</div>
+      </div>
+      <div class="inset status-tile">
+        <div class="status-base" style="background:#3b82f6"></div>
+        <div class="status-soft" style="background:rgba(255,255,255,.7);color:var(--muted)">no soft fill</div>
+        <div class="row between"><span class="chip chip-info"><span class="dot"></span>info</span><span class="swatch-val">#3b82f6</span></div>
+        <div class="radius-use" style="margin-top:8px">Info</div>
+      </div>
+    </div>
+
+    <div class="eyebrow sub-label">Radius scale</div>
+    <div class="radius-strip">
+      <div><div class="radius-box" style="border-radius:var(--radius-sm)"></div><div class="radius-label">--radius-sm · 8px</div><div class="radius-use">Tag, Button sm, SegmentedControl buttons, logo tile</div></div>
+      <div><div class="radius-box" style="border-radius:var(--radius-md)"></div><div class="radius-label">--radius-md · 12px</div><div class="radius-use">Button md, IconButton, nav items, SegmentedControl track</div></div>
+      <div><div class="radius-box" style="border-radius:var(--radius-lg)"></div><div class="radius-label">--radius-lg · 16px</div><div class="radius-use">Inset, search, Toast, video stage, mobile Button</div></div>
+      <div><div class="radius-box" style="border-radius:var(--radius-xl)"></div><div class="radius-label">--radius-xl · 24px</div><div class="radius-use">GlassCard, Sidebar, SideDrawer, DemoController</div></div>
+      <div><div class="radius-box" style="border-radius:var(--radius-2xl)"></div><div class="radius-label">--radius-2xl · 32px</div><div class="radius-use">BottomSheet</div></div>
+      <div><div class="radius-box" style="border-radius:var(--radius-full);height:32px"></div><div class="radius-label">--radius-full · 999px</div><div class="radius-use">Chip, PillTab, ProgressBar, Dock, IconButton round</div></div>
+    </div>
+
+    <div class="eyebrow sub-label">Text styles</div>
+    <div class="inset" style="padding: 4px 16px">
+      <div class="type-row"><span class="type-token">Display</span><span class="kpi-value mono">88.4<span class="kpi-unit">%</span></span><span class="type-spec">Geist 36px / 700 / -0.04em · tabular · KpiValue</span></div>
+      <div class="type-row"><span class="type-token">Title L</span><span class="page-title">Line Overview</span><span class="type-spec">Geist 30px (incident 24px) / 700 / -0.03em · PageTitle</span></div>
+      <div class="type-row"><span class="type-token">Title M</span><span class="drawer-title">8D Report · INC-2041</span><span class="type-spec">Geist 20px / 700 / -0.02em · DrawerTitle</span></div>
+      <div class="type-row"><span class="type-token">Title S</span><span class="anomaly-title">CNC-02: Tool T07 Flank Wear</span><span class="type-spec">Geist 18px / 600 / -0.02em · AnomalyBanner title</span></div>
+      <div class="type-row"><span class="type-token">Heading</span><span class="card-title">Machine Fleet</span><span class="type-spec">Geist 16px / 600 / -0.01em · CardTitle, StepSection</span></div>
+      <div class="type-row"><span class="type-token">Body M</span><span class="body-m">Spindle vibration rose to 2.84 mm/s against a 1.50 mm/s baseline.</span><span class="type-spec">Inter 14px / 400 · body, nav</span></div>
+      <div class="type-row"><span class="type-token">Body S</span><span class="body-s">CNC-02 · Housing-B42 · Spindle load 78.6 %</span><span class="type-spec">Inter 13px / 400 · table cells, Button</span></div>
+      <div class="type-row"><span class="type-token">Caption</span><span class="card-sub" style="margin:0">Last 200 parts · Shift A</span><span class="type-spec">Inter 12px / 500 · CardSubtitle, Chip md</span></div>
+      <div class="type-row"><span class="type-token">Overline</span><span class="eyebrow">Operational loop</span><span class="type-spec">Inter 11px / 700 / 0.08em · Eyebrow, table head</span></div>
+      <div class="type-row"><span class="type-token">Label XS</span><span><span class="chip chip-solid chip-danger">Critical</span></span><span class="type-spec">Inter 11px / 700 / 0.06em · Chip sm, Chip solid</span></div>
+      <div class="type-row"><span class="type-token">Mono</span><span class="mono" style="font-size:13px">SOP-CNC-014 · WNMG-080408 · 1.42%</span><span class="type-spec">JetBrains Mono · inherits size</span></div>
+    </div>
+  </section>
+
+  <!-- 4. Banners & KPI Cards -->
+  <section class="glass card-pad">
+    <div class="section-head">
+      <div class="card-title"><span class="section-num">02</span>Banners &amp; KPI Cards</div>
+      <div class="card-sub">Tier 1 glance and Tier 2 focus on the Line Overview (§3.3–§3.4).</div>
+    </div>
+
+    <div class="glass tone-danger anomaly-banner">
+      <div class="anomaly-icon"><span class="material-symbols-outlined icon-fill">warning</span></div>
+      <div class="col gap-8">
+        <div class="row gap-8 wrap">
+          <span class="anomaly-title">CNC-02: Tool T07 Flank Wear</span>
+          <span class="chip chip-solid chip-danger">Critical</span>
+          <span class="chip chip-warning"><span class="dot live"></span>Investigating</span>
+        </div>
+        <div class="anomaly-meta mono">Defect rate 1.42% · UCL 0.25% · Housing-B42</div>
+      </div>
+      <div class="row anomaly-actions">
+        <span class="btn btn-primary">Open INC <span class="material-symbols-outlined">arrow_forward</span></span>
+        <span class="btn btn-ghost">Dismiss</span>
+      </div>
+    </div>
+
+    <div class="grid kpi-grid" style="margin-top:20px">
+      <div class="glass kpi-card">
+        <div class="row between"><span class="eyebrow">OEE</span><span class="chip chip-warning">-2.1%</span></div>
+        <div class="kpi-value mono">88.4<span class="kpi-unit">%</span></div>
+        <div class="kpi-hint">Target ≥ 90% · Shift A</div>
+        <div class="kpi-bars">
+          <div class="kpi-bar-row"><span>Availability</span><div class="progress bar-ink"><span style="width:95%"></span></div><span class="mono">95%</span></div>
+          <div class="kpi-bar-row"><span>Performance</span><div class="progress bar-ink"><span style="width:95%"></span></div><span class="mono">95%</span></div>
+          <div class="kpi-bar-row"><span>Quality</span><div class="progress bar-ink"><span style="width:98%"></span></div><span class="mono">98%</span></div>
+        </div>
+      </div>
+      <div class="glass kpi-card">
+        <div class="row between"><span class="eyebrow">Defect rate vs UCL</span><span class="chip chip-danger">5.6×</span></div>
+        <div class="kpi-value mono" style="color:#c9343a">1.42<span class="kpi-unit">%</span></div>
+        <div class="kpi-hint">UCL 0.25% · last 200 parts</div>
+        <div class="kpi-bars">
+          <div class="progress bar-danger spc-bar"><span style="width:89%"></span><i class="ucl-tick" style="left:15.6%"></i></div>
+          <div class="row between kpi-hint"><span>0%</span><span class="mono">UCL tick 0.25%</span><span>1.6%</span></div>
+        </div>
+      </div>
+      <div class="glass kpi-card">
+        <div class="row between"><span class="eyebrow">Active incidents</span><span class="chip chip-danger"><span class="material-symbols-outlined" style="font-size:12px">timer</span>SLA 12:40</span></div>
+        <div class="row gap-8" style="align-items:baseline"><span class="kpi-value mono">1</span><span class="kpi-hint">critical</span></div>
+        <div class="inset row between" style="padding:8px 12px">
+          <span class="mono" style="font-size:12px;font-weight:700">INC-2041</span>
+          <span class="chip chip-danger"><span class="dot live"></span>P1 Critical</span>
+        </div>
+        <div class="kpi-line row between" style="margin-top:auto"><span>Target MTTR</span><span class="mono">&lt; 15 mins</span></div>
+      </div>
+      <div class="glass kpi-card tone-success">
+        <div class="row between"><span class="eyebrow">ESG CO₂</span><span class="chip chip-success"><span class="material-symbols-outlined" style="font-size:12px">eco</span>Verified</span></div>
+        <div><div class="kpi-hint">CO₂e avoided</div><div class="kpi-value mono" style="color:#0e8a43">18.6<span class="kpi-unit">kg</span></div></div>
+        <div class="col gap-8" style="margin-top:auto">
+          <div class="split-bar"><span style="width:62%;background:#12a150"></span><span style="width:38%;background:rgba(18,161,80,.35)"></span></div>
+          <div class="row between kpi-hint"><span>Scrap 42 parts</span><span class="mono">61 kWh</span></div>
+          <span class="btn btn-ghost btn-sm" style="color:#0e8a43;align-self:flex-start;padding:0">Open Knowledge Base →</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="eyebrow sub-label">StatusReasonBanner</div>
+    <div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+      <div class="reason reason-warning"><span class="material-symbols-outlined">priority_high</span><div><strong>Escalated</strong>Root-cause confidence stayed below 0.7 after 3 evidence rounds.</div></div>
+      <div class="reason reason-danger"><span class="material-symbols-outlined">error</span><div><strong>Error</strong>Traceability query failed: BigQuery timeout after 30s.</div></div>
+      <div class="reason reason-neutral"><span class="material-symbols-outlined">do_not_disturb_on</span><div><strong>Dismissed</strong>Defect rate returned within UCL before tracing started.</div></div>
+    </div>
+  </section>
+
+  <!-- 5. Components & Tables -->
+  <section class="glass card-pad">
+    <div class="section-head">
+      <div class="card-title"><span class="section-num">03</span>Components &amp; Tables</div>
+      <div class="card-sub">Shared components (§3.1–§3.10).</div>
+    </div>
+
+    <div class="grid comp-grid">
+      <div class="inset comp-tile">
+        <div class="eyebrow">Button</div>
+        <div class="row wrap gap-8">
+          <span class="btn btn-primary">Open INC <span class="material-symbols-outlined">arrow_forward</span></span>
+          <span class="btn"><span class="material-symbols-outlined">monitoring</span>Secondary</span>
+          <span class="btn btn-accent"><span class="material-symbols-outlined">auto_awesome</span>Ask Agent Team</span>
+          <span class="btn btn-destructive"><span class="material-symbols-outlined">block</span>Reject</span>
+          <span class="btn btn-ghost">Dismiss</span>
+          <span class="btn btn-sm">Size sm</span>
+          <span class="btn btn-locked"><span class="material-symbols-outlined">lock</span>Approve · 38/50 verified</span>
+        </div>
+      </div>
+      <div class="inset comp-tile">
+        <div class="eyebrow">Chip &amp; Tag</div>
+        <div class="row wrap gap-8">
+          <span class="chip chip-accent"><span class="dot"></span>Tracing</span>
+          <span class="chip chip-danger"><span class="dot live"></span>1 Active Anomaly</span>
+          <span class="chip chip-success"><span class="dot"></span>Nominal</span>
+          <span class="chip chip-warning"><span class="dot"></span>Drift</span>
+          <span class="chip chip-inverse"><span class="dot"></span>Shift A</span>
+          <span class="chip chip-solid chip-danger">Critical</span>
+          <span class="tag">T07</span>
+          <span class="tag tag-inverse">D4</span>
+        </div>
+      </div>
+      <div class="inset comp-tile">
+        <div class="eyebrow">SegmentedControl · sm</div>
+        <div class="seg">
+          <span class="active">5-Whys <span class="count">5</span></span>
+          <span>Ishikawa <span class="count">6</span></span>
+          <span>Evidence <span class="count">4</span></span>
+        </div>
+      </div>
+      <div class="inset comp-tile">
+        <div class="eyebrow">PillTab · sm</div>
+        <div class="row gap-8">
+          <span class="pill pill-danger"><span class="dot"></span>Anomaly</span>
+          <span class="pill"><span class="dot" style="color:#12a150"></span>Nominal</span>
+          <span class="pill">All</span>
+          <span class="pill pill-on">Required</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass" style="margin-top:20px;overflow:hidden">
+      <div class="fleet-toolbar row between">
+        <div class="row gap-12">
+          <span class="card-title">Machine Fleet</span>
+          <span class="pill pill-danger"><span class="dot"></span>Anomaly</span>
+          <span class="pill">Nominal</span>
+          <span class="pill">All</span>
+        </div>
+        <span class="inset search"><span class="material-symbols-outlined" style="font-size:16px">search</span>Search machines…</span>
+      </div>
+      <table class="fleet-table">
+        <thead>
+          <tr><th>Machine ID</th><th>Part Model</th><th>Vibration RMS</th><th>Spindle Load</th><th>Status</th><th>Incident ID</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          <tr class="row-hot">
+            <td class="machine-id">CNC-02</td><td>Housing-B42</td><td class="mono">2.84 mm/s</td><td class="mono">78.6 %</td>
+            <td><span class="chip chip-danger"><span class="dot live"></span>Critical</span></td>
+            <td><span class="inc-link">INC-2041</span></td>
+            <td><span class="btn btn-primary btn-sm">OPEN INC →</span></td>
+          </tr>
+          <tr>
+            <td class="machine-id">CNC-01</td><td>Shaft-A12</td><td class="mono">1.46 mm/s</td><td class="mono">42.1 %</td>
+            <td><span class="chip chip-success"><span class="dot"></span>Nominal</span></td>
+            <td class="muted">—</td>
+            <td><span class="btn btn-sm">Diagnostics</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid comp-grid" style="margin-top:20px">
+      <div class="glass card-pad">
+        <div class="row between" style="margin-bottom:12px">
+          <div>
+            <div class="card-title"><span class="material-symbols-outlined" style="color:#12a150">verified</span>StreakGate</div>
+            <div class="card-sub">Approval unlocks at 50 consecutive clean parts (Invariant #3).</div>
+          </div>
+          <span class="mono" style="font-size:18px;font-weight:700">38<span class="muted">/50</span></span>
+        </div>
+        <div class="streak">
+          <i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i>
+          <i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="next"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <div class="col gap-8" style="margin-top:16px">
+          <div class="progress"><span style="width:76%"></span></div>
+          <div class="row between">
+            <span class="kpi-hint">12 more clean parts in a row before sign-off.</span>
+            <span class="btn btn-sm btn-locked"><span class="material-symbols-outlined">lock</span>Approve closure</span>
+          </div>
+        </div>
+      </div>
+      <div class="col gap-8">
+        <div class="glass step"><span class="step-num done"><span class="material-symbols-outlined" style="font-size:16px">check</span></span><div class="col"><span class="step-title">Detect &amp; trace</span><span class="step-summary">Defect spike on CNC-02, 214 parts traced</span></div><span class="chip chip-success" style="margin-left:auto">Done</span></div>
+        <div class="glass step active"><span class="step-num active">2</span><div class="col"><span class="step-title">Root cause analysis</span><span class="step-summary">Tool T07 flank wear · confidence 0.82</span></div><span class="chip chip-accent" style="margin-left:auto"><span class="dot live"></span>Running</span></div>
+        <div class="glass step pending"><span class="step-num pending">3</span><div class="col"><span class="step-title">Guided repair</span><span class="step-summary">Waiting for root-cause sign-off</span></div><span class="chip" style="margin-left:auto"><span class="material-symbols-outlined" style="font-size:12px">lock</span>Waiting</span></div>
+        <div class="toast glass-dark"><span class="material-symbols-outlined icon-fill" style="color:#12a150">check_circle</span>8D report draft saved for INC-2041.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Mobile Surface -->
+  <section class="glass card-pad">
+    <div class="section-head">
+      <div class="card-title"><span class="section-num">04</span>Mobile Surface</div>
+      <div class="card-sub">Technician app · 396 × 852 frame · same components, mobile colour deltas (§4).</div>
+    </div>
+
+    <div class="mobile-layout">
+      <div class="device-slot">
+        <div class="device m-app">
+          <div class="screen">
+            <div class="blob" style="width:220px;height:220px;left:-60px;top:40px;background:#c4bcff"></div>
+            <div class="blob" style="width:200px;height:200px;right:-50px;top:260px;background:#a6dcff"></div>
+            <div class="blob" style="width:220px;height:220px;left:60px;bottom:40px;background:#ffd3e8"></div>
+            <div class="island"></div>
+            <div class="status-bar row between"><span>9:41</span><span class="material-symbols-outlined" style="font-size:16px">battery_full</span></div>
+            <div class="m-content">
+              <div class="row between">
+                <div class="row gap-8">
+                  <div class="m-brand"><span class="material-symbols-outlined" style="font-size:20px">precision_manufacturing</span></div>
+                  <div class="col"><span style="font-weight:700;font-size:14px">kAIgen</span><span class="card-sub row gap-4"><span style="width:6px;height:6px;border-radius:999px;background:#30c25a;display:inline-block"></span>Live</span></div>
+                </div>
+                <div class="m-avatar">TL</div>
+              </div>
+              <div><h1 class="page-title">Work List</h1><div class="card-sub">Jobs waiting on you right now.</div></div>
+              <div class="seg">
+                <span class="active">Active <span class="count">2</span></span>
+                <span>Processing <span class="count">1</span></span>
+                <span>Completed <span class="count">3</span></span>
+              </div>
+              <div class="eyebrow">Collect evidence</div>
+              <div class="glass wo-card">
+                <span class="bar" style="background:linear-gradient(180deg,#ff9500,#ff3b30)"></span>
+                <div class="row between">
+                  <div class="row gap-4"><span class="chip chip-sm chip-danger"><span class="dot live"></span>Needs evidence</span><span class="chip chip-sm chip-danger">P1</span><span class="chip chip-sm">Live</span></div>
+                  <span class="card-sub">2m ago</span>
+                </div>
+                <div class="row gap-12">
+                  <div class="m-thumb"><span class="material-symbols-outlined">photo_camera</span></div>
+                  <div class="col">
+                    <span class="card-title">Tool T07 flank wear</span>
+                    <span class="mono" style="font-size:11px;color:var(--m-ink-3)">#INC-2041 · CNC-02</span>
+                    <span class="body-m">Photo the T07 insert edge and the latest part surface.</span>
+                  </div>
+                </div>
+                <div class="col gap-4">
+                  <div class="row between card-sub"><span>Evidence collected 1 of 3</span><span class="mono">33%</span></div>
+                  <div class="m-progress"><span style="width:33%"></span></div>
+                </div>
+                <div class="row between" style="border-top:1px solid var(--hair);padding-top:12px">
+                  <span class="chip"><span class="material-symbols-outlined" style="font-size:16px">photo_library</span>2 shots needed</span>
+                  <span class="btn btn-accent btn-sm">Collect</span>
+                </div>
+              </div>
+              <div class="eyebrow">Repairs</div>
+              <div class="glass wo-card">
+                <span class="bar" style="background:#5b4cf5"></span>
+                <div class="row gap-4"><span class="chip chip-sm chip-accent">Ready to fix</span><span class="chip chip-sm chip-warning">P2</span></div>
+                <span class="card-title">Coolant nozzle realignment</span>
+              </div>
+            </div>
+            <div class="dock">
+              <div class="dock-cell on"><span class="material-symbols-outlined" style="font-size:24px">assignment</span>Work List</div>
+              <div class="dock-cell"><span class="material-symbols-outlined" style="font-size:24px">notifications</span>Notifications<span class="badge">2</span></div>
+              <div class="dock-cell"><span class="material-symbols-outlined" style="font-size:24px">tune</span>Settings</div>
+            </div>
+            <div class="home-ind"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col gap-16">
+        <div class="inset" style="padding:4px">
+          <table class="spec-table">
+            <thead><tr><th>Token</th><th>Desktop</th><th>Mobile</th></tr></thead>
+            <tbody>
+              <tr><td>canvas</td><td class="mono"><i class="sw" style="background:#eef1fb"></i>#eef1fb</td><td class="mono"><i class="sw" style="background:#eef1f8"></i>#eef1f8 + 3 blobs, blur 48, opacity .6</td></tr>
+              <tr><td>ink-2</td><td class="mono"><i class="sw" style="background:#1e2638"></i>#1e2638</td><td class="mono"><i class="sw" style="background:#3b4357"></i>#3b4357</td></tr>
+              <tr><td>ink-3 / ink-4</td><td class="mono">—</td><td class="mono"><i class="sw" style="background:#7b8398"></i>#7b8398 / #a9b0c0</td></tr>
+              <tr><td>accent</td><td class="mono"><i class="sw" style="background:#5b5bf0"></i>#5b5bf0 / #7c6cff</td><td class="mono"><i class="sw" style="background:#5b4cf5"></i>#5b4cf5 / #8b7bff</td></tr>
+              <tr><td>danger</td><td class="mono"><i class="sw" style="background:#e5484d"></i>#e5484d</td><td class="mono"><i class="sw" style="background:#ff3b30"></i>#ff3b30 (chip #d70015)</td></tr>
+              <tr><td>warning</td><td class="mono"><i class="sw" style="background:#f5a524"></i>#f5a524</td><td class="mono"><i class="sw" style="background:#ff9500"></i>#ff9500 (chip #b25000)</td></tr>
+              <tr><td>success</td><td class="mono"><i class="sw" style="background:#12a150"></i>#12a150</td><td class="mono"><i class="sw" style="background:#30c25a"></i>#30c25a (chip #1b8a3c)</td></tr>
+              <tr><td>info</td><td class="mono"><i class="sw" style="background:#3b82f6"></i>#3b82f6</td><td class="mono"><i class="sw" style="background:#0a84ff"></i>#0a84ff (chip #0062cc)</td></tr>
+              <tr><td>teal</td><td class="mono">—</td><td class="mono"><i class="sw" style="background:#32ade6"></i>#32ade6</td></tr>
+              <tr><td>glass fill</td><td class="mono">rgba(255,255,255,.58)</td><td class="mono">rgba(255,255,255,.56)</td></tr>
+              <tr><td>Button primary</td><td>ink gradient</td><td>solid <i class="sw" style="background:#0d0f17"></i><span class="mono">#0d0f17</span> · accent gradient</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inset" style="padding:4px">
+          <table class="spec-table">
+            <thead><tr><th>Control</th><th>Visual size</th><th>Minimum hit area</th></tr></thead>
+            <tbody>
+              <tr><td>Button lg</td><td class="mono">48</td><td class="mono ok">48</td></tr>
+              <tr><td>mic</td><td class="mono">56</td><td class="mono ok">56</td></tr>
+              <tr><td>shutter</td><td class="mono">72</td><td class="mono ok">72</td></tr>
+              <tr><td>NextStepButton</td><td class="mono">48</td><td class="mono ok">48</td></tr>
+              <tr><td>Dock cell</td><td class="mono">56 × ~116</td><td class="mono ok">56 × ~116</td></tr>
+              <tr><td>list rows</td><td class="mono">56–72</td><td class="mono ok">56–72</td></tr>
+              <tr><td>Button md</td><td class="mono">40</td><td class="mono ok">44</td></tr>
+              <tr><td>IconButton / back / camera tools</td><td class="mono">40</td><td class="mono ok">44 × 44</td></tr>
+              <tr><td>SegmentedControl md buttons</td><td class="mono">36</td><td class="mono ok">44</td></tr>
+              <tr><td>Button sm</td><td class="mono">32</td><td class="mono ok">44</td></tr>
+              <tr><td>Switch</td><td class="mono">52 × 32</td><td class="mono ok">52 × 44</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Footer -->
+  <footer class="glass footer">Source: <span class="mono">docs/DESIGN.md</span> · <span class="mono">docs/wireframes/</span></footer>
+
+</div>
+</body>
+</html>

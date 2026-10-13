@@ -29,10 +29,11 @@ output "kb_bucket" {
   value       = google_storage_bucket.kb.name
 }
 
-output "hosting_site_id" {
-  value = google_firebase_hosting_site.dashboard.site_id
+output "hosting_sites" {
+  description = "Firebase Hosting site ID per firebase.json target (web, mobile)."
+  value       = { for target, site in google_firebase_hosting_site.apps : target => site.site_id }
 }
 
-output "hosting_url" {
-  value = "https://${local.hosting_site_id}.web.app"
+output "hosting_urls" {
+  value = { for target, site in local.hosting_sites : target => "https://${site}.web.app" }
 }

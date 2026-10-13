@@ -106,7 +106,6 @@ application_default_credentials.json
 *.tfvars
 !*.tfvars.example
 .firebaserc
-.firebase/
 
 # -----------------------------------------------------------------------------
 # Data & Models (large binary / generated files)

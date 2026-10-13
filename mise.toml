@@ -291,7 +291,7 @@ run = 'rclone copy .cache/gdrive/{{arg(name="folder")}} gdrive:{{arg(name="folde
 # GCP Infrastructure (Terraform, infra/) & Deployment
 # Set TF_VAR_project_id (and optionally TF_VAR_billing_account_id) in mise.local.toml.
 # Order: infra:bootstrap → infra:init → infra:apply → deploy:backend → infra:seed
-#        → kb:import → deploy:frontend
+#        → kb:import → deploy:frontend (deploy:web + deploy:mobile)
 # =============================================================================
 
 [tasks."infra:bootstrap"]
@@ -318,14 +318,35 @@ run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && env
 description = "Upload data/knowledge_base to GCS and import it into the Vertex AI Search datastore"
 run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && python scripts/import_knowledge_base.py --project "$TF_VAR_project_id" --bucket "$(terraform -chdir=infra/terraform output -raw kb_bucket)"'
 
-[tasks."deploy:frontend"]
-description = "Build the dashboard and deploy it to the Terraform-managed Firebase Hosting site"
+[tasks."firebase:targets"]
+description = "Map firebase.json hosting targets web/mobile to the Terraform-managed sites (.firebaserc)"
 run = [
-  ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && cd frontend && npm install && npm run build',
-  'rm -f .firebaserc',
-  'firebase target:apply hosting dashboard "$(terraform -chdir=infra/terraform output -raw hosting_site_id)" --project "$TF_VAR_project_id"',
-  'firebase deploy --only hosting:dashboard --project "$TF_VAR_project_id"',
+  ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && rm -f .firebaserc',
+  'firebase target:apply hosting web "$(terraform -chdir=infra/terraform output -json hosting_sites | jq -r .web)" --project "$TF_VAR_project_id"',
+  'firebase target:apply hosting mobile "$(terraform -chdir=infra/terraform output -json hosting_sites | jq -r .mobile)" --project "$TF_VAR_project_id"',
 ]
+
+[tasks."deploy:web"]
+description = "Build apps/web and deploy it to Firebase Hosting (target web)"
+depends = ["firebase:targets"]
+run = [
+  { task = "install:web" },
+  { task = "web:build" },
+  'firebase deploy --only hosting:web --project "$TF_VAR_project_id"',
+]
+
+[tasks."deploy:mobile"]
+description = "Build apps/mobile and deploy it to Firebase Hosting (target mobile)"
+depends = ["firebase:targets"]
+run = [
+  { task = "install:mobile" },
+  { task = "mobile:build" },
+  'firebase deploy --only hosting:mobile --project "$TF_VAR_project_id"',
+]
+
+[tasks."deploy:frontend"]
+description = "Deploy both frontend apps (apps/web + apps/mobile) to Firebase Hosting"
+depends = ["deploy:web", "deploy:mobile"]
 
 [tasks."deploy:backend"]
 description = "Build the backend image, push it and roll the Terraform-managed Cloud Run service"

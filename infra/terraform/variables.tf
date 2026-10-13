@@ -57,8 +57,8 @@ variable "gdrive_folder_id" {
   default     = null
 }
 
-variable "hosting_site_id" {
-  description = "Firebase Hosting site ID; defaults to <project_id>-kaizen."
+variable "hosting_site_prefix" {
+  description = "Prefix of the Firebase Hosting sites <prefix>-web and <prefix>-mobile; defaults to project_id."
   type        = string
   default     = null
 }

@@ -25,6 +25,11 @@ locals {
     "quality-events" = "quality-events-sub"
   }
 
-  hosting_site_id = coalesce(var.hosting_site_id, "${var.project_id}-kaizen")
-  runtime_member  = "serviceAccount:${google_service_account.backend.email}"
+  # firebase.json hosting target => site ID (apps/web, apps/mobile).
+  hosting_site_prefix = coalesce(var.hosting_site_prefix, var.project_id)
+  hosting_sites = {
+    web    = "${local.hosting_site_prefix}-web"
+    mobile = "${local.hosting_site_prefix}-mobile"
+  }
+  runtime_member = "serviceAccount:${google_service_account.backend.email}"
 }

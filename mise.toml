@@ -32,6 +32,9 @@ WEB_PORT         = "{{ get_env(name='WEB_PORT', default='3000') }}"
 MOBILE_PORT      = "{{ get_env(name='MOBILE_PORT', default='3001') }}"
 API_PROXY_TARGET = "{{ get_env(name='API_PROXY_TARGET', default='http://localhost:' ~ env.API_PORT) }}"
 AI_PROVIDER      = "mock"
+# Demo login accounts (prod: TF_VAR_auth_users in mise.local.toml) + token signing key
+AUTH_USERS       = '[{"username":"technician","password":"4NpqbcqiOB4v9Ry6","role":"technician","display_name":"Red Panda"},{"username":"shiftleader","password":"REA5Dvx8VjGKdccg","role":"shift_leader","display_name":"Sea Otter"}]'
+AUTH_SECRET      = "kaizen-dev-auth-secret-not-for-production"
 RCLONE_CONFIG    = "{{config_root}}/.rclone/rclone.conf"
 # Prefix of globally unique GCP names: <prefix>-tfstate, -kb (GCS) and -web, -mobile (Hosting)
 TF_VAR_global_prefix = "kaizen-lab"
@@ -142,27 +145,27 @@ run = "uvicorn backend.api.main:app --host $API_HOST --port $API_PORT"
 
 [tasks.demo]
 description = "Inject Scenario 1 (CNC-02 Tool Wear) for deterministic 90-second multi-agent demo"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H 'Content-Type: application/json' -d '{\"scenario\":\"cnc_tool_wear\",\"mode\":\"demo\"}' | python -m json.tool"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'Content-Type: application/json' -d '{\"scenario\":\"cnc_tool_wear\",\"mode\":\"demo\"}' | python -m json.tool"
 
 [tasks."demo:fast"]
 description = "Fast-forward injection of Scenario 1 (~8 seconds)"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H 'Content-Type: application/json' -d '{\"scenario\":\"cnc_tool_wear\",\"mode\":\"fast\"}' | python -m json.tool"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'Content-Type: application/json' -d '{\"scenario\":\"cnc_tool_wear\",\"mode\":\"fast\"}' | python -m json.tool"
 
 [tasks."demo:scenario2"]
 description = "Inject Scenario 2 (IM-05 Damp Material) for 90-second demo"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H 'Content-Type: application/json' -d '{\"scenario\":\"im_damp_material\",\"mode\":\"demo\"}' | python -m json.tool"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'Content-Type: application/json' -d '{\"scenario\":\"im_damp_material\",\"mode\":\"demo\"}' | python -m json.tool"
 
 [tasks."demo:scenario2:fast"]
 description = "Fast-forward injection of Scenario 2 (~8 seconds)"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H 'Content-Type: application/json' -d '{\"scenario\":\"im_damp_material\",\"mode\":\"fast\"}' | python -m json.tool"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'Content-Type: application/json' -d '{\"scenario\":\"im_damp_material\",\"mode\":\"fast\"}' | python -m json.tool"
 
 [tasks."sim:reset"]
 description = "Reset simulation state, blackboard, and BigQuery buffers to baseline"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/reset | python -m json.tool"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/reset -H \"Authorization: Bearer $(python scripts/dev_token.py)\" | python -m json.tool"
 
 [tasks."sim:status"]
 description = "Get current simulation running status"
-run = "curl -s http://localhost:$API_PORT/api/simulation/status | python -m json.tool"
+run = "curl -s http://localhost:$API_PORT/api/simulation/status -H \"Authorization: Bearer $(python scripts/dev_token.py)\" | python -m json.tool"
 
 [tasks.test]
 description = "Run the pytest test suite"

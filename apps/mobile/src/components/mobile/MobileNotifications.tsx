@@ -4,7 +4,6 @@ import MobileHeader from './MobileHeader';
 
 interface MobileNotificationsProps {
   items: MobileNotification[];
-  initials: string;
   onOpen: (n: MobileNotification) => void;
   onMarkAllRead: () => void;
 }
@@ -12,7 +11,6 @@ interface MobileNotificationsProps {
 /** Simple grouped notification list. */
 export default function MobileNotifications({
   items,
-  initials,
   onOpen,
   onMarkAllRead,
 }: MobileNotificationsProps): React.ReactElement {
@@ -24,7 +22,6 @@ export default function MobileNotifications({
       <MobileHeader
         title="Notifications"
         subtitle={unread ? `${unread} unread` : 'You’re all caught up'}
-        initials={initials}
         trailing={
           unread > 0 ? (
             <button className="m-btn xs glass" onClick={onMarkAllRead} id="m-mark-read">

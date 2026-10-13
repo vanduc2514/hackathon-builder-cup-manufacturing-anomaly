@@ -4,20 +4,23 @@ import MobileHeader from './MobileHeader';
 
 interface MobileSettingsProps {
   profile: TechnicianProfile;
-  initials: string;
   onChange: (profile: TechnicianProfile) => void;
+  onSignOut: () => void;
 }
 
-type TextKey = 'fullName' | 'phone' | 'email' | 'leadName';
+type TextKey = 'phone' | 'email' | 'leadName';
 type ToggleKey = 'voiceGuidance' | 'pushAlerts' | 'haptics';
 
 /** Personal information and a few preferences. Kept deliberately small. */
-export default function MobileSettings({ profile, initials, onChange }: MobileSettingsProps): React.ReactElement {
+export default function MobileSettings({
+  profile,
+  onChange,
+  onSignOut,
+}: MobileSettingsProps): React.ReactElement {
   const set = <K extends keyof TechnicianProfile>(key: K, value: TechnicianProfile[K]) =>
     onChange({ ...profile, [key]: value });
 
   const textFields: { key: TextKey; label: string; type: string }[] = [
-    { key: 'fullName', label: 'Name', type: 'text' },
     { key: 'phone', label: 'Phone', type: 'tel' },
     { key: 'email', label: 'Email', type: 'email' },
     { key: 'leadName', label: 'Shift Leader', type: 'text' },
@@ -31,13 +34,14 @@ export default function MobileSettings({ profile, initials, onChange }: MobileSe
 
   return (
     <>
-      <MobileHeader title="Settings" initials={initials} />
+      <MobileHeader title="Settings" />
       <div className="m-screen">
         <section className="m-glass m-card m-row" style={{ gap: 14 }}>
-          <div className="m-avatar lg">{initials}</div>
+          <div className="m-avatar lg">
+            <span className="material-symbols-outlined">engineering</span>
+          </div>
           <div className="m-col" style={{ gap: 2, flex: 1 }}>
-            <div className="m-h2">{profile.fullName || 'Your name'}</div>
-            <div className="m-sub">{profile.role}</div>
+            <div className="m-h2">{profile.role}</div>
             <div className="m-row" style={{ gap: 6, marginTop: 4 }}>
               <span className="m-chip plain m-mono">{profile.employeeId}</span>
               <span className="m-chip indigo plain">{profile.bay}</span>
@@ -96,7 +100,7 @@ export default function MobileSettings({ profile, initials, onChange }: MobileSe
           ))}
         </section>
 
-        <button className="m-btn glass" style={{ color: '#d70015' }} id="m-sign-out">
+        <button className="m-btn glass" style={{ color: '#d70015' }} id="m-sign-out" onClick={onSignOut}>
           <span className="material-symbols-outlined">logout</span>
           Sign out
         </button>

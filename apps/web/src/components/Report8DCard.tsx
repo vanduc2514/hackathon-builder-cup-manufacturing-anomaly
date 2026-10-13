@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import type { IncidentState } from '../types';
 import type { ToastTone } from '../App';
+import { authFetch } from '../lib/auth';
 import {
   FALLBACK_FIVE_WHYS,
   formatClock,
@@ -47,7 +48,7 @@ export default function Report8DCard({ incident, isLive, onNotify }: Report8DCar
   const approve = async () => {
     setSubmitting(true);
     try {
-      const res = await fetch('/api/incidents/approve', {
+      const res = await authFetch('/api/incidents/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ incident_id: incident.incident_id }),

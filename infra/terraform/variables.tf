@@ -109,3 +109,15 @@ variable "budget_currency" {
   type        = string
   default     = "USD"
 }
+
+variable "auth_users" {
+  description = "JSON list of login accounts [{username,password,role,display_name}] for Cloud Run AUTH_USERS; set TF_VAR_auth_users in mise.local.toml. \"[]\" disables login."
+  type        = string
+  sensitive   = true
+  default     = "[]"
+
+  validation {
+    condition     = can(tolist(jsondecode(var.auth_users)))
+    error_message = "auth_users must be a JSON list of account objects."
+  }
+}

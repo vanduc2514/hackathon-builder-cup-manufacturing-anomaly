@@ -2,7 +2,9 @@
  * Thin fetch wrappers for the FastAPI backend. REST URLs are relative (`/api/...`) so the
  * Vite proxy (dev) and Firebase Hosting rewrite (prod) route them; SSE and WebSocket go to
  * VITE_STREAM_ORIGIN when set, because the Hosting rewrite cannot carry streams.
+ * Every call carries the session token (REST: Bearer header; streams: `?token=`).
  */
+import { authFetch, withToken } from './auth';
 import type {
   EvidenceUploadResponse,
   GeminiLiveServiceStatus,
@@ -20,7 +22,7 @@ export function streamUrl(path: string): string {
 }
 
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  const res = await authFetch(url, init);
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`;
     try {
@@ -81,7 +83,7 @@ export function geminiLiveSocketUrl(sessionId?: string, resumptionHandle?: strin
   if (sessionId) params.set('session_id', sessionId);
   if (resumptionHandle) params.set('resumption_handle', resumptionHandle);
   const q = params.toString();
-  return `${base}/api/gemini-live/ws${q ? `?${q}` : ''}`;
+  return withToken(`${base}/api/gemini-live/ws${q ? `?${q}` : ''}`);
 }
 
 /** Turns a data: URL (from a canvas capture) into a Blob for upload. */

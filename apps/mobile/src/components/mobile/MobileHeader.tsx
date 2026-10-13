@@ -12,7 +12,6 @@ const STREAM_LABEL: Record<StreamStatus, { text: string; color: string }> = {
 interface MobileHeaderProps {
   title: string;
   subtitle?: string;
-  initials: string;
   trailing?: React.ReactNode;
 }
 
@@ -20,7 +19,6 @@ interface MobileHeaderProps {
 export default function MobileHeader({
   title,
   subtitle,
-  initials,
   trailing,
 }: MobileHeaderProps): React.ReactElement {
   const stream = STREAM_LABEL[useContext(StreamStatusContext)];
@@ -40,7 +38,7 @@ export default function MobileHeader({
           </div>
         </div>
         <div className="m-avatar" aria-label="Your profile">
-          {initials}
+          <span className="material-symbols-outlined">engineering</span>
         </div>
       </header>
       <div className="m-screen" style={{ gap: 0, paddingBottom: 12 }}>

@@ -36,7 +36,7 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 > **Mobile:** 396×852 device frame, 44px status bar, floating 64px `Dock` (Work List / Notifications / Settings).
 
 ```text
- ╭──────────────────────╮  ╭─────────────────────────────╮        (●) 1 Active Anomaly  ╭ ⌘K Search… ╮ (♪) John Tran (JT)
+ ╭──────────────────────╮  ╭─────────────────────────────╮        (●) 1 Active Anomaly  ╭ ⌘K Search… ╮ (♪) Shift Leader (◉)
  │ [K] KAIZEN AGENT     │  │ Cell Line 1 / Line Overview │                              ╰────────────╯
  │ ╭ Cell Line 1 …    ╮ │  ╰─────────────────────────────╯
  │ OPERATIONAL LOOP     │  PageTitle                                         [ Button ] [■ Button primary ■]
@@ -47,7 +47,7 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
  │ ▤ Knowledge Base     │                                                          ╭─ Toast (DarkGlass) ╮
  │ ☰ SOP Change Log     │                                                          ╰────────────────────╯
  │ (●) 24 ms  [Shift A] │
- │ (JT) John Tran       │
+ │ (◉) Shift Leader     │
  ╰──────────────────────╯
 ```
 
@@ -56,7 +56,7 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 ## 3. Screen 1: Line Overview & Machine Fleet
 
 > **Full Specification:** [`01_line_overview.md`](./01_line_overview.md)  
-> **Target Persona:** Shift Leader (John Tran)  
+> **Target Persona:** Shift Leader  
 > **Single JTBD:** Glance at line health in <3s, detect anomalies immediately, open the incident with 1 click.
 
 ```text
@@ -104,7 +104,7 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 ## 5. Screen 3: Incident Command
 
 > **Full Specification:** [`03_incident_workspace.md`](./03_incident_workspace.md)  
-> **Target Personas:** Shift Leader (John Tran) & QA Engineer (Huong Pham)  
+> **Target Personas:** Shift Leader & QA Engineer (Hannah Parker)  
 > **Single JTBD:** Follow the 5-step Agent Team investigation, watch the 50-good-part streak gate, and sign off the 8D.
 
 ```text

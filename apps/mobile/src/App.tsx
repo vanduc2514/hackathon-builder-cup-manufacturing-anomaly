@@ -1,11 +1,8 @@
 import React from 'react';
-import MobileDeviceFrame from './components/mobile/MobileDeviceFrame';
-import { StreamStatusContext } from './components/mobile/streamStatusContext';
-import { useIncidentStream } from './hooks/useIncidentStream';
+import AuthGate from './components/mobile/AuthGate';
+import IncidentDevice from './components/mobile/IncidentDevice';
 
 export default function App(): React.ReactElement {
-  const { incident, status } = useIncidentStream();
-
   return (
     <div
       style={{
@@ -16,9 +13,9 @@ export default function App(): React.ReactElement {
       }}
     >
       <main>
-        <StreamStatusContext.Provider value={status}>
-          <MobileDeviceFrame incident={incident} />
-        </StreamStatusContext.Provider>
+        <AuthGate>
+          <IncidentDevice />
+        </AuthGate>
       </main>
     </div>
   );

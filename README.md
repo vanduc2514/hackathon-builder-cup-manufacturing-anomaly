@@ -88,6 +88,8 @@ Local development works without GCP credentials — start the local BigQuery emu
 
 Frontend dev ports come from `WEB_PORT` (3000) and `MOBILE_PORT` (3001), and the Vite `/api` proxy target from `API_PROXY_TARGET` (defaults to `http://localhost:$API_PORT`), all in `mise.toml`; override them in `mise.local.toml`.
 
+Both apps open on a login screen. Every `/api/*` route needs a token from `POST /api/auth/login`; only `/health`, `/` and `/api/auth/*` are public. The web dashboard signs in the shift leader and the mobile app signs in the technician: each screen shows the role and asks only for the password (with a show/hide toggle; the browser can save it). Accounts and passwords come from `AUTH_USERS` in `mise.toml` (dev: `technician` / `4NpqbcqiOB4v9Ry6`, `shiftleader` / `REA5Dvx8VjGKdccg`); `/api/auth/accounts` never returns passwords. Each account keeps a `display_name` on the backend, but the apps only show the role name. Roles are display-only. The `demo*` and `sim:*` curl tasks fetch a token via `scripts/dev_token.py`. In production the passwords come from the private `TF_VAR_auth_users` (same JSON shape) in `mise.local.toml`, followed by `mise run infra:apply`. If it is unset, login returns 503.
+
 ### 3. Run the full stack
 
 ```bash

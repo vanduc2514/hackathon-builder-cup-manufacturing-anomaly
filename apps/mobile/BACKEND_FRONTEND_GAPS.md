@@ -157,7 +157,7 @@ Testing note: with `AI_PROVIDER=mock` the RCA confidence is always ≥ 0.88, so 
 
 | Data point | Hardcoded value | Backend has |
 |---|---|---|
-| Technician profile | `Minh Tran`, `TECH-0427`, role, phone, email, `Shift A · 06:00–14:00`, `Bay 4`, `leadName` | No auth or user endpoint |
+| Technician profile | `TECH-0427`, role, phone, email, `Shift A · 06:00–14:00`, `Bay 4`, `leadName` | Only the role comes from the login session; no user profile endpoint |
 | Preferences | `language`, `voiceGuidance`, `pushAlerts`, `haptics` | Not saved anywhere (local state only) |
 
 ---

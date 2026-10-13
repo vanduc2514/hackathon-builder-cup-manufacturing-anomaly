@@ -8,6 +8,7 @@ import { ACTIVE_PRODUCT, productIncidents } from './lib/incident';
 import { isIncidentOpen, type EsgLedgerEntry } from './lib/fleet';
 import { buildSolution } from './lib/eightD';
 import { streamUrl } from './lib/api';
+import { authFetch, withToken } from './lib/auth';
 import type { IncidentState, SimulationStatusResponse } from './types';
 
 export type ToastTone = 'success' | 'error' | 'info';
@@ -97,7 +98,7 @@ export default function App(): React.ReactElement {
   }, [toast]);
 
   const refreshIncident = useCallback(() => {
-    fetch('/api/incidents/current')
+    authFetch('/api/incidents/current')
       .then((res) => (res.ok ? res.json() : null))
       .then((data: IncidentState | null) => {
         if (data) setIncident(data);
@@ -122,7 +123,7 @@ export default function App(): React.ReactElement {
     };
 
     const initEventSource = (path: string): EventSource => {
-      const es = new EventSource(streamUrl(path));
+      const es = new EventSource(withToken(streamUrl(path)));
       es.addEventListener('incident_update', handleMessage);
       es.onerror = () => {
         if (!fallbackAttempted && path === '/api/incidents/stream') {
@@ -189,7 +190,7 @@ export default function App(): React.ReactElement {
 
   const refreshSimStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/simulation/status');
+      const res = await authFetch('/api/simulation/status');
       if (res.ok) setSimStatus((await res.json()) as SimulationStatusResponse);
     } catch {
       setSimStatus(null);

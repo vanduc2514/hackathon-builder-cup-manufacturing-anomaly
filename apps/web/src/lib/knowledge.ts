@@ -83,7 +83,7 @@ export const SOPS: Sop[] = [
       {
         rev: '4.2',
         date: '2h ago',
-        author: 'Continuous Learning agent · approved by J. Tran',
+        author: 'Continuous Learning agent · approved by Shift Leader',
         reason: 'Root cause 8D-INC-A389F1: T07 insert ran past tool life, radial runout drifted.',
         lines: [
           { op: '-', text: 'radial_runout_tolerance_mm: 0.004' },
@@ -272,7 +272,7 @@ export const SOPS: Sop[] = [
       {
         rev: '2.0',
         date: 'Jan 14',
-        author: 'Continuous Learning agent · approved by J. Tran',
+        author: 'Continuous Learning agent · approved by Shift Leader',
         reason: '8D Kaizen: pump cavitation from clogged cartridge.',
         lines: [
           { op: '-', text: 'filter_change_trigger_bar: 1.2' },

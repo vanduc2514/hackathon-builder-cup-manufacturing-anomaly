@@ -3,6 +3,11 @@ variable "project_id" {
   type        = string
 }
 
+variable "name_suffix" {
+  description = "Suffix for globally unique names (kaizen-<role>-<suffix>); set via TF_VAR_name_suffix in mise.toml."
+  type        = string
+}
+
 variable "region" {
   description = "Primary region for Cloud Run, Artifact Registry, BigQuery, Firestore and GCS."
   type        = string
@@ -24,7 +29,7 @@ variable "artifact_repo" {
 variable "bigquery_dataset" {
   description = "BigQuery dataset for telemetry and traceability tables."
   type        = string
-  default     = "manufacturing"
+  default     = "kaizen_manufacturing"
 }
 
 variable "vertex_search_datastore_id" {
@@ -53,12 +58,6 @@ variable "gemini_model" {
 
 variable "gdrive_folder_id" {
   description = "Google Drive folder ID for hybrid RAG; GDRIVE_FOLDER_ID is omitted when null."
-  type        = string
-  default     = null
-}
-
-variable "hosting_site_prefix" {
-  description = "Prefix of the Firebase Hosting sites <prefix>-web and <prefix>-mobile; defaults to project_id."
   type        = string
   default     = null
 }

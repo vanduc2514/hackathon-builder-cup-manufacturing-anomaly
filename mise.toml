@@ -33,6 +33,8 @@ MOBILE_PORT      = "{{ get_env(name='MOBILE_PORT', default='3001') }}"
 API_PROXY_TARGET = "{{ get_env(name='API_PROXY_TARGET', default='http://localhost:' ~ env.API_PORT) }}"
 AI_PROVIDER      = "mock"
 RCLONE_CONFIG    = "{{config_root}}/.rclone/rclone.conf"
+# Suffix of globally unique GCP names: kaizen-tfstate-/kaizen-kb-/kaizen-web-/kaizen-mobile-<suffix>
+TF_VAR_name_suffix = "ai-builder-cup"
 
 # GOOGLE_APPLICATION_CREDENTIALS = "{{config_root}}/.gcp/credentials.json"
 
@@ -300,7 +302,7 @@ run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && ter
 
 [tasks."infra:init"]
 description = "Initialise the main Terraform stack against the GCS state bucket"
-run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && terraform -chdir=infra/terraform init -backend-config="bucket=${TF_VAR_project_id}-tfstate"'
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && terraform -chdir=infra/terraform init -backend-config="bucket=kaizen-tfstate-${TF_VAR_name_suffix}"'
 
 [tasks."infra:plan"]
 description = "Preview GCP infrastructure changes (infra/terraform)"
@@ -312,7 +314,7 @@ run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && ter
 
 [tasks."infra:seed"]
 description = "Create BigQuery tables (data/schemas/bigquery_tables.sql) and baseline rows in the real project"
-run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && env -u BIGQUERY_EMULATOR_HOST GCP_PROJECT_ID="$TF_VAR_project_id" python scripts/seed_bigquery.py'
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && env -u BIGQUERY_EMULATOR_HOST GCP_PROJECT_ID="$TF_VAR_project_id" BIGQUERY_DATASET="$(terraform -chdir=infra/terraform output -raw bigquery_dataset)" python scripts/seed_bigquery.py'
 
 [tasks."kb:import"]
 description = "Upload data/knowledge_base to GCS and import it into the Vertex AI Search datastore"

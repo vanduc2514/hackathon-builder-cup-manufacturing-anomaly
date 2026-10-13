@@ -24,6 +24,10 @@ output "artifact_repo_url" {
   value = "${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_repo}"
 }
 
+output "bigquery_dataset" {
+  value = google_bigquery_dataset.manufacturing.dataset_id
+}
+
 output "kb_bucket" {
   description = "Staging bucket for scripts/import_knowledge_base.py."
   value       = google_storage_bucket.kb.name

@@ -1,6 +1,6 @@
 # Staging bucket for the knowledge-base import (scripts/import_knowledge_base.py).
 resource "google_storage_bucket" "kb" {
-  name                        = "${var.project_id}-kaizen-kb"
+  name                        = local.kb_bucket
   location                    = var.region
   uniform_bucket_level_access = true
   public_access_prevention    = "enforced"

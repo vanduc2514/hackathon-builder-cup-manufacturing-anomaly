@@ -1,19 +1,25 @@
 locals {
   backend_env = {
-    APP_ENV                    = "production"
-    GCP_PROJECT_ID             = var.project_id
-    GCP_REGION                 = var.region
-    BIGQUERY_DATASET           = var.bigquery_dataset
-    VERTEX_SEARCH_DATASTORE_ID = var.vertex_search_datastore_id
-    VERTEX_SEARCH_LOCATION     = "global"
-    AI_PROVIDER                = "gemini"
-    GEMINI_MODEL               = var.gemini_model
-    GOOGLE_GENAI_USE_VERTEXAI  = "true"
-    GOOGLE_CLOUD_PROJECT       = var.project_id
-    GOOGLE_CLOUD_LOCATION      = var.vertex_ai_location
-    LOG_LEVEL                  = "INFO"
-    MQTT_BROKER_HOST           = "broker.emqx.io"
-    MQTT_BROKER_PORT           = "1883"
+    APP_ENV                     = "production"
+    GCP_PROJECT_ID              = var.project_id
+    GCP_REGION                  = var.region
+    BIGQUERY_DATASET            = var.bigquery_dataset
+    VERTEX_SEARCH_DATASTORE_ID  = var.vertex_search_datastore_id
+    VERTEX_SEARCH_LOCATION      = "global"
+    AI_PROVIDER                 = "gemini"
+    GEMINI_MODEL                = var.gemini_model
+    GOOGLE_GENAI_USE_VERTEXAI   = "true"
+    GOOGLE_CLOUD_PROJECT        = var.project_id
+    GOOGLE_CLOUD_LOCATION       = var.vertex_ai_location
+    LOG_LEVEL                   = "INFO"
+    MQTT_BROKER_HOST            = "broker.emqx.io"
+    MQTT_BROKER_PORT            = "1883"
+    PUBSUB_TELEMETRY_TOPIC      = "kaizen-telemetry"
+    PUBSUB_TELEMETRY_SUB        = local.pubsub["kaizen-telemetry"]
+    PUBSUB_TRACEABILITY_TOPIC   = "kaizen-traceability"
+    PUBSUB_TRACEABILITY_SUB     = local.pubsub["kaizen-traceability"]
+    PUBSUB_QUALITY_EVENTS_TOPIC = "kaizen-quality-events"
+    PUBSUB_QUALITY_EVENTS_SUB   = local.pubsub["kaizen-quality-events"]
   }
 }
 

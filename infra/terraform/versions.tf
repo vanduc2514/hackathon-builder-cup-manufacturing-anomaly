@@ -12,7 +12,7 @@ terraform {
     }
   }
 
-  # Bucket supplied at init: -backend-config="bucket=<project>-tfstate" (mise run infra:init).
+  # Bucket supplied at init: -backend-config="bucket=kaizen-tfstate-<name_suffix>" (mise run infra:init).
   backend "gcs" {
     prefix = "kaizen"
   }

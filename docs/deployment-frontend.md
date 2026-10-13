@@ -8,10 +8,10 @@ One Firebase project (`$GCP_PROJECT_ID`) with two Hosting sites:
 
 | App | Source | Build output | Hosting site | Target |
 |---|---|---|---|---|
-| Plant Ops dashboard | `apps/web` | `apps/web/dist` | `${GCP_PROJECT_ID}-web` | `web` |
-| Technician mobile app | `apps/mobile` | `apps/mobile/dist` | `${GCP_PROJECT_ID}-mobile` | `mobile` |
+| Plant Ops dashboard | `apps/web` | `apps/web/dist` | `kaizen-web-${TF_VAR_name_suffix}` | `web` |
+| Technician mobile app | `apps/mobile` | `apps/mobile/dist` | `kaizen-mobile-${TF_VAR_name_suffix}` | `mobile` |
 
-Sites are created by `mise run infra:apply` (`google_firebase_hosting_site.apps`; override the `${GCP_PROJECT_ID}` prefix with the `hosting_site_prefix` variable). `mise run firebase:targets` writes a local, gitignored `.firebaserc` mapping the `web` / `mobile` targets to the sites from `terraform output hosting_sites`.
+Sites are created by `mise run infra:apply` (`google_firebase_hosting_site.apps`; `TF_VAR_name_suffix` in `mise.toml`, default `ai-builder-cup`). `mise run firebase:targets` writes a local, gitignored `.firebaserc` mapping the `web` / `mobile` targets to the sites from `terraform output hosting_sites`.
 
 `firebase.json` (repo root) rewrites `/api/**` (both sites) and `/health` (web only) to Cloud Run `kaizen-backend` in `asia-southeast1`, falls back to `/index.html`, and caches `/assets/**` immutably.
 
@@ -36,4 +36,4 @@ Routes affected by the rewrite path:
 1. Add a build-time `VITE_STREAM_ORIGIN` (empty in dev). SSE and WebSocket URLs use it so they go directly to the Cloud Run URL; plain REST calls stay relative and go through the Hosting rewrite.
 2. Add FastAPI `CORSMiddleware` with origins from a `CORS_ORIGINS` setting (`terraform output hosting_urls`). Cross-origin `EventSource` requests need CORS; `backend/api/main.py` has none today.
 3. Amend Key Invariant #5 in `AGENTS.md` to allow that single stream origin.
-4. Add `https://${GCP_PROJECT_ID}-web.web.app` and `https://${GCP_PROJECT_ID}-mobile.web.app` to the GCS bucket CORS origins (`.agents/skills/google-cloud-storage/SKILL.md`).
+4. Add `terraform output hosting_urls` to the GCS bucket CORS origins (`.agents/skills/google-cloud-storage/SKILL.md`).

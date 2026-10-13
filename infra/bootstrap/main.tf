@@ -12,7 +12,7 @@ resource "google_project_service" "storage" {
 }
 
 resource "google_storage_bucket" "tfstate" {
-  name                        = "${var.project_id}-tfstate"
+  name                        = "kaizen-tfstate-${var.name_suffix}"
   location                    = var.region
   uniform_bucket_level_access = true
   public_access_prevention    = "enforced"

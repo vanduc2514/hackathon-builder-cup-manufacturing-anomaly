@@ -69,7 +69,7 @@ variable "min_instances" {
 }
 
 variable "max_instances" {
-  description = "Cloud Run maximum instances. Keep 1: orchestrator single-flight and SSE listeners are per-process."
+  description = "Cloud Run maximum instances. Keep 1: orchestrator single-flight, SSE listeners and rate-limit counters are per-process."
   type        = number
   default     = 1
 }

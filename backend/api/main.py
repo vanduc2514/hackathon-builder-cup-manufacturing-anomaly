@@ -17,6 +17,7 @@ from backend.api.routes_telemetry import router as telemetry_router
 from backend.core.auth import require_user
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
+from backend.core.rate_limit import RateLimitMiddleware
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=settings.log_level)
@@ -55,6 +56,10 @@ app = FastAPI(
     description="Kaizen Agent: Product-first AI Team for Manufacturing Anomaly Detection and Root-Cause Tracing",
     lifespan=lifespan,
 )
+
+# Every request, incl. /health, login and streams; added before CORS so CORS stays outermost
+# and 429 responses still carry the CORS headers the browser needs to read them.
+app.add_middleware(RateLimitMiddleware)
 
 # The Hosting rewrite cannot carry SSE, so the frontends open streams straight against Cloud
 # Run; only those origins may read responses cross-origin.

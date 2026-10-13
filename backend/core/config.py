@@ -32,6 +32,17 @@ class Settings(BaseSettings):
     auth_secret: str = ""
     auth_token_ttl_hours: int = 12
 
+    # Rate limits (backend/core/rate_limit.py), per signed-in user or, without a valid token,
+    # per client IP. In-process state: valid while Cloud Run runs a single instance.
+    rate_limit_enabled: bool = True
+    rate_limit_per_minute: int = 300
+    rate_limit_write_per_minute: int = 30
+    rate_limit_login_per_minute: int = 20
+    # Failed logins allowed per username within 5 minutes before login is refused (429).
+    rate_limit_login_failures: int = 5
+    # Concurrent SSE / Gemini Live WebSocket connections per caller.
+    rate_limit_max_streams: int = 10
+
     # BigQuery / Emulator settings
     bigquery_emulator_host: str | None = None
     bigquery_dataset: str = "manufacturing"

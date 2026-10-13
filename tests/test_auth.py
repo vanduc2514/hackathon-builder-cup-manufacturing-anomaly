@@ -17,13 +17,13 @@ pytestmark = pytest.mark.real_auth
 
 SECRET = "test-auth-secret-0123456789-abcdefghijkl"
 TECH = AuthAccount(
-    username="technician", password="pw-tech", role=AuthRole.TECHNICIAN, display_name="Mike Turner"
+    username="technician", password="pw-tech", role=AuthRole.TECHNICIAN, display_name="Red Panda"
 )
 LEAD = AuthAccount(
     username="shiftleader",
     password="pw-lead",
     role=AuthRole.SHIFT_LEADER,
-    display_name="John Taylor",
+    display_name="Sea Otter",
 )
 
 
@@ -50,7 +50,7 @@ def test_login_matches_username_case_insensitively(client: TestClient) -> None:
     body = res.json()
     assert body["user"] == {
         "username": "technician",
-        "display_name": "Mike Turner",
+        "display_name": "Red Panda",
         "role": "technician",
     }
     assert body["token"]
@@ -89,6 +89,23 @@ def test_api_requires_token(client: TestClient) -> None:
     res = client.get("/api/simulation/status")
     assert res.status_code == 401
     assert res.headers["www-authenticate"] == "Bearer"
+
+
+def _gated_routes() -> list[tuple[str, str]]:
+    """Every HTTP operation under /api except the public /api/auth/* endpoints."""
+    return [
+        (method.upper(), path)
+        for path, operations in app.openapi()["paths"].items()
+        if path.startswith("/api/") and not path.startswith("/api/auth/")
+        for method in operations
+    ]
+
+
+@pytest.mark.parametrize(("method", "path"), _gated_routes())
+def test_every_api_route_except_auth_rejects_anonymous_calls(
+    client: TestClient, method: str, path: str
+) -> None:
+    assert client.request(method, path).status_code == 401
 
 
 def test_bearer_header_and_query_token_are_accepted(client: TestClient) -> None:

@@ -66,7 +66,7 @@ This file is the authoritative reference for AI coding agents and human contribu
 │
 ├── infra/                      # Terraform: all GCP resources (mise run infra:*)
 │   ├── bootstrap/              # One-time GCS state bucket (local state)
-│   └── terraform/              # Main stack: Cloud Run, IAM, BigQuery, Pub/Sub, Firestore, Vertex Search, Firebase Hosting, budget
+│   └── terraform/              # Main stack: Cloud Run, IAM, BigQuery, Pub/Sub, Firestore, Vertex Search, Firebase Hosting, budget, monitoring dashboard + owner email alerts
 │
 ├── firebase.json               # Firebase Hosting targets web/mobile (apps/*/dist); /api/** rewritten to Cloud Run
 ├── docs/                       # Architecture diagrams (.mmd + rendered .svg)

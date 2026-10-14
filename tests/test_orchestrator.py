@@ -14,9 +14,15 @@ from google.adk.models.base_llm import BaseLlm
 from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
+from google.genai.errors import ClientError
 
 from backend.agents import agent_quality_inspector
-from backend.agents.orchestrator import MAX_LLM_CALLS_PER_INCIDENT, Orchestrator
+from backend.agents.orchestrator import (
+    GEMINI_RATE_LIMIT_MESSAGE,
+    MAX_LLM_CALLS_PER_INCIDENT,
+    Orchestrator,
+    _build_gemini_model,
+)
 from backend.agents.tool_guards import MAX_TOOL_CALLS
 from backend.core.blackboard import blackboard
 from backend.core.models import (
@@ -37,13 +43,14 @@ class FakeLlm(BaseLlm):
     model: str = "fake"
     rca_confidences: list[float] = [0.87]
     fail_on: str | None = None
+    fail_with: Exception | None = None
 
     async def generate_content_async(
         self, llm_request: LlmRequest, stream: bool = False
     ) -> AsyncGenerator[LlmResponse, None]:
         si = str(llm_request.config.system_instruction)
         if self.fail_on and self.fail_on in si:
-            raise RuntimeError("fake failure")
+            raise self.fail_with or RuntimeError("fake failure")
         confidence = 0.9
         if "You are the Root Cause Agent" in si:
             confidence = (
@@ -187,6 +194,42 @@ def test_agent_failure_surfaces_as_error_status():
     state = _run(FakeLlm(fail_on="You are the Process Analyst Agent"))
     assert state.status == "error"
     assert "RuntimeError" in state.status_reason
+
+
+def test_gemini_429_surfaces_as_friendly_status_reason(caplog: pytest.LogCaptureFixture):
+    err = ClientError(
+        code=429,
+        response_json={
+            "error": {
+                "code": 429,
+                "status": "RESOURCE_EXHAUSTED",
+                "message": "Resource exhausted. See https://ai.google.dev/quota for details.",
+            }
+        },
+    )
+    with caplog.at_level("ERROR", logger="backend.agents.orchestrator"):
+        state = _run(FakeLlm(fail_on="You are the Process Analyst Agent", fail_with=err))
+    assert state.status == "error"
+    assert state.status_reason == GEMINI_RATE_LIMIT_MESSAGE
+    assert "429" not in state.status_reason
+    assert "RESOURCE_EXHAUSTED" not in state.status_reason
+    assert "http" not in state.status_reason.lower()
+    assert any(record.exc_info for record in caplog.records)
+
+
+def test_gemini_non_429_api_error_keeps_generic_status_reason():
+    err = ClientError(
+        code=400, response_json={"error": {"code": 400, "message": "Invalid argument"}}
+    )
+    state = _run(FakeLlm(fail_on="You are the Process Analyst Agent", fail_with=err))
+    assert state.status == "error"
+    assert state.status_reason == f"{type(err).__name__}: {err}"
+
+
+def test_build_gemini_model_retries_only_on_429():
+    model = _build_gemini_model("gemini-flash-latest")
+    assert model.retry_options.attempts == 3
+    assert model.retry_options.http_status_codes == [429]
 
 
 class ToolLoopLlm(FakeLlm):

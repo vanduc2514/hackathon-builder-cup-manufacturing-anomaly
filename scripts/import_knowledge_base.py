@@ -20,6 +20,10 @@ KB_ROOT = Path(__file__).resolve().parent.parent / "data" / "knowledge_base"
 # Tracked document folders; drive/ is a gitignored duplicate and index.json is not a document.
 KB_CATEGORIES = ("manuals", "maint_logs", "past_8d_reports")
 GCS_PREFIX = "kb/"
+# Import error logs; outside GCS_PREFIX so they are never imported. Without error_config,
+# Discovery Engine creates its own unmanaged *_import_content bucket. Its service agent
+# writes here through the project-level roles/discoveryengine.serviceAgent grant.
+ERRORS_PREFIX = "import-errors/"
 IMPORT_TIMEOUT_SECONDS = 1800
 
 
@@ -75,6 +79,9 @@ def import_documents(project_id: str, location: str, datastore_id: str, bucket_n
             data_schema="content",
         ),
         reconciliation_mode=discoveryengine.ImportDocumentsRequest.ReconciliationMode.FULL,
+        error_config=discoveryengine.ImportErrorConfig(
+            gcs_prefix=f"gs://{bucket_name}/{ERRORS_PREFIX}"
+        ),
     )
 
     logger.info("Importing gs://%s/%s* into %s", bucket_name, GCS_PREFIX, parent)

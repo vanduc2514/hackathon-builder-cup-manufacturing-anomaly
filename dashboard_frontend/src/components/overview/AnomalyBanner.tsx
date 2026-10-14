@@ -1,9 +1,9 @@
-// AnomalyBanner: red glass alert for the open incident with its SPC numbers and a jump into the incident workspace.
+// AnomalyBanner: one-line red alert naming what went wrong (machine, defect, tool), its severity and latest finding, with a jump into the incident.
 import React from 'react';
 import type { IncidentState } from '../../types';
 import type { FleetRow } from '../../lib/fleet';
 import { incidentSeverity } from '../../lib/fleet';
-import { STATUS_LABEL, formatPct, friendlyDefectName } from '../../lib/incident';
+import { STATUS_LABEL, friendlyDefectName } from '../../lib/incident';
 
 interface AnomalyBannerProps {
   incident: IncidentState;
@@ -33,16 +33,16 @@ export default function AnomalyBanner({ incident, row, onOpenIncident, onDismiss
 
   return (
     <section className="glass tone-red anomaly-banner" aria-live="polite">
-      <div className="anomaly-icon">
+      <span className="anomaly-icon">
         <span className="material-symbols-outlined">warning</span>
-      </div>
-      <div className="col" style={{ gap: 6, flex: 1, minWidth: 0 }}>
-        <h2 className="anomaly-title">
-          {where}: {defect}
-          {tool}
-          {breach ? ' Exceeding SPC Limit' : ''}
-        </h2>
-        <div className="row wrap" style={{ gap: 8 }}>
+      </span>
+      <div className="col" style={{ gap: 2, flex: 1, minWidth: 0 }}>
+        <div className="row wrap" style={{ gap: '4px 8px' }}>
+          <h2 className="anomaly-title">
+            {where}: {defect}
+            {tool}
+            {breach ? ' exceeding SPC limit' : ''}
+          </h2>
           {signoff ? (
             <span className="sev-chip sev-chip-green">
               Verified {incident.verification_count}/{incident.verification_target}
@@ -55,28 +55,19 @@ export default function AnomalyBanner({ incident, row, onOpenIncident, onDismiss
             {signoff ? 'Awaiting sign-off' : STATUS_LABEL[incident.status]}
           </span>
         </div>
-        <p className="anomaly-meta">
-          Defect Rate: <b className="mono">{formatPct(incident.defect_rate)}</b> (UCL: {formatPct(incident.spc_ucl)})
-          {row?.vibration != null && (
-            <>
-              {' '}| Vibration: <b className="mono">{row.vibration.toFixed(2)} mm/s</b>
-            </>
-          )}
-          {row && row.part !== '—' && <> | Part: {row.part}</>}
-        </p>
         {action && (
-          <p className="anomaly-meta clamp-2">
+          <p className="anomaly-meta" title={action.text}>
             {action.label}: {action.text}
           </p>
         )}
       </div>
-      <div className="row wrap anomaly-actions">
-        <button id="banner-open-incident" type="button" className="btn btn-dark" onClick={onOpenIncident}>
+      <div className="row anomaly-actions">
+        <button id="banner-open-incident" type="button" className="btn btn-dark btn-sm" onClick={onOpenIncident}>
           Open {incident.incident_id}
           <span className="material-symbols-outlined">arrow_forward</span>
         </button>
-        <button id="banner-dismiss" type="button" className="link-btn" style={{ color: '#c9343a' }} onClick={onDismiss}>
-          Dismiss
+        <button id="banner-dismiss" type="button" className="icon-btn-plain" aria-label="Dismiss alert" onClick={onDismiss}>
+          <span className="material-symbols-outlined">close</span>
         </button>
       </div>
     </section>

@@ -16,11 +16,14 @@ from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 
 from backend.agents import agent_quality_inspector
-from backend.agents.orchestrator import Orchestrator
+from backend.agents.orchestrator import MAX_LLM_CALLS_PER_INCIDENT, Orchestrator
+from backend.agents.tool_guards import MAX_TOOL_CALLS
 from backend.core.blackboard import blackboard
 from backend.core.models import (
     DefectInjectionRequest,
     IncidentState,
+    SensorMetrics,
+    SensorTelemetryWindowResponse,
     SuspectCorrelation,
     TraceabilityTopologyResponse,
     VerificationResult,
@@ -184,6 +187,95 @@ def test_agent_failure_surfaces_as_error_status():
     state = _run(FakeLlm(fail_on="You are the Process Analyst Agent"))
     assert state.status == "error"
     assert "RuntimeError" in state.status_reason
+
+
+class ToolLoopLlm(FakeLlm):
+    """Process Analyst calls its telemetry tool whenever it is offered (or always, if stubborn)."""
+
+    stubborn: bool = False
+    calls: int = 0
+
+    async def generate_content_async(
+        self, llm_request: LlmRequest, stream: bool = False
+    ) -> AsyncGenerator[LlmResponse, None]:
+        self.calls += 1
+        offered = any(
+            decl.name == "analyze_machine_telemetry"
+            for tool in llm_request.config.tools or []
+            for decl in tool.function_declarations or []
+        )
+        si = str(llm_request.config.system_instruction)
+        if "You are the Process Analyst Agent" in si and (offered or self.stubborn):
+            call = types.FunctionCall(
+                name="analyze_machine_telemetry",
+                args={"machine_id": "CNC-02", "time_window": "09:00-10:00"},
+            )
+            yield LlmResponse(
+                content=types.Content(role="model", parts=[types.Part(function_call=call)])
+            )
+            return
+        async for response in super().generate_content_async(llm_request, stream):
+            yield response
+
+
+TELEMETRY = SensorTelemetryWindowResponse(
+    source="test_fixture",
+    machine_id="CNC-02",
+    time_window="09:00-10:00",
+    metrics=SensorMetrics(
+        min_vibration=1.5,
+        max_vibration=2.7,
+        avg_vibration=2.1,
+        std_vibration=0.5,
+        avg_temperature=41.0,
+        avg_current=12.9,
+        sample_count=5,
+    ),
+    anomaly_detected=True,
+)
+
+
+def test_tool_happy_agent_is_cut_off_after_budget_and_incident_closes():
+    with patch(
+        "backend.agents.agent_process_analyst.query_sensor_telemetry_window",
+        return_value=TELEMETRY,
+    ) as query:
+        state = _run(ToolLoopLlm())
+    assert query.call_count == MAX_TOOL_CALLS
+    assert state.status == "closed"
+    assert "PA" in _ids(state)
+
+
+def test_runaway_llm_calls_stop_at_incident_ceiling():
+    llm = ToolLoopLlm(stubborn=True)
+    with patch(
+        "backend.agents.agent_process_analyst.query_sensor_telemetry_window",
+        return_value=TELEMETRY,
+    ):
+        state = _run(llm)
+    assert state.status == "error"
+    assert "LlmCallsLimitExceededError" in state.status_reason
+    assert llm.calls == MAX_LLM_CALLS_PER_INCIDENT
+
+
+def test_rejected_tool_arguments_go_back_to_the_model_and_incident_closes():
+    with patch(
+        "backend.agents.agent_process_analyst.query_sensor_telemetry_window",
+        side_effect=ValueError("start_time must be an ISO-8601 timestamp or HH:MM"),
+    ) as query:
+        state = _run(ToolLoopLlm())
+    assert query.call_count == MAX_TOOL_CALLS
+    assert state.status == "closed"
+
+
+def test_tool_outage_still_fails_the_incident():
+    with patch(
+        "backend.agents.agent_process_analyst.query_sensor_telemetry_window",
+        side_effect=RuntimeError("BigQuery query failed: 503"),
+    ):
+        state = _run(ToolLoopLlm())
+    assert state.status == "error"
+    assert "BigQuery query failed" in state.status_reason
 
 
 def test_single_flight_and_abort_cancel():

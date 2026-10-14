@@ -11,6 +11,7 @@ from typing import Any
 from google.adk import Agent
 from google.genai import types
 
+from backend.agents.tool_guards import limit_tool_calls, return_argument_errors
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
 from backend.core.models import (
@@ -1060,6 +1061,8 @@ agent = Agent(
     description="Guides the technician through physical equipment repair in Vietnamese grounded in OEM manuals.",
     instruction=INSTRUCTION,
     tools=[query_repair_procedure] if _supports_tools() else [],
+    before_model_callback=limit_tool_calls(query_repair_procedure),
+    on_tool_error_callback=return_argument_errors,
     output_schema=FindingDraft,
     generate_content_config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=2048),
 )
@@ -1087,6 +1090,8 @@ diagnostic_agent = Agent(
     description="Collects field photos and physical diagnostic evidence from the technician when RCA confidence is low.",
     instruction=DIAGNOSTIC_INSTRUCTION,
     tools=[query_repair_procedure] if _supports_tools() else [],
+    before_model_callback=limit_tool_calls(query_repair_procedure),
+    on_tool_error_callback=return_argument_errors,
     output_schema=FindingDraft,
     generate_content_config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=2048),
 )

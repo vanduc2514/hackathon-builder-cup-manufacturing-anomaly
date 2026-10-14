@@ -7,6 +7,7 @@ import logging
 from google.adk import Agent
 from google.genai import types
 
+from backend.agents.tool_guards import limit_tool_calls, return_argument_errors
 from backend.core.config import settings
 from backend.core.models import RAGSearchResult, ScribeDraft
 from backend.tools.rag_search_tool import search_knowledge_base
@@ -63,6 +64,8 @@ agent = Agent(
     description="Drafts the 8D report, work order, and SOP revision proposal from the board.",
     instruction=INSTRUCTION,
     tools=[query_8d_archive_and_sops] if _supports_tools() else [],
+    before_model_callback=limit_tool_calls(query_8d_archive_and_sops),
+    on_tool_error_callback=return_argument_errors,
     output_schema=ScribeDraft,
     generate_content_config=types.GenerateContentConfig(max_output_tokens=2048),
 )

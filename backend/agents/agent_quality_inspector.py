@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 
 from google.adk import Agent
 
+from backend.agents.tool_guards import limit_tool_calls, return_argument_errors
 from backend.core.config import settings
 from backend.core.models import (
     FilteredFramePacket,
@@ -105,6 +106,8 @@ agent = Agent(
     description="Classifies the defect and SPC breach from the measured conveyor window.",
     instruction=INSTRUCTION,
     tools=[check_spc_control_limits, check_verification_streak] if _supports_tools() else [],
+    before_model_callback=limit_tool_calls(check_spc_control_limits, check_verification_streak),
+    on_tool_error_callback=return_argument_errors,
     output_schema=FindingDraft,
 )
 

@@ -8,7 +8,7 @@ import time
 from typing import Any
 
 from google.adk import Workflow
-from google.adk.agents import LlmAgent
+from google.adk.agents import LlmAgent, RunConfig
 from google.adk.runners import InMemoryRunner
 from google.adk.workflow import JoinNode
 from google.genai import types
@@ -58,6 +58,9 @@ else:
 
 APP_NAME = "kaizen_orchestrator"
 WORKFLOW_NAME = "kaizen_incident"
+# Whole-incident ceiling (ADK default 500). A full run with evidence rounds and one reopen is
+# ~20 agent turns of at most 1 + MAX_TOOL_CALLS model calls each.
+MAX_LLM_CALLS_PER_INCIDENT = 100
 
 
 resolution_join = JoinNode(name="resolution_join")
@@ -177,6 +180,7 @@ class Orchestrator:
                     role="user", parts=[types.Part(text=trigger.model_dump_json())]
                 ),
                 abort_signal=abort,
+                run_config=RunConfig(max_llm_calls=MAX_LLM_CALLS_PER_INCIDENT),
             ):
                 pass
             logger.info("incident workflow finished: status=%s", blackboard.get_state().status)

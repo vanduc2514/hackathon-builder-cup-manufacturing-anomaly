@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class CitationReference(BaseModel):
@@ -194,6 +194,15 @@ class RootCauseFindingDraft(FindingDraft):
         default=None,
         description="Diagnostic evidence request for technician if confidence < 0.70",
     )
+
+    @field_validator("ishikawa", mode="before")
+    @classmethod
+    def _wrap_single_causes(cls, value: Any) -> Any:
+        """Gemini does not hold a free-form map's value schema and may answer one string per
+        category; keep it as a one-cause list instead of failing the incident."""
+        if isinstance(value, dict):
+            return {k: [v] if isinstance(v, str) else v for k, v in value.items()}
+        return value
 
 
 class ScribeDraft(FindingDraft):

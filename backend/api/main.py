@@ -53,6 +53,9 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.version,
     description="Kaizen Agent: Product-first AI Team for Manufacturing Anomaly Detection and Root-Cause Tracing",
+    # The schema maps every route, so production serves neither it nor /docs and /redoc
+    # (FastAPI mounts both only when openapi_url is set).
+    openapi_url=None if settings.is_production else "/openapi.json",
     lifespan=lifespan,
 )
 

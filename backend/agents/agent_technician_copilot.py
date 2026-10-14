@@ -1024,10 +1024,16 @@ def _supports_tools() -> bool:
 
 async def query_repair_procedure(
     machine_id: str,
-    defect_symptom: str | None = None,
+    defect_symptom: str,
     query: str | None = None,
 ) -> RAGSearchResult:
-    """ADK Tool: Queries OEM equipment manuals and repair procedures for the suspect machine."""
+    """ADK Tool: Queries OEM equipment manuals and repair procedures for the suspect machine.
+
+    Args:
+        machine_id: Board suspect_machine, e.g. CNC-02 or IM-05.
+        defect_symptom: Board defect_type, e.g. scratch_vertical or short_fill.
+        query: Optional free-text refinement.
+    """
     return await search_knowledge_base(
         defect_symptom=defect_symptom,
         suspect_asset=machine_id,

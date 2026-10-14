@@ -587,6 +587,18 @@ def test_rca_gate_escalate_route_after_max_rounds():
     assert "still below" in event.output
 
 
+def test_root_cause_draft_accepts_one_string_per_ishikawa_category():
+    """Gemini's actual answer shape (string per 6M category) validates as one-cause lists."""
+    draft = RootCauseFindingDraft.model_validate_json(
+        '{"finding": "f", "evidence": "e", "confidence": 0.87, "citation": "c",'
+        ' "ishikawa": {"Machine": "T07 flank wear", "Method": ["no tool-life SOP", "manual check"]}}'
+    )
+    assert draft.ishikawa == {
+        "Machine": ["T07 flank wear"],
+        "Method": ["no tool-life SOP", "manual check"],
+    }
+
+
 def test_agent_root_cause_adk_definition():
     """Verifies ADK agent configuration and metadata."""
     agent = agent_root_cause.agent

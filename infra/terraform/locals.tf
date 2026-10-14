@@ -9,6 +9,7 @@ locals {
     "pubsub",
     "storage",
     "logging",
+    "monitoring",
     "iam",
     "cloudresourcemanager",
     "serviceusage",

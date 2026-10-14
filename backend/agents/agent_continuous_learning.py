@@ -7,6 +7,7 @@ import logging
 from google.adk import Agent
 from google.genai import types
 
+from backend.agents.tool_guards import limit_tool_calls, return_argument_errors
 from backend.core.config import settings
 from backend.core.models import FindingDraft, ImpactMetrics, IncidentState
 from backend.tools.impact_calculator import calculate_sustainability_impact
@@ -87,6 +88,8 @@ agent = Agent(
     description="Indexes the verified resolution into institutional memory and reports sustainability impact.",
     instruction=INSTRUCTION,
     tools=[compute_sustainability_impact] if _supports_tools() else [],
+    before_model_callback=limit_tool_calls(compute_sustainability_impact),
+    on_tool_error_callback=return_argument_errors,
     output_schema=FindingDraft,
     generate_content_config=types.GenerateContentConfig(max_output_tokens=2048),
 )

@@ -13,6 +13,7 @@ This file is the authoritative reference for AI coding agents and human contribu
 │   │   ├── agent.py            # ADK CLI entry (root_agent) for `mise run adk-web` / `adk run`
 │   │   ├── orchestrator.py     # ADK graph Workflow (no LLM) + Orchestrator runner; routes the agent_* nodes
 │   │   ├── workflow_nodes.py   # Workflow function nodes: Blackboard writes + routing gates
+│   │   ├── tool_guards.py      # Callbacks every tool-using agent sets: 3 tool calls/turn, ValueError → tool result
 │   │   ├── agent_quality_inspector.py
 │   │   ├── agent_traceability.py
 │   │   ├── agent_process_analyst.py

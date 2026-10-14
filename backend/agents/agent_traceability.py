@@ -7,6 +7,7 @@ import logging
 
 from google.adk import Agent
 
+from backend.agents.tool_guards import limit_tool_calls, return_argument_errors
 from backend.core.config import settings
 from backend.core.models import (
     FindingDraft,
@@ -67,5 +68,7 @@ agent = Agent(
     description="Isolates the suspect machine and tool from discrete line topology while excluding innocent factors.",
     instruction=INSTRUCTION,
     tools=[trace_line_topology] if _supports_tools() else [],
+    before_model_callback=limit_tool_calls(trace_line_topology),
+    on_tool_error_callback=return_argument_errors,
     output_schema=FindingDraft,
 )

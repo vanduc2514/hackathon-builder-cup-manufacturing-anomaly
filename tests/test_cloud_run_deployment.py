@@ -108,3 +108,27 @@ def test_cors_allows_only_configured_hosting_origins(monkeypatch: pytest.MonkeyP
     finally:
         monkeypatch.undo()
         importlib.reload(main_module)
+
+
+def test_api_docs_are_served_only_outside_production(monkeypatch: pytest.MonkeyPatch):
+    """/docs, /redoc and /openapi.json map every route, so production must not serve them."""
+    import importlib
+
+    from fastapi.testclient import TestClient
+
+    import backend.api.main as main_module
+    from backend.core.config import settings
+
+    docs_paths = ("/docs", "/redoc", "/openapi.json")
+    try:
+        monkeypatch.setattr(settings, "app_env", "production")
+        client = TestClient(importlib.reload(main_module).app)
+        assert [client.get(path).status_code for path in docs_paths] == [404, 404, 404]
+        assert client.get("/health").status_code == 200
+
+        monkeypatch.setattr(settings, "app_env", "development")
+        client = TestClient(importlib.reload(main_module).app)
+        assert [client.get(path).status_code for path in docs_paths] == [200, 200, 200]
+    finally:
+        monkeypatch.undo()
+        importlib.reload(main_module)

@@ -31,11 +31,17 @@ def _supports_tools() -> bool:
 
 
 async def query_8d_archive_and_sops(
-    defect_symptom: str | None = None,
-    suspect_asset: str | None = None,
+    defect_symptom: str,
+    suspect_asset: str,
     query: str | None = None,
 ) -> RAGSearchResult:
-    """ADK Tool: Queries historical 8D reports, SOP procedures, and root-cause archives."""
+    """ADK Tool: Queries historical 8D reports, SOP procedures, and root-cause archives.
+
+    Args:
+        defect_symptom: Board defect_type, e.g. scratch_vertical or short_fill.
+        suspect_asset: Board suspect_machine, e.g. CNC-02 or IM-05.
+        query: Optional free-text refinement.
+    """
     return await search_knowledge_base(
         defect_symptom=defect_symptom,
         suspect_asset=suspect_asset,

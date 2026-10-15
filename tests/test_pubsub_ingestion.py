@@ -315,7 +315,7 @@ async def test_factory_simulator_pubsub_dispatch():
         seed=42,
     )
 
-    with patch.object(pubsub_manager, "publish_quality_event") as mock_pub_q:
+    with patch.object(service.pubsub_dispatcher, "publish_quality_event") as mock_pub_q:
         service.trigger_anomaly(machine_id="CNC-02", scenario="cnc_tool_wear")
         mock_pub_q.assert_called_once()
         args, _ = mock_pub_q.call_args

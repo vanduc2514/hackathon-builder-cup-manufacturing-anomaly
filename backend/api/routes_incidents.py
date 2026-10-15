@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sse_starlette.sse import EventSourceResponse
 
 from backend.agents.agent_technician_copilot import (
@@ -14,8 +14,16 @@ from backend.agents.agent_technician_copilot import (
     analyze_visual_evidence_frame_async,
 )
 from backend.agents.orchestrator import orchestrator
+from backend.core.auth import require_user
 from backend.core.blackboard import blackboard
-from backend.core.models import AgentFinding, IncidentState, IncidentSummary
+from backend.core.models import (
+    AgentFinding,
+    AuthUser,
+    HandoverNote,
+    HandoverNoteRequest,
+    IncidentState,
+    IncidentSummary,
+)
 
 router = APIRouter(prefix="/api/incidents", tags=["incidents"])
 
@@ -82,10 +90,21 @@ async def upload_incident_evidence(
         confidence=0.92,
         citation=ev_payload.citation,
     )
-    new_state = blackboard.attach_field_evidence(finding, ev_payload)
+    new_state = orchestrator.attach_evidence(finding, ev_payload)
     return {
         "status": "success",
         "evidence": ev_payload.model_dump(),
         "finding": finding.model_dump(),
         "incident_status": new_state.status,
     }
+
+
+@router.post("/handover", response_model=HandoverNote)
+async def create_handover_note(
+    request: HandoverNoteRequest,
+    current_user: AuthUser = Depends(require_user),
+) -> HandoverNote:
+    """Records a technician shift handover note on the active incident via Orchestrator."""
+    author = current_user.display_name or current_user.username or "Frontline Technician"
+    return orchestrator.add_handover_note(author=author, note=request.note)
+

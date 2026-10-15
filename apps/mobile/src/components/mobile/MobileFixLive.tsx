@@ -281,7 +281,7 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
             <textarea
               className="m-textarea"
               placeholder={
-                isLiveOrder ? 'Handover note for your lead (saved on this device)' : 'Handover note for your lead (optional)'
+                isLiveOrder ? 'Handover note for your lead' : 'Handover note for your lead (optional)'
               }
               value={notes}
               onChange={(e) => setNotes(e.target.value)}

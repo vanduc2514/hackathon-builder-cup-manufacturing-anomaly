@@ -15,6 +15,7 @@ Compares the technician mobile app (`apps/mobile/src`) with the FastAPI backend 
 | `GET /api/incidents/current` | Snapshot on load and after every SSE reconnect | `hooks/useIncidentStream.ts` |
 | `GET /api/incidents/stream` (alternates with `/events`) | Live updates, event `incident_update`; reconnect with backoff; state shown in the header (Live / Reconnecting / Offline) | `hooks/useIncidentStream.ts`, `MobileHeader.tsx` |
 | `POST /api/incidents/evidence` (multipart `file`, `notes`) | Uploads the technician's real photo, only while `status == awaiting_evidence` | `MobileApp.tsx` `submitEvidence()` |
+| `POST /api/incidents/handover` (`{"note": string}`) | Records technician shift handover note on the active incident | `MobileApp.tsx` `submitRepair()`, `MobileWorkStatus.tsx` `handleAddNote()` |
 | `GET /api/telemetry/baseline` | Alert thresholds (`vibration_warning_threshold`, `current_warning_threshold`) and trend vs. baseline | `hooks/useTelemetry.ts` |
 | `GET /api/telemetry/history?machine_id=` | Sensor tiles when `latest_telemetry` is null; vibration bars on the evidence screen | `hooks/useTelemetry.ts` |
 | `GET /api/gemini-live/status` | Copilot availability, language (`default_language`), SIM/LIVE tag | `hooks/useGeminiLive.ts` |
@@ -136,7 +137,7 @@ Testing note: with `AI_PROVIDER=mock` the RCA confidence is always ≥ 0.88, so 
 | Repair steps | Live: copy of `OEM_REPAIR_MANUALS` checkpoints. Demo: `COLLAR_STEPS`, `NOZZLE_STEPS` with scripted copilot lines | `RepairCheckpoint` list exists but isn't exposed (see 1c) |
 | Step verification | Confirmed by the technician (no auto-verify) | Copilot `validate_metric_measurement()` exists but isn't exposed |
 | Copilot voice/camera | Live: `WS /api/gemini-live/ws` text turns + audio; camera stays local. Demo: scripted lines | The socket has no microphone transcription path the app can use yet (audio chunks are answered with a fixed probe) |
-| Submit repair + handover note | Live: nothing is posted; note kept on the device | No endpoint for repair completion or technician notes |
+| Submit repair + handover note | Live: repair completion handled by copilot workflow; handover note posted to `POST /api/incidents/handover` | `POST /api/incidents/handover` records note via Orchestrator onto Blackboard & Firestore |
 
 ### Status / Processing
 
@@ -164,12 +165,12 @@ Testing note: with `AI_PROVIDER=mock` the RCA confidence is always ≥ 0.88, so 
 
 ## 3. Missing on both sides (needed for the technician flow)
 
-Technician evidence now has an endpoint. The rest of the technician flow still has none:
+Technician evidence and handover notes now have endpoints. The rest of the technician flow still has none:
 
 | Missing | Needed for |
 |---|---|
 | `POST` repair step / checkpoint result | Live Fix step verification |
-| `POST` repair complete (+ handover note) | Letting the technician, not the workflow, mark the repair done (`record_resolution()` sets `repair_done` by itself); saving the handover note |
+| `POST` repair complete | Letting the technician, not the workflow, mark the repair done (`record_resolution()` sets `repair_done` by itself) |
 | `GET` repair checkpoints for the incident | Live Fix steps |
 | `GET` technician work orders / incident history | Work List tabs (Active / Processing / Completed) |
 | `GET` structured evidence request (items + guidance) | Evidence checklist instead of fixed `e1`–`e5` |

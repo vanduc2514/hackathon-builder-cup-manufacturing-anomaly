@@ -558,6 +558,31 @@ class VisualInspectionResult(BaseModel):
     )
 
 
+class HandoverNote(BaseModel):
+    """Technician shift handover note recorded on an incident."""
+
+    author: str = Field(description="Username or technician name who authored the note")
+    note: str = Field(description="Handover note content")
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="UTC timestamp of the handover note",
+    )
+
+
+class HandoverNoteRequest(BaseModel):
+    """Request payload for recording a technician handover note."""
+
+    note: str = Field(..., min_length=1, description="Handover note content")
+
+    @field_validator("note")
+    @classmethod
+    def validate_non_empty(cls, v: str) -> str:
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Handover note cannot be empty")
+        return stripped
+
+
 class IncidentState(BaseModel):
     incident_id: str = "INC-0412"
     # normal, detecting, tracing, investigating, analyzing, awaiting_evidence, repairing,
@@ -581,6 +606,10 @@ class IncidentState(BaseModel):
     telemetry_alerts: List[TelemetryAlert] = Field(default_factory=list)
     diagnostic_request: Optional[str] = None
     visual_evidence: Optional[VisualEvidencePayload] = None
+    handover_notes: List[HandoverNote] = Field(
+        default_factory=list,
+        description="Technician shift handover notes recorded for this incident",
+    )
     updated_at: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
     opened_at: Optional[str] = Field(
         default=None,

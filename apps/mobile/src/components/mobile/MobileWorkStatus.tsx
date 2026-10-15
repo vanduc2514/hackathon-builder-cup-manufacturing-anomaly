@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import type { HandoverNote } from '../../types';
 import type { WorkOrder } from '../../types/mobile';
 import MobileNavBar from './MobileNavBar';
 import ConfidenceRing from './ConfidenceRing';
@@ -8,8 +9,10 @@ import VisualEvidenceCard from './VisualEvidenceCard';
 interface MobileWorkStatusProps {
   order: WorkOrder;
   handoverNote?: string;
+  handoverNotes?: HandoverNote[];
   onBack: () => void;
   onPingLead: () => void;
+  onAddHandoverNote?: (note: string) => Promise<void>;
 }
 
 interface Milestone {
@@ -87,8 +90,28 @@ function liveMilestones(order: WorkOrder): Milestone[] {
   return list;
 }
 
+function formatNoteTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return iso;
+  }
+}
+
 /** Read-only status for Processing (awaiting lead) and Completed work. */
-export default function MobileWorkStatus({ order, handoverNote, onBack, onPingLead }: MobileWorkStatusProps): React.ReactElement {
+export default function MobileWorkStatus({
+  order,
+  handoverNote,
+  handoverNotes,
+  onBack,
+  onPingLead,
+  onAddHandoverNote,
+}: MobileWorkStatusProps): React.ReactElement {
+  const [noteDraft, setNoteDraft] = useState('');
+  const [submittingNote, setSubmittingNote] = useState(false);
+
   const live = order.live;
   const done = order.stage === 'completed';
   const p = order.processing;
@@ -101,6 +124,24 @@ export default function MobileWorkStatus({ order, handoverNote, onBack, onPingLe
   const milestones = live ? liveMilestones(order) : demoMilestones(order);
   const pct = hasParts ? Math.min(100, (verified / target) * 100) : 100;
   const impact = live?.impact;
+
+  const allNotes: Array<{ author: string; note: string; created_at?: string }> = [
+    ...(handoverNotes ?? []),
+    ...(handoverNote && !handoverNotes?.some((n) => n.note === handoverNote)
+      ? [{ author: 'You', note: handoverNote }]
+      : []),
+  ];
+
+  const handleAddNote = async () => {
+    if (!noteDraft.trim() || !onAddHandoverNote) return;
+    try {
+      setSubmittingNote(true);
+      await onAddHandoverNote(noteDraft.trim());
+      setNoteDraft('');
+    } finally {
+      setSubmittingNote(false);
+    }
+  };
 
   return (
     <>
@@ -224,14 +265,59 @@ export default function MobileWorkStatus({ order, handoverNote, onBack, onPingLe
           <p className="m-body">{order.summary}</p>
         </section>
 
-        {handoverNote && (
+        {(allNotes.length > 0 || onAddHandoverNote) && (
           <>
             <div className="m-label">
-              Your handover note
-              <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>On this device only</span>
+              Handover notes
+              {live && <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>Synced to board</span>}
             </div>
-            <section className="m-glass m-card">
-              <p className="m-body">{handoverNote}</p>
+            <section className="m-glass m-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {allNotes.length === 0 ? (
+                <p className="m-sub" style={{ margin: 0 }}>No handover notes recorded yet.</p>
+              ) : (
+                allNotes.map((n, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      borderBottom: i < allNotes.length - 1 ? '1px solid var(--hair)' : 'none',
+                      paddingBottom: i < allNotes.length - 1 ? 10 : 0,
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>{n.author}</span>
+                      {n.created_at && (
+                        <span className="m-sub" style={{ fontSize: 11 }}>
+                          {formatNoteTime(n.created_at)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="m-body" style={{ margin: 0 }}>{n.note}</p>
+                  </div>
+                ))
+              )}
+
+              {onAddHandoverNote && (
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <textarea
+                    className="m-textarea"
+                    placeholder="Add a handover note for the next shift..."
+                    value={noteDraft}
+                    onChange={(e) => setNoteDraft(e.target.value)}
+                    disabled={submittingNote}
+                    rows={2}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      className="m-btn glass"
+                      disabled={!noteDraft.trim() || submittingNote}
+                      onClick={handleAddNote}
+                      style={{ height: 36, minWidth: 80, fontSize: 13 }}
+                    >
+                      {submittingNote ? 'Saving...' : 'Add note'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </section>
           </>
         )}

@@ -49,6 +49,7 @@ ENV/
 .coverage.*
 htmlcov/
 .tox/
+crash_*.json
 
 # Type checking
 .mypy_cache/

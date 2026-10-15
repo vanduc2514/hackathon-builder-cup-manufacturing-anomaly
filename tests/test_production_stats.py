@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
+from backend.core.config import settings
 from backend.core.models import IncidentState, LineOeeResponse
 from backend.tools.production_stats import (
     DEFAULT_LINE_ID,
-    DEFAULT_PLANNED_AVAILABILITY,
-    DEFAULT_TARGET_OEE,
     build_oee_series,
     calculate_availability,
     calculate_oee_losses,
@@ -48,10 +47,10 @@ def test_calculate_availability_normal():
     """Verify normal baseline availability matches planned availability (0.92)."""
     incident = IncidentState(status="normal")
     line_avail = calculate_availability(incident=incident, window_minutes=60, machine_id=None)
-    assert line_avail == DEFAULT_PLANNED_AVAILABILITY
+    assert line_avail == settings.planned_availability
 
     m_avail = calculate_availability(incident=incident, window_minutes=60, machine_id="CNC-02")
-    assert m_avail == DEFAULT_PLANNED_AVAILABILITY
+    assert m_avail == settings.planned_availability
 
 
 def test_calculate_availability_repairing_suspect_machine():
@@ -65,15 +64,15 @@ def test_calculate_availability_repairing_suspect_machine():
     )
     # CNC-01 (not affected)
     cnc01_avail = calculate_availability(incident=incident, window_minutes=60, machine_id="CNC-01")
-    assert cnc01_avail == DEFAULT_PLANNED_AVAILABILITY
+    assert cnc01_avail == settings.planned_availability
 
     # CNC-02 (suspect machine repairing)
     cnc02_avail = calculate_availability(incident=incident, window_minutes=60, machine_id="CNC-02")
-    assert cnc02_avail < DEFAULT_PLANNED_AVAILABILITY
+    assert cnc02_avail < settings.planned_availability
 
     # Line availability is reduced proportionally across 3 machines
     line_avail = calculate_availability(incident=incident, window_minutes=60, machine_id=None)
-    assert line_avail < DEFAULT_PLANNED_AVAILABILITY
+    assert line_avail < settings.planned_availability
     assert line_avail > cnc02_avail
 
 
@@ -149,7 +148,7 @@ def test_calculate_production_stats_model():
     resp = calculate_production_stats(line_id=DEFAULT_LINE_ID, window_minutes=60)
     assert isinstance(resp, LineOeeResponse)
     assert resp.line_id == DEFAULT_LINE_ID
-    assert resp.target == DEFAULT_TARGET_OEE
+    assert resp.target == settings.oee_target
     assert 0.0 <= resp.availability <= 1.0
     assert 0.0 <= resp.performance <= 1.0
     assert 0.0 <= resp.quality <= 1.0

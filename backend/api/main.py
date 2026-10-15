@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.agents.orchestrator import orchestrator
 from backend.api.routes_auth import router as auth_router
 from backend.api.routes_copilot import router as copilot_router
+from backend.api.routes_fleet import router as fleet_router
 from backend.api.routes_gemini_live import router as gemini_live_router
 from backend.api.routes_impact import router as impact_router
 from backend.api.routes_incidents import router as incidents_router
@@ -88,6 +89,7 @@ app.include_router(knowledge_router, dependencies=_auth)
 app.include_router(oee_router, dependencies=_auth)
 app.include_router(spc_router, dependencies=_auth)
 app.include_router(copilot_router, dependencies=_auth)
+app.include_router(fleet_router, dependencies=_auth)
 
 
 @app.get("/healthz", include_in_schema=False)

@@ -1,6 +1,6 @@
 // LineOverviewView: Cell Line 1 one-screen overview — what went wrong (banner), quality / incident / ESG KPIs, OEE trend and losses, and the fleet table.
 import React, { useEffect, useMemo, useState } from 'react';
-import type { IncidentState, LineOeeResponse, MultiMachineTelemetryResponse } from '../../types';
+import type { FleetRegistryResponse, IncidentState, LineOeeResponse, MultiMachineTelemetryResponse } from '../../types';
 import type { ToastTone } from '../../App';
 import { useApi } from '../../lib/api';
 import type { EsgLedgerEntry } from '../../lib/fleet';
@@ -39,11 +39,17 @@ export default function LineOverviewView({
 }: LineOverviewViewProps): React.ReactElement {
   const telemetry = useApi<MultiMachineTelemetryResponse>('/api/telemetry/history', 15000);
   const oeeApi = useApi<LineOeeResponse>('/api/oee', 15000);
+  const fleet = useApi<FleetRegistryResponse>('/api/fleet', 60000);
   const [dismissedId, setDismissedId] = useState<string | null>(null);
   const [diagId, setDiagId] = useState<string | null>(null);
   const [scope, setScope] = useState<string | null>(null);
 
-  const rows = useMemo(() => buildFleetRows(telemetry.data, incident), [telemetry.data, incident]);
+  const plannedAvail = fleet.data?.planned_availability ?? null;
+
+  const rows = useMemo(
+    () => buildFleetRows(telemetry.data, incident, fleet.data),
+    [telemetry.data, incident, fleet.data],
+  );
   const oee = useMemo(() => {
     if (oeeApi.data) {
       return {
@@ -53,8 +59,8 @@ export default function LineOverviewView({
         oee: oeeApi.data.oee,
       };
     }
-    return telemetry.data || incident ? computeOee(telemetry.data, incident, rows) : null;
-  }, [oeeApi.data, telemetry.data, incident, rows]);
+    return (telemetry.data || incident) && plannedAvail !== null ? computeOee(telemetry.data, incident, rows, plannedAvail) : null;
+  }, [oeeApi.data, telemetry.data, incident, rows, plannedAvail]);
 
   const machines = useMemo(() => {
     if (oeeApi.data?.machines && oeeApi.data.machines.length > 0) {
@@ -73,11 +79,24 @@ export default function LineOverviewView({
             anomalous: points.map((p) => p.is_anomalous),
           };
         }
-        return machineOee(r, telemetry.data, incident);
+        if (plannedAvail !== null) {
+          return machineOee(r, telemetry.data, incident, plannedAvail);
+        }
+        return {
+          id: r.id,
+          availability: 0,
+          performance: 0,
+          quality: 0,
+          oee: 0,
+          down: false,
+          vibration: points.map((p) => p.vibration_mm_s),
+          anomalous: points.map((p) => p.is_anomalous),
+        };
       });
     }
-    return rows.map((r) => machineOee(r, telemetry.data, incident));
-  }, [oeeApi.data, rows, telemetry.data, incident]);
+    if (plannedAvail === null) return [];
+    return rows.map((r) => machineOee(r, telemetry.data, incident, plannedAvail));
+  }, [oeeApi.data, rows, telemetry.data, incident, plannedAvail]);
 
   const losses = useMemo(() => {
     if (oeeApi.data?.losses && oeeApi.data.losses.length > 0) {
@@ -101,8 +120,9 @@ export default function LineOverviewView({
         incidentId: l.incident_id ?? null,
       }));
     }
-    return oeeLosses(machines, rows, incident, friendlyDefectName(incident?.defect_type));
-  }, [oeeApi.data, machines, rows, incident]);
+    if (plannedAvail === null) return [];
+    return oeeLosses(machines, rows, incident, friendlyDefectName(incident?.defect_type), plannedAvail);
+  }, [oeeApi.data, machines, rows, incident, plannedAvail]);
 
   const open = isIncidentOpen(incident) ? incident : null;
   const showBanner = open && dismissedId !== open.incident_id;
@@ -120,6 +140,7 @@ export default function LineOverviewView({
   const refresh = () => {
     telemetry.reload();
     oeeApi.reload();
+    fleet.reload();
     onRefreshIncident();
     onNotify('Line data refreshed', 'info');
   };
@@ -195,7 +216,7 @@ export default function LineOverviewView({
       <div className="ov-main">
         <div className="glass kpi-strip stagger">
           <DefectRateCard incident={incident} />
-          <ActiveIncidentsCard incident={incident} openedAt={openedAt} />
+          <ActiveIncidentsCard incident={incident} openedAt={openedAt} fleet={fleet.data} />
           <EsgCard ledger={esgLedger} factoryType={factoryType} onOpenHub={onOpenEsgHub} />
         </div>
         <OeeTrendCard
@@ -206,8 +227,9 @@ export default function LineOverviewView({
           lineOee={oee}
           scope={scope}
           onScope={setScope}
-          loading={telemetry.loading || oeeApi.loading}
+          loading={telemetry.loading || oeeApi.loading || fleet.loading}
           oeeResponse={oeeApi.data}
+          plannedAvailability={plannedAvail}
         />
         <OeeLossCard
           losses={losses}
@@ -217,7 +239,7 @@ export default function LineOverviewView({
         />
       </div>
 
-      <MachineFleetTable rows={rows} loading={telemetry.loading} onOpenIncident={onOpenIncident} onDiagnostics={setDiagId} />
+      <MachineFleetTable rows={rows} loading={telemetry.loading || fleet.loading} onOpenIncident={onOpenIncident} onDiagnostics={setDiagId} />
 
       {diagRow && (
         <DiagnosticsModal

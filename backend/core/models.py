@@ -651,27 +651,17 @@ class IncidentSummary(BaseModel):
     defect_type: Optional[str] = Field(default=None, description="Classified defect symptom name")
     defect_rate: float = Field(default=0.0, description="Defect rate at capture or closure")
     spc_ucl: float = Field(default=0.030, description="Upper specification/control limit")
-    suspect_machine: Optional[str] = Field(
-        default=None, description="Target suspect equipment ID"
-    )
+    suspect_machine: Optional[str] = Field(default=None, description="Target suspect equipment ID")
     suspect_tool: Optional[str] = Field(
         default=None, description="Suspect cutter or tool identifier"
     )
     root_cause: Optional[str] = Field(default=None, description="Identified root cause summary")
     repair_done: bool = Field(default=False, description="Whether repair has been executed")
-    approved: bool = Field(
-        default=False, description="Whether incident has shift-leader sign-off"
-    )
-    verification_count: int = Field(
-        default=0, description="Consecutive verified parts count"
-    )
+    approved: bool = Field(default=False, description="Whether incident has shift-leader sign-off")
+    verification_count: int = Field(default=0, description="Consecutive verified parts count")
     verification_target: int = Field(default=50, description="Target verified parts count")
-    opened_at: Optional[str] = Field(
-        default=None, description="ISO timestamp when incident opened"
-    )
-    closed_at: Optional[str] = Field(
-        default=None, description="ISO timestamp when incident closed"
-    )
+    opened_at: Optional[str] = Field(default=None, description="ISO timestamp when incident opened")
+    closed_at: Optional[str] = Field(default=None, description="ISO timestamp when incident closed")
     updated_at: Optional[str] = Field(default=None, description="ISO timestamp of last update")
     impact: Optional[ImpactMetrics] = Field(
         default=None, description="Calculated impact metrics if closed"
@@ -1383,3 +1373,44 @@ class LineOeeResponse(OeeFactors):
     series: List[OeePoint] = Field(default_factory=list, description="Line trend series")
     machines: List[MachineOee] = Field(default_factory=list, description="Station-level breakdowns")
     losses: List[OeeLoss] = Field(default_factory=list, description="Loss attribution breakdown")
+
+
+class FleetAsset(BaseModel):
+    """Manufacturing asset specification for cell fleet registry."""
+
+    machine_id: str = Field(description="Machine identifier, e.g. CNC-01, CNC-02, IM-05")
+    machine_type: Literal["cnc", "im"] = Field(
+        description="Machine equipment type: cnc for CNC machines or im for injection moulders"
+    )
+    bay: str = Field(description="Factory floor bay location, e.g. Bay 2, Bay 4")
+    part: str = Field(description="Active part model running on this station")
+    operation: str = Field(description="Manufacturing process or operation description")
+    on_demand: bool = Field(
+        default=False,
+        description="Whether this asset is provisioned on-demand (e.g. secondary line or material switch)",
+    )
+
+
+class FleetRegistryResponse(BaseModel):
+    """Dynamic fleet registry and line-level operational targets."""
+
+    line_id: str = Field(description="Production line identifier, e.g. cell-line-1")
+    line_name: str = Field(description="Human-readable line name, e.g. Cell Line 1")
+    planned_availability: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Planned shift availability target (ratio between 0 and 1)",
+    )
+    mttr_target_minutes: int = Field(
+        gt=0,
+        description="Mean-time-to-repair SLA target in minutes",
+    )
+    oee_target: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Configured line OEE target (ratio between 0 and 1)",
+    )
+    assets: List[FleetAsset] = Field(
+        default_factory=list,
+        description="Registered fleet assets in the production cell",
+    )

@@ -1,14 +1,19 @@
 // ActiveIncidentsCard: open incident count by severity, the MTTR SLA countdown and the good-part streak that closes it.
 import React, { useEffect, useState } from 'react';
-import type { IncidentState } from '../../types';
-import { MTTR_TARGET_MIN, formatCountdown, incidentSeverity, isIncidentOpen } from '../../lib/fleet';
+import type { FleetRegistryResponse, IncidentState } from '../../types';
+import { formatCountdown, incidentSeverity, isIncidentOpen } from '../../lib/fleet';
 
 interface ActiveIncidentsCardProps {
   incident: IncidentState | null;
   openedAt: number | null;
+  fleet?: FleetRegistryResponse | null;
 }
 
-export default function ActiveIncidentsCard({ incident, openedAt }: ActiveIncidentsCardProps): React.ReactElement {
+export default function ActiveIncidentsCard({
+  incident,
+  openedAt,
+  fleet,
+}: ActiveIncidentsCardProps): React.ReactElement {
   const [now, setNow] = useState<number>(Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
@@ -20,8 +25,8 @@ export default function ActiveIncidentsCard({ incident, openedAt }: ActiveIncide
   const critical = severity === 'critical' ? 1 : 0;
   const minor = severity === 'minor' ? 1 : 0;
   const working = open && open.status !== 'closed';
-  const mttrTarget = open?.mttr_target_minutes ?? MTTR_TARGET_MIN;
-  const left = working && openedAt !== null ? mttrTarget * 60_000 - (now - openedAt) : null;
+  const mttrTarget = open?.mttr_target_minutes ?? fleet?.mttr_target_minutes ?? null;
+  const left = working && openedAt !== null && mttrTarget !== null ? mttrTarget * 60_000 - (now - openedAt) : null;
   const target = open?.verification_target ?? 0;
   const progress = open && target > 0 ? Math.min(1, open.verification_count / target) : 0;
 
@@ -50,7 +55,7 @@ export default function ActiveIncidentsCard({ incident, openedAt }: ActiveIncide
             0 Open
           </span>
         )}
-        <span className="kpi-hint">MTTR target &lt; {mttrTarget}m</span>
+        {mttrTarget !== null && <span className="kpi-hint">MTTR target &lt; {mttrTarget}m</span>}
       </div>
       {open && target > 0 ? (
         <div className="col" style={{ gap: 5, marginTop: 'auto' }}>

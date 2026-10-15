@@ -34,7 +34,6 @@ from backend.core.models import (
     TraceabilityTopologyResponse,
     VerificationResult,
 )
-from simulator.injection_engine import injection_engine
 
 
 class FakeLlm(BaseLlm):
@@ -91,10 +90,6 @@ MOCK_TOPOLOGY = TraceabilityTopologyResponse(
 @pytest.fixture(autouse=True)
 def clean_state():
     blackboard.reset()
-    injection_engine.reset()
-    injection_engine.conveyor_sim.rng.seed(42)
-    injection_engine.machine_sim.rng.seed(42)
-    injection_engine.inject_scenario_1_cnc_tool_wear()
     saved = LlmAgent._default_model
     with patch(
         "backend.agents.agent_traceability.trace_line_topology",
@@ -102,13 +97,12 @@ def clean_state():
     ):
         yield
     LlmAgent._default_model = saved
-    injection_engine.reset()
     blackboard.reset()
 
 
-def _run(llm: FakeLlm) -> IncidentState:
+def _run(llm: FakeLlm, req: DefectInjectionRequest | None = None) -> IncidentState:
     LlmAgent.set_default_model(llm)
-    return asyncio.run(Orchestrator(step_delay=0).run_incident(DefectInjectionRequest()))
+    return asyncio.run(Orchestrator(step_delay=0).run_incident(req or DefectInjectionRequest()))
 
 
 def _ids(state: IncidentState) -> list[str]:
@@ -141,8 +135,7 @@ def test_persistently_low_confidence_escalates_without_repair():
 
 
 def test_no_spc_breach_dismisses_without_investigation():
-    injection_engine.reset()
-    state = _run(FakeLlm())
+    state = _run(FakeLlm(), req=DefectInjectionRequest(defect_rate=0.01))
     assert state.status == "dismissed"
     assert state.findings == []
     assert "No SPC breach" in state.status_reason

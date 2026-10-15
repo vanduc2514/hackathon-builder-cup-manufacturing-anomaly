@@ -24,19 +24,16 @@ from backend.api.main import app
 from backend.core.blackboard import blackboard
 from backend.core.models import DefectInjectionRequest, SimulationStatusResponse
 from backend.tools.spc_calculator import StreakGatekeeper
-from simulator.injection_engine import injection_engine
 from tests.test_orchestrator import MOCK_TOPOLOGY, FakeLlm
 
 
 @pytest.fixture(autouse=True)
 def clean_test_environment() -> Generator[None, None, None]:
-    """Ensures clean blackboard and simulator state before and after each test."""
+    """Ensures clean blackboard and orchestrator state before and after each test."""
     blackboard.reset()
-    injection_engine.reset()
     orchestrator.stop_simulation()
     yield
     blackboard.reset()
-    injection_engine.reset()
     orchestrator.stop_simulation()
 
 
@@ -178,7 +175,6 @@ def test_e2e_fast_forward_verifies_streak_and_closure() -> None:
     saved_model = LlmAgent._default_model
     try:
         LlmAgent.set_default_model(FakeLlm())
-        injection_engine.inject_scenario_1_cnc_tool_wear()
         req = DefectInjectionRequest(scenario="cnc_tool_wear", mode="fast", duration_seconds=0.2)
         with patch(
             "backend.agents.agent_traceability.trace_line_topology",

@@ -88,6 +88,12 @@ WORKFLOW_NAME = "kaizen_incident"
 MAX_LLM_CALLS_PER_INCIDENT = 100
 # Shown to the technician instead of the raw Vertex 429/RESOURCE_EXHAUSTED error + doc URL.
 GEMINI_RATE_LIMIT_MESSAGE = "The AI service is busy right now. Please try again in a minute."
+# Shown for any other failure instead of leaking exception class names/messages (ADK
+# internals, tool error text, stack traces) to the technician. The full exception is still
+# logged server-side (logger.exception) and captured in the crash dump for debugging.
+GENERIC_FAILURE_MESSAGE = (
+    "Something went wrong while analyzing this incident. Please retry or notify a shift leader."
+)
 
 
 resolution_join = JoinNode(name="resolution_join")
@@ -244,11 +250,11 @@ class Orchestrator:
             if exc.code == 429:
                 blackboard.update_status("error", status_reason=GEMINI_RATE_LIMIT_MESSAGE)
             else:
-                blackboard.update_status("error", status_reason=f"{type(exc).__name__}: {exc}")
+                blackboard.update_status("error", status_reason=GENERIC_FAILURE_MESSAGE)
             dump_crash(blackboard.get_state(), exc)
         except Exception as exc:
             logger.exception("incident workflow failed")
-            blackboard.update_status("error", status_reason=f"{type(exc).__name__}: {exc}")
+            blackboard.update_status("error", status_reason=GENERIC_FAILURE_MESSAGE)
             dump_crash(blackboard.get_state(), exc)
         return blackboard.get_state()
 

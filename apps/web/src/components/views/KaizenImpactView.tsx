@@ -1,8 +1,8 @@
 // Knowledge Base: 3 ESG KPI cards, knowledge search, signed-off solutions table and the past 8D slide-over sheet.
 import React, { useState } from 'react';
 import type { ManufacturingBenchmark } from '../../types';
-import type { EsgLedgerEntry } from '../../lib/fleet';
-import { formatCo2, sumEsg } from '../../lib/fleet';
+import type { EsgLedgerEntry, EsgTotals } from '../../lib/fleet';
+import { formatCo2 } from '../../lib/fleet';
 import { useApi } from '../../lib/api';
 import { titleCase } from '../../lib/incident';
 import SideDrawer from '../SideDrawer';
@@ -12,6 +12,9 @@ import EightDSheet from '../knowledge/EightDSheet';
 
 interface KaizenImpactViewProps {
   esgLedger: EsgLedgerEntry[];
+  esgTotals: EsgTotals;
+  downtimeMinutes: number;
+  factoryType?: string;
   onOpenSop: (code: number) => void;
   onOpenWalkthrough: (id: string) => void;
 }
@@ -20,14 +23,21 @@ type Panel = { kind: 'eightd'; incidentId: string } | { kind: 'whatif' } | { kin
 
 const usd = (v: number) => `$${Math.round(v).toLocaleString('en-US')}`;
 
-export default function KaizenImpactView({ esgLedger, onOpenSop, onOpenWalkthrough }: KaizenImpactViewProps): React.ReactElement {
+export default function KaizenImpactView({
+  esgLedger,
+  esgTotals,
+  downtimeMinutes,
+  factoryType = 'aluminum_cnc',
+  onOpenSop,
+  onOpenWalkthrough,
+}: KaizenImpactViewProps): React.ReactElement {
   const bench = useApi<Record<string, ManufacturingBenchmark>>('/api/impact/benchmarks');
   const [panel, setPanel] = useState<Panel>(null);
 
-  const totals = sumEsg(esgLedger);
+  const totals = esgTotals;
   const has = totals.incidents > 0;
-  const downtime = esgLedger.reduce((s, e) => s + e.impact.downtime_minutes, 0);
-  const factory = esgLedger[esgLedger.length - 1]?.impact.factory_type ?? 'aluminum_cnc';
+  const downtime = downtimeMinutes;
+  const factory = factoryType;
   const solutions = esgLedger.flatMap((e) => (e.solution ? [e.solution] : []));
   const across = has ? `across ${totals.incidents} signed-off incident${totals.incidents > 1 ? 's' : ''}` : 'appears once the first 8D is signed off';
 
@@ -114,7 +124,7 @@ export default function KaizenImpactView({ esgLedger, onOpenSop, onOpenWalkthrou
                 </tr>
               </thead>
               <tbody>
-                {[...esgLedger].reverse().map((e) => {
+                {esgLedger.map((e) => {
                   const s = e.solution;
                   if (!s) return null;
                   const openRow = () => setPanel({ kind: 'eightd', incidentId: e.incidentId });

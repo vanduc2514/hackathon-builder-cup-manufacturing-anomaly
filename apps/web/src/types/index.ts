@@ -449,3 +449,28 @@ export interface FleetRegistryResponse {
   oee_target: number;
   assets: FleetAsset[];
 }
+
+export interface EsgLedgerTotals {
+  incidents: number;
+  scrap_avoided: number;
+  downtime_minutes: number;
+  energy_kwh: number;
+  co2_kg: number;
+  energy_co2_kg: number;
+  material_co2_kg: number;
+  cost_savings_usd: number;
+}
+
+export interface EsgLedgerEntryResponse {
+  incident_id: string;
+  closed_at: string | null;
+  approved: boolean;
+  impact: ImpactMetrics;
+  incident: IncidentState;
+}
+
+export interface EsgLedgerResponse {
+  totals: EsgLedgerTotals;
+  entries: EsgLedgerEntryResponse[];
+  factory_type: string;
+}

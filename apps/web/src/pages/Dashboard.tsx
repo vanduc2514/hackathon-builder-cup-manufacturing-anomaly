@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import type { IncidentState } from '../types';
 import type { DashboardTab } from '../components/Sidebar';
 import type { ToastTone } from '../App';
-import type { EsgLedgerEntry } from '../lib/fleet';
+import type { EsgLedgerEntry, EsgTotals } from '../lib/fleet';
 import LineOverviewView from '../components/views/LineOverviewView';
 import IncidentCommandView from '../components/views/IncidentCommandView';
 import KaizenImpactView from '../components/views/KaizenImpactView';
@@ -16,6 +16,9 @@ interface DashboardProps {
   openIncident: { incident: IncidentState; product: string } | null;
   openedAt: number | null;
   esgLedger: EsgLedgerEntry[];
+  esgTotals: EsgTotals;
+  downtimeMinutes: number;
+  factoryType: string;
   onRefreshIncident: () => void;
   onSelectTab: (tab: DashboardTab) => void;
   onOpenIncident: (incidentId: string) => void;
@@ -29,6 +32,9 @@ export default function Dashboard({
   openIncident,
   openedAt,
   esgLedger,
+  esgTotals,
+  downtimeMinutes,
+  factoryType,
   onRefreshIncident,
   onSelectTab,
   onOpenIncident,
@@ -75,7 +81,16 @@ export default function Dashboard({
           onNotify={onNotify}
         />
       )}
-      {currentTab === 'impact' && <KaizenImpactView esgLedger={esgLedger} onOpenSop={openSop} onOpenWalkthrough={openWalkthrough} />}
+      {currentTab === 'impact' && (
+        <KaizenImpactView
+          esgLedger={esgLedger}
+          esgTotals={esgTotals}
+          downtimeMinutes={downtimeMinutes}
+          factoryType={factoryType}
+          onOpenSop={openSop}
+          onOpenWalkthrough={openWalkthrough}
+        />
+      )}
       {currentTab === 'walkthroughs' && <TechWalkthroughsView requestedId={requestedWalkthrough} onOpenSop={openSop} onNotify={onNotify} />}
       {currentTab === 'sops' && <SopLibraryView requestedCode={requestedSop} onOpenWalkthrough={openWalkthrough} onNotify={onNotify} />}
     </div>

@@ -193,7 +193,7 @@ export default function MobileFixDetail({ order, onBack, onStart }: MobileFixDet
         </div>
 
         <div className="m-sticky-cta">
-          <button className="m-btn accent" onClick={onStart} disabled={order.steps.length === 0} id="m-start-repair">
+          <button className="m-btn accent" onClick={onStart} disabled={steps.length === 0} id="m-start-repair">
             <span className="material-symbols-outlined ms-fill">play_arrow</span>
             Start guided repair
           </button>

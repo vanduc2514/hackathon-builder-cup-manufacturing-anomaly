@@ -12,6 +12,7 @@ from backend.api.routes_gemini_live import router as gemini_live_router
 from backend.api.routes_impact import router as impact_router
 from backend.api.routes_incidents import router as incidents_router
 from backend.api.routes_knowledge import router as knowledge_router
+from backend.api.routes_oee import router as oee_router
 from backend.api.routes_simulation import router as simulation_router
 from backend.api.routes_telemetry import router as telemetry_router
 from backend.core.auth import require_user
@@ -82,6 +83,7 @@ app.include_router(gemini_live_router, dependencies=_auth)
 app.include_router(impact_router, dependencies=_auth)
 app.include_router(telemetry_router, dependencies=_auth)
 app.include_router(knowledge_router, dependencies=_auth)
+app.include_router(oee_router, dependencies=_auth)
 
 
 @app.get("/healthz", include_in_schema=False)

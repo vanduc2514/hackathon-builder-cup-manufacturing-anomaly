@@ -616,6 +616,9 @@ class LocalBM25Retriever:
         asset_family: Optional[str],
     ) -> float:
         """Evaluate whether a chunk belongs to or is compatible with the suspect asset."""
+        if asset_norm in ("ALL", "*", "", "ANY"):
+            return 1.0
+
         if not chunk.machines:
             # General documentation applicable across machinery
             return 0.60

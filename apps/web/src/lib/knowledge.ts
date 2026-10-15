@@ -1,4 +1,6 @@
-// Knowledge Hub content: SOP runbooks and technician walkthrough videos (static reference library).
+// Knowledge Hub content: SOP runbooks and technician walkthrough videos (static reference library and live API).
+import { fetchJson } from './api';
+import type { RAGSearchResult } from '../types';
 
 export type TagTone = 'neutral' | 'accent' | 'red' | 'green';
 
@@ -467,4 +469,37 @@ export function formatDuration(sec: number): string {
 
 export function formatClockTime(sec: number): string {
   return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+}
+
+export async function fetchSops(params?: { category?: string; station?: string; search?: string }): Promise<Sop[]> {
+  const query = new URLSearchParams();
+  if (params?.category) query.set('category', params.category);
+  if (params?.station) query.set('station', params.station);
+  if (params?.search) query.set('search', params.search);
+  const qs = query.toString();
+  return fetchJson<Sop[]>(`/api/knowledge/sops${qs ? `?${qs}` : ''}`);
+}
+
+export async function fetchSopByCode(code: number): Promise<Sop> {
+  return fetchJson<Sop>(`/api/knowledge/sops/${code}`);
+}
+
+export async function fetchWalkthroughs(params?: { station?: string; required?: boolean; search?: string }): Promise<Walkthrough[]> {
+  const query = new URLSearchParams();
+  if (params?.station) query.set('station', params.station);
+  if (params?.required !== undefined) query.set('required', String(params.required));
+  if (params?.search) query.set('search', params.search);
+  const qs = query.toString();
+  return fetchJson<Walkthrough[]>(`/api/knowledge/walkthroughs${qs ? `?${qs}` : ''}`);
+}
+
+export async function fetchWalkthroughById(id: string): Promise<Walkthrough> {
+  return fetchJson<Walkthrough>(`/api/knowledge/walkthroughs/${encodeURIComponent(id)}`);
+}
+
+export async function searchKnowledgeApi(q: string, asset?: string, defectSymptom?: string): Promise<RAGSearchResult> {
+  const query = new URLSearchParams({ q });
+  if (asset) query.set('asset', asset);
+  if (defectSymptom) query.set('defect_symptom', defectSymptom);
+  return fetchJson<RAGSearchResult>(`/api/knowledge/search?${query.toString()}`);
 }

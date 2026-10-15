@@ -1,7 +1,9 @@
 // KnowledgeSearch: ask-a-question box over verified 8D fixes, SOPs and walkthrough videos, with source-typed results.
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { VerifiedSolution } from '../../lib/eightD';
 import { searchKnowledge, type SearchHit } from '../../lib/knowledgeSearch';
+import { searchKnowledgeApi } from '../../lib/knowledge';
+import type { RAGSearchResult } from '../../types';
 
 interface KnowledgeSearchProps {
   solutions: VerifiedSolution[];
@@ -21,7 +23,31 @@ const KIND: Record<SearchHit['kind'], { label: string; icon: string; cls: string
 export default function KnowledgeSearch({ solutions, onOpenSolution, onOpenSop, onOpenWalkthrough }: KnowledgeSearchProps): React.ReactElement {
   const [query, setQuery] = useState<string>('');
   const [asked, setAsked] = useState<string>('');
+  const [ragResult, setRagResult] = useState<RAGSearchResult | null>(null);
+  const [ragLoading, setRagLoading] = useState<boolean>(false);
   const hits = useMemo(() => searchKnowledge(asked, solutions), [asked, solutions]);
+
+  useEffect(() => {
+    if (!asked.trim()) {
+      setRagResult(null);
+      return;
+    }
+    let cancelled = false;
+    setRagLoading(true);
+    searchKnowledgeApi(asked)
+      .then((res) => {
+        if (!cancelled) setRagResult(res);
+      })
+      .catch(() => {
+        if (!cancelled) setRagResult(null);
+      })
+      .finally(() => {
+        if (!cancelled) setRagLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [asked]);
 
   const ask = (q: string) => {
     setQuery(q);
@@ -104,6 +130,63 @@ export default function KnowledgeSearch({ solutions, onOpenSolution, onOpenSop, 
               );
             })
           )}
+        </div>
+      )}
+
+      {asked && ragLoading && (
+        <div className="row" style={{ gap: 8, padding: '0.75rem 1.25rem', alignItems: 'center', borderTop: '1px solid var(--hair)' }}>
+          <span className="material-symbols-outlined spin" style={{ fontSize: 16, color: 'var(--accent)' }}>
+            sync
+          </span>
+          <span className="kpi-hint" style={{ fontSize: '0.82rem' }}>
+            Retrieving grounded OEM manuals and engineering specifications...
+          </span>
+        </div>
+      )}
+
+      {asked && ragResult && ragResult.citations.length > 0 && (
+        <div className="col" style={{ borderTop: '1px solid var(--hair)', padding: '1rem 1.25rem', gap: 10 }}>
+          <div className="row between" style={{ alignItems: 'center' }}>
+            <span className="card-title" style={{ fontSize: '0.85rem' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--accent)' }}>
+                menu_book
+              </span>
+              OEM Grounded Engineering Citations ({ragResult.citations.length})
+            </span>
+            <span className="mono chip chip-accent" style={{ fontSize: '0.72rem' }}>
+              Confidence {Math.round(ragResult.confidence * 100)}%
+            </span>
+          </div>
+          <div className="col" style={{ gap: 8 }}>
+            {ragResult.citations.map((c, idx) => (
+              <div
+                key={`${c.document_id}-${idx}`}
+                className="glass-inset"
+                style={{
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                }}
+              >
+                <div className="row between" style={{ gap: 8, alignItems: 'flex-start' }}>
+                  <span style={{ fontWeight: 650, fontSize: '0.86rem', color: 'var(--ink)' }}>{c.title}</span>
+                  <span className="chip" style={{ fontSize: '0.72rem', flexShrink: 0 }}>
+                    {Math.round(c.relevance_score * 100)}% match
+                  </span>
+                </div>
+                {c.section && (
+                  <span className="muted mono" style={{ fontSize: '0.75rem' }}>
+                    § {c.section}
+                  </span>
+                )}
+                <p className="kpi-hint clamp-2" style={{ margin: 0, fontSize: '0.82rem' }}>
+                  {c.snippet}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </section>

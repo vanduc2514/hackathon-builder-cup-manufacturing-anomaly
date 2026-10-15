@@ -18,7 +18,7 @@ interface OeeTrendCardProps {
   onScope: (machineId: string | null) => void;
   loading: boolean;
   oeeResponse?: LineOeeResponse | null;
-  plannedAvailability?: number;
+  plannedAvailability: number | null;
 }
 
 type SeriesKey = 'oee' | 'availability' | 'performance' | 'quality';
@@ -57,10 +57,12 @@ export default function OeeTrendCard({
   const [hover, setHover] = useState<number | null>(null);
   const [range, setRange] = useState<number | null>(null);
   const span = useMemo(() => telemetrySpanMin(telemetry), [telemetry]);
-  const trend = useMemo(
-    () => oeeTrend(telemetry, incident, rows, scope, range, plannedAvailability),
-    [telemetry, incident, rows, scope, range, plannedAvailability],
-  );
+  const trend = useMemo(() => {
+    if (plannedAvailability === null) {
+      return { points: [], onsetIdx: -1, onsetClipped: false };
+    }
+    return oeeTrend(telemetry, incident, rows, scope, range, plannedAvailability);
+  }, [telemetry, incident, rows, scope, range, plannedAvailability]);
   const rangeLabel = RANGES.find((r) => r.min === range)?.label ?? 'All';
 
   // Use backend OEE series when available, otherwise fall back to client-modeled trend
@@ -200,6 +202,10 @@ export default function OeeTrendCard({
           {SERIES.map((s) => {
             const off = hidden.has(s.key);
             const value = s.key === 'oee' ? null : currentOf[s.key];
+            const title =
+              s.key === 'availability' && plannedAvailability !== null
+                ? `Planned availability ${Math.round(plannedAvailability * 100)}% (config)`
+                : undefined;
             return (
               <button
                 key={s.key}
@@ -207,6 +213,7 @@ export default function OeeTrendCard({
                 className={`legend-btn ${off ? 'legend-off' : ''}`}
                 aria-pressed={!off}
                 onClick={() => toggle(s.key)}
+                title={title}
               >
                 <svg width="18" height="8" aria-hidden="true">
                   <line
@@ -254,7 +261,7 @@ export default function OeeTrendCard({
       <div ref={ref} className="oee-trend-plot">
         {n < 2 ? (
           <div className="oee-trend-empty">
-            {loading ? 'Loading telemetry…' : `No telemetry history for ${scope ?? LINE_NAME}`}
+            {loading || plannedAvailability === null ? 'Loading telemetry…' : `No telemetry history for ${scope ?? LINE_NAME}`}
           </div>
         ) : (
           <svg

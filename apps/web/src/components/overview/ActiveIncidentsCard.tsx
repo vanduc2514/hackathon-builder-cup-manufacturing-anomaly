@@ -25,8 +25,8 @@ export default function ActiveIncidentsCard({
   const critical = severity === 'critical' ? 1 : 0;
   const minor = severity === 'minor' ? 1 : 0;
   const working = open && open.status !== 'closed';
-  const mttrTarget = open?.mttr_target_minutes ?? fleet?.mttr_target_minutes ?? 15;
-  const left = working && openedAt !== null ? mttrTarget * 60_000 - (now - openedAt) : null;
+  const mttrTarget = open?.mttr_target_minutes ?? fleet?.mttr_target_minutes ?? null;
+  const left = working && openedAt !== null && mttrTarget !== null ? mttrTarget * 60_000 - (now - openedAt) : null;
   const target = open?.verification_target ?? 0;
   const progress = open && target > 0 ? Math.min(1, open.verification_count / target) : 0;
 
@@ -55,7 +55,7 @@ export default function ActiveIncidentsCard({
             0 Open
           </span>
         )}
-        <span className="kpi-hint">MTTR target &lt; {mttrTarget}m</span>
+        {mttrTarget !== null && <span className="kpi-hint">MTTR target &lt; {mttrTarget}m</span>}
       </div>
       {open && target > 0 ? (
         <div className="col" style={{ gap: 5, marginTop: 'auto' }}>

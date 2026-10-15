@@ -25,9 +25,6 @@ from backend.tools.fleet_registry import DEFAULT_LINE_ID, default_machine_ids
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TARGET_OEE = settings.oee_target
-DEFAULT_PLANNED_AVAILABILITY = settings.planned_availability
-DEFAULT_MACHINES = default_machine_ids()
 NOMINAL_SPINDLE_RPM = 12000
 VIBRATION_WARNING_THRESHOLD = 1.95
 CURRENT_WARNING_THRESHOLD = 13.0

@@ -44,7 +44,7 @@ export default function LineOverviewView({
   const [diagId, setDiagId] = useState<string | null>(null);
   const [scope, setScope] = useState<string | null>(null);
 
-  const plannedAvail = fleet.data?.planned_availability ?? 0.92;
+  const plannedAvail = fleet.data?.planned_availability ?? null;
 
   const rows = useMemo(
     () => buildFleetRows(telemetry.data, incident, fleet.data),
@@ -59,7 +59,7 @@ export default function LineOverviewView({
         oee: oeeApi.data.oee,
       };
     }
-    return telemetry.data || incident ? computeOee(telemetry.data, incident, rows, plannedAvail) : null;
+    return (telemetry.data || incident) && plannedAvail !== null ? computeOee(telemetry.data, incident, rows, plannedAvail) : null;
   }, [oeeApi.data, telemetry.data, incident, rows, plannedAvail]);
 
   const machines = useMemo(() => {
@@ -79,9 +79,22 @@ export default function LineOverviewView({
             anomalous: points.map((p) => p.is_anomalous),
           };
         }
-        return machineOee(r, telemetry.data, incident, plannedAvail);
+        if (plannedAvail !== null) {
+          return machineOee(r, telemetry.data, incident, plannedAvail);
+        }
+        return {
+          id: r.id,
+          availability: 0,
+          performance: 0,
+          quality: 0,
+          oee: 0,
+          down: false,
+          vibration: points.map((p) => p.vibration_mm_s),
+          anomalous: points.map((p) => p.is_anomalous),
+        };
       });
     }
+    if (plannedAvail === null) return [];
     return rows.map((r) => machineOee(r, telemetry.data, incident, plannedAvail));
   }, [oeeApi.data, rows, telemetry.data, incident, plannedAvail]);
 
@@ -107,6 +120,7 @@ export default function LineOverviewView({
         incidentId: l.incident_id ?? null,
       }));
     }
+    if (plannedAvail === null) return [];
     return oeeLosses(machines, rows, incident, friendlyDefectName(incident?.defect_type), plannedAvail);
   }, [oeeApi.data, machines, rows, incident, plannedAvail]);
 
@@ -213,7 +227,7 @@ export default function LineOverviewView({
           lineOee={oee}
           scope={scope}
           onScope={setScope}
-          loading={telemetry.loading || oeeApi.loading}
+          loading={telemetry.loading || oeeApi.loading || fleet.loading}
           oeeResponse={oeeApi.data}
           plannedAvailability={plannedAvail}
         />

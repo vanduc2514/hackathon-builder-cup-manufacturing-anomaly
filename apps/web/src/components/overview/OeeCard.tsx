@@ -6,12 +6,11 @@ import { OEE_TARGET } from '../../lib/fleet';
 
 interface OeeCardProps {
   oee: LineOeeResponse | OeeBreakdown | OeeFactors | null;
-  plannedAvailability?: number | null;
 }
 
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
-export default function OeeCard({ oee, plannedAvailability }: OeeCardProps): React.ReactElement {
+export default function OeeCard({ oee }: OeeCardProps): React.ReactElement {
   const target =
     oee && 'target' in oee && typeof oee.target === 'number' ? oee.target : OEE_TARGET;
   const delta = oee ? (oee.oee - target) * 100 : null;
@@ -41,24 +40,17 @@ export default function OeeCard({ oee, plannedAvailability }: OeeCardProps): Rea
         <span className="kpi-hint">Target: {pct(target)}</span>
       </div>
       <div className="col" style={{ gap: 10, marginTop: 'auto' }}>
-        {parts.map((p) => {
-          const isAvailability = p.label === 'Availability';
-          const hint =
-            isAvailability && plannedAvailability
-              ? `Planned availability ${(plannedAvailability * 100).toFixed(0)}% (config)`
-              : undefined;
-          return (
-            <div key={p.label} className="col" style={{ gap: 5 }}>
-              <div className="row between kpi-line" title={hint}>
-                <span>{p.label}</span>
-                <span className="mono">{p.value !== null ? pct(p.value) : '—'}</span>
-              </div>
-              <div className="bar" title={hint}>
-                <span style={{ width: `${(p.value ?? 0) * 100}%` }} />
-              </div>
+        {parts.map((p) => (
+          <div key={p.label} className="col" style={{ gap: 5 }}>
+            <div className="row between kpi-line">
+              <span>{p.label}</span>
+              <span className="mono">{p.value !== null ? pct(p.value) : '—'}</span>
             </div>
-          );
-        })}
+            <div className="bar">
+              <span style={{ width: `${(p.value ?? 0) * 100}%` }} />
+            </div>
+          </div>
+        ))}
       </div>
     </article>
   );

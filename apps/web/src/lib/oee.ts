@@ -55,7 +55,7 @@ export function machineOee(
   row: FleetRow,
   telemetry: MultiMachineTelemetryResponse | null,
   incident: IncidentState | null,
-  plannedAvailability: number = 0.92,
+  plannedAvailability: number,
 ): MachineOee {
   const points = telemetry?.series?.[row.id] ?? [];
   const down = isDown(row, incident);
@@ -120,8 +120,8 @@ export function oeeTrend(
   incident: IncidentState | null,
   rows: FleetRow[],
   scope: string | null,
-  windowMin: number | null = null,
-  plannedAvailability: number = 0.92,
+  windowMin: number | null,
+  plannedAvailability: number,
 ): OeeTrend {
   const empty: OeeTrend = { points: [], onsetIdx: -1, onsetClipped: false };
   const full = telemetry?.series ?? {};
@@ -218,7 +218,7 @@ export function oeeLosses(
   rows: FleetRow[],
   incident: IncidentState | null,
   defectLabel: string,
-  plannedAvailability: number = 0.92,
+  plannedAvailability: number,
 ): OeeLoss[] {
   const live = machines.filter((m) => rows.find((r) => r.id === m.id)?.status !== 'offline');
   if (!live.length) return [];

@@ -100,7 +100,7 @@ export function computeOee(
   telemetry: MultiMachineTelemetryResponse | null,
   incident: IncidentState | null,
   rows: FleetRow[],
-  plannedAvailability: number = 0.92,
+  plannedAvailability: number,
 ): OeeBreakdown {
   const ratios: number[] = [];
   for (const pts of Object.values(telemetry?.series ?? {})) {
@@ -138,12 +138,11 @@ export function shiftLabel(now: Date): string {
   return 'Shift C · 22:00 - 06:00';
 }
 
-
 export function formatCountdown(ms: number): string {
   const total = Math.max(0, Math.floor(Math.abs(ms) / 1000));
   const m = Math.floor(total / 60);
   const s = total % 60;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 export interface EsgLedgerEntry {

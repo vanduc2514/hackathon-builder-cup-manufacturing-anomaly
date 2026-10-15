@@ -651,27 +651,17 @@ class IncidentSummary(BaseModel):
     defect_type: Optional[str] = Field(default=None, description="Classified defect symptom name")
     defect_rate: float = Field(default=0.0, description="Defect rate at capture or closure")
     spc_ucl: float = Field(default=0.030, description="Upper specification/control limit")
-    suspect_machine: Optional[str] = Field(
-        default=None, description="Target suspect equipment ID"
-    )
+    suspect_machine: Optional[str] = Field(default=None, description="Target suspect equipment ID")
     suspect_tool: Optional[str] = Field(
         default=None, description="Suspect cutter or tool identifier"
     )
     root_cause: Optional[str] = Field(default=None, description="Identified root cause summary")
     repair_done: bool = Field(default=False, description="Whether repair has been executed")
-    approved: bool = Field(
-        default=False, description="Whether incident has shift-leader sign-off"
-    )
-    verification_count: int = Field(
-        default=0, description="Consecutive verified parts count"
-    )
+    approved: bool = Field(default=False, description="Whether incident has shift-leader sign-off")
+    verification_count: int = Field(default=0, description="Consecutive verified parts count")
     verification_target: int = Field(default=50, description="Target verified parts count")
-    opened_at: Optional[str] = Field(
-        default=None, description="ISO timestamp when incident opened"
-    )
-    closed_at: Optional[str] = Field(
-        default=None, description="ISO timestamp when incident closed"
-    )
+    opened_at: Optional[str] = Field(default=None, description="ISO timestamp when incident opened")
+    closed_at: Optional[str] = Field(default=None, description="ISO timestamp when incident closed")
     updated_at: Optional[str] = Field(default=None, description="ISO timestamp of last update")
     impact: Optional[ImpactMetrics] = Field(
         default=None, description="Calculated impact metrics if closed"
@@ -916,6 +906,54 @@ class SpcEvaluationResult(BaseModel):
     )
     breach_direction: Optional[str] = Field(default=None, description="'upper', 'lower', or None")
     violations: List[NelsonRuleViolation] = Field(default_factory=list)
+
+
+class SpcSeriesPoint(BaseModel):
+    """A discrete part inspection point with trailing subgroup defect rate and OOC flag."""
+
+    index: int = Field(ge=0, description="Chronological 0-based point index in inspection window")
+    product_id: str = Field(description="Unique part identifier e.g. PRD-1001")
+    timestamp: str = Field(description="ISO-8601 inspection timestamp")
+    machine_id: str = Field(description="Originating manufacturing machine identifier e.g. CNC-02")
+    is_defect: bool = Field(description="True if part failed quality inspection")
+    defect_rate: float = Field(
+        ge=0.0, le=1.0, description="Defect proportion of trailing subgroup parts"
+    )
+    subgroup_n: int = Field(
+        gt=0, description="Effective sample size of trailing subgroup min(i+1, subgroup)"
+    )
+    out_of_control: bool = Field(
+        default=False, description="True if point breaches UCL/LCL or Nelson run-rules"
+    )
+
+
+class SpcSeriesResponse(BaseModel):
+    """Run chart defect proportion time series with control limits and Nelson violations."""
+
+    machine_id: Optional[str] = Field(
+        default=None, description="Filtered machine identifier or null"
+    )
+    window: int = Field(ge=0, description="Inspection window size (number of evaluated parts)")
+    subgroup: int = Field(
+        gt=0, description="Moving subgroup sample size for trailing rate calculation"
+    )
+    centerline: float = Field(ge=0.0, le=1.0, description="Baseline defect rate centerline p_bar")
+    ucl: float = Field(
+        ge=0.0, le=1.0, description="Active upper control limit threshold (e.g. from blackboard)"
+    )
+    ucl_3sigma: float = Field(ge=0.0, le=1.0, description="Statistical 3-sigma upper control limit")
+    lcl: float = Field(ge=0.0, le=1.0, description="Lower control limit (typically 0.0)")
+    sigma: float = Field(ge=0.0, description="Standard deviation for subgroup sample size")
+    peak_rate: float = Field(
+        default=0.0, ge=0.0, le=1.0, description="Maximum defect rate in the window (0.0 if empty)"
+    )
+    points: List[SpcSeriesPoint] = Field(
+        default_factory=list, description="Ordered time series inspection points"
+    )
+    violations: List[NelsonRuleViolation] = Field(
+        default_factory=list, description="Nelson run-rule violations detected"
+    )
+    source: Literal["bigquery", "mock_buffer", "seed"] = Field(description="Data provenance source")
 
 
 class StreakVerificationResult(BaseModel):

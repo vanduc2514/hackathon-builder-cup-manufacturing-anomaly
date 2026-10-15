@@ -1,4 +1,4 @@
-// Chart helpers: smooth SVG paths and deterministic pseudo-noise for demo-safe series.
+// Chart helpers: smooth SVG paths for SVG series.
 
 export interface Pt {
   x: number;
@@ -30,10 +30,4 @@ export function areaPath(points: Pt[], baseline: number): string {
   const first = points[0];
   const last = points[points.length - 1];
   return `${smoothPath(points)} L${last.x.toFixed(1)},${baseline} L${first.x.toFixed(1)},${baseline} Z`;
-}
-
-/** Deterministic noise in [-1, 1] so charts do not jitter between renders. */
-export function noise(seed: number): number {
-  const s = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
-  return (s - Math.floor(s)) * 2 - 1;
 }

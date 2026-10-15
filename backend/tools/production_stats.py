@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
@@ -780,41 +780,111 @@ def calculate_production_stats(
     )
 
 
+def get_inspection_window_with_source(
+    limit: int = 60,
+    machine_id: Optional[str] = None,
+) -> Tuple[List[Dict[str, Any]], Literal["bigquery", "mock_buffer", "seed"]]:
+    """Returns discrete inspection records and provenance source for SPC calculations.
+
+    Tries BigQuery traceability first; on any error falls back to mock buffer and seed.
+    Always returns the latest `limit` records in chronological ascending order.
+    """
+    # 1. Try BigQuery traceability table
+    try:
+        from google.cloud import bigquery
+
+        from backend.tools.bigquery_tool import _run_query
+
+        client = get_bigquery_client()
+        dataset_id = f"{client.project}.{settings.bigquery_dataset}"
+        where_clauses: List[str] = []
+        params: List[Any] = [
+            bigquery.ScalarQueryParameter("limit", "INT64", limit),
+        ]
+        if machine_id:
+            where_clauses.append("machine_id = @machine_id")
+            params.append(bigquery.ScalarQueryParameter("machine_id", "STRING", machine_id))
+
+        where_str = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+        sql = f"""
+            SELECT product_id, timestamp, machine_id, status
+            FROM `{dataset_id}.traceability`
+            {where_str}
+            ORDER BY timestamp DESC
+            LIMIT @limit
+        """
+        results = _run_query(client, sql, params)
+        rows = list(results)
+        rows.reverse()  # Reverse descending order to chronological ascending
+        records: List[Dict[str, Any]] = []
+        for r in rows:
+            ts = r.get("timestamp") if isinstance(r, dict) else getattr(r, "timestamp", "")
+            if hasattr(ts, "isoformat"):
+                ts_str = ts.isoformat()
+            else:
+                ts_str = str(ts)
+            pid = str(r.get("product_id") if isinstance(r, dict) else getattr(r, "product_id", ""))
+            mid = str(r.get("machine_id") if isinstance(r, dict) else getattr(r, "machine_id", ""))
+            status = str(r.get("status") if isinstance(r, dict) else getattr(r, "status", "PASS"))
+            records.append(
+                {
+                    "product_id": pid,
+                    "timestamp": ts_str,
+                    "machine_id": mid,
+                    "status": status,
+                    "is_defect": status.startswith("DEFECT"),
+                }
+            )
+        return records, "bigquery"
+    except Exception as exc:
+        logger.debug(
+            "BigQuery traceability query failed or unavailable (%s); falling back to mock buffer/seed",
+            exc,
+        )
+
+    # 2. Fallback to mock buffer + seed
+    mock_records = get_mock_traceability_records()
+    from scripts.seed_bigquery import SEED_TRACEABILITY_ROWS
+
+    def _normalize(r: Dict[str, Any]) -> Dict[str, Any]:
+        ts = r.get("timestamp", "")
+        if hasattr(ts, "isoformat"):
+            ts = ts.isoformat()
+        else:
+            ts = str(ts)
+        status = str(r.get("status", "PASS"))
+        return {
+            "product_id": str(r.get("product_id", "")),
+            "timestamp": ts,
+            "machine_id": str(r.get("machine_id", "")),
+            "status": status,
+            "is_defect": status.startswith("DEFECT"),
+        }
+
+    mock_filtered = [
+        _normalize(r) for r in mock_records if not machine_id or r.get("machine_id") == machine_id
+    ]
+    seed_filtered = [
+        _normalize(r)
+        for r in SEED_TRACEABILITY_ROWS
+        if not machine_id or r.get("machine_id") == machine_id
+    ]
+
+    if mock_filtered:
+        combined = seed_filtered + mock_filtered
+        combined.sort(key=lambda r: str(r.get("timestamp", "")))
+        selected = combined[-limit:] if limit > 0 else []
+        return selected, "mock_buffer"
+    else:
+        seed_filtered.sort(key=lambda r: str(r.get("timestamp", "")))
+        selected = seed_filtered[-limit:] if limit > 0 else []
+        return selected, "seed"
+
+
 def get_inspection_window(
     limit: int = 60,
     machine_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Returns discrete inspection records for SPC calculations and run charts."""
-    mock_records = get_mock_traceability_records()
-    records: List[Dict[str, Any]] = []
-
-    for r in mock_records:
-        if machine_id and r.get("machine_id") != machine_id:
-            continue
-        records.append(
-            {
-                "product_id": r.get("product_id", ""),
-                "timestamp": r.get("timestamp", ""),
-                "machine_id": r.get("machine_id", ""),
-                "status": r.get("status", "PASS"),
-                "is_defect": str(r.get("status", "")).startswith("DEFECT"),
-            }
-        )
-
-    if len(records) < limit:
-        from scripts.seed_bigquery import SEED_TRACEABILITY_ROWS
-
-        for r in SEED_TRACEABILITY_ROWS:
-            if machine_id and r.get("machine_id") != machine_id:
-                continue
-            records.append(
-                {
-                    "product_id": r.get("product_id", ""),
-                    "timestamp": r.get("timestamp", ""),
-                    "machine_id": r.get("machine_id", ""),
-                    "status": r.get("status", "PASS"),
-                    "is_defect": str(r.get("status", "")).startswith("DEFECT"),
-                }
-            )
-
-    return records[:limit]
+    records, _ = get_inspection_window_with_source(limit=limit, machine_id=machine_id)
+    return records

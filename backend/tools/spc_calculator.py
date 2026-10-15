@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import logging
 import math
-from typing import List, Optional, Sequence
+from typing import Any, Dict, List, Literal, Optional, Sequence
 
 from backend.core.models import (
     ControlLimits,
     IncidentState,
     NelsonRuleViolation,
     SpcEvaluationResult,
+    SpcSeriesPoint,
+    SpcSeriesResponse,
     StreakVerificationResult,
 )
 
@@ -404,6 +406,96 @@ def evaluate_nelson_rules(
                 )
 
     return violations
+
+
+def build_spc_series(
+    records: Sequence[Dict[str, Any]],
+    ucl: float,
+    subgroup: int = 20,
+    centerline: float = DEFAULT_BASELINE_P,
+    machine_id: Optional[str] = None,
+    source: Literal["bigquery", "mock_buffer", "seed"] = "seed",
+    window: Optional[int] = None,
+) -> SpcSeriesResponse:
+    """Builds an SPC run chart defect rate series with control limits and Nelson violations.
+
+    Args:
+        records: Sequence of raw inspection records (each containing product_id, timestamp,
+                 machine_id, and is_defect).
+        ucl: Active upper control limit (e.g. from incident blackboard).
+        subgroup: Moving subgroup sample size for trailing rate calculation.
+        centerline: Baseline historical defect proportion p_bar.
+        machine_id: Optional filter identifier for originating machine.
+        source: Data provenance source (bigquery, mock_buffer, or seed).
+        window: Total window length requested (defaults to len(records)).
+
+    Returns:
+        SpcSeriesResponse with calculated control limits, points, peak_rate, and violations.
+    """
+    limits = calculate_p_chart_limits(p_bar=centerline, n=subgroup)
+    sigma = limits.sigma
+    lcl = limits.lcl
+    ucl_3sigma = limits.ucl
+
+    rates: List[float] = []
+    points: List[SpcSeriesPoint] = []
+    effective_window = window if window is not None else len(records)
+
+    for i, r in enumerate(records):
+        subgroup_n = min(i + 1, subgroup)
+        trailing_slice = records[i + 1 - subgroup_n : i + 1]
+        defect_count = sum(1 for item in trailing_slice if bool(item.get("is_defect")))
+        rate = round(defect_count / subgroup_n, 6)
+        rates.append(rate)
+
+        ts = r.get("timestamp", "")
+        if hasattr(ts, "isoformat"):
+            ts_str = ts.isoformat()
+        else:
+            ts_str = str(ts)
+
+        points.append(
+            SpcSeriesPoint(
+                index=i,
+                product_id=str(r.get("product_id", "")),
+                timestamp=ts_str,
+                machine_id=str(r.get("machine_id", "")),
+                is_defect=bool(r.get("is_defect", False)),
+                defect_rate=rate,
+                subgroup_n=subgroup_n,
+                out_of_control=False,
+            )
+        )
+
+    violations = evaluate_nelson_rules(
+        rates=rates,
+        centerline=centerline,
+        sigma=sigma,
+        ucl=ucl,
+        lcl=lcl,
+    )
+
+    ooc_indices = {idx for v in violations for idx in v.violation_indices}
+    for i, p in enumerate(points):
+        if i in ooc_indices or p.defect_rate > ucl or p.defect_rate < lcl:
+            p.out_of_control = True
+
+    peak_rate = round(max((p.defect_rate for p in points), default=0.0), 6)
+
+    return SpcSeriesResponse(
+        machine_id=machine_id,
+        window=effective_window,
+        subgroup=subgroup,
+        centerline=round(centerline, 6),
+        ucl=round(ucl, 6),
+        ucl_3sigma=ucl_3sigma,
+        lcl=lcl,
+        sigma=sigma,
+        peak_rate=peak_rate,
+        points=points,
+        violations=violations,
+        source=source,
+    )
 
 
 class StreakGatekeeper:

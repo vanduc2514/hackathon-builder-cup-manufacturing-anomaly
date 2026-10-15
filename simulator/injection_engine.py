@@ -6,6 +6,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from simulator.conveyor_simulator import ConveyorSimulator
+from simulator.edge.edge_filter import EdgeInspectionStation
 from simulator.machine_simulator import MachineSimulator
 
 logger = logging.getLogger(__name__)
@@ -18,10 +19,12 @@ class DefectInjectionEngine:
         self,
         machine_sim: Optional[MachineSimulator] = None,
         conveyor_sim: Optional[ConveyorSimulator] = None,
+        edge_station: Optional[EdgeInspectionStation] = None,
         seed: Optional[int] = None,
     ) -> None:
         self.machine_sim = machine_sim or MachineSimulator(seed=seed)
         self.conveyor_sim = conveyor_sim or ConveyorSimulator(seed=seed)
+        self.edge_station = edge_station or EdgeInspectionStation()
         self.active_scenario: Optional[str] = None
         self.active_machine: Optional[str] = None
         self.active_severity: float = 1.0
@@ -106,6 +109,8 @@ class DefectInjectionEngine:
         """Restores all machinery, conveyors, and scenarios back to pristine baseline."""
         self.machine_sim.reset()
         self.conveyor_sim.reset()
+        self.edge_station.edge_filter.reset_statistics()
+        self.edge_station.spool.clear()
         self.active_scenario = None
         self.active_machine = None
         self.active_severity = 1.0
@@ -118,6 +123,7 @@ class DefectInjectionEngine:
             "active_severity": self.active_severity,
             "recovery_mode": self.conveyor_sim.recovery_mode,
             "consecutive_passes": self.conveyor_sim.consecutive_pass_count,
+            "edge_stats": self.edge_station.edge_filter.get_statistics().model_dump(),
         }
 
 

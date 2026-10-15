@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from starlette.testclient import TestClient
 
-from backend.agents.orchestrator import orchestrator
+import backend.agents.orchestrator as orchestrator_module
 from backend.api.main import app
 from backend.core.models import (
     MachineTelemetryPayload,
@@ -31,11 +31,11 @@ def cleanup_buffers():
     """Cleans in-memory buffers before and after each test."""
     clear_mock_sensor_telemetry()
     clear_mock_traceability_records()
-    orchestrator.stop_simulation()
+    orchestrator_module.orchestrator.stop_simulation()
     yield
     clear_mock_sensor_telemetry()
     clear_mock_traceability_records()
-    orchestrator.stop_simulation()
+    orchestrator_module.orchestrator.stop_simulation()
 
 
 def test_traceability_event_payload_schema():
@@ -207,6 +207,7 @@ def test_pubsub_quality_event_message_handler_dispatch():
     mock_msg = MagicMock()
     mock_msg.data = quality_evt.model_dump_json().encode("utf-8")
 
+    orchestrator = orchestrator_module.orchestrator
     orchestrator.stop_simulation()
     with patch.object(orchestrator, "start_incident") as mock_start:
         manager._handle_quality_event_message(mock_msg)
@@ -226,6 +227,7 @@ def test_pubsub_quality_event_message_handler_duplicate_suppression():
     mock_msg = MagicMock()
     mock_msg.data = quality_evt.model_dump_json().encode("utf-8")
 
+    orchestrator = orchestrator_module.orchestrator
     orchestrator._task = MagicMock()
     orchestrator._task.done.return_value = False
     try:
@@ -290,7 +292,7 @@ def test_simulation_inject_pubsub_integration():
     client = TestClient(app)
 
     with patch.object(pubsub_manager, "publish_quality_event", return_value=True) as mock_pub:
-        with patch.object(orchestrator, "start_incident"):
+        with patch.object(orchestrator_module.orchestrator, "start_incident"):
             resp = client.post(
                 "/api/simulation/inject",
                 json={"scenario": "cnc_tool_wear", "mode": "fast"},
@@ -315,7 +317,7 @@ async def test_factory_simulator_pubsub_dispatch():
         seed=42,
     )
 
-    with patch.object(pubsub_manager, "publish_quality_event") as mock_pub_q:
+    with patch.object(service.pubsub_dispatcher, "publish_quality_event") as mock_pub_q:
         service.trigger_anomaly(machine_id="CNC-02", scenario="cnc_tool_wear")
         mock_pub_q.assert_called_once()
         args, _ = mock_pub_q.call_args

@@ -47,6 +47,10 @@ export interface MachineOee {
   anomalous: boolean[];
 }
 
+/**
+ * @deprecated Prefer backend production stats from GET /api/oee (calculate_production_stats)
+ * which computes real OEE from BigQuery traceability, sensor telemetry, and incident downtime.
+ */
 export function machineOee(
   row: FleetRow,
   telemetry: MultiMachineTelemetryResponse | null,
@@ -106,6 +110,9 @@ export function telemetrySpanMin(telemetry: MultiMachineTelemetryResponse | null
  * Bucketed OEE history for the whole line (`scope` null) or one machine, limited to the last
  * `windowMin` minutes before the newest sample (null = everything loaded). Nominal RPM and the
  * scrap ramp come from the full history, so a narrower window zooms without changing values.
+ *
+ * @deprecated Prefer backend series from GET /api/oee (calculate_production_stats)
+ * which calculates real OEE series from BigQuery traceability and sensor telemetry.
  */
 export function oeeTrend(
   telemetry: MultiMachineTelemetryResponse | null,
@@ -198,7 +205,12 @@ export interface OeeLoss {
   incidentId: string | null;
 }
 
-/** Splits 1 − OEE into planned stops, unplanned downtime, speed and quality losses (they sum exactly). */
+/**
+ * Splits 1 − OEE into planned stops, unplanned downtime, speed and quality losses (they sum exactly).
+ *
+ * @deprecated Prefer backend loss attribution from GET /api/oee (calculate_production_stats)
+ * which provides 4-category OEE waterfall attribution based on BigQuery telemetry and incident state.
+ */
 export function oeeLosses(machines: MachineOee[], rows: FleetRow[], incident: IncidentState | null, defectLabel: string): OeeLoss[] {
   const live = machines.filter((m) => rows.find((r) => r.id === m.id)?.status !== 'offline');
   if (!live.length) return [];

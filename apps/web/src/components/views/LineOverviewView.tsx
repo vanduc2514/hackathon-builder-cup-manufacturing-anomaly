@@ -1,6 +1,6 @@
 // LineOverviewView: Cell Line 1 one-screen overview — what went wrong (banner), quality / incident / ESG KPIs, OEE trend and losses, and the fleet table.
 import React, { useEffect, useMemo, useState } from 'react';
-import type { IncidentState, MultiMachineTelemetryResponse } from '../../types';
+import type { IncidentState, LineOeeResponse, MultiMachineTelemetryResponse } from '../../types';
 import type { ToastTone } from '../../App';
 import { useApi } from '../../lib/api';
 import type { EsgLedgerEntry } from '../../lib/fleet';
@@ -38,21 +38,71 @@ export default function LineOverviewView({
   onNotify,
 }: LineOverviewViewProps): React.ReactElement {
   const telemetry = useApi<MultiMachineTelemetryResponse>('/api/telemetry/history', 15000);
+  const oeeApi = useApi<LineOeeResponse>('/api/oee', 15000);
   const [dismissedId, setDismissedId] = useState<string | null>(null);
   const [diagId, setDiagId] = useState<string | null>(null);
   const [scope, setScope] = useState<string | null>(null);
 
   const rows = useMemo(() => buildFleetRows(telemetry.data, incident), [telemetry.data, incident]);
-  const oee = useMemo(
-    () => (telemetry.data || incident ? computeOee(telemetry.data, incident, rows) : null),
-    [telemetry.data, incident, rows],
-  );
+  const oee = useMemo(() => {
+    if (oeeApi.data) {
+      return {
+        availability: oeeApi.data.availability,
+        performance: oeeApi.data.performance,
+        quality: oeeApi.data.quality,
+        oee: oeeApi.data.oee,
+      };
+    }
+    return telemetry.data || incident ? computeOee(telemetry.data, incident, rows) : null;
+  }, [oeeApi.data, telemetry.data, incident, rows]);
 
-  const machines = useMemo(() => rows.map((r) => machineOee(r, telemetry.data, incident)), [rows, telemetry.data, incident]);
-  const losses = useMemo(
-    () => oeeLosses(machines, rows, incident, friendlyDefectName(incident?.defect_type)),
-    [machines, rows, incident],
-  );
+  const machines = useMemo(() => {
+    if (oeeApi.data?.machines && oeeApi.data.machines.length > 0) {
+      return rows.map((r) => {
+        const mMetric = oeeApi.data?.machines.find((m) => m.machine_id === r.id);
+        const points = telemetry.data?.series?.[r.id] ?? [];
+        if (mMetric) {
+          return {
+            id: r.id,
+            availability: mMetric.availability,
+            performance: mMetric.performance,
+            quality: mMetric.quality,
+            oee: mMetric.oee,
+            down: mMetric.availability < 0.05,
+            vibration: points.map((p) => p.vibration_mm_s),
+            anomalous: points.map((p) => p.is_anomalous),
+          };
+        }
+        return machineOee(r, telemetry.data, incident);
+      });
+    }
+    return rows.map((r) => machineOee(r, telemetry.data, incident));
+  }, [oeeApi.data, rows, telemetry.data, incident]);
+
+  const losses = useMemo(() => {
+    if (oeeApi.data?.losses && oeeApi.data.losses.length > 0) {
+      return oeeApi.data.losses.map((l) => ({
+        kind: (l.kind === 'planned_stop'
+          ? 'planned'
+          : l.kind === 'unplanned_downtime'
+            ? 'downtime'
+            : l.kind) as 'planned' | 'downtime' | 'speed' | 'quality',
+        label:
+          l.kind === 'planned_stop'
+            ? 'Planned stops'
+            : l.kind === 'unplanned_downtime'
+              ? 'Unplanned downtime'
+              : l.kind === 'speed'
+                ? 'Speed loss'
+                : 'Quality loss',
+        detail: l.reason ?? '',
+        value: l.points,
+        machine: l.machine_id ?? null,
+        incidentId: l.incident_id ?? null,
+      }));
+    }
+    return oeeLosses(machines, rows, incident, friendlyDefectName(incident?.defect_type));
+  }, [oeeApi.data, machines, rows, incident]);
 
   const open = isIncidentOpen(incident) ? incident : null;
   const showBanner = open && dismissedId !== open.incident_id;
@@ -69,6 +119,7 @@ export default function LineOverviewView({
 
   const refresh = () => {
     telemetry.reload();
+    oeeApi.reload();
     onRefreshIncident();
     onNotify('Line data refreshed', 'info');
   };
@@ -155,9 +206,15 @@ export default function LineOverviewView({
           lineOee={oee}
           scope={scope}
           onScope={setScope}
-          loading={telemetry.loading}
+          loading={telemetry.loading || oeeApi.loading}
+          oeeResponse={oeeApi.data}
         />
-        <OeeLossCard losses={losses} oee={oee?.oee ?? null} onSelectMachine={setScope} />
+        <OeeLossCard
+          losses={losses}
+          oee={oee?.oee ?? null}
+          onSelectMachine={setScope}
+          isLive={Boolean(oeeApi.data)}
+        />
       </div>
 
       <MachineFleetTable rows={rows} loading={telemetry.loading} onOpenIncident={onOpenIncident} onDiagnostics={setDiagId} />

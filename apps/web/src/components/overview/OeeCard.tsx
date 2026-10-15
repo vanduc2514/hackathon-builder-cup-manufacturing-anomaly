@@ -1,16 +1,19 @@
 // OeeCard: line OEE with availability / performance / quality breakdown bars.
 import React from 'react';
+import type { LineOeeResponse, OeeFactors } from '../../types';
 import type { OeeBreakdown } from '../../lib/fleet';
 import { OEE_TARGET } from '../../lib/fleet';
 
 interface OeeCardProps {
-  oee: OeeBreakdown | null;
+  oee: LineOeeResponse | OeeBreakdown | OeeFactors | null;
 }
 
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
 export default function OeeCard({ oee }: OeeCardProps): React.ReactElement {
-  const delta = oee ? (oee.oee - OEE_TARGET) * 100 : null;
+  const target =
+    oee && 'target' in oee && typeof oee.target === 'number' ? oee.target : OEE_TARGET;
+  const delta = oee ? (oee.oee - target) * 100 : null;
   const below = delta !== null && delta < 0;
   const parts: { label: string; value: number | null }[] = [
     { label: 'Availability', value: oee?.availability ?? null },
@@ -34,7 +37,7 @@ export default function OeeCard({ oee }: OeeCardProps): React.ReactElement {
       </div>
       <div className="row" style={{ alignItems: 'baseline', gap: 8 }}>
         <span className="kpi-value mono">{oee ? pct(oee.oee) : '—'}</span>
-        <span className="kpi-hint">Target: {pct(OEE_TARGET)}</span>
+        <span className="kpi-hint">Target: {pct(target)}</span>
       </div>
       <div className="col" style={{ gap: 10, marginTop: 'auto' }}>
         {parts.map((p) => (

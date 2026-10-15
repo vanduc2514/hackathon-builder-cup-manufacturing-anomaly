@@ -330,11 +330,7 @@ def test_gemini_live_websocket_realtime_media_chunks():
         # Realtime media input
         payload = {
             "type": "client_content",
-            "realtime_input": {
-                "media_chunks": [
-                    {"mime_type": "image/jpeg", "data": jpeg_b64}
-                ]
-            }
+            "realtime_input": {"media_chunks": [{"mime_type": "image/jpeg", "data": jpeg_b64}]},
         }
         ws.send_text(json.dumps(payload))
 

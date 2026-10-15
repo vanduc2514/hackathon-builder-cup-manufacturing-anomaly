@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
+import traceback
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from google.adk import Workflow
@@ -137,6 +141,34 @@ incident_workflow = Workflow(
 )
 
 
+def dump_crash(
+    state: IncidentState,
+    exc: Exception,
+    output_dir: Path | None = None,
+) -> Path | None:
+    """Serializes the exact IncidentState context to crash_<incident_id>_<timestamp>.json upon failure."""
+    try:
+        ts = int(time.time())
+        filename = f"crash_{state.incident_id}_{ts}.json"
+        target_dir = output_dir or Path.cwd()
+        target_dir.mkdir(parents=True, exist_ok=True)
+        crash_path = target_dir / filename
+        data = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "incident_id": state.incident_id,
+            "error_type": type(exc).__name__,
+            "error_message": str(exc),
+            "traceback": traceback.format_exc(),
+            "state": state.model_dump(mode="json"),
+        }
+        crash_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        logger.info("Serialized crash dump to %s", crash_path)
+        return crash_path
+    except Exception as dump_err:
+        logger.error("Failed to write crash dump: %s", dump_err)
+        return None
+
+
 class Orchestrator:
     """Single input/output boundary: starts, approves and resets incidents; one at a time."""
 
@@ -213,9 +245,11 @@ class Orchestrator:
                 blackboard.update_status("error", status_reason=GEMINI_RATE_LIMIT_MESSAGE)
             else:
                 blackboard.update_status("error", status_reason=f"{type(exc).__name__}: {exc}")
+            dump_crash(blackboard.get_state(), exc)
         except Exception as exc:
             logger.exception("incident workflow failed")
             blackboard.update_status("error", status_reason=f"{type(exc).__name__}: {exc}")
+            dump_crash(blackboard.get_state(), exc)
         return blackboard.get_state()
 
     async def cancel(self) -> None:

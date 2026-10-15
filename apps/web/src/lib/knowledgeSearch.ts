@@ -6,6 +6,7 @@ export type HitKind = 'solution' | 'sop' | 'video';
 export interface SearchHit {
   kind: HitKind;
   id: string;
+  page?: number;
   title: string;
   snippet: string;
   score: number;

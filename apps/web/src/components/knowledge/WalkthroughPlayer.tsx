@@ -7,14 +7,14 @@ interface WalkthroughPlayerProps {
   item: WalkthroughMeta;
   autoPlay?: boolean;
   embedded?: boolean;
-  onOpenSop?: (code: number | string) => void;
+  onOpenDocument: (documentId: string) => void;
 }
 
 export default function WalkthroughPlayer({
   item,
   autoPlay = false,
   embedded = false,
-  onOpenSop,
+  onOpenDocument,
 }: WalkthroughPlayerProps): React.ReactElement {
   const [time, setTime] = useState<number>(autoPlay ? 0 : item.chapters?.[1]?.at ?? 0);
   const [playing, setPlaying] = useState<boolean>(autoPlay);
@@ -67,7 +67,23 @@ export default function WalkthroughPlayer({
     >
       <div className="col" style={{ gap: 10 }}>
         <div ref={stageRef} className="player-stage">
-          <img src={item.thumbnail_url || '/knowledge/wt-hero.jpg'} alt="" />
+          {item.thumbnail_url ? (
+            <img src={item.thumbnail_url} alt="" />
+          ) : (
+            <div
+              className="row center"
+              style={{
+                width: '100%',
+                height: '100%',
+                minHeight: 220,
+                background: 'var(--surface-muted, #1e293b)',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 48, color: 'var(--text-muted)' }}>
+                videocam
+              </span>
+            </div>
+          )}
           <div className="player-shade" />
           <span className="player-tag">
             <span className="material-symbols-outlined icon-fill" style={{ fontSize: 14 }}>
@@ -225,12 +241,12 @@ export default function WalkthroughPlayer({
           </div>
         )}
 
-        {item.linked_sop && onOpenSop && (
+        {item.linked_sop && (
           <button
             type="button"
             className="btn"
             style={{ alignSelf: 'flex-start', marginTop: 8 }}
-            onClick={() => onOpenSop(item.linked_sop as string)}
+            onClick={() => onOpenDocument(item.linked_sop!)}
           >
             <span className="material-symbols-outlined">description</span>
             Open Linked SOP ({item.linked_sop})

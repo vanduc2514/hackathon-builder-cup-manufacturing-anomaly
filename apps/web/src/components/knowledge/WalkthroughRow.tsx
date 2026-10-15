@@ -25,7 +25,22 @@ export default function WalkthroughRow({
         aria-label={`Play ${item.title}`}
       >
         <span className="wt-thumb">
-          <img src={item.thumbnail_url || '/knowledge/wt-hero.jpg'} alt="" loading="lazy" />
+          {item.thumbnail_url ? (
+            <img src={item.thumbnail_url} alt="" loading="lazy" />
+          ) : (
+            <span
+              className="row center"
+              style={{
+                width: '100%',
+                height: '100%',
+                background: 'var(--surface-muted, #1e293b)',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 24, color: 'var(--text-muted)' }}>
+                videocam
+              </span>
+            </span>
+          )}
           <span className="material-symbols-outlined icon-fill wt-thumb-play">play_arrow</span>
         </span>
         <span className="col" style={{ minWidth: 0, gap: 3, flex: 1, textAlign: 'left' }}>

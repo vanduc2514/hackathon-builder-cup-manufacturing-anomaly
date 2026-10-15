@@ -12,7 +12,7 @@ import EightDSheet from '../knowledge/EightDSheet';
 
 interface KaizenImpactViewProps {
   esgLedger: EsgLedgerEntry[];
-  onOpenSop: (code: string | number) => void;
+  onOpenDocument: (documentId: string) => void;
   onOpenWalkthrough: (id: string) => void;
 }
 
@@ -20,7 +20,7 @@ type Panel = { kind: 'eightd'; incidentId: string } | { kind: 'whatif' } | { kin
 
 const usd = (v: number) => `$${Math.round(v).toLocaleString('en-US')}`;
 
-export default function KaizenImpactView({ esgLedger, onOpenSop, onOpenWalkthrough }: KaizenImpactViewProps): React.ReactElement {
+export default function KaizenImpactView({ esgLedger, onOpenDocument, onOpenWalkthrough }: KaizenImpactViewProps): React.ReactElement {
   const bench = useApi<Record<string, ManufacturingBenchmark>>('/api/impact/benchmarks');
   const [panel, setPanel] = useState<Panel>(null);
 
@@ -86,7 +86,7 @@ export default function KaizenImpactView({ esgLedger, onOpenSop, onOpenWalkthrou
       <KnowledgeSearch
         solutions={solutions}
         onOpenSolution={(incidentId) => setPanel({ kind: 'eightd', incidentId })}
-        onOpenSop={onOpenSop}
+        onOpenDocument={onOpenDocument}
         onOpenWalkthrough={onOpenWalkthrough}
       />
 

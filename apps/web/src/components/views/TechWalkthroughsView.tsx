@@ -9,13 +9,13 @@ import type { WalkthroughMeta } from '../../types';
 
 interface TechWalkthroughsViewProps {
   requestedId: string | null;
-  onOpenSop?: (code: number | string) => void;
+  onOpenDocument: (documentId: string) => void;
   onNotify: (text: string, tone?: ToastTone) => void;
 }
 
 export default function TechWalkthroughsView({
   requestedId,
-  onOpenSop,
+  onOpenDocument,
   onNotify,
 }: TechWalkthroughsViewProps): React.ReactElement {
   const { data: walkthroughs, loading, error } = useApi<WalkthroughMeta[]>('/api/knowledge/walkthroughs');
@@ -216,7 +216,7 @@ export default function TechWalkthroughsView({
             </>
           }
         >
-          <WalkthroughPlayer item={open} embedded autoPlay onOpenSop={onOpenSop} />
+          <WalkthroughPlayer item={open} embedded autoPlay onOpenDocument={onOpenDocument} />
         </SideDrawer>
       )}
     </div>

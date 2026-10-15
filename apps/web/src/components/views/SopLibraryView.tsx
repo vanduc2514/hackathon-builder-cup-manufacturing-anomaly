@@ -7,18 +7,14 @@ import type { KnowledgeDocumentMeta } from '../../types';
 import SopDetailDrawer from '../knowledge/SopDetailDrawer';
 
 interface SopLibraryViewProps {
-  requestedCode?: string | number | null;
-  requestedId?: string | null;
-  onOpenWalkthrough: (id: string) => void;
+  requestedDocumentId: string | null;
   onNotify: (text: string, tone?: ToastTone) => void;
 }
 
 type SortKey = 'recent' | 'title' | 'pages';
 
 export default function SopLibraryView({
-  requestedCode,
-  requestedId,
-  onOpenWalkthrough,
+  requestedDocumentId,
   onNotify,
 }: SopLibraryViewProps): React.ReactElement {
   const { data: documents, loading, error } = useApi<KnowledgeDocumentMeta[]>('/api/knowledge/sops');
@@ -28,8 +24,7 @@ export default function SopLibraryView({
   const [machine, setMachine] = useState<string>('All');
   const [sort, setSort] = useState<SortKey>('recent');
 
-  const initialId = requestedId ?? (requestedCode != null ? String(requestedCode) : null);
-  const [openDocId, setOpenDocId] = useState<string | null>(initialId);
+  const [openDocId, setOpenDocId] = useState<string | null>(requestedDocumentId);
 
   // Collect distinct machines across documents
   const allMachines = useMemo(() => {
@@ -296,7 +291,6 @@ export default function SopLibraryView({
         <SopDetailDrawer
           document={openDoc}
           onClose={() => setOpenDocId(null)}
-          onOpenWalkthrough={onOpenWalkthrough}
         />
       )}
     </div>

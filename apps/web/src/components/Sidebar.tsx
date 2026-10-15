@@ -253,7 +253,7 @@ export default function Sidebar({
               icon="smart_display"
               label="Tech Walkthroughs"
               active={currentTab === 'walkthroughs'}
-              onClick={() => onSelectTab('walkthroughs')}
+              onClick={() => onSelectTab('walkthroughs' as const)}
             />
             <NavItem
               id="nav-impact"

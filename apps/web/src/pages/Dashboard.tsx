@@ -37,19 +37,19 @@ export default function Dashboard({
 }: DashboardProps): React.ReactElement {
   // Cross-links (SOP → video, video → SOP) land on the target page with that item's drawer already open.
   const [requestedWalkthrough, setRequestedWalkthrough] = useState<string | null>(null);
-  const [requestedSop, setRequestedSop] = useState<string | number | null>(null);
+  const [requestedDocumentId, setRequestedDocumentId] = useState<string | null>(null);
   useEffect(() => {
-    if (currentTab !== 'walkthroughs') setRequestedWalkthrough(null);
-    if (currentTab !== 'sops') setRequestedSop(null);
+    if (currentTab !== ('walkthroughs' as const)) setRequestedWalkthrough(null);
+    if (currentTab !== 'sops') setRequestedDocumentId(null);
   }, [currentTab]);
 
   const goHome = () => onSelectTab('overview');
   const openWalkthrough = (id: string) => {
     setRequestedWalkthrough(id);
-    onSelectTab('walkthroughs');
+    onSelectTab('walkthroughs' as DashboardTab);
   };
-  const openSop = (code: string | number) => {
-    setRequestedSop(code);
+  const openDocument = (documentId: string) => {
+    setRequestedDocumentId(documentId);
     onSelectTab('sops');
   };
   return (
@@ -75,9 +75,26 @@ export default function Dashboard({
           onNotify={onNotify}
         />
       )}
-      {currentTab === 'impact' && <KaizenImpactView esgLedger={esgLedger} onOpenSop={openSop} onOpenWalkthrough={openWalkthrough} />}
-      {currentTab === 'walkthroughs' && <TechWalkthroughsView requestedId={requestedWalkthrough} onOpenSop={openSop} onNotify={onNotify} />}
-      {currentTab === 'sops' && <SopLibraryView requestedCode={requestedSop} onOpenWalkthrough={openWalkthrough} onNotify={onNotify} />}
+      {currentTab === 'impact' && (
+        <KaizenImpactView
+          esgLedger={esgLedger}
+          onOpenDocument={openDocument}
+          onOpenWalkthrough={openWalkthrough}
+        />
+      )}
+      {currentTab === 'walkthroughs' && (
+        <TechWalkthroughsView
+          requestedId={requestedWalkthrough}
+          onOpenDocument={openDocument}
+          onNotify={onNotify}
+        />
+      )}
+      {currentTab === 'sops' && (
+        <SopLibraryView
+          requestedDocumentId={requestedDocumentId}
+          onNotify={onNotify}
+        />
+      )}
     </div>
   );
 }

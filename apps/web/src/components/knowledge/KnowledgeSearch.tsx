@@ -8,8 +8,7 @@ import type { RAGSearchResult } from '../../types';
 interface KnowledgeSearchProps {
   solutions: VerifiedSolution[];
   onOpenSolution: (incidentId: string) => void;
-  onOpenDocument?: (documentId: string) => void;
-  onOpenSop?: (code: number | string) => void;
+  onOpenDocument: (documentId: string) => void;
   onOpenWalkthrough: (id: string) => void;
 }
 
@@ -30,7 +29,6 @@ export default function KnowledgeSearch({
   solutions,
   onOpenSolution,
   onOpenDocument,
-  onOpenSop,
   onOpenWalkthrough,
 }: KnowledgeSearchProps): React.ReactElement {
   const [query, setQuery] = useState<string>('');
@@ -80,6 +78,7 @@ export default function KnowledgeSearch({
         const hits: SearchHit[] = res.citations.map((c) => ({
           kind: 'sop' as const,
           id: c.document_id,
+          page: c.page_number,
           title: `${c.title}${c.page_number ? ` (p. ${c.page_number})` : ''}`,
           snippet: c.snippet,
           score: c.relevance_score,
@@ -126,11 +125,7 @@ export default function KnowledgeSearch({
     if (h.kind === 'solution') {
       onOpenSolution(h.id);
     } else if (h.kind === 'sop') {
-      if (onOpenDocument) {
-        onOpenDocument(h.id);
-      } else if (onOpenSop) {
-        onOpenSop(h.id);
-      }
+      onOpenDocument(h.id);
     } else {
       onOpenWalkthrough(h.id);
     }
@@ -225,7 +220,7 @@ export default function KnowledgeSearch({
               const k = KIND[h.kind];
               return (
                 <button
-                  key={`${h.kind}-${h.id}`}
+                  key={`${h.kind}-${h.id}-p${h.page ?? 0}`}
                   type="button"
                   className="list-row search-hit"
                   onClick={() => openHit(h)}

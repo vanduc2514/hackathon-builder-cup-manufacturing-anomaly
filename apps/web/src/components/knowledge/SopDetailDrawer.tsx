@@ -8,13 +8,11 @@ import { CATEGORY_LABELS } from '../../lib/knowledge';
 interface SopDetailDrawerProps {
   document: KnowledgeDocumentMeta;
   onClose: () => void;
-  onOpenWalkthrough?: (id: string) => void;
 }
 
 export default function SopDetailDrawer({
   document,
   onClose,
-  onOpenWalkthrough,
 }: SopDetailDrawerProps): React.ReactElement {
   return (
     <SideDrawer
@@ -39,16 +37,6 @@ export default function SopDetailDrawer({
       title={document.title}
       footer={
         <>
-          {onOpenWalkthrough && (
-            <button
-              type="button"
-              className="btn btn-dark"
-              onClick={() => onOpenWalkthrough('walkthroughs')}
-            >
-              <span className="material-symbols-outlined">smart_display</span>
-              Walkthroughs
-            </button>
-          )}
           <button type="button" className="btn" onClick={onClose}>
             <span className="material-symbols-outlined">close</span>
             Close

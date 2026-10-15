@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { WorkOrder } from '../../types/mobile';
 import { useCamera } from '../../hooks/useCamera';
 import { useGeminiLive, type LiveConnection } from '../../hooks/useGeminiLive';
+import { useOemManual } from '../../hooks/useOemManual';
 import { IMG } from './mobileData';
 
 interface MobileFixLiveProps {
@@ -30,7 +31,8 @@ function stepQuestion(index: number, title: string): string {
  * checkpoint-verification endpoint, so nothing is marked "verified" by the app.
  */
 export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }: MobileFixLiveProps): React.ReactElement {
-  const steps = order.steps;
+  const { steps: dynamicSteps, loading: manualLoading } = useOemManual(order.machine);
+  const steps = order.steps.length > 0 ? order.steps : dynamicSteps;
   const isLiveOrder = Boolean(order.live);
   const [idx, setIdx] = useState(0);
   const [voiceOn, setVoiceOn] = useState(voiceGuidance);
@@ -73,7 +75,9 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
             <span className="material-symbols-outlined">arrow_back_ios_new</span>
           </button>
         </div>
-        <div className="m-hint-pill m-glass-dark">No OEM repair procedure for {order.machine}</div>
+        <div className="m-hint-pill m-glass-dark">
+          {manualLoading ? `Loading OEM manual for ${order.machine}…` : `No OEM repair procedure for ${order.machine}`}
+        </div>
       </div>
     );
   }

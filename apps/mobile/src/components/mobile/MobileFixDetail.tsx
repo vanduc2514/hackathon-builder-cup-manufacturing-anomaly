@@ -1,5 +1,6 @@
 import React from 'react';
 import type { WorkOrder } from '../../types/mobile';
+import { useOemManual } from '../../hooks/useOemManual';
 import MobileNavBar from './MobileNavBar';
 import ConfidenceRing from './ConfidenceRing';
 import AiReasonCard from './AiReasonCard';
@@ -14,6 +15,9 @@ const TREND_ICON = { up: 'trending_up', down: 'trending_down', flat: 'trending_f
 
 /** Repair job briefing: what's wrong, why, what you need, and the step plan — then Start. */
 export default function MobileFixDetail({ order, onBack, onStart }: MobileFixDetailProps): React.ReactElement {
+  const { steps: dynamicSteps, parts: dynamicParts } = useOemManual(order.machine);
+  const steps = order.steps.length > 0 ? order.steps : dynamicSteps;
+  const partsNeeded = order.partsNeeded.length > 0 ? order.partsNeeded : dynamicParts;
   return (
     <>
       <MobileNavBar
@@ -133,14 +137,14 @@ export default function MobileFixDetail({ order, onBack, onStart }: MobileFixDet
         {/* Bring */}
         <div className="m-label">Bring with you</div>
         <div className="m-glass m-list">
-          {order.partsNeeded.length === 0 && (
+          {partsNeeded.length === 0 && (
             <div className="m-li">
               <div className="m-li-body">
                 <div className="m-li-sub">No parts list for this machine. Check the work order above.</div>
               </div>
             </div>
           )}
-          {order.partsNeeded.map((p) => (
+          {partsNeeded.map((p) => (
             <div key={p} className="m-li">
               <span className="m-li-icon">
                 <span className="material-symbols-outlined">inventory_2</span>
@@ -158,17 +162,17 @@ export default function MobileFixDetail({ order, onBack, onStart }: MobileFixDet
         {/* Plan */}
         <div className="m-label">
           Repair plan
-          <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>{order.steps.length} steps</span>
+          <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>{steps.length} steps</span>
         </div>
         <div className="m-glass m-list">
-          {order.steps.length === 0 && (
+          {steps.length === 0 && (
             <div className="m-li">
               <div className="m-li-body">
                 <div className="m-li-sub">No OEM repair procedure for {order.machine}.</div>
               </div>
             </div>
           )}
-          {order.steps.map((s) => (
+          {steps.map((s) => (
             <div key={s.id} className="m-li">
               <span className="m-step-num">{s.id}</span>
               <div className="m-li-body">

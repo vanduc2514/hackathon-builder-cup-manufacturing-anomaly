@@ -1157,6 +1157,26 @@ class RepairCheckpoint(BaseModel):
     notes: Optional[str] = None
 
 
+class OemRepairManual(BaseModel):
+    """OEM equipment repair manual specification and checkpoints."""
+
+    machine_id: str
+    title: str
+    citation: str
+    manual_title: Optional[str] = None
+    primary_citation: Optional[str] = None
+    equipment_name: Optional[str] = None
+    parts: list[str] = Field(default_factory=list)
+    supported_actions: list[str] = Field(default_factory=list)
+    checkpoints: list[RepairCheckpoint] = Field(default_factory=list)
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.manual_title:
+            self.manual_title = self.title
+        if not self.primary_citation:
+            self.primary_citation = self.citation
+
+
 class CopilotTurn(BaseModel):
     """A single turn in the interactive technician guidance session."""
 

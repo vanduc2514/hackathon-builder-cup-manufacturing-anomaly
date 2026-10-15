@@ -318,6 +318,19 @@ export interface RepairCheckpoint {
   unit?: string | null;
 }
 
+/** Mirrors `OemRepairManual` from backend/core/models.py. */
+export interface OemRepairManual {
+  machine_id: string;
+  title: string;
+  citation: string;
+  manual_title?: string;
+  primary_citation?: string;
+  equipment_name?: string;
+  parts: string[];
+  supported_actions?: string[];
+  checkpoints: RepairCheckpoint[];
+}
+
 export interface TelemetryPoint {
   timestamp: string;
   machine_id: string;

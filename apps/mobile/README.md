@@ -32,7 +32,6 @@ src/
 └── components/mobile/
     ├── MobileApp.tsx            # Shell: tabs, Work List navigation stack, shared state
     ├── mobileData.ts            # Demo data + buildLiveOrder() (incident → work order)
-    ├── oemRepairManuals.ts      # Copy of the backend OEM repair checkpoints
     ├── MobileWork*.tsx          # Work List and status screens
     ├── MobileEvidence*.tsx      # Field evidence request and capture
     ├── MobileFix*.tsx           # Repair brief and live repair guide
@@ -41,7 +40,7 @@ src/
 
 ## Backend connection (current state)
 
-- Reads: `GET /api/incidents/current`, SSE `/api/incidents/stream` (alternates with `/events`), `/api/telemetry/baseline`, `/api/telemetry/history`, `/api/gemini-live/status|session|sessions` and `WS /api/gemini-live/ws` (the Vite proxy has `ws: true`).
+- Reads: `GET /api/incidents/current`, SSE `/api/incidents/stream` (alternates with `/events`), `/api/copilot/manuals/{machine_id}`, `/api/telemetry/baseline`, `/api/telemetry/history`, `/api/gemini-live/status|session|sessions` and `WS /api/gemini-live/ws` (the Vite proxy has `ws: true`).
 - Writes: `POST /api/incidents/evidence`, only while the incident is `awaiting_evidence`.
 - The live incident is its own work order (badge Live). Demo orders (badge Demo), the AI Helper and settings are local only.
 - Full gap list: [BACKEND_FRONTEND_GAPS.md](BACKEND_FRONTEND_GAPS.md).

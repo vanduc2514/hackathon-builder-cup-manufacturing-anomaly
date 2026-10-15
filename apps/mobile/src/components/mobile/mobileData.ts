@@ -16,7 +16,6 @@ import type {
   WorkStage,
 } from '../../types/mobile';
 import type { TelemetryContext } from '../../hooks/useTelemetry';
-import { getRepairParts, getRepairSteps } from './oemRepairManuals';
 import type { AgentFinding, AuthUser, IncidentState, IncidentSummary } from '../../types';
 
 export const IMG = {
@@ -384,8 +383,8 @@ export function buildLiveOrder(
     aiRequest,
     sensors,
     evidence: kind === 'evidence' ? buildEvidence(incident, telemetry, captures) : [],
-    steps: getRepairSteps(incident.suspect_machine),
-    partsNeeded: getRepairParts(incident.suspect_machine),
+    steps: [],
+    partsNeeded: [],
     processing,
     completedAt,
     outcome,
@@ -497,8 +496,8 @@ export function summaryToWorkOrder(summary: IncidentSummary, leadName: string): 
     suspectTool: summary.suspect_tool ?? undefined,
     sensors: [],
     evidence: [],
-    steps: getRepairSteps(summary.suspect_machine),
-    partsNeeded: getRepairParts(summary.suspect_machine),
+    steps: [],
+    partsNeeded: [],
     processing,
     completedAt,
     outcome,

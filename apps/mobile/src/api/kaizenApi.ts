@@ -13,6 +13,7 @@ import type {
   IncidentState,
   IncidentSummary,
   MultiMachineTelemetryResponse,
+  OemRepairManual,
   TelemetryBaselineResponse,
 } from '../types';
 
@@ -40,6 +41,11 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function fetchCurrentIncident(): Promise<IncidentState> {
   return getJson<IncidentState>('/api/incidents/current');
+}
+
+/** `GET /api/copilot/manuals/{machine_id}`: OEM repair manual and structured checkpoints. */
+export function fetchOemManual(machineId: string): Promise<OemRepairManual> {
+  return getJson<OemRepairManual>(`/api/copilot/manuals/${encodeURIComponent(machineId)}`);
 }
 
 export function fetchIncidentHistory(limit = 20, status?: string): Promise<IncidentSummary[]> {

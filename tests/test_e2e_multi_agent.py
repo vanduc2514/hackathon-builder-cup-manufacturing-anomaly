@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.agents.orchestrator import dump_crash, orchestrator
+from backend.agents.orchestrator import GENERIC_FAILURE_MESSAGE, dump_crash, orchestrator
 from backend.agents.workflow_nodes import (
     close_incident,
     reopen_investigation,
@@ -400,10 +400,13 @@ async def test_crash_dump_serialization_on_agent_failure(tmp_path):
     ):
         result_state = await orchestrator.run_incident(trigger)
 
-        # Assert blackboard transitioned to error status
+        # Assert blackboard transitioned to error status with a friendly message (the raw
+        # exception class/text must never reach the technician; it is still captured below
+        # in the server-side crash dump).
         assert result_state.status == "error"
-        assert "RuntimeError" in (result_state.status_reason or "")
-        assert "Catastrophic agent network partitioning" in (result_state.status_reason or "")
+        assert result_state.status_reason == GENERIC_FAILURE_MESSAGE
+        assert "RuntimeError" not in (result_state.status_reason or "")
+        assert "Catastrophic agent network partitioning" not in (result_state.status_reason or "")
 
         # Assert crash file was generated in cwd
         crash_files = glob.glob(f"crash_{result_state.incident_id}_*.json")

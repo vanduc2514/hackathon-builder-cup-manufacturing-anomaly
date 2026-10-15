@@ -19,6 +19,7 @@ from google.genai.errors import ClientError
 from backend.agents import agent_quality_inspector
 from backend.agents.orchestrator import (
     GEMINI_RATE_LIMIT_MESSAGE,
+    GENERIC_FAILURE_MESSAGE,
     MAX_LLM_CALLS_PER_INCIDENT,
     Orchestrator,
     _build_gemini_model,
@@ -186,7 +187,8 @@ def test_approval_rejected_on_escalated_incident():
 def test_agent_failure_surfaces_as_error_status():
     state = _run(FakeLlm(fail_on="You are the Process Analyst Agent"))
     assert state.status == "error"
-    assert "RuntimeError" in state.status_reason
+    assert state.status_reason == GENERIC_FAILURE_MESSAGE
+    assert "RuntimeError" not in state.status_reason
 
 
 def test_gemini_429_surfaces_as_friendly_status_reason(caplog: pytest.LogCaptureFixture):
@@ -210,13 +212,15 @@ def test_gemini_429_surfaces_as_friendly_status_reason(caplog: pytest.LogCapture
     assert any(record.exc_info for record in caplog.records)
 
 
-def test_gemini_non_429_api_error_keeps_generic_status_reason():
+def test_gemini_non_429_api_error_surfaces_as_friendly_status_reason():
     err = ClientError(
         code=400, response_json={"error": {"code": 400, "message": "Invalid argument"}}
     )
     state = _run(FakeLlm(fail_on="You are the Process Analyst Agent", fail_with=err))
     assert state.status == "error"
-    assert state.status_reason == f"{type(err).__name__}: {err}"
+    assert state.status_reason == GENERIC_FAILURE_MESSAGE
+    assert "400" not in state.status_reason
+    assert "Invalid argument" not in state.status_reason
 
 
 def test_build_gemini_model_retries_only_on_429():
@@ -290,7 +294,8 @@ def test_runaway_llm_calls_stop_at_incident_ceiling():
     ):
         state = _run(llm)
     assert state.status == "error"
-    assert "LlmCallsLimitExceededError" in state.status_reason
+    assert state.status_reason == GENERIC_FAILURE_MESSAGE
+    assert "LlmCallsLimitExceededError" not in state.status_reason
     assert llm.calls == MAX_LLM_CALLS_PER_INCIDENT
 
 
@@ -311,7 +316,8 @@ def test_tool_outage_still_fails_the_incident():
     ):
         state = _run(ToolLoopLlm())
     assert state.status == "error"
-    assert "BigQuery query failed" in state.status_reason
+    assert state.status_reason == GENERIC_FAILURE_MESSAGE
+    assert "BigQuery query failed" not in state.status_reason
 
 
 def test_single_flight_and_abort_cancel():

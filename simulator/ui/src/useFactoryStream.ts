@@ -24,9 +24,11 @@ export function useFactoryStream() {
     const connect = () => {
       es = new EventSource('/api/factory/stream');
       es.onopen = () => setConnected(true);
-      es.onmessage = (e) => {
+      const handlePacket = (e: MessageEvent) => {
         try { setPacket(JSON.parse(e.data)); } catch { /* ignore non-json */ }
       };
+      es.onmessage = handlePacket;
+      es.addEventListener('factory_tick', handlePacket);
       es.onerror = () => {
         setConnected(false);
         es?.close();

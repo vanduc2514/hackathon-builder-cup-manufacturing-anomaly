@@ -156,6 +156,61 @@ class QualityEventPayload(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class ActiveAnomalyStatus(BaseModel):
+    """Current injected anomaly state for real-time monitoring and HUD display."""
+
+    scenario: Optional[str] = None
+    machine_id: Optional[str] = None
+    tool_id: Optional[str] = None
+    severity: float = 1.0
+    elapsed_seconds: float = 0.0
+
+
+class FactoryTickPacket(BaseModel):
+    """Real-time factory telemetry packet broadcast via SSE stream."""
+
+    tick_index: int
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    telemetry: list[MachineTelemetry] = Field(default_factory=list)
+    machines: list[MachineTelemetry] = Field(default_factory=list)
+    parts: list[ConveyorPart] = Field(default_factory=list)
+    recent_parts: list[ConveyorPart] = Field(default_factory=list)
+    edge_stats: EdgeFilterStatistics = Field(default_factory=EdgeFilterStatistics)
+    active_anomaly: Optional[ActiveAnomalyStatus] = None
+
+
+class InjectAnomalyRequest(BaseModel):
+    """Payload to trigger a simulated machine/mold anomaly burst."""
+
+    scenario: str = Field(
+        default="cnc_tool_wear",
+        description="Anomaly scenario: 'cnc_tool_wear' or 'im_damp_material'",
+    )
+    machine_id: Optional[str] = Field(
+        default=None,
+        description="Target machine ID (defaults to CNC-02 for tool wear, IM-05 for damp material)",
+    )
+    severity: float = Field(default=1.0, ge=0.1, le=2.0, description="Anomaly severity multiplier")
+    mode: str = Field(
+        default="demo",
+        description="Simulation speed mode: 'demo' (standard pace) or 'fast' (accelerated)",
+    )
+
+
+class FactoryStatusResponse(BaseModel):
+    """Operational status and configuration of the factory simulator."""
+
+    running: bool = True
+    tick_index: int = 0
+    interval_sec: float = 1.0
+    speed: float = 1.0
+    active_scenario: Optional[str] = None
+    active_anomaly: Optional[ActiveAnomalyStatus] = None
+    edge_stats: EdgeFilterStatistics = Field(default_factory=EdgeFilterStatistics)
+    machine_count: int = 4
+    machines: list[str] = Field(default_factory=lambda: ["CNC-01", "CNC-02", "CNC-03", "IM-05"])
+
+
 class SimulatorTickSummary(BaseModel):
     """Aggregate snapshot produced per simulation tick."""
 
@@ -164,4 +219,5 @@ class SimulatorTickSummary(BaseModel):
     telemetry: list[MachineTelemetry]
     parts: list[ConveyorPart]
     edge_stats: Optional[EdgeFilterStatistics] = None
+    active_anomaly: Optional[ActiveAnomalyStatus] = None
     forwarded_packets: list[FilteredFramePacket] = Field(default_factory=list)

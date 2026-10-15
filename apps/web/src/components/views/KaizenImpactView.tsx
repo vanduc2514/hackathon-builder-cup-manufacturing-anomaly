@@ -12,7 +12,7 @@ import EightDSheet from '../knowledge/EightDSheet';
 
 interface KaizenImpactViewProps {
   esgLedger: EsgLedgerEntry[];
-  onOpenSop: (code: number) => void;
+  onOpenSop: (code: string | number) => void;
   onOpenWalkthrough: (id: string) => void;
 }
 

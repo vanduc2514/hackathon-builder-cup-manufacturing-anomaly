@@ -1,191 +1,302 @@
-// SopLibraryView: Knowledge Hub SOPs as a scannable table; a row opens the SOP drawer with its diff log.
+// SopLibraryView: Knowledge Base document catalogue (manuals, specs, logs, 8D reports).
 import React, { useMemo, useState } from 'react';
 import type { ToastTone } from '../../App';
-import SopDetailDrawer, { sopCode } from '../knowledge/SopDetailDrawer';
-import { SOPS, SOP_CATEGORIES, type Sop } from '../../lib/knowledge';
+import { useApi } from '../../lib/api';
+import { CATEGORY_LABELS, DOCUMENT_CATEGORIES } from '../../lib/knowledge';
+import type { KnowledgeDocumentMeta } from '../../types';
+import SopDetailDrawer from '../knowledge/SopDetailDrawer';
 
 interface SopLibraryViewProps {
-  requestedCode: number | null;
+  requestedCode?: string | number | null;
+  requestedId?: string | null;
   onOpenWalkthrough: (id: string) => void;
   onNotify: (text: string, tone?: ToastTone) => void;
 }
 
-type SortKey = 'recent' | 'numeric';
+type SortKey = 'recent' | 'title' | 'pages';
 
-/** The most recent AI-proposed revision is surfaced as the single action item above the table. */
-const PENDING_REVIEW = SOPS[0];
+export default function SopLibraryView({
+  requestedCode,
+  requestedId,
+  onOpenWalkthrough,
+  onNotify,
+}: SopLibraryViewProps): React.ReactElement {
+  const { data: documents, loading, error } = useApi<KnowledgeDocumentMeta[]>('/api/knowledge/sops');
 
-export default function SopLibraryView({ requestedCode, onOpenWalkthrough, onNotify }: SopLibraryViewProps): React.ReactElement {
   const [query, setQuery] = useState<string>('');
   const [category, setCategory] = useState<string>('All');
+  const [machine, setMachine] = useState<string>('All');
   const [sort, setSort] = useState<SortKey>('recent');
-  const [openCode, setOpenCode] = useState<number | null>(requestedCode);
+
+  const initialId = requestedId ?? (requestedCode != null ? String(requestedCode) : null);
+  const [openDocId, setOpenDocId] = useState<string | null>(initialId);
+
+  // Collect distinct machines across documents
+  const allMachines = useMemo(() => {
+    if (!documents) return [];
+    const set = new Set<string>();
+    for (const d of documents) {
+      for (const m of d.machines) {
+        set.add(m);
+      }
+    }
+    return Array.from(set).sort();
+  }, [documents]);
 
   const visible = useMemo(() => {
+    if (!documents) return [];
     const q = query.trim().toLowerCase();
-    const list = SOPS.filter(
-      (s) =>
-        (category === 'All' || s.category === category) &&
-        (!q || `${sopCode(s.code)} ${s.code} ${s.title} ${s.station} ${s.category}`.toLowerCase().includes(q)),
-    );
-    return sort === 'numeric' ? [...list].sort((a, b) => a.code - b.code) : list;
-  }, [query, category, sort]);
+    const list = documents.filter((d) => {
+      const matchCat = category === 'All' || d.category === category;
+      const matchMach =
+        machine === 'All' || d.machines.includes(machine) || d.machine_id === machine;
+      const searchBlob = `${d.document_id} ${d.title} ${d.category} ${d.machines.join(' ')} ${d.tags.join(' ')}`.toLowerCase();
+      const matchQuery = !q || searchBlob.includes(q);
+      return matchCat && matchMach && matchQuery;
+    });
 
-  const open = SOPS.find((s) => s.code === openCode) ?? null;
-  const latest = PENDING_REVIEW.changes[0];
+    if (sort === 'title') {
+      return [...list].sort((a, b) => a.title.localeCompare(b.title));
+    }
+    if (sort === 'pages') {
+      return [...list].sort((a, b) => b.pages - a.pages);
+    }
+    // 'recent' by last_revised or effective_date descending
+    return [...list].sort((a, b) => {
+      const dateA = a.last_revised ?? a.effective_date ?? '';
+      const dateB = b.last_revised ?? b.effective_date ?? '';
+      return dateB.localeCompare(dateA);
+    });
+  }, [documents, query, category, machine, sort]);
+
+  const openDoc = useMemo(() => {
+    if (!documents || !openDocId) return null;
+    return documents.find((d) => d.document_id === openDocId) ?? null;
+  }, [documents, openDocId]);
 
   const exportCsv = () => {
     const rows = [
-      ['code', 'rev', 'station', 'category', 'title', 'updated'],
-      ...visible.map((s) => [sopCode(s.code), s.rev, s.station, s.category, s.title, s.updated]),
+      ['document_id', 'category', 'title', 'machines', 'pages', 'last_revised', 'linked_sops'],
+      ...visible.map((d) => [
+        d.document_id,
+        d.category,
+        d.title,
+        d.machines.join('; '),
+        String(d.pages),
+        d.last_revised ?? d.effective_date ?? '',
+        d.linked_sops.join('; '),
+      ]),
     ];
-    const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
+    const csv = rows
+      .map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(','))
+      .join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `sop-library-${Date.now()}.csv`;
+    a.download = `knowledge-docs-${Date.now()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    onNotify(`Exported ${visible.length} procedures`, 'info');
+    onNotify(`Exported ${visible.length} knowledge documents`, 'info');
   };
 
   return (
     <div className="page">
       <header className="row between wrap" style={{ gap: 16, alignItems: 'flex-end' }}>
         <div>
-          <h1 className="page-title">SOP Library</h1>
+          <h1 className="page-title">SOP & Knowledge Library</h1>
           <p className="muted" style={{ fontSize: '0.9rem', marginTop: 4 }}>
-            {SOPS.length} active procedures · click a row to see details and the change log
+            {documents ? `${documents.length} verified engineering documents` : 'Loading document catalogue…'}{' '}
+            · click a row for sections and citations
           </p>
         </div>
         <div className="row wrap" style={{ gap: 10 }}>
-          <button id="sop-export" type="button" className="btn" onClick={exportCsv}>
+          <button id="sop-export" type="button" className="btn" onClick={exportCsv} disabled={visible.length === 0}>
             <span className="material-symbols-outlined">file_download</span>
             Export CSV
-          </button>
-          <button id="sop-new" type="button" className="btn btn-dark" onClick={() => onNotify('Procedure authoring is not connected in this build', 'info')}>
-            <span className="material-symbols-outlined">add</span>
-            New Procedure
           </button>
         </div>
       </header>
 
-      <button type="button" id="sop-review-revision" className="glass action-strip" onClick={() => setOpenCode(PENDING_REVIEW.code)}>
-        <span className="chip" style={{ background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)' }}>
-          Needs review
-        </span>
-        <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-          <b className="mono" style={{ color: 'var(--accent)' }}>
-            {sopCode(PENDING_REVIEW.code)}
-          </b>{' '}
-          revised to Rev {latest.rev} · {latest.reason}
-        </span>
-        <span className="row" style={{ gap: 4, fontWeight: 650, color: 'var(--accent)', whiteSpace: 'nowrap' }}>
-          Review changes
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-            arrow_forward
-          </span>
-        </span>
-      </button>
-
       <section className="glass fleet-card">
         <div className="row wrap fleet-toolbar">
           <label className="glass-inset search-field row" style={{ flex: '1 1 320px' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--faint)' }}>
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 18, color: 'var(--faint)' }}
+            >
               search
             </span>
-            <input id="sop-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by SOP #, title or machine (CNC-02)…" aria-label="Search procedures" />
+            <input
+              id="sop-search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by title, tag, or document ID…"
+              aria-label="Search documents"
+            />
           </label>
           <label className="glass-inset search-field row" style={{ flex: '0 0 auto' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--faint)' }}>
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 18, color: 'var(--faint)' }}
+            >
               filter_list
             </span>
-            <select id="sop-category" value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Filter by category">
-              <option value="All">All categories ({SOPS.length})</option>
-              {SOP_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c} ({SOPS.filter((s) => s.category === c).length})
-                </option>
-              ))}
+            <select
+              id="sop-category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              aria-label="Filter by category"
+            >
+              <option value="All">All categories ({documents?.length ?? 0})</option>
+              {DOCUMENT_CATEGORIES.map((c) => {
+                const count = documents?.filter((d) => d.category === c).length ?? 0;
+                return (
+                  <option key={c} value={c}>
+                    {CATEGORY_LABELS[c] ?? c} ({count})
+                  </option>
+                );
+              })}
             </select>
           </label>
+          {allMachines.length > 0 && (
+            <label className="glass-inset search-field row" style={{ flex: '0 0 auto' }}>
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: 18, color: 'var(--faint)' }}
+              >
+                precision_manufacturing
+              </span>
+              <select
+                id="sop-machine"
+                value={machine}
+                onChange={(e) => setMachine(e.target.value)}
+                aria-label="Filter by machine"
+              >
+                <option value="All">All machines</option>
+                {allMachines.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="glass-inset search-field row" style={{ flex: '0 0 auto' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--faint)' }}>
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 18, color: 'var(--faint)' }}
+            >
               sort
             </span>
-            <select id="sop-sort" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Sort procedures">
-              <option value="recent">Recently updated</option>
-              <option value="numeric">SOP number</option>
+            <select
+              id="sop-sort"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              aria-label="Sort documents"
+            >
+              <option value="recent">Recently revised</option>
+              <option value="title">Document title</option>
+              <option value="pages">Page count</option>
             </select>
           </label>
         </div>
 
-        <div className="fleet-scroll">
-          <table className="fleet-table row-click">
-            <thead>
-              <tr>
-                <th>SOP</th>
-                <th>Procedure</th>
-                <th>Machine / Station</th>
-                <th>Rev</th>
-                <th>Updated</th>
-                <th aria-label="Open" />
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((s: Sop) => (
-                <tr
-                  key={s.code}
-                  tabIndex={0}
-                  onClick={() => setOpenCode(s.code)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setOpenCode(s.code);
-                    }
-                  }}
-                  aria-label={`Open ${sopCode(s.code)} ${s.title}`}
-                >
-                  <td className="mono" style={{ fontWeight: 700, color: s.safety ? '#c9343a' : 'var(--accent)' }}>
-                    {sopCode(s.code)}
-                  </td>
-                  <td style={{ whiteSpace: 'normal', minWidth: 280 }}>
-                    <span className="row" style={{ gap: 6, fontWeight: 600, color: 'var(--ink)' }}>
-                      {s.safety && (
-                        <span className="material-symbols-outlined" title="Safety-critical" style={{ fontSize: 16, color: 'var(--red)' }}>
-                          lock
-                        </span>
-                      )}
-                      {s.title}
-                    </span>
-                    <span className="kpi-hint">{s.category}</span>
-                  </td>
-                  <td>{s.station}</td>
-                  <td className="mono">{s.rev}</td>
-                  <td style={{ color: 'var(--muted)' }}>{s.updated}</td>
-                  <td style={{ textAlign: 'right', color: 'var(--faint)' }}>
-                    <span className="material-symbols-outlined">chevron_right</span>
-                  </td>
-                </tr>
-              ))}
-              {visible.length === 0 && (
+        {loading ? (
+          <div className="col center" style={{ padding: '2.5rem', gap: 10 }}>
+            <span className="material-symbols-outlined spin" style={{ fontSize: 24, color: 'var(--accent)' }}>
+              sync
+            </span>
+            <span className="kpi-hint">Loading knowledge documents…</span>
+          </div>
+        ) : error ? (
+          <div className="col center" style={{ padding: '2rem', gap: 8 }}>
+            <span className="material-symbols-outlined tone-red" style={{ fontSize: 24 }}>
+              error
+            </span>
+            <span className="kpi-hint tone-red">Failed to load documents: {error}</span>
+          </div>
+        ) : visible.length === 0 ? (
+          <div className="col center" style={{ padding: '2.5rem', gap: 8 }}>
+            <span className="material-symbols-outlined muted" style={{ fontSize: 24 }}>
+              folder_off
+            </span>
+            <span className="kpi-hint">No engineering documents match the selected filters.</span>
+          </div>
+        ) : (
+          <div className="fleet-scroll">
+            <table className="fleet-table row-click">
+              <thead>
                 <tr>
-                  <td colSpan={6} className="kpi-hint" style={{ textAlign: 'center', padding: '2rem' }}>
-                    No procedures match these filters.
-                  </td>
+                  <th>Document ID</th>
+                  <th>Category</th>
+                  <th>Title</th>
+                  <th>Machines</th>
+                  <th>Pages</th>
+                  <th>Revised</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {visible.map((d) => (
+                  <tr
+                    key={d.document_id}
+                    onClick={() => setOpenDocId(d.document_id)}
+                    tabIndex={0}
+                    role="button"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setOpenDocId(d.document_id);
+                      }
+                    }}
+                  >
+                    <td>
+                      <span className="mono" style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>
+                        {d.document_id}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="chip" style={{ fontSize: '0.72rem' }}>
+                        {CATEGORY_LABELS[d.category] ?? d.category}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="col" style={{ gap: 2 }}>
+                        <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{d.title}</span>
+                        {d.summary && <span className="kpi-hint clamp-1">{d.summary}</span>}
+                      </div>
+                    </td>
+                    <td>
+                      {d.machines.length > 0 ? (
+                        <span className="mono" style={{ fontSize: '0.78rem' }}>
+                          {d.machines.join(', ')}
+                        </span>
+                      ) : (
+                        <span className="kpi-hint">—</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className="mono" style={{ fontSize: '0.8rem' }}>
+                        {d.pages}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="mono" style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+                        {d.last_revised ?? d.effective_date ?? '—'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
-      {open && (
+      {openDoc && (
         <SopDetailDrawer
-          sop={open}
-          onClose={() => setOpenCode(null)}
+          document={openDoc}
+          onClose={() => setOpenDocId(null)}
           onOpenWalkthrough={onOpenWalkthrough}
-          onSideLink={(sop) => onNotify(`${sop.sideLink.label} for ${sopCode(sop.code)} is not attached in this build`, 'info')}
         />
       )}
     </div>

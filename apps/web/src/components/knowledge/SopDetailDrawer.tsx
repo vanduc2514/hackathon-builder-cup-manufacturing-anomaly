@@ -1,123 +1,189 @@
-// SopDetailDrawer: one SOP's summary, key figures, tags and revision diff log, opened from the SOP table.
+// SopDetailDrawer: curated engineering document details, sections, and critical citations.
 import React from 'react';
-import type { Sop, SopMetric } from '../../lib/knowledge';
+import type { KnowledgeDocumentMeta } from '../../types';
 import SideDrawer from '../SideDrawer';
 import TagChip from './TagChip';
+import { CATEGORY_LABELS } from '../../lib/knowledge';
 
 interface SopDetailDrawerProps {
-  sop: Sop;
+  document: KnowledgeDocumentMeta;
   onClose: () => void;
-  onOpenWalkthrough: (id: string) => void;
-  onSideLink: (sop: Sop) => void;
+  onOpenWalkthrough?: (id: string) => void;
 }
 
-const METRIC_COLOR: Record<NonNullable<SopMetric['tone']>, string> = {
-  accent: 'var(--accent)',
-  red: '#c9343a',
-  green: '#0e8a43',
-  ink: 'var(--ink)',
-};
-
-export const sopCode = (code: number): string => `SOP #${String(code).padStart(3, '0')}`;
-
-export default function SopDetailDrawer({ sop, onClose, onOpenWalkthrough, onSideLink }: SopDetailDrawerProps): React.ReactElement {
+export default function SopDetailDrawer({
+  document,
+  onClose,
+  onOpenWalkthrough,
+}: SopDetailDrawerProps): React.ReactElement {
   return (
     <SideDrawer
       onClose={onClose}
       eyebrow={
         <>
-          <span className="mono" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent)' }}>
-            {sopCode(sop.code)}
+          <span
+            className="mono"
+            style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent)' }}
+          >
+            {document.document_id}
           </span>
-          <span className={`chip ${sop.safety ? 'chip-red' : ''}`}>Rev {sop.rev}</span>
-          <span className="chip">{sop.station}</span>
+          <span className="chip chip-accent">
+            {CATEGORY_LABELS[document.category] ?? document.category}
+          </span>
+          {document.revision && <span className="chip">{document.revision}</span>}
+          {document.machines.length > 0 && (
+            <span className="chip">{document.machines.join(', ')}</span>
+          )}
         </>
       }
-      title={sop.title}
+      title={document.title}
       footer={
         <>
-          {sop.walkthroughId && (
-            <button type="button" className="btn btn-dark" onClick={() => onOpenWalkthrough(sop.walkthroughId as string)}>
-              <span className="material-symbols-outlined">play_circle</span>
-              Watch video walkthrough
+          {onOpenWalkthrough && (
+            <button
+              type="button"
+              className="btn btn-dark"
+              onClick={() => onOpenWalkthrough('walkthroughs')}
+            >
+              <span className="material-symbols-outlined">smart_display</span>
+              Walkthroughs
             </button>
           )}
-          <button type="button" className="btn" onClick={() => onSideLink(sop)}>
-            <span className="material-symbols-outlined">{sop.sideLink.icon}</span>
-            {sop.sideLink.label}
+          <button type="button" className="btn" onClick={onClose}>
+            <span className="material-symbols-outlined">close</span>
+            Close
           </button>
         </>
       }
     >
-      {sop.safety && (
-        <div className="glass-inset tone-red row" style={{ gap: 10, padding: '0.7rem 0.9rem' }}>
-          <span className="material-symbols-outlined" style={{ color: 'var(--red)' }}>
-            lock
-          </span>
-          <span style={{ fontSize: '0.84rem', color: '#9f1d22', fontWeight: 600 }}>
-            Safety-critical procedure — {sop.note}. Line lead authorization required.
-          </span>
-        </div>
+      {document.summary && (
+        <p style={{ fontSize: '0.92rem', color: 'var(--text)', lineHeight: 1.55 }}>
+          {document.summary}
+        </p>
       )}
 
-      <p style={{ fontSize: '0.92rem', color: 'var(--text)', lineHeight: 1.55 }}>{sop.summary}</p>
-
       <div className="drawer-facts">
-        {sop.metrics.map((m) => (
-          <div key={m.label} className="glass-inset" style={{ padding: '0.7rem 0.85rem' }}>
-            <div className="eyebrow">{m.label}</div>
-            <div className="mono" style={{ fontWeight: 700, fontSize: '0.95rem', color: m.tone ? METRIC_COLOR[m.tone] : 'var(--ink)' }}>
-              {m.value}
+        <div className="glass-inset" style={{ padding: '0.7rem 0.85rem' }}>
+          <div className="eyebrow">Category</div>
+          <div className="mono" style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--ink)' }}>
+            {CATEGORY_LABELS[document.category] ?? document.category}
+          </div>
+        </div>
+        <div className="glass-inset" style={{ padding: '0.7rem 0.85rem' }}>
+          <div className="eyebrow">Total Pages</div>
+          <div className="mono" style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--accent)' }}>
+            {document.pages} {document.pages === 1 ? 'page' : 'pages'}
+          </div>
+        </div>
+        {(document.last_revised || document.effective_date) && (
+          <div className="glass-inset" style={{ padding: '0.7rem 0.85rem' }}>
+            <div className="eyebrow">Effective / Revised</div>
+            <div className="mono" style={{ fontWeight: 650, fontSize: '0.86rem', color: 'var(--ink)' }}>
+              {document.last_revised ?? document.effective_date}
             </div>
           </div>
-        ))}
-        {!sop.safety && (
+        )}
+        {document.machines.length > 0 && (
           <div className="glass-inset" style={{ padding: '0.7rem 0.85rem' }}>
-            <div className="eyebrow">Key spec</div>
-            <div style={{ fontWeight: 650, fontSize: '0.86rem', color: 'var(--ink)' }}>{sop.note}</div>
+            <div className="eyebrow">Target Machines</div>
+            <div className="mono" style={{ fontWeight: 650, fontSize: '0.86rem', color: 'var(--ink)' }}>
+              {document.machines.join(', ')}
+            </div>
           </div>
         )}
       </div>
 
-      <div className="row wrap" style={{ gap: 6 }}>
-        {sop.tags.map((t) => (
-          <TagChip key={t.label} {...t} />
-        ))}
-      </div>
+      {document.linked_sops.length > 0 && (
+        <div className="row wrap" style={{ gap: 6, alignItems: 'center' }}>
+          <span className="kpi-hint" style={{ fontWeight: 600 }}>Linked SOPs:</span>
+          {document.linked_sops.map((sop) => (
+            <span key={sop} className="chip chip-accent" style={{ fontFamily: 'var(--font-mono)' }}>
+              {sop}
+            </span>
+          ))}
+        </div>
+      )}
 
-      <section className="col" style={{ gap: 10 }}>
-        <h3 className="card-title">
-          <span className="material-symbols-outlined" style={{ fontSize: 19, color: 'var(--accent)' }}>
-            history
-          </span>
-          Change log
-        </h3>
-        {sop.changes.map((c, i) => (
-          <details key={c.rev} className="glass-inset change-entry" open={i === 0}>
-            <summary className="row between" style={{ gap: 10 }}>
-              <span className="row" style={{ gap: 8 }}>
-                <span className="chip chip-accent">Rev {c.rev}</span>
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)' }}>{c.date}</span>
-              </span>
-              <span className="material-symbols-outlined change-chevron" style={{ fontSize: 18, color: 'var(--faint)' }}>
-                expand_more
-              </span>
-            </summary>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text)', marginTop: 8 }}>{c.reason}</p>
-            <pre className="mono diff-block">
-              {c.lines.map((l) => (
-                <span key={`${l.op}${l.text}`} className={l.op === '+' ? 'diff-add' : 'diff-del'}>
-                  {l.op} {l.text}
-                  {'\n'}
+      {document.tags.length > 0 && (
+        <div className="row wrap" style={{ gap: 6 }}>
+          {document.tags.map((t) => (
+            <TagChip key={t} label={t} tone="neutral" />
+          ))}
+        </div>
+      )}
+
+      {document.sections.length > 0 && (
+        <section className="col" style={{ gap: 10 }}>
+          <h3 className="card-title">
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 19, color: 'var(--accent)' }}
+            >
+              menu_book
+            </span>
+            Document Sections
+          </h3>
+          <div className="col" style={{ gap: 6 }}>
+            {document.sections.map((s) => (
+              <div
+                key={`${s.page}-${s.title}`}
+                className="glass-inset row between"
+                style={{ padding: '0.6rem 0.85rem', alignItems: 'center' }}
+              >
+                <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--ink)' }}>
+                  {s.title}
                 </span>
-              ))}
-            </pre>
-            <div className="kpi-hint" style={{ marginTop: 6 }}>
-              {c.author}
-            </div>
-          </details>
-        ))}
-      </section>
+                <span
+                  className="mono chip"
+                  style={{ fontSize: '0.72rem', color: 'var(--muted)', flexShrink: 0 }}
+                >
+                  p. {s.page}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {document.key_citations.length > 0 && (
+        <section className="col" style={{ gap: 10 }}>
+          <h3 className="card-title">
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 19, color: 'var(--accent)' }}
+            >
+              format_quote
+            </span>
+            Key Citations & Guidance
+          </h3>
+          <div className="col" style={{ gap: 8 }}>
+            {document.key_citations.map((c, i) => (
+              <div
+                key={`${c.document_id}-${c.page_number}-${i}`}
+                className="glass-inset col"
+                style={{ padding: '0.75rem 0.9rem', gap: 6 }}
+              >
+                <div className="row between" style={{ gap: 8 }}>
+                  <span
+                    className="mono"
+                    style={{ fontSize: '0.74rem', color: 'var(--accent)', fontWeight: 650 }}
+                  >
+                    {c.section ?? `Section p.${c.page_number}`}
+                  </span>
+                  {c.page_number && (
+                    <span className="mono chip" style={{ fontSize: '0.7rem' }}>
+                      p. {c.page_number}
+                    </span>
+                  )}
+                </div>
+                <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text)', lineHeight: 1.5 }}>
+                  {c.snippet}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </SideDrawer>
   );
 }

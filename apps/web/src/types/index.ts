@@ -77,6 +77,51 @@ export interface RAGSearchResult {
   total_found: number;
 }
 
+export interface KnowledgeSection {
+  page: number;
+  title: string;
+}
+
+export interface KnowledgeDocumentMeta {
+  document_id: string;
+  title: string;
+  category: string;
+  machine_id?: string | null;
+  component?: string | null;
+  version: string;
+  pages: number;
+  last_revised?: string | null;
+  tags: string[];
+  machines: string[];
+  revision?: string | null;
+  effective_date?: string | null;
+  linked_sops: string[];
+  sections: KnowledgeSection[];
+  key_citations: CitationReference[];
+  summary?: string | null;
+}
+
+export interface WalkthroughChapter {
+  label: string;
+  at: number;
+}
+
+export interface WalkthroughMeta {
+  id: string;
+  title: string;
+  description?: string | null;
+  asset?: string | null;
+  category?: string | null;
+  duration_sec: number;
+  video_uri?: string | null;
+  thumbnail_url?: string | null;
+  chapters: WalkthroughChapter[];
+  key_steps: string[];
+  linked_sop?: string | null;
+  required: boolean;
+  tags: string[];
+}
+
 export interface ImpactMetrics {
   scrap_avoided: number;
   downtime_minutes: number;

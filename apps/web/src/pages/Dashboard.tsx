@@ -37,7 +37,7 @@ export default function Dashboard({
 }: DashboardProps): React.ReactElement {
   // Cross-links (SOP → video, video → SOP) land on the target page with that item's drawer already open.
   const [requestedWalkthrough, setRequestedWalkthrough] = useState<string | null>(null);
-  const [requestedSop, setRequestedSop] = useState<number | null>(null);
+  const [requestedSop, setRequestedSop] = useState<string | number | null>(null);
   useEffect(() => {
     if (currentTab !== 'walkthroughs') setRequestedWalkthrough(null);
     if (currentTab !== 'sops') setRequestedSop(null);
@@ -48,7 +48,7 @@ export default function Dashboard({
     setRequestedWalkthrough(id);
     onSelectTab('walkthroughs');
   };
-  const openSop = (code: number) => {
+  const openSop = (code: string | number) => {
     setRequestedSop(code);
     onSelectTab('sops');
   };

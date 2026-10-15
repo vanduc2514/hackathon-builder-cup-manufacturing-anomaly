@@ -190,7 +190,7 @@ These are calculated inside the agents, and only their text summary reaches the 
 | Data point | Hardcoded value | Backend has |
 |---|---|---|
 | Logged-in user | `Devon Vance`, "Lead Plant Operator · Shift A" | No auth or user endpoint |
-| Offline demo data | `DEMO_INCIDENT` (INC-A389F1), `DEMO_ACTIVE_INCIDENT` (INC-B71E42), `FALLBACK_FINDINGS`, `FALLBACK_FIVE_WHYS`, `FALLBACK_ISHIKAWA` | Shown only when the backend is unreachable |
+| Offline demo data | Removed in #171 (no fallback fake incidents/RCA) | Shown only when the backend is unreachable |
 | Scenario cards | `cnc_tool_wear` → CNC-02/T07, `im_damp_material` → IM-05/MOLD-03 | Backend has the same defaults but no `GET` scenarios endpoint |
 | Run duration fallback | 8 s / 90 s | `total_seconds` never set (see bug 3) |
 

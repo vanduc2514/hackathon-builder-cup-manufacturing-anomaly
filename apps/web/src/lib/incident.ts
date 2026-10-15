@@ -1,86 +1,12 @@
-// Shared incident helpers: Andon phase mapping, status labels and demo-safe fallback narrative.
+// Shared incident helpers: Andon phase mapping, status labels and helper utilities.
 import type {
   AgentFinding,
   AndonPhaseDetails,
   AndonPhaseKey,
   AndonPhaseStatus,
-  FiveWhysStep,
   IncidentState,
   IncidentStatus,
 } from '../types';
-
-export const FALLBACK_FINDINGS: AgentFinding[] = [
-  {
-    agent_id: 'quality_inspector',
-    agent_name: 'Quality Inspector',
-    phase: 'A',
-    finding: 'Defect rate 3.42% breached UCL 3.00% — vertical scratch on Face A, parts #8378–#8382.',
-    evidence: 'CAM-LINE01-EOL frames classified "scratch" at 99.4% confidence; 300-part moving average crossed UCL at part #8380.',
-    confidence: 0.994,
-    citation: 'SPC-RULE-1 · AS9100 Rev D §8.7',
-    timestamp: '2024-10-24T14:02:11Z',
-  },
-  {
-    agent_id: 'traceability',
-    agent_name: 'Traceability Agent',
-    phase: 'B',
-    finding: 'All defective serials share Op-20 on CNC-02 with tool T07; CNC-01 and CNC-03 cleared.',
-    evidence: 'BigQuery genealogy join over lot #L8830-TI (24 pcs): 5/5 defects routed via CNC-02, 0/19 good parts flagged upstream.',
-    confidence: 0.942,
-    citation: 'bq://traceability.part_route',
-    timestamp: '2024-10-24T14:04:37Z',
-  },
-  {
-    agent_id: 'process_analyst',
-    agent_name: 'Process Analyst',
-    phase: 'B',
-    finding: 'CNC-02 spindle vibration +35% (2.14 mm/s vs 0.38 baseline) coincident with defect onset.',
-    evidence: 'Axis-Z RMS crossed 1.95 mm/s warn at 14:01:48; motor current rose 12.0 → 13.9 A; CNC-01/03 flat.',
-    confidence: 0.918,
-    citation: 'ISO-10816-3 Zone C',
-    timestamp: '2024-10-24T14:06:02Z',
-  },
-  {
-    agent_id: 'root_cause',
-    agent_name: 'Root Cause Agent',
-    phase: 'B',
-    finding: 'T07 insert exceeded tool life (482 / 450 cycles) — delayed auto-offset in PLC sub-routine 14B.',
-    evidence: '5-Whys grounded in OEM manual + 8D-2023-088; field flank-wear scan 0.32 mm raised confidence 68.4% → 91.8%.',
-    confidence: 0.918,
-    citation: 'SOP-CNC-402 §4.2 · 8D-2023-088',
-    timestamp: '2024-10-24T14:11:20Z',
-  },
-  {
-    agent_id: 'technician_copilot',
-    agent_name: 'Technician Copilot',
-    phase: 'C',
-    finding: 'Insert T07 indexed to edge 2, damper torque 24.5 Nm, runout re-checked at 0.0012 mm.',
-    evidence: 'Gemini Live session with Marcus Vance (TECH-902), dial indicator reading confirmed on camera.',
-    confidence: 0.97,
-    citation: 'Walkthrough #08 · SOP #209',
-    timestamp: '2024-10-24T14:31:44Z',
-  },
-  {
-    agent_id: 'incident_scribe',
-    agent_name: 'Incident Scribe',
-    phase: 'D',
-    finding: '50/50 consecutive good parts verified. 8D report #8D-INC-A389F1 drafted for sign-off.',
-    evidence: 'Streak #8383 → #8432 at CAM-EOL with zero defects; SOP #209 bumped to Rev 4.2.',
-    confidence: 1,
-    citation: 'AIAG 8D · IATF 16949 §10.2',
-    timestamp: '2024-10-24T14:44:29Z',
-  },
-  {
-    agent_id: 'continuous_learning',
-    agent_name: 'Continuous Learning',
-    phase: 'D',
-    finding: 'Hard tripwire interlock added in PLC Macro B at cycle 440 (10-cycle buffer before wear limit).',
-    evidence: 'SOP #209 updated with a mandatory laser auto-offset check across all 4 CNC milling bays; 8D lesson indexed for RAG.',
-    confidence: 0.96,
-    citation: 'SOP #209 Rev 4.2 · 8D-INC-A389F1',
-    timestamp: '2024-10-24T14:44:29Z',
-  },
-];
 
 /** Product currently running on Line-01; end-of-line defects are attributed to it. */
 export const ACTIVE_PRODUCT = 'Gearbox Casing';
@@ -268,38 +194,10 @@ export function agentIcon(agentId: string, agentName = ''): string {
   return key ? AGENT_ICON[key] : 'smart_toy';
 }
 
-/** Real Blackboard findings when available; demo narrative only when the backend is unreachable. */
+/** Real Blackboard findings when available; empty array if none. */
 export function resolveFindings(incident: IncidentState | null): AgentFinding[] {
-  if (incident?.findings?.length) return incident.findings;
-  return incident ? [] : FALLBACK_FINDINGS;
+  return incident?.findings ?? [];
 }
-
-/** Archived reference incident rendered when no live Blackboard snapshot exists. */
-export const DEMO_INCIDENT: IncidentState = {
-  incident_id: 'INC-A389F1',
-  status: 'closed',
-  status_reason: 'Archived reference incident (backend offline)',
-  defect_type: 'scratch',
-  defect_rate: 0.0342,
-  spc_ucl: 0.03,
-  suspect_machine: 'CNC-02',
-  suspect_tool: 'T07',
-  root_cause: 'Tool T07 exceeded service life due to delayed automated tool-offset trigger in PLC sub-routine 14B.',
-  verification_count: 50,
-  verification_target: 50,
-  repair_done: true,
-  approved: false,
-  findings: FALLBACK_FINDINGS,
-  impact: {
-    scrap_avoided: 142,
-    downtime_minutes: 192,
-    energy_kwh: 318,
-    co2_kg: 1240,
-    cost_savings_usd: 18460,
-  },
-  documents: {},
-  updated_at: '2024-10-24T14:44:29Z',
-};
 
 export const PHASES: AndonPhaseDetails[] = [
   {
@@ -391,54 +289,7 @@ export const STATUS_LABEL: Record<IncidentStatus, string> = {
   error: 'Error',
 };
 
-export const FALLBACK_FIVE_WHYS: FiveWhysStep[] = [
-  {
-    level: 1,
-    why: 'Surface scratch on finished bore?',
-    answer: 'Harmonic chatter and micro-deflection during finishing cut cycle.',
-    evidence: 'Keyence Cam-EOL #8380',
-    citation: 'ISO-9001:2015 §8.7',
-  },
-  {
-    level: 2,
-    why: 'Harmonic chatter generated?',
-    answer: 'Spindle vibration spiked to 2.14 mm/s at 18,400 RPM resonant node.',
-    evidence: 'FFT Accelerometer /telemetry',
-    citation: 'ISO-10816-3 Std',
-  },
-  {
-    level: 3,
-    why: 'Vibration resonance occurred?',
-    answer: 'Cutting insert T07 edge micro-chipping caused severe shearing friction.',
-    evidence: 'Flank Wear Scan 0.32mm',
-    citation: 'Tooling Spec T07-CARB',
-  },
-  {
-    level: 4,
-    why: 'Severe wear on carbide insert?',
-    answer: 'Insert operated to cycle 482 without indexing (threshold 450 cycles).',
-    evidence: 'Fanuc PLC Register #D1042',
-    citation: 'Cycle Threshold Log',
-  },
-  {
-    level: 5,
-    why: 'Exceeded threshold without changeout?',
-    answer: 'Auto tool-life offset counter trigger delayed in PLC sub-routine 14B due to unacknowledged calibration flag.',
-    evidence: 'PLC Log 14:02:11',
-    citation: 'Fanuc Macro B Rev 4.1',
-  },
-];
-
-export const FALLBACK_ISHIKAWA: Record<string, string[]> = {
-  Machine: ['Spindle bearing preload; T07 holder thermal deflection'],
-  Method: ['Feed-rate override at 102%; delayed PLC sub-routine 14B'],
-  Material: ['Ti-6Al-4V Grade 5 heat batch #B77402 nominal'],
-  Man: ['Shift handover gap at cycle-450 warning event'],
-  Measurement: ['Laser tool setter calibrated 14 days ago (valid)'],
-  'Mother Nature': ['Bay 3B ambient 21.4 °C, controlled'],
-};
-
-/** Ishikawa categories flagged as causal in the fallback narrative. */
+/** Default Ishikawa categories considered causal when no explicit signals match. */
 export const CAUSAL_CATEGORIES = new Set(['Machine', 'Method']);
 
 /** Deduces whether an Ishikawa factor category represents a root cause or a cleared/nominal factor. */
@@ -574,108 +425,13 @@ export function formatIncidentDate(raw?: string | null): string {
     : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-const minutesAgo = (m: number): string => new Date(Date.now() - m * 60_000).toISOString();
-
-/** In-progress reference incident (post-repair verification) rendered when no live Blackboard snapshot exists. */
-export const DEMO_ACTIVE_INCIDENT: IncidentState = {
-  incident_id: 'INC-B71E42',
-  status: 'verifying',
-  status_reason: 'Post-repair verification streak in progress (backend offline)',
-  defect_type: 'burr',
-  defect_rate: 0.0386,
-  spc_ucl: 0.03,
-  suspect_machine: 'CNC-03',
-  suspect_tool: 'T12',
-  root_cause: 'Coolant concentration fell to 4.1% after the dosing alarm was suppressed, causing built-up edge on drill T12.',
-  verification_count: 18,
-  verification_target: 50,
-  repair_done: true,
-  approved: false,
-  impact: null,
-  documents: {},
-  updated_at: minutesAgo(0),
-  findings: [
-    {
-      agent_id: 'quality_inspector',
-      agent_name: 'Quality Inspector',
-      phase: 'A',
-      finding: 'Defect rate 3.86% breached UCL 3.00% — edge burr on the oil-gallery bore exit, parts #5512–#5519.',
-      evidence: 'CAM-LINE01-EOL frames classified "burr" at 97.6% confidence; 300-part moving average crossed UCL at part #5517.',
-      confidence: 0.976,
-      citation: 'SPC-RULE-1 · ISO 13715',
-      timestamp: minutesAgo(38),
-    },
-    {
-      agent_id: 'traceability',
-      agent_name: 'Traceability Agent',
-      phase: 'B',
-      finding: 'All burred serials share Op-30 on CNC-03 with tool T12; CNC-01 and CNC-02 cleared.',
-      evidence: 'BigQuery genealogy join over lot #L9024-AL (32 pcs): 8/8 defects routed via CNC-03, 0/24 good parts flagged upstream.',
-      confidence: 0.951,
-      citation: 'bq://traceability.part_route',
-      timestamp: minutesAgo(35),
-    },
-    {
-      agent_id: 'process_analyst',
-      agent_name: 'Process Analyst',
-      phase: 'B',
-      finding: 'CNC-03 spindle load +22% on the exit pass, coincident with the burr onset.',
-      evidence: 'Motor current rose 11.8 → 14.4 A during Op-30 exit; vibration 1.62 mm/s vs 0.41 baseline; CNC-01/02 flat.',
-      confidence: 0.902,
-      citation: 'ISO-10816-3 Zone B',
-      timestamp: minutesAgo(33),
-    },
-    {
-      agent_id: 'root_cause',
-      agent_name: 'Root Cause Agent',
-      phase: 'B',
-      finding: 'T12 edge wear from built-up edge — coolant concentration fell to 4.1% after the dosing alarm was suppressed.',
-      evidence: 'Grounded in the OEM coolant manual + 8D-2024-017; field refractometer reading of 4.1% raised confidence 71.2% → 89.4%.',
-      confidence: 0.894,
-      citation: 'SOP-CL-07 §3.1 · 8D-2024-017',
-      timestamp: minutesAgo(28),
-      five_whys: [
-        { level: 1, why: 'Burr on oil-gallery bore exit?', answer: 'Material tearing instead of shearing on the exit pass.', evidence: 'Keyence Cam-EOL #5517', citation: 'ISO 13715' },
-        { level: 2, why: 'Material tearing on exit?', answer: 'Rounded cutting edge raised exit cutting force by 22%.', evidence: 'Spindle load /telemetry', citation: 'ISO-10816-3 Std' },
-        { level: 3, why: 'Cutting edge rounded?', answer: 'Aluminium built-up edge wore through the T12 coating.', evidence: 'Edge scan 0.08mm BUE', citation: 'Tooling Spec T12-DLC' },
-        { level: 4, why: 'Built-up edge formed?', answer: 'Coolant concentration dropped to 4.1% (spec 7–9%).', evidence: 'Refractometer log #C-311', citation: 'Coolant SOP-CL-07' },
-        {
-          level: 5,
-          why: 'Coolant concentration dropped?',
-          answer: 'Auto-dosing pump alarm was suppressed after a sensor fault on night shift.',
-          evidence: 'PLC Log 02:47:19',
-          citation: 'Fanuc Macro B Rev 4.1',
-        },
-      ],
-      ishikawa: {
-        Machine: ['Coolant dosing pump alarm suppressed'],
-        Method: ['Alarm acknowledged without root-cause check'],
-        Material: ['AlSi9Cu3 casting lot #L9024 nominal'],
-        Man: ['Sensor fault cleared without escalation'],
-        Measurement: ['Refractometer logged but not trended'],
-        'Mother Nature': ['Bay 2 ambient 22.0 °C, controlled'],
-      },
-    },
-    {
-      agent_id: 'technician_copilot',
-      agent_name: 'Technician Copilot',
-      phase: 'C',
-      finding: 'Drill T12 replaced, coolant topped up to 8.2%, dosing alarm re-armed.',
-      evidence: 'Gemini Live session with Lena Ortiz (TECH-417); refractometer reading of 8.2% confirmed on camera.',
-      confidence: 0.95,
-      citation: 'Walkthrough #12 · SOP #214',
-      timestamp: minutesAgo(16),
-    },
-  ],
-};
-
 /**
  * Open incident per Line-01 product. A live Blackboard incident is attributed to the active product;
- * the reference incidents appear only while the backend is unreachable (no snapshot at all).
+ * when offline or nominal, returns an empty map (no fabricated incidents).
  */
 export function productIncidents(live: IncidentState | null): Record<string, IncidentState> {
-  if (!live) return { [ACTIVE_PRODUCT]: DEMO_INCIDENT, 'Cylinder Head': DEMO_ACTIVE_INCIDENT };
-  return live.status === 'normal' ? {} : { [ACTIVE_PRODUCT]: live };
+  if (!live || live.status === 'normal') return {};
+  return { [ACTIVE_PRODUCT]: live };
 }
 
 export type LineProductState = 'normal' | 'warning' | 'queued';

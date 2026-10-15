@@ -26,13 +26,18 @@ class EdgePubSubDispatcher:
         self,
         project_id: Optional[str] = None,
         emulator_host: Optional[str] = None,
-        dry_run: bool = False,
+        dry_run: Optional[bool] = None,
     ) -> None:
         self.project_id = project_id or settings.gcp_project_id
         self.emulator_host = (
             emulator_host or settings.pubsub_emulator_host or os.getenv("PUBSUB_EMULATOR_HOST")
         )
-        self.dry_run = dry_run
+        if dry_run is not None:
+            self.dry_run = dry_run
+        elif self.emulator_host:
+            self.dry_run = False
+        else:
+            self.dry_run = not settings.pubsub_enabled
         self._publisher: Any = None
         self._published_events: List[Dict[str, Any]] = []
 

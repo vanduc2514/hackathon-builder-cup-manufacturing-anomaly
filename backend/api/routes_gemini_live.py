@@ -20,7 +20,7 @@ from backend.agents.agent_technician_copilot import (
     AGENT_ID,
     AGENT_NAME,
     DIAGNOSTIC_PHASE,
-    analyze_visual_evidence_frame,
+    analyze_visual_evidence_frame_async,
     build_contextual_diagnostic_probe_vi,
 )
 from backend.core.blackboard import blackboard
@@ -383,7 +383,7 @@ async def gemini_live_websocket(
 
                 if is_image:
                     cur_st = blackboard.get_state()
-                    ev_payload = analyze_visual_evidence_frame(
+                    ev_payload = await analyze_visual_evidence_frame_async(
                         image_bytes=raw_bytes,
                         machine_id=cur_st.suspect_machine or "CNC-02",
                         tool_id=cur_st.suspect_tool,
@@ -488,7 +488,7 @@ async def gemini_live_websocket(
                                 except Exception:
                                     img_bytes = b""
                                 cur_st = blackboard.get_state()
-                                ev_payload = analyze_visual_evidence_frame(
+                                ev_payload = await analyze_visual_evidence_frame_async(
                                     image_bytes=img_bytes,
                                     machine_id=cur_st.suspect_machine or "CNC-02",
                                     tool_id=cur_st.suspect_tool,
@@ -562,7 +562,7 @@ async def upload_gemini_live_evidence(
     """Ingests visual evidence photo from technician's mobile device via Gemini Live session."""
     image_bytes = await file.read()
     cur_st = blackboard.get_state()
-    ev_payload = analyze_visual_evidence_frame(
+    ev_payload = await analyze_visual_evidence_frame_async(
         image_bytes=image_bytes,
         machine_id=cur_st.suspect_machine or "CNC-02",
         tool_id=cur_st.suspect_tool,

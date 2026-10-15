@@ -81,6 +81,10 @@ class Settings(BaseSettings):
     gemini_live_language: str = "vi-VN"
     gemini_live_simulation_mode: bool = True
 
+    # Gemini Vision settings
+    gemini_vision_model: str = "gemini-2.5-flash"
+    gemini_vision_fallback_to_mock: bool = True
+
     # EMQX MQTT Settings
     mqtt_broker_host: str = "broker.emqx.io"
     mqtt_broker_port: int = 1883

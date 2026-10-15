@@ -11,7 +11,7 @@ from backend.agents.agent_technician_copilot import (
     AGENT_ID,
     AGENT_NAME,
     DIAGNOSTIC_PHASE,
-    analyze_visual_evidence_frame,
+    analyze_visual_evidence_frame_async,
 )
 from backend.agents.orchestrator import orchestrator
 from backend.core.blackboard import blackboard
@@ -57,7 +57,7 @@ async def upload_incident_evidence(
     """Uploads technician visual evidence for low-confidence RCA verification."""
     image_bytes = await file.read()
     cur_st = blackboard.get_state()
-    ev_payload = analyze_visual_evidence_frame(
+    ev_payload = await analyze_visual_evidence_frame_async(
         image_bytes=image_bytes,
         machine_id=cur_st.suspect_machine or "CNC-02",
         tool_id=cur_st.suspect_tool,

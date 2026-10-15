@@ -174,6 +174,41 @@ class FirestoreAdapter:
             logger.warning("Failed to query open incidents from Firestore: %s", exc)
             return None
 
+    def list_incidents(
+        self, limit: int = 20, status: str | None = None
+    ) -> list[IncidentState]:
+        """Lists incidents from Firestore ordered by updated_at descending with optional status filtering."""
+        if not self.is_enabled:
+            return []
+
+        try:
+            coll_ref = self._client.collection(self._collection)
+            query = coll_ref
+            if status:
+                query = query.where("status", "==", status)
+
+            try:
+                query = query.order_by(
+                    "updated_at", direction=firestore.Query.DESCENDING
+                ).limit(limit)
+                docs = list(query.stream())
+            except Exception:
+                docs = list(query.limit(limit).stream())
+
+            results: list[IncidentState] = []
+            for doc in docs:
+                data = doc.to_dict()
+                if not data:
+                    continue
+                try:
+                    results.append(IncidentState.model_validate(data))
+                except Exception as exc:
+                    logger.warning("Failed to parse incident %s from Firestore: %s", doc.id, exc)
+            return results
+        except Exception as exc:
+            logger.warning("Failed to list incidents from Firestore: %s", exc)
+            return []
+
     def attach_listener(
         self, incident_id: str, callback: Callable[[IncidentState], None]
     ) -> Callable[[], None] | None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 from typing import AsyncGenerator, Callable
 
 from backend.core.config import settings
@@ -24,6 +25,7 @@ class Blackboard:
 
     def __init__(self, storage: FirestoreAdapter | None = None) -> None:
         self._state = IncidentState()
+        self._history: list[IncidentState] = []
         self._listeners: list[asyncio.Queue] = []
         self._storage = storage if storage is not None else get_firestore_adapter()
         self._listener_unsubscribe: Callable[[], None] | None = None
@@ -33,16 +35,54 @@ class Blackboard:
         return self._state
 
     def reset(self) -> IncidentState:
+        if self._state.incident_id and self._state.status != "normal":
+            self._record_in_history(self._state)
         self._detach_listener()
         self._state = IncidentState()
         self._notify()
         return self._state
 
+    def _record_in_history(self, incident: IncidentState) -> None:
+        """Stores incident snapshot into the in-memory fallback ring buffer."""
+        if not incident.incident_id or incident.status == "normal":
+            return
+        for i, existing in enumerate(self._history):
+            if existing.incident_id == incident.incident_id:
+                self._history[i] = incident
+                return
+        self._history.insert(0, incident)
+        if len(self._history) > 50:
+            self._history = self._history[:50]
+
+    def list_incidents(
+        self, limit: int = 20, status: str | None = None
+    ) -> list[IncidentState]:
+        """Lists incidents from Firestore if enabled, or falls back to in-memory history buffer."""
+        if self.is_firestore_enabled and self._storage:
+            results = self._storage.list_incidents(limit=limit, status=status)
+            if results:
+                return results
+
+        # In-memory fallback: sync current active/closed incident if present
+        if self._state.incident_id and self._state.status != "normal":
+            self._record_in_history(self._state)
+
+        filtered = [
+            inc for inc in self._history
+            if not status or inc.status == status
+        ]
+        return filtered[:limit]
+
     def update_status(self, status: str, **kwargs) -> IncidentState:
         update_dict = self._state.model_dump()
         update_dict["status"] = status
+        if status != "normal" and not update_dict.get("opened_at") and not kwargs.get("opened_at"):
+            update_dict["opened_at"] = datetime.now(timezone.utc).isoformat()
+        if status in ("closed", "dismissed") and not update_dict.get("closed_at") and not kwargs.get("closed_at"):
+            update_dict["closed_at"] = datetime.now(timezone.utc).isoformat()
         update_dict.update(kwargs)
         self._state = IncidentState(**update_dict)
+        self._record_in_history(self._state)
         self._notify()
         self._persist()
         return self._state

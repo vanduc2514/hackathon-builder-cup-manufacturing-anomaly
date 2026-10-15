@@ -159,3 +159,43 @@ def test_eight_d_report_and_document_schemas():
     assert kb.entry_id == "KB-001"
     assert kb.impact.scrap_avoided == 240
     assert kb.video_metadata is not None
+
+
+def test_incident_summary_schema():
+    from backend.core.models import IncidentSummary
+
+    state = IncidentState(
+        incident_id="INC-0412",
+        status="closed",
+        status_reason="All 50 parts passed verification",
+        severity="high",
+        defect_type="scratch_vertical",
+        defect_rate=0.082,
+        spc_ucl=0.030,
+        suspect_machine="CNC-02",
+        suspect_tool="T07",
+        root_cause="Insert T07 flank wear exceeded 0.3mm",
+        repair_done=True,
+        approved=True,
+        verification_count=50,
+        verification_target=50,
+        opened_at="2026-10-15T09:30:00Z",
+        closed_at="2026-10-15T09:42:00Z",
+        updated_at="09:42:15",
+    )
+    summary = IncidentSummary.from_incident(state)
+    assert summary.incident_id == "INC-0412"
+    assert summary.status == "closed"
+    assert summary.status_reason == "All 50 parts passed verification"
+    assert summary.severity == "high"
+    assert summary.suspect_machine == "CNC-02"
+    assert summary.suspect_tool == "T07"
+    assert summary.repair_done is True
+    assert summary.approved is True
+    assert summary.verification_count == 50
+    assert summary.opened_at == "2026-10-15T09:30:00Z"
+    assert summary.closed_at == "2026-10-15T09:42:00Z"
+    dump = summary.model_dump()
+    assert dump["incident_id"] == "INC-0412"
+    assert dump["closed_at"] == "2026-10-15T09:42:00Z"
+

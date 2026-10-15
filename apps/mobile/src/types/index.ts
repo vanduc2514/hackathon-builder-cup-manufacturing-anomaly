@@ -188,7 +188,31 @@ export interface IncidentState {
   telemetry_alerts?: TelemetryAlert[];
   diagnostic_request?: string | null;
   visual_evidence?: VisualEvidencePayload | null;
+  opened_at?: string | null;
+  closed_at?: string | null;
+  severity?: string;
   updated_at: string;
+}
+
+export interface IncidentSummary {
+  incident_id: string;
+  status: IncidentStatus;
+  status_reason?: string | null;
+  severity: string;
+  defect_type?: string | null;
+  defect_rate: number;
+  spc_ucl: number;
+  suspect_machine?: string | null;
+  suspect_tool?: string | null;
+  root_cause?: string | null;
+  repair_done: boolean;
+  approved: boolean;
+  verification_count: number;
+  verification_target: number;
+  opened_at?: string | null;
+  closed_at?: string | null;
+  updated_at?: string | null;
+  impact?: ImpactMetrics | null;
 }
 
 /** Mirrors `VisualEvidencePayload`: the Copilot's read of a technician photo. */

@@ -2,10 +2,10 @@
  * Subscribes to the incident SSE stream with reconnect and exposes the connection state,
  * so a dropped stream is visible instead of looking like "nothing is happening".
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { withToken } from '../api/auth';
-import { fetchCurrentIncident, streamUrl } from '../api/kaizenApi';
-import type { IncidentState, StreamStatus } from '../types';
+import { fetchCurrentIncident, fetchIncidentHistory, streamUrl } from '../api/kaizenApi';
+import type { IncidentState, IncidentSummary, StreamStatus } from '../types';
 
 const STREAM_URLS = ['/api/incidents/stream', '/api/incidents/events'].map(streamUrl);
 const MAX_BACKOFF_MS = 15000;
@@ -15,12 +15,24 @@ const LIVENESS_MS = 10000;
 
 export interface IncidentStream {
   incident: IncidentState | null;
+  history: IncidentSummary[];
   status: StreamStatus;
+  refreshHistory: () => Promise<void>;
 }
 
 export function useIncidentStream(): IncidentStream {
   const [incident, setIncident] = useState<IncidentState | null>(null);
+  const [history, setHistory] = useState<IncidentSummary[]>([]);
   const [status, setStatus] = useState<StreamStatus>('connecting');
+
+  const refreshHistory = useCallback(async () => {
+    try {
+      const items = await fetchIncidentHistory(20);
+      setHistory(items);
+    } catch (err) {
+      console.warn('Incident history unavailable:', err);
+    }
+  }, []);
 
   useEffect(() => {
     let source: EventSource | null = null;
@@ -50,11 +62,16 @@ export function useIncidentStream(): IncidentStream {
         setStatus('live');
         // Catch up on anything missed while disconnected.
         refreshSnapshot();
+        void refreshHistory();
       };
 
       es.addEventListener('incident_update', (event: MessageEvent<string>) => {
         try {
-          setIncident(JSON.parse(event.data) as IncidentState);
+          const updated = JSON.parse(event.data) as IncidentState;
+          setIncident(updated);
+          if (updated.status === 'closed' || updated.status === 'normal') {
+            void refreshHistory();
+          }
         } catch (err) {
           console.error('Failed to parse incident SSE event:', err);
         }
@@ -91,6 +108,7 @@ export function useIncidentStream(): IncidentStream {
     }, LIVENESS_MS);
 
     refreshSnapshot();
+    void refreshHistory();
     connect();
 
     return () => {
@@ -99,7 +117,7 @@ export function useIncidentStream(): IncidentStream {
       if (livenessTimer) clearInterval(livenessTimer);
       source?.close();
     };
-  }, []);
+  }, [refreshHistory]);
 
-  return { incident, status };
+  return { incident, history, status, refreshHistory };
 }

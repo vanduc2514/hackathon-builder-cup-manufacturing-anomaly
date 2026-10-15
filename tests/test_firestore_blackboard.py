@@ -61,11 +61,21 @@ class FakeCollectionReference:
     def document(self, doc_id: str) -> FakeDocumentReference:
         return FakeDocumentReference(self, doc_id)
 
+    def where(self, field: str, op: str, value: Any):
+        filtered = FakeCollectionReference()
+        for doc_id, data in self._store.items():
+            if op == "==" and data.get(field) == value:
+                filtered._store[doc_id] = data
+        return filtered
+
     def order_by(self, field: str, direction=None):
         return self
 
     def limit(self, count: int):
-        return self
+        limited = FakeCollectionReference()
+        items = list(self._store.items())[:count]
+        limited._store = dict(items)
+        return limited
 
     def stream(self):
         for doc_id, data in self._store.items():
@@ -373,3 +383,68 @@ def test_api_current_incident_recovers_state_on_restart(fake_adapter: FirestoreA
     # Reset blackboard back to baseline
     blackboard.reset()
     blackboard.set_storage(None)
+
+
+def test_firestore_adapter_list_incidents(fake_adapter: FirestoreAdapter) -> None:
+    """Verifies that FirestoreAdapter lists incidents with filtering."""
+    fake_adapter.save_incident(
+        IncidentState(
+            incident_id="INC-HIST-1",
+            status="closed",
+            suspect_machine="CNC-02",
+            verification_count=50,
+        )
+    )
+    fake_adapter.save_incident(
+        IncidentState(
+            incident_id="INC-HIST-2",
+            status="investigating",
+            suspect_machine="IM-05",
+        )
+    )
+
+    all_incs = fake_adapter.list_incidents(limit=10)
+    assert len(all_incs) == 2
+    ids = {i.incident_id for i in all_incs}
+    assert ids == {"INC-HIST-1", "INC-HIST-2"}
+
+    closed_incs = fake_adapter.list_incidents(status="closed")
+    assert len(closed_incs) == 1
+    assert closed_incs[0].incident_id == "INC-HIST-1"
+
+
+def test_api_get_incident_history_endpoint(fake_adapter: FirestoreAdapter) -> None:
+    """Verifies GET /api/incidents/history returns incident summaries."""
+    fake_adapter.save_incident(
+        IncidentState(
+            incident_id="INC-API-HIST-1",
+            status="closed",
+            suspect_machine="CNC-02",
+            suspect_tool="T07",
+            verification_count=50,
+            verification_target=50,
+            approved=True,
+        )
+    )
+    blackboard.set_storage(fake_adapter)
+
+    with TestClient(app) as client:
+        response = client.get("/api/incidents/history")
+        assert response.status_code == 200
+        items = response.json()
+        assert isinstance(items, list)
+        assert len(items) >= 1
+        found = next((x for x in items if x["incident_id"] == "INC-API-HIST-1"), None)
+        assert found is not None
+        assert found["status"] == "closed"
+        assert found["approved"] is True
+        assert found["suspect_machine"] == "CNC-02"
+
+        # Filter by status
+        resp_filtered = client.get("/api/incidents/history?status=closed")
+        assert resp_filtered.status_code == 200
+        assert all(x["status"] == "closed" for x in resp_filtered.json())
+
+    blackboard.reset()
+    blackboard.set_storage(None)
+

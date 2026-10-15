@@ -32,7 +32,8 @@ resource "google_cloud_run_v2_service" "factory" {
     }
 
     containers {
-      # Placeholder until first deploy; the hello image answers 200 on /health
+      # Placeholder until first deploy; scripts/deploy_cloud_run.sh manages and updates the real image.
+      # The hello image answers 200 on /health so initial deployment probes pass.
       image = var.bootstrap_image
 
       ports {

@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
 
 from simulator.config import settings
+from simulator.edge.pubsub_dispatcher import EdgePubSubDispatcher
 from simulator.injection_engine import DefectInjectionEngine
 from simulator.models import (
     ActiveAnomalyStatus,
@@ -27,6 +28,9 @@ from simulator.models import (
     FactoryTickPacket,
     InjectAnomalyRequest,
     MachineTelemetry,
+    MachineTelemetryPayload,
+    QualityEventPayload,
+    TraceabilityEventPayload,
 )
 
 logger = logging.getLogger("simulator.server")
@@ -94,7 +98,12 @@ class EdgeFilterTracker:
 class FactoryServerService:
     """Coordinates simulation loop, anomaly injection, and real-time SSE dispatch."""
 
-    def __init__(self, interval_sec: float = 1.0, speed: float = 1.0) -> None:
+    def __init__(
+        self,
+        interval_sec: float = 1.0,
+        speed: float = 1.0,
+        pubsub_dispatcher: Optional[EdgePubSubDispatcher] = None,
+    ) -> None:
         self.interval_sec = interval_sec
         self.speed = max(0.1, speed)
         self.running = False
@@ -104,6 +113,7 @@ class FactoryServerService:
         self._recent_parts: deque[ConveyorPart] = deque(maxlen=30)
         self.edge_tracker = EdgeFilterTracker()
         self._task: Optional[asyncio.Task[None]] = None
+        self.pubsub_dispatcher = pubsub_dispatcher or EdgePubSubDispatcher()
 
         self.injection_engine = DefectInjectionEngine()
         # Always register IM-05 baseline so 4 machine bays (CNC-01..03, IM-05) are monitored
@@ -175,14 +185,79 @@ class FactoryServerService:
         """Unregisters an SSE listener queue."""
         self._subscribers.discard(q)
 
-    def inject(
+    async def dispatch_injection_events(
+        self,
+        scenario: str = "cnc_tool_wear",
+        machine_id: str = "CNC-02",
+        severity: float = 1.0,
+        mode: str = "demo",
+    ) -> dict[str, bool]:
+        """Dispatches quality event, anomalous telemetry, and traceability record to Pub/Sub."""
+        tool = "MOLD-03" if scenario == "im_damp_material" else "T07"
+        defect_type = "short_fill" if scenario == "im_damp_material" else "scratch_vertical"
+        lot_id = "RESIN-HDPE-L09" if scenario == "im_damp_material" else "AL-5083-B4"
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        # 1. Quality Event
+        quality_evt = QualityEventPayload(
+            machine_id=machine_id,
+            tool_id=tool,
+            defect_type=defect_type,
+            scenario=scenario,
+            mode=mode,
+            severity="high" if severity >= 1.0 else "medium",
+            defect_rate=0.08 if scenario == "cnc_tool_wear" else 0.05,
+        )
+        q_ok = await self.pubsub_dispatcher.publish_quality_event(quality_evt)
+
+        # 2. Machine Telemetry
+        telemetry_payload = MachineTelemetryPayload(
+            machine_id=machine_id,
+            timestamp=now_iso,
+            tool_id=tool,
+            spindle_vibration=3.45 if scenario == "cnc_tool_wear" else 0.08,
+            motor_current=18.5 if scenario == "cnc_tool_wear" else 32.0,
+            spindle_temp=58.0 if scenario == "cnc_tool_wear" else 82.0,
+            rpm=8500 if scenario == "cnc_tool_wear" else 0,
+            operating_status="ALARM" if severity >= 1.0 else "WARNING",
+            dryer_dew_point=-18.0 if scenario == "im_damp_material" else None,
+        )
+        t_ok = await self.pubsub_dispatcher.publish_telemetry(telemetry_payload)
+
+        # 3. Traceability Event
+        traceability_payload = TraceabilityEventPayload(
+            product_id=f"PRD-{int(time.time() * 1000) % 100000:05d}",
+            timestamp=now_iso,
+            machine_id=machine_id,
+            tool_id=tool,
+            lot_id=lot_id,
+            operator_id="OP-12",
+            status="DEFECT_SHORT_FILL" if scenario == "im_damp_material" else "DEFECT_SCRATCH",
+        )
+        tr_ok = await self.pubsub_dispatcher.publish_traceability(traceability_payload)
+
+        logger.info(
+            "Dispatched injection events to Pub/Sub for %s (%s): quality=%s, telemetry=%s, traceability=%s",
+            machine_id,
+            scenario,
+            q_ok,
+            t_ok,
+            tr_ok,
+        )
+        return {
+            "quality_event": q_ok,
+            "telemetry": t_ok,
+            "traceability": tr_ok,
+        }
+
+    async def inject(
         self,
         scenario: str = "cnc_tool_wear",
         machine_id: Optional[str] = None,
         severity: float = 1.0,
         mode: str = "demo",
     ) -> dict[str, Any]:
-        """Triggers a simulated defect scenario and optionally accelerates timing."""
+        """Triggers a simulated defect scenario, accelerates timing, and dispatches to Pub/Sub."""
         if scenario == "im_damp_material" or machine_id == "IM-05":
             target = machine_id or "IM-05"
             res = self.injection_engine.inject_scenario_2_im_damp_material(
@@ -200,11 +275,23 @@ class FactoryServerService:
         else:
             self.speed = 1.0
 
+        pubsub_dispatched: dict[str, bool] = {}
+        try:
+            pubsub_dispatched = await self.dispatch_injection_events(
+                scenario=scenario,
+                machine_id=target,
+                severity=severity,
+                mode=mode,
+            )
+        except Exception as exc:
+            logger.warning("Failed to dispatch injection events to Pub/Sub: %s", exc)
+
         return {
             "status": "ok",
             "message": f"Injected scenario {scenario} into {target}",
             "details": res,
             "speed_multiplier": self.speed,
+            "pubsub_dispatch": pubsub_dispatched,
         }
 
     def reset(self) -> None:
@@ -213,6 +300,8 @@ class FactoryServerService:
         self.anomaly_start_time = None
         self.speed = 1.0
         self.edge_tracker.reset()
+        if hasattr(self, "pubsub_dispatcher") and self.pubsub_dispatcher is not None:
+            self.pubsub_dispatcher.clear_published_events()
 
     async def step(self) -> FactoryTickPacket:
         """Advances simulation by one tick and broadcasts to all active SSE queues."""
@@ -345,7 +434,7 @@ async def get_factory_status() -> FactoryStatusResponse:
 @app.post("/api/factory/inject")
 async def inject_anomaly(req: InjectAnomalyRequest = InjectAnomalyRequest()) -> dict[str, Any]:
     """Triggers Scenario 1 (CNC Tool Wear) or Scenario 2 (IM Damp Material)."""
-    return service.inject(
+    return await service.inject(
         scenario=req.scenario,
         machine_id=req.machine_id,
         severity=req.severity,

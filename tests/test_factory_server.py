@@ -4,15 +4,19 @@ from __future__ import annotations
 
 import asyncio
 import json
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from starlette.testclient import TestClient
 
+from simulator.edge.pubsub_dispatcher import EdgePubSubDispatcher
 from simulator.models import (
     EdgeFilterStatistics,
     FactoryStatusResponse,
     FactoryTickPacket,
+    MachineTelemetryPayload,
+    QualityEventPayload,
+    TraceabilityEventPayload,
 )
 from simulator.server import EdgeFilterTracker, app, service
 
@@ -131,7 +135,7 @@ async def test_factory_stream_receives_sse_events():
 
 @pytest.mark.asyncio
 async def test_inject_scenario_1_cnc_tool_wear():
-    """Verify injecting Scenario 1 elevates CNC-02 vibration and sets active anomaly."""
+    """Verify injecting Scenario 1 elevates CNC-02 vibration, sets active anomaly, and dispatches to Pub/Sub."""
     with TestClient(app) as client:
         inject_res = client.post(
             "/api/factory/inject",
@@ -143,7 +147,33 @@ async def test_inject_scenario_1_cnc_tool_wear():
             },
         )
         assert inject_res.status_code == 200
-        assert inject_res.json()["status"] == "ok"
+        res_data = inject_res.json()
+        assert res_data["status"] == "ok"
+        assert "pubsub_dispatch" in res_data
+        assert res_data["pubsub_dispatch"]["quality_event"] is True
+        assert res_data["pubsub_dispatch"]["telemetry"] is True
+        assert res_data["pubsub_dispatch"]["traceability"] is True
+
+        # Verify fallback buffer holds published events across topics
+        published = service.pubsub_dispatcher.get_published_events()
+        assert len(published) >= 3
+        topics = [e["topic"] for e in published]
+        assert "kaizen-quality-events" in topics
+        assert "kaizen-telemetry" in topics
+        assert "kaizen-traceability" in topics
+
+        q_event = next(e for e in published if e["topic"] == "kaizen-quality-events")
+        assert q_event["payload"]["machine_id"] == "CNC-02"
+        assert q_event["payload"]["scenario"] == "cnc_tool_wear"
+        assert q_event["payload"]["defect_type"] == "scratch_vertical"
+
+        t_event = next(e for e in published if e["topic"] == "kaizen-telemetry")
+        assert t_event["payload"]["machine_id"] == "CNC-02"
+        assert t_event["payload"]["spindle_vibration"] > 2.5
+
+        tr_event = next(e for e in published if e["topic"] == "kaizen-traceability")
+        assert tr_event["payload"]["machine_id"] == "CNC-02"
+        assert tr_event["payload"]["status"] == "DEFECT_SCRATCH"
 
         # Check status endpoint
         status_res = client.get("/api/factory/status")
@@ -164,7 +194,7 @@ async def test_inject_scenario_1_cnc_tool_wear():
 
 @pytest.mark.asyncio
 async def test_inject_scenario_2_im_damp_material():
-    """Verify injecting Scenario 2 elevates IM-05 dew point and sets mold anomaly."""
+    """Verify injecting Scenario 2 elevates IM-05 dew point, sets mold anomaly, and dispatches to Pub/Sub."""
     with TestClient(app) as client:
         inject_res = client.post(
             "/api/factory/inject",
@@ -176,7 +206,27 @@ async def test_inject_scenario_2_im_damp_material():
             },
         )
         assert inject_res.status_code == 200
-        assert inject_res.json()["status"] == "ok"
+        res_data = inject_res.json()
+        assert res_data["status"] == "ok"
+        assert "pubsub_dispatch" in res_data
+        assert res_data["pubsub_dispatch"]["quality_event"] is True
+        assert res_data["pubsub_dispatch"]["telemetry"] is True
+        assert res_data["pubsub_dispatch"]["traceability"] is True
+
+        published = service.pubsub_dispatcher.get_published_events()
+        assert len(published) >= 3
+        q_event = next(e for e in published if e["topic"] == "kaizen-quality-events")
+        assert q_event["payload"]["machine_id"] == "IM-05"
+        assert q_event["payload"]["scenario"] == "im_damp_material"
+        assert q_event["payload"]["defect_type"] == "short_fill"
+
+        t_event = next(e for e in published if e["topic"] == "kaizen-telemetry")
+        assert t_event["payload"]["machine_id"] == "IM-05"
+        assert t_event["payload"]["dryer_dew_point"] == -18.0
+
+        tr_event = next(e for e in published if e["topic"] == "kaizen-traceability")
+        assert tr_event["payload"]["machine_id"] == "IM-05"
+        assert tr_event["payload"]["status"] == "DEFECT_SHORT_FILL"
 
         # Check status endpoint
         status_res = client.get("/api/factory/status")
@@ -196,7 +246,7 @@ async def test_inject_scenario_2_im_damp_material():
 
 @pytest.mark.asyncio
 async def test_reset_factory_restores_nominal_baseline():
-    """Verify POST /api/factory/reset restores nominal machinery baselines."""
+    """Verify POST /api/factory/reset restores nominal machinery baselines and clears buffer."""
     with TestClient(app) as client:
         # First inject anomaly
         client.post(
@@ -204,6 +254,7 @@ async def test_reset_factory_restores_nominal_baseline():
             json={"scenario": "cnc_tool_wear", "severity": 1.2, "mode": "fast"},
         )
         assert service.injection_engine.active_scenario is not None
+        assert len(service.pubsub_dispatcher.get_published_events()) > 0
 
         # Reset
         reset_res = client.post("/api/factory/reset")
@@ -216,6 +267,7 @@ async def test_reset_factory_restores_nominal_baseline():
         assert status.active_scenario is None
         assert status.active_anomaly is None
         assert status.speed == 1.0
+        assert len(service.pubsub_dispatcher.get_published_events()) == 0
 
         # Step and verify nominal vibration
         packet = await service.step()
@@ -223,6 +275,63 @@ async def test_reset_factory_restores_nominal_baseline():
         assert cnc02 is not None
         assert cnc02.spindle_vibration <= 2.2
         assert cnc02.operating_status == "NORMAL"
+
+
+@pytest.mark.asyncio
+async def test_inject_pubsub_dispatcher_custom_mock():
+    """Verify custom EdgePubSubDispatcher receives all three payloads on injection."""
+    from simulator.server import FactoryServerService
+
+    mock_dispatcher = MagicMock(spec=EdgePubSubDispatcher)
+    mock_dispatcher.publish_quality_event = AsyncMock(return_value=True)
+    mock_dispatcher.publish_telemetry = AsyncMock(return_value=True)
+    mock_dispatcher.publish_traceability = AsyncMock(return_value=True)
+
+    custom_service = FactoryServerService(pubsub_dispatcher=mock_dispatcher)
+    res = await custom_service.inject(
+        scenario="cnc_tool_wear",
+        machine_id="CNC-02",
+        severity=1.2,
+        mode="fast",
+    )
+    assert res["status"] == "ok"
+    assert res["pubsub_dispatch"] == {
+        "quality_event": True,
+        "telemetry": True,
+        "traceability": True,
+    }
+
+    mock_dispatcher.publish_quality_event.assert_awaited_once()
+    q_call = mock_dispatcher.publish_quality_event.await_args[0][0]
+    assert isinstance(q_call, QualityEventPayload)
+    assert q_call.machine_id == "CNC-02"
+    assert q_call.scenario == "cnc_tool_wear"
+
+    mock_dispatcher.publish_telemetry.assert_awaited_once()
+    t_call = mock_dispatcher.publish_telemetry.await_args[0][0]
+    assert isinstance(t_call, MachineTelemetryPayload)
+    assert t_call.machine_id == "CNC-02"
+    assert t_call.spindle_vibration > 2.5
+
+    mock_dispatcher.publish_traceability.assert_awaited_once()
+    tr_call = mock_dispatcher.publish_traceability.await_args[0][0]
+    assert isinstance(tr_call, TraceabilityEventPayload)
+    assert tr_call.machine_id == "CNC-02"
+    assert tr_call.status == "DEFECT_SCRATCH"
+
+
+@pytest.mark.asyncio
+async def test_inject_pubsub_dispatcher_error_handling():
+    """Verify inject still succeeds if Pub/Sub dispatcher raises an exception."""
+    from simulator.server import FactoryServerService
+
+    mock_dispatcher = MagicMock(spec=EdgePubSubDispatcher)
+    mock_dispatcher.publish_quality_event = AsyncMock(side_effect=RuntimeError("Pub/Sub down"))
+
+    custom_service = FactoryServerService(pubsub_dispatcher=mock_dispatcher)
+    res = await custom_service.inject(scenario="cnc_tool_wear")
+    assert res["status"] == "ok"
+    assert res["pubsub_dispatch"] == {}
 
 
 def test_edge_statistics_tracker():

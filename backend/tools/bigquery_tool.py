@@ -136,6 +136,9 @@ def get_bigquery_client() -> Any:
                 client_options={"api_endpoint": endpoint},
             )
 
+        if settings.bigquery_fallback_to_mock and settings.gcp_project_id == "kaizen-local":
+            raise RuntimeError("BigQuery live client disabled for local development ('kaizen-local')")
+
         return bigquery.Client(project=settings.gcp_project_id)
 
     except Exception as exc:

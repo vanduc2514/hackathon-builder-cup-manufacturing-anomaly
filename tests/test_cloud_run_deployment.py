@@ -1,13 +1,10 @@
-"""Tests for Cloud Run production container configuration, service spec, and deployment scripts."""
+"""Tests for the Cloud Run production container configuration and runtime settings."""
 
 from __future__ import annotations
 
-import os
-import subprocess
 from pathlib import Path
 
 import pytest
-import yaml
 
 from backend.core.config import Settings
 
@@ -51,120 +48,11 @@ def test_dockerignore_exclusions():
         line.strip() for line in content.splitlines() if line.strip() and not line.startswith("#")
     ]
 
-    expected_ignored = [".git", ".venv", "tests/", "frontend/", ".cache/", "__pycache__/"]
+    expected_ignored = [".git", ".venv", "tests/", "apps/", ".cache/", "__pycache__/"]
     for pattern in expected_ignored:
         assert any(pattern in line for line in ignored_patterns), (
             f"{pattern} should be in .dockerignore"
         )
-
-
-def test_cloudrun_service_yaml_spec():
-    """Validates Knative / Cloud Run v2 service specification and resource limits."""
-    service_yaml_path = REPO_ROOT / "deploy" / "cloudrun-service.yaml"
-    assert service_yaml_path.exists(), "deploy/cloudrun-service.yaml must exist"
-
-    with open(service_yaml_path, "r") as f:
-        doc = yaml.safe_load(f)
-
-    assert doc["apiVersion"] == "serving.knative.dev/v1"
-    assert doc["kind"] == "Service"
-    assert doc["metadata"]["name"] == "kaizen-backend"
-
-    spec = doc["spec"]["template"]["spec"]
-    # Session concurrency & timeout for streaming
-    assert spec["containerConcurrency"] == 80
-    assert spec["timeoutSeconds"] == 3600
-
-    annotations = doc["spec"]["template"]["metadata"]["annotations"]
-    assert annotations["run.googleapis.com/execution-environment"] == "gen2"
-    assert annotations["run.googleapis.com/startup-cpu-boost"] == "true"
-    assert annotations["autoscaling.knative.dev/maxScale"] == "10"
-
-    container = spec["containers"][0]
-    assert container["name"] == "kaizen-backend"
-    assert container["resources"]["limits"]["cpu"] == "2000m"
-    assert container["resources"]["limits"]["memory"] == "2Gi"
-
-    # Environment variables
-    env_map = {env["name"]: env["value"] for env in container["env"]}
-    assert env_map["APP_ENV"] == "production"
-    assert env_map["GOOGLE_GENAI_USE_VERTEXAI"] == "true"
-    assert env_map["AI_PROVIDER"] == "gemini"
-
-    # Health probes
-    assert container["startupProbe"]["httpGet"]["path"] == "/healthz"
-    assert container["livenessProbe"]["httpGet"]["path"] == "/health"
-
-
-def test_setup_workload_identity_script():
-    """Validates execution and least-privilege IAM bindings in setup_workload_identity.sh."""
-    script_path = REPO_ROOT / "scripts" / "setup_workload_identity.sh"
-    assert script_path.exists(), "scripts/setup_workload_identity.sh must exist"
-    assert os.access(script_path, os.X_OK), "Script must be executable"
-
-    result = subprocess.run(
-        [
-            str(script_path),
-            "--dry-run",
-            "--project",
-            "test-project-123",
-            "--service-account",
-            "test-sa",
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-
-    stdout = result.stdout
-    assert "test-project-123" in stdout
-    assert "test-sa@test-project-123.iam.gserviceaccount.com" in stdout
-
-    # Least-privileged IAM roles verified
-    required_roles = [
-        "roles/aiplatform.user",
-        "roles/bigquery.dataViewer",
-        "roles/bigquery.jobUser",
-        "roles/datastore.user",
-        "roles/storage.objectViewer",
-        "roles/logging.logWriter",
-        "roles/run.invoker",
-    ]
-    for role in required_roles:
-        assert role in stdout, f"Missing required IAM role: {role}"
-
-
-def test_deploy_cloud_run_script_dry_run():
-    """Validates scripts/deploy_cloud_run.sh execution with dry-run, yaml templating, and iam flags."""
-    script_path = REPO_ROOT / "scripts" / "deploy_cloud_run.sh"
-    assert script_path.exists(), "scripts/deploy_cloud_run.sh must exist"
-    assert os.access(script_path, os.X_OK), "Script must be executable"
-
-    result = subprocess.run(
-        [
-            str(script_path),
-            "--dry-run",
-            "--setup-iam",
-            "--apply-yaml",
-            "--project",
-            "test-deploy-proj",
-            "--image-tag",
-            "v1.0.0",
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-
-    stdout = result.stdout
-    assert "test-deploy-proj" in stdout
-    assert (
-        "asia-southeast1-docker.pkg.dev/test-deploy-proj/kaizen-agent/kaizen-backend:v1.0.0"
-        in stdout
-    )
-    assert "docker build" in stdout
-    assert "gcloud run services replace" in stdout
-    assert "Cloud Run Deployment Succeeded!" in stdout
 
 
 def test_config_cloud_run_environment_resolution(monkeypatch: pytest.MonkeyPatch):
@@ -194,12 +82,53 @@ def test_config_cloud_run_environment_resolution(monkeypatch: pytest.MonkeyPatch
     assert prod_settings.ai_provider == "gemini"
 
 
-def test_mise_tasks_defined():
-    """Validates that mise.toml defines deploy:iam and deploy:backend tasks."""
-    mise_toml_path = REPO_ROOT / "mise.toml"
-    assert mise_toml_path.exists(), "mise.toml must exist"
+def test_cors_allows_only_configured_hosting_origins(monkeypatch: pytest.MonkeyPatch):
+    """CORS_ORIGINS (comma-separated, blanks ignored) gates cross-origin reads; empty disables CORS."""
+    import importlib
 
-    content = mise_toml_path.read_text()
-    assert '[tasks."deploy:iam"]' in content
-    assert '[tasks."deploy:backend"]' in content
-    assert '[tasks."deploy:backend:dry"]' in content
+    from fastapi.testclient import TestClient
+
+    import backend.api.main as main_module
+    from backend.core.config import settings
+
+    web, mobile = "https://kaizen-lab-web.web.app", "https://kaizen-lab-mobile.web.app"
+    monkeypatch.setattr(settings, "cors_origins", f" {web} , ,{mobile}")
+    try:
+        client = TestClient(importlib.reload(main_module).app)
+        for origin in (web, mobile):
+            res = client.get("/health", headers={"Origin": origin})
+            assert res.headers.get("access-control-allow-origin") == origin
+        denied = client.get("/health", headers={"Origin": "https://evil.example"})
+        assert "access-control-allow-origin" not in denied.headers
+
+        monkeypatch.setattr(settings, "cors_origins", "")
+        client = TestClient(importlib.reload(main_module).app)
+        res = client.get("/health", headers={"Origin": web})
+        assert "access-control-allow-origin" not in res.headers
+    finally:
+        monkeypatch.undo()
+        importlib.reload(main_module)
+
+
+def test_api_docs_are_served_only_outside_production(monkeypatch: pytest.MonkeyPatch):
+    """/docs, /redoc and /openapi.json map every route, so production must not serve them."""
+    import importlib
+
+    from fastapi.testclient import TestClient
+
+    import backend.api.main as main_module
+    from backend.core.config import settings
+
+    docs_paths = ("/docs", "/redoc", "/openapi.json")
+    try:
+        monkeypatch.setattr(settings, "app_env", "production")
+        client = TestClient(importlib.reload(main_module).app)
+        assert [client.get(path).status_code for path in docs_paths] == [404, 404, 404]
+        assert client.get("/health").status_code == 200
+
+        monkeypatch.setattr(settings, "app_env", "development")
+        client = TestClient(importlib.reload(main_module).app)
+        assert [client.get(path).status_code for path in docs_paths] == [200, 200, 200]
+    finally:
+        monkeypatch.undo()
+        importlib.reload(main_module)

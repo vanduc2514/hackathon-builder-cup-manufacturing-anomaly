@@ -30,7 +30,7 @@ It covers:
 | **Cloud Firestore** | • [Firestore Homepage](https://cloud.google.com/firestore)<br/>• [Firestore Pricing](https://cloud.google.com/firestore/pricing) | Shared Incident State (Blackboard) | In-memory reactive SSE Blackboard ([`backend/core/blackboard.py`](../../backend/core/blackboard.py)) | Cloud Firestore (Native mode) | [`firestore-blackboard`](../../.agents/skills/firestore-blackboard/SKILL.md) |
 | **BigQuery** | • [BigQuery Homepage](https://cloud.google.com/bigquery)<br/>• [BigQuery Pricing](https://cloud.google.com/bigquery/pricing)<br/>• [goccy/bigquery-emulator](https://github.com/goccy/bigquery-emulator) | Traceability & sensor warehouse ([`data/schemas/bigquery_tables.sql`](../../data/schemas/bigquery_tables.sql)) | **`goccy/bigquery-emulator` on port 9050** + mock fallback | Managed BigQuery Dataset (`manufacturing`) | [`bigquery`](../../.agents/skills/bigquery/SKILL.md) |
 | **Cloud Run** | • [Cloud Run Homepage](https://cloud.google.com/run)<br/>• [Cloud Run Pricing](https://cloud.google.com/run/pricing) | Serverless container runtime for backend & agents | Local Uvicorn / FastAPI server (`mise run backend`) | Managed Cloud Run service | [`cloud-run`](../../.agents/skills/cloud-run/SKILL.md) |
-| **Firebase Hosting** | • [Firebase Hosting Homepage](https://firebase.google.com/products/hosting)<br/>• [Firebase Pricing](https://firebase.google.com/pricing) | Web dashboard (SPC charts, blackboard UI) | Local Vite dev server (`localhost:3000`, `mise run frontend`) | Global Firebase CDN | [`firebase`](../../.agents/skills/firebase/SKILL.md) |
+| **Firebase Hosting** | • [Firebase Hosting Homepage](https://firebase.google.com/products/hosting)<br/>• [Firebase Pricing](https://firebase.google.com/pricing) | Web dashboard (SPC charts, blackboard UI) and technician mobile app | Local Vite dev servers (`localhost:3000` via `mise run web`, `localhost:3001` via `mise run mobile`) | Global Firebase CDN | [`firebase`](../../.agents/skills/firebase/SKILL.md) |
 | **Cloud Storage** | • [Cloud Storage Homepage](https://cloud.google.com/storage)<br/>• [Cloud Storage Pricing](https://cloud.google.com/storage/pricing) | Media storage (repair video SOPs, defect snapshots, RAG documents) | Local `data/knowledge_base/` fallback | Regional GCS Bucket (`gs://kaizen-media`) | [`google-cloud-storage`](../../.agents/skills/google-cloud-storage/SKILL.md) |
 | **Cloud Logging** | • [Cloud Logging Homepage](https://cloud.google.com/logging)<br/>• [Cloud Logging Pricing](https://cloud.google.com/logging/pricing) | Centralized observability, agent trace logs, and SPC breach alerts | Local Uvicorn stdout/stderr stream | Managed Cloud Logging (LQL queries) | [`cloud-logging`](../../.agents/skills/cloud-logging/SKILL.md) |
 | **Cloud IAM & Auth** | • [Cloud IAM Homepage](https://cloud.google.com/iam)<br/>• [IAM Pricing (Free)](https://cloud.google.com/iam) | Least-privilege role bindings & Workload Identity | Local `gcloud auth application-default login` | Cloud IAM Service Accounts (ADC) | [`iam-troubleshooting`](../../.agents/skills/iam-troubleshooting/SKILL.md) |
@@ -256,13 +256,14 @@ It covers:
   * [Firebase Hosting Homepage](https://firebase.google.com/products/hosting)
   * [Firebase Pricing Page](https://firebase.google.com/pricing)
 * **What is it?**
-  Fast and secure hosting for the React + Vite + TypeScript dashboard ([`frontend/`](../../frontend)).
+  Fast and secure hosting for the React + Vite + TypeScript frontends: Plant Ops dashboard ([`apps/web/`](../../apps/web)) and technician mobile app ([`apps/mobile/`](../../apps/mobile)).
 * **How to run locally?**
   ```bash
-  mise run frontend  # Runs Vite dev server on port 3000
+  mise run web     # Runs the dashboard Vite dev server on port 3000
+  mise run mobile  # Runs the technician app Vite dev server on port 3001
   ```
 * **How it runs after deployment?**
-  Deployed via `firebase deploy --only hosting`. Rewrites `/api/**` calls directly to Cloud Run.
+  Deployed via `firebase deploy --only hosting`. Rewrites `/api/**` calls directly to Cloud Run; SSE/WebSocket routes cannot go through the rewrite (see [`docs/deployment-frontend.md`](../deployment-frontend.md)).
 * **Pricing & Free Tier:**
   * **Free Tier**: **10 GB storage, 360 MB/day transfer free**.
 
@@ -310,13 +311,13 @@ GOOGLE_GENAI_USE_VERTEXAI="true"
 
 | Command | Action |
 |---|---|
-| `mise run install` | Installs Python backend packages & frontend npm dependencies |
-| `mise run dev` | Runs backend (:8000) and frontend (:3000) in parallel |
+| `mise run install` | Installs Python backend packages & npm dependencies of apps/web and apps/mobile |
+| `mise run dev` | Runs backend (:8000), web (:3000), mobile (:3001) and ADK dev UI (:8001) in parallel |
 | `mise run emulator` | Spawns `goccy/bigquery-emulator` Docker container on port 9050 |
 | `mise run seed` | Seeds mock traceability data into BigQuery / emulator |
 | `mise run demo` | Triggers synthetic defect injection to test the full 90s incident loop |
 | `mise run test` | Executes backend test suite |
-| `mise run docker:up` | Runs backend, frontend, and emulator via `docker-compose.yml` |
+| `mise run docker:up` | Runs backend, web, mobile, and emulators via `docker-compose.yml` |
 
 ---
 

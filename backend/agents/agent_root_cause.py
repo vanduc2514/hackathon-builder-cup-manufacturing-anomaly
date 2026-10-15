@@ -8,6 +8,7 @@ from typing import Any, Optional
 from google.adk import Agent
 from google.genai import types
 
+from backend.agents.tool_guards import limit_tool_calls, return_argument_errors
 from backend.core.config import settings
 from backend.core.models import (
     RAGSearchResult,
@@ -88,6 +89,8 @@ agent = Agent(
     description="Synthesizes board evidence with 5-Whys, Ishikawa fishbone, and domain RAG into a root cause.",
     instruction=INSTRUCTION,
     tools=[query_domain_knowledge] if _supports_tools() else [],
+    before_model_callback=limit_tool_calls(query_domain_knowledge),
+    on_tool_error_callback=return_argument_errors,
     output_schema=RootCauseFindingDraft,
     generate_content_config=types.GenerateContentConfig(max_output_tokens=2048),
 )

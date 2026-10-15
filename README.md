@@ -55,7 +55,7 @@ git clone https://github.com/your-org/kaizen-agent.git
 cd kaizen-agent
 
 mise install          # provisions Python 3.11 + Node 22 + .venv
-mise run install      # pip install backend deps + npm install frontend deps
+mise run install      # pip install backend deps + npm install apps/web and apps/mobile
 ```
 
 ### 2. Configure environment
@@ -86,18 +86,32 @@ mise automatically merges `mise.local.toml` on top of `mise.toml` when you `cd` 
 
 Local development works without GCP credentials — start the local BigQuery emulator (`mise run emulator`) or leave it unset to automatically fall back to mock data.
 
+Frontend dev ports come from `WEB_PORT` (3000) and `MOBILE_PORT` (3001), and the Vite `/api` proxy target from `API_PROXY_TARGET` (defaults to `http://localhost:$API_PORT`), all in `mise.toml`; override them in `mise.local.toml`.
+
+Both apps open on a login screen. Every `/api/*` route needs a token from `POST /api/auth/login`; only `/health` and `/api/auth/*` are public. The web dashboard signs in the shift leader and the mobile app signs in the technician: each screen shows the role and asks only for the password (with a show/hide toggle; the browser can save it). Accounts and passwords come from `AUTH_USERS` in `mise.toml` (dev: `technician` / `4NpqbcqiOB4v9Ry6`, `shiftleader` / `REA5Dvx8VjGKdccg`); `/api/auth/accounts` never returns passwords. Each account keeps a `display_name` on the backend, but the apps only show the role name. Roles are display-only. The `demo*` and `sim:*` curl tasks fetch a token via `scripts/dev_token.py`. In production the passwords come from the private `TF_VAR_auth_users` (same JSON shape) in `mise.local.toml`, followed by `mise run infra:apply`. If it is unset, login returns 503.
+
+Calls with a valid token, including the SSE/WebSocket streams, are rate limited in-process per user (`backend/core/rate_limit.py`):
+- 300 requests/min overall (`RATE_LIMIT_PER_MINUTE`).
+- 30 writes/min for POST/PUT/PATCH/DELETE (`RATE_LIMIT_WRITE_PER_MINUTE`).
+- 10 concurrent streams (`RATE_LIMIT_MAX_STREAMS`).
+
+Anonymous calls (`/health`, `/api/auth/*`, requests with a missing or invalid token) are not limited. Behind Firebase Hosting the client IP is not reliably known, so an IP-keyed limit would let one caller throttle every user. Failed logins do not lock accounts either.
+
+Over-limit calls get `429` with `Retry-After`; over-limit WebSockets are closed with code 1008. `RATE_LIMIT_ENABLED=false` turns limiting off. Counters live in the process, which is correct only while Cloud Run keeps `max_instances = 1`.
+
 ### 3. Run the full stack
 
 ```bash
-# Backend (FastAPI :8000) + Frontend (Vite :3000) + ADK dev UI (:8001) in parallel
-mise run dev -j3
+# Backend (FastAPI :8000) + web dashboard (Vite :3000) + mobile app (Vite :3001) + ADK dev UI (:8001) in parallel
+mise run dev -j4
 ```
 
 Or run each side independently:
 
 ```bash
 mise run backend    # FastAPI with auto-reload
-mise run frontend   # Vite dev server
+mise run web        # Plant Ops dashboard (apps/web, :3000)
+mise run mobile     # Technician mobile app (apps/mobile, :3001)
 mise run adk-web    # ADK dev UI: incident workflow graph + per-node events (app "agents")
 ```
 
@@ -109,7 +123,7 @@ With the backend running, inject a synthetic defect to see the full 90-second mu
 mise run demo
 ```
 
-Then open `http://localhost:3000` (frontend) or `http://localhost:8000` (FastAPI backend) to watch the live dashboard.
+Then open `http://localhost:3000` (Plant Ops dashboard), `http://localhost:3001` (technician mobile app) or `http://localhost:8000` (FastAPI backend).
 
 ### Other useful commands
 
@@ -120,7 +134,16 @@ mise run emulator       # start local BigQuery emulator (:9050)
 mise run emulator:down  # stop BigQuery emulator
 mise run docker:up      # start full stack via docker compose
 adk run backend/agents '{}'  # run one incident workflow in the terminal
+mise run build          # production build of apps/web + apps/mobile
+mise run typecheck      # tsc --noEmit for both apps
+mise run web:preview    # serve apps/web/dist on :3000
+mise run mobile:preview # serve apps/mobile/dist on :3001
 ```
+
+### Deployment
+
+- Backend: `mise run deploy:backend` builds the container and deploys it to Cloud Run.
+- Frontend hosting (`apps/web`, `apps/mobile`) is documented in [`docs/deployment-frontend.md`](docs/deployment-frontend.md) (not yet automated).
 
 ---
 

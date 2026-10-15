@@ -7,6 +7,7 @@ import logging
 
 from google.adk import Agent
 
+from backend.agents.tool_guards import limit_tool_calls, return_argument_errors
 from backend.core.config import settings
 from backend.core.models import (
     FindingDraft,
@@ -53,11 +54,12 @@ INSTRUCTION = (
     "Your role is to analyze continuous sensor telemetry for machines suspected of causing defects. "
     "The user message is the current incident board as JSON. "
     "Look at the board findings or suspect_machine field to identify the primary suspect machine. "
-    "Call the analyze_machine_telemetry tool for the suspected machine for the precise pre-incident time window (e.g. 09:00 to 10:00). "
-    "Analyze the metrics returned. Compare the suspected machine's sensor readings against nominal line baselines. "
-    "Identify any baseline deviations (e.g., calculate the percentage increase for vibration and motor current, note if temperature is steady). "
-    "Correlate the temporal onset (e.g., mechanical anomaly started prior to the visual defect). "
-    "Return a FindingDraft containing the percentage shifts, onset timestamps, a high confidence score (e.g. 0.89), "
+    "Call the analyze_machine_telemetry tool once for that machine with time_window '09:00-10:00', "
+    "the pre-incident window. Its result already carries the nominal line baseline, so do not "
+    "query other windows. "
+    "Compare the suspected machine's sensor readings against that baseline: calculate the "
+    "percentage increase for vibration and motor current and note whether temperature is steady. "
+    "Return a FindingDraft containing the percentage shifts, a high confidence score (e.g. 0.89), "
     f"and cite the table/window queried as your citation (e.g. '{CITATION}')."
 )
 
@@ -66,5 +68,7 @@ agent = Agent(
     description="Analyzes suspect machine telemetry for deviations preceding the defects.",
     instruction=INSTRUCTION,
     tools=[analyze_machine_telemetry] if _supports_tools() else [],
+    before_model_callback=limit_tool_calls(analyze_machine_telemetry),
+    on_tool_error_callback=return_argument_errors,
     output_schema=FindingDraft,
 )

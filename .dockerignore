@@ -29,8 +29,8 @@ htmlcov/
 *.pem
 *.json-credentials
 
-# Frontend source (deployed separately to Firebase Hosting)
-frontend/
+# Frontend apps (built and hosted separately; see docs)
+apps/
 node_modules/
 
 # Test suite and docs (not needed inside Cloud Run production image)
@@ -42,3 +42,6 @@ docs/
 docker-compose*.yml
 mise.local.toml
 .env*
+
+# Infrastructure as code
+infra/

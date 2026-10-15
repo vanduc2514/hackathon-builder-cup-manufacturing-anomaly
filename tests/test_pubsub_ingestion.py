@@ -137,6 +137,25 @@ def test_pubsub_manager_direct_fallback():
     assert res_q is False
 
 
+@pytest.mark.parametrize(("emulator_host", "provisions"), [(None, False), ("localhost:8085", True)])
+def test_start_subscribers_provisions_only_on_emulator(
+    monkeypatch: pytest.MonkeyPatch, emulator_host: str | None, provisions: bool
+):
+    """Real projects rely on Terraform-owned topics (no create rights); the emulator is seeded."""
+    monkeypatch.delenv("PUBSUB_EMULATOR_HOST", raising=False)
+    monkeypatch.setattr("backend.core.config.settings.pubsub_emulator_host", emulator_host)
+    manager = PubSubManager()
+    manager._cached_available = True
+    subscriber = MagicMock()
+    with (
+        patch.object(manager, "ensure_topics_and_subscriptions") as ensure,
+        patch.object(manager, "get_subscriber_client", return_value=subscriber),
+    ):
+        assert manager.start_subscribers() is True
+    assert ensure.called is provisions
+    assert subscriber.subscribe.call_count == 3
+
+
 def test_pubsub_telemetry_message_handler():
     """Verifies subscriber _handle_telemetry_message decodes payload, streams to BigQuery, and acks."""
     manager = PubSubManager()

@@ -1,6 +1,6 @@
 # =============================================================================
 # Kaizen Agent — Manufacturing Anomaly Detection
-# Monorepo: backend/ (Python/FastAPI) + frontend/ (React/Vite)
+# Monorepo: backend/ (Python/FastAPI) + apps/web, apps/mobile (React/Vite)
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -61,15 +61,15 @@ htmlcov/
 *.ipynb
 
 # -----------------------------------------------------------------------------
-# Node.js — frontend/
+# Node.js — apps/
 # -----------------------------------------------------------------------------
 node_modules/
-frontend/node_modules/
+apps/*/node_modules/
 
 # Vite / build output
-frontend/dist/
-frontend/.vite/
-frontend/build/
+apps/*/dist/
+apps/*/.vite/
+apps/*/build/
 
 # npm / yarn / pnpm
 npm-debug.log*
@@ -78,6 +78,9 @@ yarn-error.log*
 .pnpm-debug.log*
 package-lock.json
 yarn.lock
+
+# Firebase CLI cache
+.firebase/
 
 # Storybook
 .storybook-out/
@@ -96,11 +99,13 @@ storybook-static/
 application_default_credentials.json
 .gcloud/
 
-# Terraform state (if infra is added later)
+# Terraform / Firebase
 *.tfstate
 *.tfstate.*
 .terraform/
-.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+.firebaserc
 
 # -----------------------------------------------------------------------------
 # Data & Models (large binary / generated files)

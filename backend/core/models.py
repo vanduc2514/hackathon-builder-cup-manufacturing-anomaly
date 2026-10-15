@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class CitationReference(BaseModel):
@@ -194,6 +194,15 @@ class RootCauseFindingDraft(FindingDraft):
         default=None,
         description="Diagnostic evidence request for technician if confidence < 0.70",
     )
+
+    @field_validator("ishikawa", mode="before")
+    @classmethod
+    def _wrap_single_causes(cls, value: Any) -> Any:
+        """Gemini does not hold a free-form map's value schema and may answer one string per
+        category; keep it as a one-cause list instead of failing the incident."""
+        if isinstance(value, dict):
+            return {k: [v] if isinstance(v, str) else v for k, v in value.items()}
+        return value
 
 
 class ScribeDraft(FindingDraft):
@@ -963,3 +972,50 @@ class QualityEventPayload(BaseModel):
             machine_id=self.machine_id,
             tool_id=self.tool_id or ("MOLD-03" if self.scenario == "im_damp_material" else "T07"),
         )
+
+
+class AuthRole(str, Enum):
+    """Display role of a login account; every role may call every API."""
+
+    TECHNICIAN = "technician"
+    SHIFT_LEADER = "shift_leader"
+
+
+class AuthAccount(BaseModel):
+    """One AUTH_USERS entry; plain-text password because these are demo accounts."""
+
+    username: str
+    password: str
+    role: AuthRole
+    display_name: str
+
+
+class AuthUser(BaseModel):
+    """Signed-in identity resolved from an API token."""
+
+    username: str
+    display_name: str
+    role: AuthRole
+
+
+class LoginRequest(BaseModel):
+    """Username/password submitted to POST /api/auth/login."""
+
+    username: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    """Signed API token plus the identity it carries."""
+
+    token: str
+    expires_at: datetime
+    user: AuthUser
+
+
+class DemoAccount(BaseModel):
+    """Login screen entry; never carries a password."""
+
+    username: str
+    display_name: str
+    role: AuthRole

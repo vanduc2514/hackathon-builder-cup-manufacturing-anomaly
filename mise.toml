@@ -7,8 +7,9 @@
 # =============================================================================
 [tools]
 python   = "3.11"    # backend: FastAPI / ADK agents
-node     = "22"      # frontend: Vite / React
+node     = "22"      # apps/web + apps/mobile: Vite / React
 gcloud   = "580.0.0" # Google Cloud SDK (gcloud & BigQuery bq CLI)
+terraform = "1.16.5" # Infrastructure as code (infra/)
 firebase = "15.32.1" # Firebase CLI (hosting & emulators)
 ruff     = "0.16.10" # PEP 8 fast linter & code formatter (per AGENTS.md)
 jq       = "1.8.2"   # JSON query utility for scripts & simulation payloads
@@ -23,12 +24,20 @@ _.python.venv = { path = ".venv", create = true }
 VIRTUAL_ENV   = "{{config_root}}/.venv"
 PYTHONPATH    = "{{config_root}}"
 
-APP_ENV       = "development"
-API_HOST      = "0.0.0.0"
-API_PORT      = "8000"
-FRONTEND_PORT = "3000"
-AI_PROVIDER   = "mock"
-RCLONE_CONFIG = "{{config_root}}/.rclone/rclone.conf"
+APP_ENV          = "development"
+API_HOST         = "0.0.0.0"
+API_PORT         = "8000"
+# Frontend ports + Vite proxy target; a shell export (e.g. `WEB_PORT=3010 mise run web`) wins
+WEB_PORT         = "{{ get_env(name='WEB_PORT', default='3000') }}"
+MOBILE_PORT      = "{{ get_env(name='MOBILE_PORT', default='3001') }}"
+API_PROXY_TARGET = "{{ get_env(name='API_PROXY_TARGET', default='http://localhost:' ~ env.API_PORT) }}"
+AI_PROVIDER      = "mock"
+# Demo login accounts (prod: TF_VAR_auth_users in mise.local.toml) + token signing key
+AUTH_USERS       = '[{"username":"technician","password":"4NpqbcqiOB4v9Ry6","role":"technician","display_name":"Red Panda"},{"username":"shiftleader","password":"REA5Dvx8VjGKdccg","role":"shift_leader","display_name":"Sea Otter"}]'
+AUTH_SECRET      = "kaizen-dev-auth-secret-not-for-production"
+RCLONE_CONFIG    = "{{config_root}}/.rclone/rclone.conf"
+# Prefix of globally unique GCP names: <prefix>-tfstate, -kb (GCS) and -web, -mobile (Hosting)
+TF_VAR_global_prefix = "kaizen-lab"
 
 # GOOGLE_APPLICATION_CREDENTIALS = "{{config_root}}/.gcp/credentials.json"
 
@@ -36,13 +45,24 @@ RCLONE_CONFIG = "{{config_root}}/.rclone/rclone.conf"
 # Setup
 # =============================================================================
 
-# Install everything — backend pip deps + frontend npm deps
+# Install everything — backend pip deps + npm deps of both frontend apps
 [tasks.install]
-description = "Install all dependencies (backend + frontend)"
-run = [
-  "uv pip install -r backend/requirements.txt 2>/dev/null || python -m pip install -r backend/requirements.txt",
-  "cd frontend && npm install",
-]
+description = "Install all dependencies (backend + apps/web + apps/mobile)"
+depends = ["install:backend", "install:web", "install:mobile"]
+
+[tasks."install:backend"]
+description = "Install backend Python dependencies"
+run = "uv pip install -r backend/requirements.txt 2>/dev/null || python -m pip install -r backend/requirements.txt"
+
+[tasks."install:web"]
+description = "Install apps/web npm dependencies"
+dir = "{{config_root}}/apps/web"
+run = "npm install"
+
+[tasks."install:mobile"]
+description = "Install apps/mobile npm dependencies"
+dir = "{{config_root}}/apps/mobile"
+run = "npm install"
 
 [tasks."mqtt:listen"]
 description = "Start the EMQX MQTT telemetry bridge listener"
@@ -52,23 +72,63 @@ run = "python -m backend.edge.gateway.mqtt_bridge"
 # Development
 # =============================================================================
 
-# Run the full stack (backend + frontend + ADK dev UI) concurrently
-# `mise run dev` fans out to all three tasks in parallel
+# Run the full stack (backend + web + mobile + ADK dev UI) concurrently
+# `mise run dev` fans out to all four tasks in parallel
 [tasks.dev]
-description = "Start the full stack: FastAPI (:8000) + Vite (:3000) + ADK dev UI (:8001)"
-depends  = ["backend", "frontend", "adk-web"]
+description = "Start the full stack: FastAPI (:8000) + web (:3000) + mobile (:3001) + ADK dev UI (:8001)"
+depends  = ["backend", "web", "mobile", "adk-web"]
 
 [tasks.backend]
 description = "Start FastAPI dev server with auto-reload (:8000)"
 run = "uvicorn backend.api.main:app --host $API_HOST --port $API_PORT --reload"
 
-[tasks.frontend]
-description = "Start Vite dev server (:3000, /api proxied to backend)"
-run = "cd frontend && npm run dev"
+[tasks.web]
+description = "Start Plant Ops dashboard Vite dev server (apps/web, :3000, /api proxied to backend)"
+dir = "{{config_root}}/apps/web"
+run = "npm run dev -- --port $WEB_PORT --strictPort"
 
-[tasks.dashboard]
-description = "Start Plant Ops dashboard Vite dev server (:3001, /api proxied to backend)"
-run = "cd dashboard_frontend && npm run dev"
+[tasks.mobile]
+description = "Start technician mobile app Vite dev server (apps/mobile, :3001, /api + WS proxied to backend)"
+dir = "{{config_root}}/apps/mobile"
+run = "npm run dev -- --port $MOBILE_PORT --strictPort"
+
+[tasks."web:build"]
+description = "Typecheck + production build of apps/web (apps/web/dist)"
+dir = "{{config_root}}/apps/web"
+run = "npm run build"
+
+[tasks."mobile:build"]
+description = "Typecheck + production build of apps/mobile (apps/mobile/dist)"
+dir = "{{config_root}}/apps/mobile"
+run = "npm run build"
+
+[tasks."web:preview"]
+description = "Serve the apps/web production build (:3000)"
+dir = "{{config_root}}/apps/web"
+run = "npm run preview -- --port $WEB_PORT --strictPort"
+
+[tasks."mobile:preview"]
+description = "Serve the apps/mobile production build (:3001)"
+dir = "{{config_root}}/apps/mobile"
+run = "npm run preview -- --port $MOBILE_PORT --strictPort"
+
+[tasks."web:typecheck"]
+description = "TypeScript typecheck of apps/web"
+dir = "{{config_root}}/apps/web"
+run = "npm run typecheck"
+
+[tasks."mobile:typecheck"]
+description = "TypeScript typecheck of apps/mobile"
+dir = "{{config_root}}/apps/mobile"
+run = "npm run typecheck"
+
+[tasks.build]
+description = "Production build of all frontend apps"
+depends = ["web:build", "mobile:build"]
+
+[tasks.typecheck]
+description = "Typecheck all frontend apps"
+depends = ["web:typecheck", "mobile:typecheck"]
 
 [tasks.adk-web]
 description = "Start ADK dev UI for the incident workflow (:8001, backend/agents/agent.py)"
@@ -85,27 +145,27 @@ run = "uvicorn backend.api.main:app --host $API_HOST --port $API_PORT"
 
 [tasks.demo]
 description = "Inject Scenario 1 (CNC-02 Tool Wear) for deterministic 90-second multi-agent demo"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H 'Content-Type: application/json' -d '{\"scenario\":\"cnc_tool_wear\",\"mode\":\"demo\"}' | python -m json.tool"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'Content-Type: application/json' -d '{\"scenario\":\"cnc_tool_wear\",\"mode\":\"demo\"}' | python -m json.tool"
 
 [tasks."demo:fast"]
 description = "Fast-forward injection of Scenario 1 (~8 seconds)"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H 'Content-Type: application/json' -d '{\"scenario\":\"cnc_tool_wear\",\"mode\":\"fast\"}' | python -m json.tool"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'Content-Type: application/json' -d '{\"scenario\":\"cnc_tool_wear\",\"mode\":\"fast\"}' | python -m json.tool"
 
 [tasks."demo:scenario2"]
 description = "Inject Scenario 2 (IM-05 Damp Material) for 90-second demo"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H 'Content-Type: application/json' -d '{\"scenario\":\"im_damp_material\",\"mode\":\"demo\"}' | python -m json.tool"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'Content-Type: application/json' -d '{\"scenario\":\"im_damp_material\",\"mode\":\"demo\"}' | python -m json.tool"
 
 [tasks."demo:scenario2:fast"]
 description = "Fast-forward injection of Scenario 2 (~8 seconds)"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H 'Content-Type: application/json' -d '{\"scenario\":\"im_damp_material\",\"mode\":\"fast\"}' | python -m json.tool"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'Content-Type: application/json' -d '{\"scenario\":\"im_damp_material\",\"mode\":\"fast\"}' | python -m json.tool"
 
 [tasks."sim:reset"]
 description = "Reset simulation state, blackboard, and BigQuery buffers to baseline"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/reset | python -m json.tool"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/reset -H \"Authorization: Bearer $(python scripts/dev_token.py)\" | python -m json.tool"
 
 [tasks."sim:status"]
 description = "Get current simulation running status"
-run = "curl -s http://localhost:$API_PORT/api/simulation/status | python -m json.tool"
+run = "curl -s http://localhost:$API_PORT/api/simulation/status -H \"Authorization: Bearer $(python scripts/dev_token.py)\" | python -m json.tool"
 
 [tasks.test]
 description = "Run the pytest test suite"
@@ -233,15 +293,68 @@ description = "Upload cached changes to a Drive folder (copy only, never deletes
 run = 'rclone copy .cache/gdrive/{{arg(name="folder")}} gdrive:{{arg(name="folder")}} --drive-shared-with-me -v'
 
 # =============================================================================
-# Cloud Run & Workload Identity Deployment
+# GCP Infrastructure (Terraform, infra/) & Deployment
+# Set TF_VAR_project_id (and optionally TF_VAR_billing_account_id) in mise.local.toml.
+# Order: infra:bootstrap → infra:init → infra:apply → deploy:backend → infra:seed
+#        → kb:import → deploy:frontend (deploy:web + deploy:mobile)
 # =============================================================================
 
-[tasks."deploy:iam"]
-description = "Provision least-privileged IAM roles & Cloud Run service account"
-run = "bash scripts/setup_workload_identity.sh"
+[tasks."infra:bootstrap"]
+description = "One-time: create the GCS bucket holding Terraform state (infra/bootstrap, local state)"
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && terraform -chdir=infra/bootstrap init && terraform -chdir=infra/bootstrap apply'
+
+[tasks."infra:init"]
+description = "Initialise the main Terraform stack against the GCS state bucket"
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && terraform -chdir=infra/terraform init -backend-config="bucket=${TF_VAR_global_prefix}-tfstate"'
+
+[tasks."infra:plan"]
+description = "Preview GCP infrastructure changes (infra/terraform)"
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && terraform -chdir=infra/terraform plan'
+
+[tasks."infra:apply"]
+description = "Provision / update GCP infrastructure (infra/terraform)"
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && terraform -chdir=infra/terraform apply'
+
+[tasks."infra:seed"]
+description = "Create BigQuery tables (data/schemas/bigquery_tables.sql) and baseline rows in the real project"
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && env -u BIGQUERY_EMULATOR_HOST GCP_PROJECT_ID="$TF_VAR_project_id" BIGQUERY_DATASET="$(terraform -chdir=infra/terraform output -raw bigquery_dataset)" python scripts/seed_bigquery.py'
+
+[tasks."kb:import"]
+description = "Upload data/knowledge_base to GCS and import it into the Vertex AI Search datastore"
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && python scripts/import_knowledge_base.py --project "$TF_VAR_project_id" --bucket "$(terraform -chdir=infra/terraform output -raw kb_bucket)"'
+
+[tasks."firebase:targets"]
+description = "Map firebase.json hosting targets web/mobile to the Terraform-managed sites (.firebaserc)"
+run = [
+  ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && rm -f .firebaserc',
+  'firebase target:apply hosting web "$(terraform -chdir=infra/terraform output -json hosting_sites | jq -r .web)" --project "$TF_VAR_project_id"',
+  'firebase target:apply hosting mobile "$(terraform -chdir=infra/terraform output -json hosting_sites | jq -r .mobile)" --project "$TF_VAR_project_id"',
+]
+
+[tasks."deploy:web"]
+description = "Build apps/web against the Cloud Run stream origin and deploy it to Firebase Hosting (target web)"
+depends = ["firebase:targets"]
+run = [
+  { task = "install:web" },
+  'origin="$(terraform -chdir=infra/terraform output -raw service_url)" && cd apps/web && VITE_STREAM_ORIGIN="$origin" npm run build',
+  'firebase deploy --only hosting:web --project "$TF_VAR_project_id"',
+]
+
+[tasks."deploy:mobile"]
+description = "Build apps/mobile against the Cloud Run stream origin and deploy it to Firebase Hosting (target mobile)"
+depends = ["firebase:targets"]
+run = [
+  { task = "install:mobile" },
+  'origin="$(terraform -chdir=infra/terraform output -raw service_url)" && cd apps/mobile && VITE_STREAM_ORIGIN="$origin" npm run build',
+  'firebase deploy --only hosting:mobile --project "$TF_VAR_project_id"',
+]
+
+[tasks."deploy:frontend"]
+description = "Deploy both frontend apps (apps/web + apps/mobile) to Firebase Hosting"
+depends = ["deploy:web", "deploy:mobile"]
 
 [tasks."deploy:backend"]
-description = "Build container and deploy FastAPI backend to Google Cloud Run"
+description = "Build the backend image, push it and roll the Terraform-managed Cloud Run service"
 run = "bash scripts/deploy_cloud_run.sh"
 
 [tasks."deploy:backend:dry"]
@@ -253,7 +366,7 @@ run = "bash scripts/deploy_cloud_run.sh --dry-run"
 # =============================================================================
 
 [tasks."video:dev"]
-description = "Launch Remotion Studio preview at http://localhost:3000"
+description = "Launch Remotion Studio preview (Remotion default :3000; stop `mise run web` first)"
 run = "cd video && npm run dev"
 
 [tasks."video:render"]

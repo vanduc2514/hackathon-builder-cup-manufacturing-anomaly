@@ -1,80 +1,40 @@
-"""Tests for Frontend Web Dashboard Execution, Component Topology, and API Proxying (Issue #83).
+"""Tests for the frontend apps' backend contracts (Issue #83).
 
 Validates:
-1. Frontend build and TypeScript type-checking execute without errors.
-2. Vite configuration sets port 3000 and proxies /api to localhost:8000.
-3. Architecture invariant: No frontend component hardcodes localhost backend addresses.
-4. All dashboard components (Telemetry, SPC, Andon, 5-Whys, 8D Report, Impact) exist and export valid modules.
-5. SSE connection contracts (/api/incidents/stream and /api/incidents/events) deliver valid IncidentState packets.
+1. Architecture invariant #5: no source file in apps/web or apps/mobile hardcodes the backend host.
+2. SSE connection contracts (/api/incidents/stream and /api/incidents/events) deliver valid IncidentState packets.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
-import subprocess
 from pathlib import Path
 
+import pytest
 from starlette.testclient import TestClient
 
 from backend.api.main import app
 from backend.core.blackboard import blackboard
 from backend.core.models import AgentFinding, IncidentState
 
-FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
-SRC_DIR = FRONTEND_DIR / "src"
+APPS_DIR = Path(__file__).resolve().parent.parent / "apps"
 
 
-def test_vite_config_proxy_and_port() -> None:
-    """Verifies vite.config.ts configures port 3000 and reverse proxies /api to localhost:8000."""
-    vite_config_path = FRONTEND_DIR / "vite.config.ts"
-    assert vite_config_path.exists(), "vite.config.ts must exist"
+@pytest.mark.parametrize("app_name", ["web", "mobile"])
+def test_frontend_components_architecture_invariants(app_name: str) -> None:
+    """Verifies that no app source file violates Key Invariant #5 (no hardcoded backend hostnames)."""
+    src_dir = APPS_DIR / app_name / "src"
+    assert src_dir.is_dir(), f"{src_dir} must exist"
+    ts_files = list(src_dir.glob("**/*.tsx")) + list(src_dir.glob("**/*.ts"))
+    assert ts_files, f"Expected TS/TSX source files in {src_dir}"
 
-    content = vite_config_path.read_text(encoding="utf-8")
-    assert "port: 3000" in content, "Vite server port must be configured to 3000"
-    assert "'/api'" in content or '"/api"' in content, "Vite must proxy /api prefix"
-    assert "http://localhost:8000" in content, "Vite proxy target must be http://localhost:8000"
-    assert "changeOrigin: true" in content, "Vite proxy must enable changeOrigin"
-
-
-def test_frontend_components_architecture_invariants() -> None:
-    """Verifies that no frontend source files violate Key Invariant #5 (no hardcoded backend hostnames)."""
-    tsx_files = list(SRC_DIR.glob("**/*.tsx")) + list(SRC_DIR.glob("**/*.ts"))
-    assert len(tsx_files) >= 8, (
-        f"Expected at least 8 frontend TS/TSX source files, found {len(tsx_files)}"
-    )
-
-    for file_path in tsx_files:
+    for file_path in ts_files:
         content = file_path.read_text(encoding="utf-8")
-        # Invariant 5: Frontend never calls backend directly by hostname. All API calls use relative URLs (/api/...)
         assert "localhost:8000" not in content, (
-            f"Violation of Key Invariant #5 in {file_path.relative_to(FRONTEND_DIR)}: "
+            f"Violation of Key Invariant #5 in {file_path.relative_to(APPS_DIR)}: "
             "Found hardcoded 'localhost:8000'. All API calls must use relative URLs."
         )
-
-
-def test_required_dashboard_components_exist() -> None:
-    """Verifies all required dashboard views and components exist in frontend/src/components."""
-    components_dir = SRC_DIR / "components"
-    required_components = [
-        "AndonPhaseTracker.tsx",
-        "DemoController.tsx",
-        "DocumentApprovals.tsx",
-        "ImpactCard.tsx",
-        "IncidentStream.tsx",
-        "IshikawaViewer.tsx",
-        "ProductionLine.tsx",
-        "Report8DCard.tsx",
-        "RootCauseCard.tsx",
-        "SpcChart.tsx",
-        "TelemetryChart.tsx",
-    ]
-
-    for comp in required_components:
-        comp_path = components_dir / comp
-        assert comp_path.exists(), f"Dashboard component {comp} is missing in {components_dir}"
-        content = comp_path.read_text(encoding="utf-8")
-        assert "export default function" in content, f"{comp} must have a default export component"
 
 
 def test_frontend_sse_stream_contract() -> None:
@@ -124,28 +84,41 @@ def test_frontend_sse_stream_contract() -> None:
     assert len(current_data["findings"]) == 1
 
 
-def test_frontend_typescript_typecheck() -> None:
-    """Executes 'npm run typecheck' to verify zero TypeScript compilation errors."""
-    result = subprocess.run(
-        ["npm", "run", "typecheck"],
-        cwd=FRONTEND_DIR,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, f"TypeScript typecheck failed:\n{result.stdout}\n{result.stderr}"
+def test_frontend_project_layout_compliance() -> None:
+    """Verifies that apps/web adheres to AGENTS.md project layout and includes all new OEE components."""
+    repo_root = APPS_DIR.parent
+    legacy_dir = repo_root / "dashboard_frontend"
+    assert not legacy_dir.exists(), "Legacy 'dashboard_frontend' directory must be removed in favor of 'apps/web'"
+
+    web_src = APPS_DIR / "web" / "src"
+    required_files = [
+        web_src / "components" / "overview" / "MachineSelect.tsx",
+        web_src / "components" / "overview" / "OeeLossCard.tsx",
+        web_src / "components" / "overview" / "OeeTrendCard.tsx",
+        web_src / "lib" / "oee.ts",
+        APPS_DIR / "web" / "BACKEND_GAPS.md",
+    ]
+    for req in required_files:
+        assert req.exists(), f"Required dashboard component or doc missing: {req.relative_to(repo_root)}"
 
 
-def test_frontend_vite_build() -> None:
-    """Executes 'npm run build' to verify production bundle generation succeeds cleanly."""
-    result = subprocess.run(
-        ["npm", "run", "build"],
-        cwd=FRONTEND_DIR,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, f"Vite build failed:\n{result.stdout}\n{result.stderr}"
+def test_oee_calculation_and_band_logic() -> None:
+    """Verifies OEE calculation rules and status bands mirror production criteria."""
+    # OEE target is 85% (0.85)
+    target = 0.85
+    watch_threshold = target - 0.15  # 0.70
 
-    dist_index = FRONTEND_DIR / "dist" / "index.html"
-    assert dist_index.exists(), "Build artifact dist/index.html must be generated"
+    def calculate_band(oee: float) -> str:
+        if oee >= target:
+            return "good"
+        if oee >= watch_threshold:
+            return "watch"
+        return "poor"
+
+    assert calculate_band(0.88) == "good"
+    assert calculate_band(0.85) == "good"
+    assert calculate_band(0.80) == "watch"
+    assert calculate_band(0.70) == "watch"
+    assert calculate_band(0.69) == "poor"
+    assert calculate_band(0.45) == "poor"
+

@@ -1,0 +1,123 @@
+{
+  "projectId": "11176127150074892325",
+  "title": "Industrial Quality Command Center",
+  "deviceType": "DESKTOP",
+  "lastSyncTime": "2026-10-10T15:18:15.906Z",
+  "totalScreens": 6,
+  "screens": [
+    {
+      "order": 1,
+      "id": "ab26b74397314ea4b85edd3923cad135",
+      "title": "Telemetry Core — Clean White Desk",
+      "slug": "desktop_screen_1_telemetry_core",
+      "width": 2560,
+      "height": 2994,
+      "deviceType": "DESKTOP",
+      "htmlUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzAwMDY1ZDdjMTdiYWY2MDEwOTI1YzdlMWEyMWYzY2VhEgsSBxCpzt3NnhgYAZIBJAoKcHJvamVjdF9pZBIWQhQxMTE3NjEyNzE1MDA3NDg5MjMyNQ&filename=&opi=89354086",
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1X023_0PvQb0c7SESf3SybquAir1tEa3e0DdQNHKG5at8zXCGhwg2jmSxKYvFv3r-sgLBKoO_7ntHOhpKxgSkamcef-OF2qRqprYibwzlTLWDRcZZ0GQcSX-NzP3lJomyp0sv_b71pbZSwhjDu8STzf80fzZuVnYVmdmZ0AkA_mfnncV_8xf781Z2FeF261A4DmfkX8iYCESMGtgvBFdwzultnuWkWhqQmZO_O7v31tV7xNV-QY7lR4MvC6=w2560",
+      "htmlSize": 70033,
+      "pngSize": 380442,
+      "files": {
+        "html": ".stitch/designs/desktop_screen_1_telemetry_core.html",
+        "image": ".stitch/designs/desktop_screen_1_telemetry_core.png",
+        "publicHtml": "/stitch/desktop_screen_1_telemetry_core.html",
+        "publicImage": "/stitch/desktop_screen_1_telemetry_core.png"
+      }
+    },
+    {
+      "order": 2,
+      "id": "57b3c43660ed45518903b322fbc6c71c",
+      "title": "Incident Command Screen — INC-A389F1",
+      "slug": "desktop_screen_2_incident_command_overview",
+      "width": 2560,
+      "height": 2192,
+      "deviceType": "DESKTOP",
+      "htmlUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzAwMDY1ZDdjMTdhYzg1ODcwNWMyZmQ2Njc1MDhkNzFmEgsSBxCpzt3NnhgYAZIBJAoKcHJvamVjdF9pZBIWQhQxMTE3NjEyNzE1MDA3NDg5MjMyNQ&filename=&opi=89354086",
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1U8Ga8KTXE1Tsa7D_woa_pS9-9Y5P5HXYX5IR8by-kbreAAgdToQRFzF6KQrvvZDgKcGxxhHSmypvTi9rSzJAW_nHGTe23iOBDR_uOFS7zJptA5g-5k7hzvaiLvsOx7PHgehI-eU3okrDlfLrbrz1wiuyIGpoG7ABjrzmthKM-AxRpcIn9tCS5YK33EcRIpHKdQVVzWyh7K3hgtzSWHS7n515k7ObKE6Ue9d4Q6M-CX-N5dYvADy4pXoJI8=w2560",
+      "htmlSize": 37472,
+      "pngSize": 447241,
+      "files": {
+        "html": ".stitch/designs/desktop_screen_2_incident_command_overview.html",
+        "image": ".stitch/designs/desktop_screen_2_incident_command_overview.png",
+        "publicHtml": "/stitch/desktop_screen_2_incident_command_overview.html",
+        "publicImage": "/stitch/desktop_screen_2_incident_command_overview.png"
+      }
+    },
+    {
+      "order": 3,
+      "id": "dd9f3eca35e24f74a9a084f71c4034e6",
+      "title": "Incident Command — Spindle Anomaly & Defect Spike (Pill Step Bar)",
+      "slug": "desktop_screen_3_incident_command_steps",
+      "width": 2560,
+      "height": 7372,
+      "deviceType": "DESKTOP",
+      "htmlUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzAwMDY1ZDdjMTc5MTcxZDUwNTc2MzE3MmVkMTExM2YyEgsSBxCpzt3NnhgYAZIBJAoKcHJvamVjdF9pZBIWQhQxMTE3NjEyNzE1MDA3NDg5MjMyNQ&filename=&opi=89354086",
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1Xyyih4SwWGzNydnp7jOWtWFpdhdzJFAi5PvfdJymKKhXrnmdnRAu12POO6Cxe3HLywbn8bbej0T5kZYLI7pp_5svpJie1BEWLgitNA77DI_1VUm2GHmHdTsUHl-1mxt8-EhcAkWStlFuT-mQHM4ojmsfyI0smtCZIljDx0-kS-jnzVw3w9USc6aT2UiN2tWlXVTerZf-NBfAoJulEP6Se_WL1py42xFIGquG4xkzSZjH7cSSy5fR50IPPG=w2560",
+      "htmlSize": 61907,
+      "pngSize": 1181975,
+      "files": {
+        "html": ".stitch/designs/desktop_screen_3_incident_command_steps.html",
+        "image": ".stitch/designs/desktop_screen_3_incident_command_steps.png",
+        "publicHtml": "/stitch/desktop_screen_3_incident_command_steps.html",
+        "publicImage": "/stitch/desktop_screen_3_incident_command_steps.png"
+      }
+    },
+    {
+      "order": 4,
+      "id": "61a7739982c64bc3b60bf7343c06b13d",
+      "title": "The Kaizen & Impact Hub",
+      "slug": "desktop_screen_4_kaizen_impact_hub",
+      "width": 2560,
+      "height": 4730,
+      "deviceType": "DESKTOP",
+      "htmlUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzAwMDY1ZDdjMTc4NmY2ZjcwNGVhYjcwMDk4MTY4MGQ4EgsSBxCpzt3NnhgYAZIBJAoKcHJvamVjdF9pZBIWQhQxMTE3NjEyNzE1MDA3NDg5MjMyNQ&filename=&opi=89354086",
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XaE-khXVredt69P3i-CJMpk-HenPbuz7OjspvbGHHytvgVkqAKlja8AxZvlTbpPOIf8XB12CPKdFPE4CN5n6dhF4Jp0sToPDLbH1lZEs3nvf4dmpJJ2-vDwyznLkrRjM95LUOI0f5RLEhFys5FwF3_VdzhEd3u0K7lfQJLix6XnNDRWH90QDfs2BdpWHMVSJl_DKdJsgo4M18_h8J3soLqIQPIjPUoAIYkYZXcB29l8p-8E0JLBd6vE-4=w2560",
+      "htmlSize": 47668,
+      "pngSize": 460700,
+      "files": {
+        "html": ".stitch/designs/desktop_screen_4_kaizen_impact_hub.html",
+        "image": ".stitch/designs/desktop_screen_4_kaizen_impact_hub.png",
+        "publicHtml": "/stitch/desktop_screen_4_kaizen_impact_hub.html",
+        "publicImage": "/stitch/desktop_screen_4_kaizen_impact_hub.png"
+      }
+    },
+    {
+      "order": 5,
+      "id": "f80dfafec98d43c4ba800806beb57e47",
+      "title": "Knowledge Hub — Tech Walkthroughs",
+      "slug": "desktop_screen_5_knowledge_hub_walkthroughs",
+      "width": 2560,
+      "height": 4196,
+      "deviceType": "DESKTOP",
+      "htmlUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzAwMDY1ZDdjMTc3NWNjNzQwOTEwN2NiYzk2MTQyN2M1EgsSBxCpzt3NnhgYAZIBJAoKcHJvamVjdF9pZBIWQhQxMTE3NjEyNzE1MDA3NDg5MjMyNQ&filename=&opi=89354086",
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1U94oke4ulp0zM-nWRSCQkgGVGXt_fJmsR7u4rbrYJUpeDskEJYwcnIOR4CyQlabkqJiIKju7MKxPKs44dS8Uidosv1mp1dc0p_qHemmaULAF4ejvyDjUWr7F4k3_O1ZnURTGxzUfE20ZyQO3wAZ-JgDnrq_CpvdXiRytlcOqLUTc1KNb9W0kwJ2Eoq3TKivtvCqfkBQrbZRS28fBJKPJeXknaoVClpdkJl6teaUL1SGHutClPukNTeFsiL=w2560",
+      "htmlSize": 50665,
+      "pngSize": 668748,
+      "files": {
+        "html": ".stitch/designs/desktop_screen_5_knowledge_hub_walkthroughs.html",
+        "image": ".stitch/designs/desktop_screen_5_knowledge_hub_walkthroughs.png",
+        "publicHtml": "/stitch/desktop_screen_5_knowledge_hub_walkthroughs.html",
+        "publicImage": "/stitch/desktop_screen_5_knowledge_hub_walkthroughs.png"
+      }
+    },
+    {
+      "order": 6,
+      "id": "239f3910c83543bfbdef467c563e12e0",
+      "title": "Knowledge Hub — SOP Library",
+      "slug": "desktop_screen_6_knowledge_hub_sop_library",
+      "width": 2560,
+      "height": 3976,
+      "deviceType": "DESKTOP",
+      "htmlUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzAwMDY1ZDdjMTc5YWVkNmMwMmE5OWZhOGZkMTIzMGI3EgsSBxCpzt3NnhgYAZIBJAoKcHJvamVjdF9pZBIWQhQxMTE3NjEyNzE1MDA3NDg5MjMyNQ&filename=&opi=89354086",
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1VK5-pkk2fWU8a0pkpbUPo1FQNeFiG5c-6f2iRo9-pAwGae62viGyjsrIqH2BmGikSd-X7Cr-JeczV5HsCIkXykDImKNZyu85zAcHo9oGPbd5Xh9Xiqaf0MH8HhFq47VmXqWBiNMOcWX3FdX6vdktZWoUN60GRtVhwk8iODS1vICFdChS5ESFNCGvVjp_YIeFHCQ_IqdFt0wfrXeIOJTbkYm0xgZXXfC5Ge7jdGm_FtT4kU-4UtXwaqABo=w2560",
+      "htmlSize": 44290,
+      "pngSize": 704368,
+      "files": {
+        "html": ".stitch/designs/desktop_screen_6_knowledge_hub_sop_library.html",
+        "image": ".stitch/designs/desktop_screen_6_knowledge_hub_sop_library.png",
+        "publicHtml": "/stitch/desktop_screen_6_knowledge_hub_sop_library.html",
+        "publicImage": "/stitch/desktop_screen_6_knowledge_hub_sop_library.png"
+      }
+    }
+  ]
+}

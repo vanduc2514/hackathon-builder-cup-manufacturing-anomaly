@@ -11,6 +11,7 @@ from typing import Any
 from google.adk import Agent
 from google.genai import types
 
+from backend.agents.tool_guards import limit_tool_calls, return_argument_errors
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
 from backend.core.models import (
@@ -1024,10 +1025,16 @@ def _supports_tools() -> bool:
 
 async def query_repair_procedure(
     machine_id: str,
-    defect_symptom: str | None = None,
+    defect_symptom: str,
     query: str | None = None,
 ) -> RAGSearchResult:
-    """ADK Tool: Queries OEM equipment manuals and repair procedures for the suspect machine."""
+    """ADK Tool: Queries OEM equipment manuals and repair procedures for the suspect machine.
+
+    Args:
+        machine_id: Board suspect_machine, e.g. CNC-02 or IM-05.
+        defect_symptom: Board defect_type, e.g. scratch_vertical or short_fill.
+        query: Optional free-text refinement.
+    """
     return await search_knowledge_base(
         defect_symptom=defect_symptom,
         suspect_asset=machine_id,
@@ -1060,6 +1067,8 @@ agent = Agent(
     description="Guides the technician through physical equipment repair in Vietnamese grounded in OEM manuals.",
     instruction=INSTRUCTION,
     tools=[query_repair_procedure] if _supports_tools() else [],
+    before_model_callback=limit_tool_calls(query_repair_procedure),
+    on_tool_error_callback=return_argument_errors,
     output_schema=FindingDraft,
     generate_content_config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=2048),
 )
@@ -1087,6 +1096,8 @@ diagnostic_agent = Agent(
     description="Collects field photos and physical diagnostic evidence from the technician when RCA confidence is low.",
     instruction=DIAGNOSTIC_INSTRUCTION,
     tools=[query_repair_procedure] if _supports_tools() else [],
+    before_model_callback=limit_tool_calls(query_repair_procedure),
+    on_tool_error_callback=return_argument_errors,
     output_schema=FindingDraft,
     generate_content_config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=2048),
 )

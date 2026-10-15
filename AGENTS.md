@@ -13,6 +13,7 @@ This file is the authoritative reference for AI coding agents and human contribu
 │   │   ├── agent.py            # ADK CLI entry (root_agent) for `mise run adk-web` / `adk run`
 │   │   ├── orchestrator.py     # ADK graph Workflow (no LLM) + Orchestrator runner; routes the agent_* nodes
 │   │   ├── workflow_nodes.py   # Workflow function nodes: Blackboard writes + routing gates
+│   │   ├── tool_guards.py      # Callbacks every tool-using agent sets: 3 tool calls/turn, ValueError → tool result
 │   │   ├── agent_quality_inspector.py
 │   │   ├── agent_traceability.py
 │   │   ├── agent_process_analyst.py
@@ -24,11 +25,13 @@ This file is the authoritative reference for AI coding agents and human contribu
 │   │   ├── main.py             # App factory, mounts routers
 │   │   ├── routes_incidents.py # SSE stream + incident read endpoints
 │   │   ├── routes_simulation.py# Demo inject / reset endpoints
+│   │   ├── routes_auth.py      # Public login + demo-account endpoints
 │   │   └── routes_gemini_live.py
 │   ├── core/                   # Shared primitives (import freely)
 │   │   ├── models.py           # Pydantic schemas — single source of truth
 │   │   ├── blackboard.py       # Reactive shared state (asyncio + SSE)
-│   │   └── config.py           # Settings read from env vars (provided by mise)
+│   │   ├── config.py           # Settings read from env vars (provided by mise)
+│   │   └── auth.py             # Login, signed tokens, require_user dependency
 │   ├── edge/                   # Edge device code (Gemma classifier, MQTT bridge)
 │   │   ├── gateway/
 │   │   └── simulator/          # Local mock of edge hardware for dev
@@ -47,26 +50,26 @@ This file is the authoritative reference for AI coding agents and human contribu
 │   ├── mqtt_publisher.py       # Async EMQX MQTT publisher
 │   └── main.py                 # Service runner & CLI entrypoint
 │
-├── frontend/                   # React + Vite + TypeScript dashboard
-│   ├── src/
-│   │   ├── main.tsx            # Entry point
-│   │   ├── App.tsx             # Root component
-│   │   ├── types/              # TypeScript interfaces mirroring backend models
-│   │   │   └── index.ts
-│   │   ├── components/         # Reusable UI components (.tsx)
-│   │   └── pages/              # Route-level page components (.tsx)
-│   ├── public/
-│   ├── index.html
-│   ├── tsconfig.json
-│   ├── tsconfig.node.json
-│   ├── vite.config.ts          # Dev proxy: /api → localhost:8000
-│   └── package.json
+├── apps/                       # Frontend apps (React + Vite + TypeScript)
+│   ├── web/                    # Plant Ops dashboard (desktop, :3000)
+│   │   ├── src/
+│   │   ├── vite.config.ts      # Dev proxy: /api, /health → $API_PROXY_TARGET
+│   │   └── package.json
+│   └── mobile/                 # Technician mobile app (:3001)
+│       ├── src/
+│       ├── vite.config.ts      # Dev proxy: /api (+ WebSocket) → $API_PROXY_TARGET
+│       └── package.json
 │
 ├── data/
 │   ├── datasets/               # Raw / mock sensor and traceability data
 │   ├── knowledge_base/         # PDFs, maintenance logs, 8D reports for RAG
 │   └── schemas/                # BigQuery DDL and Firestore schema definitions
 │
+├── infra/                      # Terraform: all GCP resources (mise run infra:*)
+│   ├── bootstrap/              # One-time GCS state bucket (local state)
+│   └── terraform/              # Main stack: Cloud Run, IAM, BigQuery, Pub/Sub, Firestore, Vertex Search, Firebase Hosting, budget, monitoring dashboard + owner email alerts
+│
+├── firebase.json               # Firebase Hosting targets web/mobile (apps/*/dist); /api/** rewritten to Cloud Run
 ├── docs/                       # Architecture diagrams (.mmd + rendered .svg)
 ├── tests/                      # pytest test suite (mirrors backend/ structure)
 ├── mise.toml                   # Tool versions + all dev tasks (canonical runner)
@@ -105,9 +108,9 @@ async def inspect(defect_rate: float) -> AgentFinding:
     ...
 ```
 
-### TypeScript / React (frontend/)
+### TypeScript / React (apps/web, apps/mobile)
 
-- **Language:** TypeScript (`.ts`, `.tsx`) with strict type checking enabled (`strict: true`). Avoid `any`; define domain types in `frontend/src/types/` mirroring backend Pydantic models.
+- **Language:** TypeScript (`.ts`, `.tsx`) with strict type checking enabled (`strict: true`). Avoid `any`; define domain types in `apps/<app>/src/types/` mirroring backend Pydantic models.
 - **Style:** ESLint + Prettier (2-space indent, single quotes, semicolons allowed).
 - **Components:** Functional components only — no class components. One component per file. File name matches the exported component name.
 - **Props:** Strongly typed via interfaces. Destructure props in the function signature.
@@ -191,7 +194,7 @@ Follow **Conventional Commits** (`<type>(<scope>): <subject>`).
 
 ### Scopes
 
-Use the top-level area affected: `backend`, `frontend`, `agents`, `api`, `core`, `edge`, `tools`, `data`, `docs`, `ci`.
+Use the top-level area affected: `backend`, `web`, `mobile`, `agents`, `api`, `core`, `edge`, `tools`, `data`, `docs`, `ci`.
 
 ### Examples
 
@@ -299,6 +302,7 @@ $HOME/.gemini/antigravity/worktrees/hackathon-builder-cup-manufacturing-anomaly/
 - [ ] Implemented and verified in an isolated worktree
 - [ ] `mise run test` passes
 - [ ] `mise run test:health` passes against a local server
+- [ ] `mise run typecheck` passes (frontend changes)
 - [ ] No secrets or hardcoded credentials
 - [ ] New behaviour covered by a test
 - [ ] `AGENTS.md` updated if conventions changed
@@ -318,4 +322,6 @@ Agents should never violate these:
    - `adk web` / `adk run` run `incident_workflow` without the `Orchestrator` runner (no single-flight/cancel); dev only, separate process and Blackboard.
 3. **Incidents close on product evidence only.** The orchestrator transitions to `closed` only after `verification_count >= verification_target`. Shift-leader approval (`approved`) is accepted only on a `closed` incident. Do not shortcut this.
 4. **Development parity & mock fallback.** `backend/tools/bigquery_tool.py` connects to `goccy/bigquery-emulator` (via `BIGQUERY_EMULATOR_HOST`) for high-fidelity SQL testing in dev, or falls back to local mock data when no emulator or GCP credentials are present. Neither local dev nor automated CI should ever fail due to missing cloud credentials.
-5. **Frontend never calls backend directly by hostname.** All API calls use relative URLs (`/api/...`) so the Vite proxy (dev) and server (prod) handle routing transparently.
+5. **Frontend never calls backend directly by hostname, except streams.** All REST calls use relative URLs (`/api/...`) so the Vite proxy (dev) and the Firebase Hosting rewrite (prod) handle routing. The single exception is the SSE/WebSocket routes, which Hosting rewrites cannot carry: they use the build-time `VITE_STREAM_ORIGIN` (the Cloud Run URL, set by `mise run deploy:web` / `deploy:mobile`; unset in dev, so they stay relative), and the backend allows the Hosting origins via `CORS_ORIGINS`. Never hardcode a hostname in component code. See `docs/deployment-frontend.md`.
+6. **UI Design System compliance (Lumina Slate liquid glass, light).** All UI wireframes, Stitch prompts and frontend components must conform to `docs/DESIGN.md`: plain CSS custom-property tokens (no Tailwind/shadcn), frosted glass surfaces over the pastel backdrop, indigo accent with dark ink primary buttons, Inter / Geist / JetBrains Mono, Material Symbols icons, the 4 px spacing grid and radius tokens (`--radius-sm` 8, `--radius-md` 12, `--radius-lg` 16, `--radius-xl` 24 glass cards, `--radius-full` 999 chips), component names rather than CSS class names in docs, and ≥ 44 px tap targets on the technician app. Never generate dark-mode canvases, neon glows, or cluttered wall-of-metrics layouts.
+7. **Every `/api` router requires login.** `backend/api/main.py` mounts each router with `dependencies=[Depends(require_user)]` (`backend/core/auth.py`); only `/health` and `/api/auth/*` are public. Frontend REST calls go through `authFetch`, and SSE/WebSocket URLs go through `withToken` (`?token=`). API tests run as a signed-in user via the autouse override in `tests/conftest.py`; mark a test `real_auth` to exercise the real gate.

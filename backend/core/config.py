@@ -8,6 +8,8 @@ from typing import Any, Literal
 from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings
 
+from backend.core.models import AuthAccount
+
 
 class Settings(BaseSettings):
     """Reads each field from the same-named env var (case-insensitive)."""
@@ -18,8 +20,25 @@ class Settings(BaseSettings):
     app_env: str = "development"
     host: str = "0.0.0.0"
     port: int = 8000
+    # Comma-separated browser origins allowed to call the API cross-origin (the Firebase
+    # Hosting sites open SSE directly against Cloud Run); empty disables CORS.
+    cors_origins: str = ""
     gcp_project_id: str = "kaizen-local"
     gcp_region: str = "asia-southeast1"
+
+    # Login accounts: JSON list of AuthAccount objects; empty disables login (every /api call 401s).
+    auth_users: list[AuthAccount] = []
+    # HS256 signing key for API tokens (>= 32 chars); empty disables login.
+    auth_secret: str = ""
+    auth_token_ttl_hours: int = 12
+
+    # Rate limits (backend/core/rate_limit.py) per signed-in user; calls without a valid token
+    # are not limited. In-process state: valid while Cloud Run runs a single instance.
+    rate_limit_enabled: bool = True
+    rate_limit_per_minute: int = 300
+    rate_limit_write_per_minute: int = 30
+    # Concurrent SSE / Gemini Live WebSocket connections per caller.
+    rate_limit_max_streams: int = 10
 
     # BigQuery / Emulator settings
     bigquery_emulator_host: str | None = None
@@ -106,6 +125,11 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         """Indicates whether running in a production deployment environment."""
         return self.app_env.lower() == "production"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """CORS_ORIGINS split on commas, blanks dropped."""
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     @computed_field
     @property

@@ -7,6 +7,7 @@ import logging
 from google.adk import Agent
 from google.genai import types
 
+from backend.agents.tool_guards import limit_tool_calls, return_argument_errors
 from backend.core.config import settings
 from backend.core.models import RAGSearchResult, ScribeDraft
 from backend.tools.rag_search_tool import search_knowledge_base
@@ -30,11 +31,17 @@ def _supports_tools() -> bool:
 
 
 async def query_8d_archive_and_sops(
-    defect_symptom: str | None = None,
-    suspect_asset: str | None = None,
+    defect_symptom: str,
+    suspect_asset: str,
     query: str | None = None,
 ) -> RAGSearchResult:
-    """ADK Tool: Queries historical 8D reports, SOP procedures, and root-cause archives."""
+    """ADK Tool: Queries historical 8D reports, SOP procedures, and root-cause archives.
+
+    Args:
+        defect_symptom: Board defect_type, e.g. scratch_vertical or short_fill.
+        suspect_asset: Board suspect_machine, e.g. CNC-02 or IM-05.
+        query: Optional free-text refinement.
+    """
     return await search_knowledge_base(
         defect_symptom=defect_symptom,
         suspect_asset=suspect_asset,
@@ -63,6 +70,8 @@ agent = Agent(
     description="Drafts the 8D report, work order, and SOP revision proposal from the board.",
     instruction=INSTRUCTION,
     tools=[query_8d_archive_and_sops] if _supports_tools() else [],
+    before_model_callback=limit_tool_calls(query_8d_archive_and_sops),
+    on_tool_error_callback=return_argument_errors,
     output_schema=ScribeDraft,
     generate_content_config=types.GenerateContentConfig(max_output_tokens=2048),
 )

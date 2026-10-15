@@ -8,10 +8,12 @@ import time
 from typing import Any
 
 from google.adk import Workflow
-from google.adk.agents import LlmAgent
+from google.adk.agents import LlmAgent, RunConfig
+from google.adk.models import Gemini
 from google.adk.runners import InMemoryRunner
 from google.adk.workflow import JoinNode
 from google.genai import types
+from google.genai.errors import APIError
 
 from backend.agents import (
     agent_continuous_learning,
@@ -46,18 +48,42 @@ from backend.core.models import DefectInjectionRequest, IncidentState, Simulatio
 
 logger = logging.getLogger(__name__)
 
+
+def _build_gemini_model(model_name: str) -> Gemini:
+    """Builds a Gemini model that retries a 429 at the single-call level before it surfaces."""
+    return Gemini(
+        model=model_name,
+        retry_options=types.HttpRetryOptions(
+            attempts=3,
+            initial_delay=1.0,
+            max_delay=15.0,
+            exp_base=2.0,
+            jitter=1.0,
+            http_status_codes=[429],
+        ),
+    )
+
+
 # Every agent_* node is model-less and resolves to this default at call time.
 if settings.ai_provider == "mock":
     from backend.agents.mock_llm import MockLlm
 
     LlmAgent.set_default_model(MockLlm())
     logger.info("LLM provider=mock using in-memory MockLlm")
+elif settings.ai_provider == "gemini":
+    LlmAgent.set_default_model(_build_gemini_model(settings.gemini_model))
+    logger.info("LLM provider=gemini model=%s retrying 429s", settings.gemini_model)
 else:
     LlmAgent.set_default_model(settings.llm_model)
     logger.info("LLM provider=%s model=%s", settings.ai_provider, settings.llm_model)
 
 APP_NAME = "kaizen_orchestrator"
 WORKFLOW_NAME = "kaizen_incident"
+# Whole-incident ceiling (ADK default 500). A full run with evidence rounds and one reopen is
+# ~20 agent turns of at most 1 + MAX_TOOL_CALLS model calls each.
+MAX_LLM_CALLS_PER_INCIDENT = 100
+# Shown to the technician instead of the raw Vertex 429/RESOURCE_EXHAUSTED error + doc URL.
+GEMINI_RATE_LIMIT_MESSAGE = "The AI service is busy right now. Please try again in a minute."
 
 
 resolution_join = JoinNode(name="resolution_join")
@@ -177,9 +203,16 @@ class Orchestrator:
                     role="user", parts=[types.Part(text=trigger.model_dump_json())]
                 ),
                 abort_signal=abort,
+                run_config=RunConfig(max_llm_calls=MAX_LLM_CALLS_PER_INCIDENT),
             ):
                 pass
             logger.info("incident workflow finished: status=%s", blackboard.get_state().status)
+        except APIError as exc:
+            logger.exception("incident workflow failed")
+            if exc.code == 429:
+                blackboard.update_status("error", status_reason=GEMINI_RATE_LIMIT_MESSAGE)
+            else:
+                blackboard.update_status("error", status_reason=f"{type(exc).__name__}: {exc}")
         except Exception as exc:
             logger.exception("incident workflow failed")
             blackboard.update_status("error", status_reason=f"{type(exc).__name__}: {exc}")

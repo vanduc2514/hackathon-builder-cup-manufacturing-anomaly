@@ -1,0 +1,106 @@
+{
+  "projectId": "18385853383393464771",
+  "title": "Technician Copilot Mobile App",
+  "deviceType": "MOBILE",
+  "lastSyncTime": "2026-10-10T13:16:17.834Z",
+  "totalScreens": 7,
+  "screens": [
+    {
+      "id": "1eca35c6b287456ea44d4d9a14b3f9c5",
+      "title": "Screen 1 - Work Order Overview",
+      "slug": "screen_1_work_order_overview",
+      "width": 780,
+      "height": 2428,
+      "deviceType": "MOBILE",
+      "htmlUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzAwMDY1ZDdiZmViNzM1NDUwMWE2MGJmNTA0MmFkODgzEgsSBxCpzt3NnhgYAZIBJAoKcHJvamVjdF9pZBIWQhQxODM4NTg1MzM4MzM5MzQ2NDc3MQ&filename=&opi=89354086",
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XdoOKLwr4xHAfSEI4d4SN6xFmliXTbuIfJTVZZtb_dD2tlfkChp9J9t2MUzIf8-vsLPhdwBJe8lrQY6HVbhA9UR9r8FBC-rlaHNyAP_O5q4_fRuir15ELR4aq5DANMRQgP4ieZgCRGXbHJ3B_KBRaYdA-eaUaytKbeCf8CnBQSgJGd-3fzGpVhasEaxYl_44IfMKKs_hWFb27UDUKEPRs2-zkk3ghvg249Gw3AA-t7AbZSvmGKC42NUxU6=w780",
+      "files": {
+        "html": ".stitch/designs/screen_1_work_order_overview.html",
+        "image": ".stitch/designs/screen_1_work_order_overview.png"
+      }
+    },
+    {
+      "id": "82cbef04f15c40db8d23d254300cee52",
+      "title": "Screen 3 - Field Evidence Request",
+      "slug": "screen_3_field_evidence_request",
+      "width": 780,
+      "height": 2332,
+      "deviceType": "MOBILE",
+      "htmlUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzAwMDY1ZDdiZmU4NDRkMGQwMWE2MDk1NGYyM2I2MjZkEgsSBxCpzt3NnhgYAZIBJAoKcHJvamVjdF9pZBIWQhQxODM4NTg1MzM4MzM5MzQ2NDc3MQ&filename=&opi=89354086",
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XsuOj65xDuKK6PxXPmkP5JufyU_WNixdPpCopJ_Pn0b0x8xEY3_IRQS0Hddr2aLbuslsb6i8tODqp9u22jKcQAlgdmArDO6m6WSx_BRSHuUsfd8pZOU4IG44tqALVA24OHtGDLxyKw0gTnt831lvPKfjqR51HOu5erNiqgUZHpC4HNKql6MkjysUz4-iuDRYYaLqshp6lXjgcm_AkrTmVX8XZ6PgmdFdPPJP5f8bgZ4ECeYw0q2E5eDu8=w780",
+      "files": {
+        "html": ".stitch/designs/screen_3_field_evidence_request.html",
+        "image": ".stitch/designs/screen_3_field_evidence_request.png"
+      }
+    },
+    {
+      "id": "5ba1476f65f842b196b293bc6ebb45d2",
+      "title": "Screen 2 - Active Work Order (Fix)",
+      "slug": "screen_2_active_work_order_fix",
+      "width": 780,
+      "height": 2134,
+      "deviceType": "MOBILE",
+      "htmlUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzAwMDY1ZDdiZmVhOWI5N2UwMWVlN2RlOTViMGZiZWI5EgsSBxCpzt3NnhgYAZIBJAoKcHJvamVjdF9pZBIWQhQxODM4NTg1MzM4MzM5MzQ2NDc3MQ&filename=&opi=89354086",
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XQR1eNp8qO-9CavuCRSTXnzoh6rJ8FMzz9ZQ7kn6T6XiOpBTP7m7uBei8Hb3HCtDNOWedybotiNrfRpzZU_UvGdby8OFVRHGDzUaZWkU9zlx_Eddnyeo457dQdfGsog9npkdErvnKNO__4FLlPQwpIYMLZ6K-_7-EEiJvTnEMywHozaaGGTvua-9fCp_WnkWVcjGer-9JBUCtRwGo6tpW5dFGXsZPeTwysanV4770xc-ncm-mXveejdr6U=w780",
+      "files": {
+        "html": ".stitch/designs/screen_2_active_work_order_fix.html",
+        "image": ".stitch/designs/screen_2_active_work_order_fix.png"
+      }
+    },
+    {
+      "id": "e31839e793f643b9a3bd5e546e1fd0b3",
+      "title": "Screen 6 - Quality Verification & State Flows",
+      "slug": "screen_6_quality_verification_state_flows",
+      "width": 780,
+      "height": 2836,
+      "deviceType": "MOBILE",
+      "htmlUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzAwMDY1ZDdjMGI5OTM4MjIwNzc5OWFjNzQ4MTA1YmYzEgsSBxCpzt3NnhgYAZIBJAoKcHJvamVjdF9pZBIWQhQxODM4NTg1MzM4MzM5MzQ2NDc3MQ&filename=&opi=89354086",
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1WaANt3A16Uz9jGfeWuw9U6-bkzKW_XdgHmI5XreHDSXvXKl3y-DvHaiTKdthKXZrSam5wF7DQvvHFLL19YP5EN11EugLieZ4ng2qJVV1UFljDgh2xE5aqFHP8FFAOBxnkzwxYiIvGRzWEzKGwRmHbqNU6qwn6y-IISyg6QvIZZVgsqtgG9GyAgIoG5YxuvhVuI-Gs3ZaErZAEYsEia13lp6ibs2uVp1VzkA1cDQquxmEdcjZGVPs6XPO7N=w780",
+      "files": {
+        "html": ".stitch/designs/screen_6_quality_verification_state_flows.html",
+        "image": ".stitch/designs/screen_6_quality_verification_state_flows.png"
+      }
+    },
+    {
+      "id": "3548383000867799228",
+      "title": "image.png",
+      "slug": "image_png",
+      "width": 2198,
+      "height": 900,
+      "deviceType": "MOBILE",
+      "htmlUrl": null,
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XT9s8Z5AmVuCtOY9DtZbMIEK0NDnOFj1K-mo88fMwlBwwHT_1BwWEk5YzNd6PDGYevGqdt-7f6RM6AG7usR31x-EIJDxuVGLSavJeCZS_xaIT328IEW95jM5iBJl06NCMcsyxA2iKt-HcX6xVVlsmZMSCqfAy7ReVKaeKRsPqCZtQUlib6rtVX8GwCbnfhlSLNsl6ZprQpB1H9sjuu3AqZ_91vMchNpyACAoA6V3rtyEQr3KmwGZRV1hFbRJyBJOTj2wbeayd8FQY=w2198",
+      "files": {
+        "image": ".stitch/designs/image_png.png"
+      }
+    },
+    {
+      "id": "fd70351ff5bc498086c34cad03e1675c",
+      "title": "Screen 4 - Repair Guide Copilot",
+      "slug": "screen_4_repair_guide_copilot",
+      "width": 780,
+      "height": 3052,
+      "deviceType": "MOBILE",
+      "htmlUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzAwMDY1ZDdjMGVlNmViNGIwNGVhYjcwMDk4MTY4MGQ4EgsSBxCpzt3NnhgYAZIBJAoKcHJvamVjdF9pZBIWQhQxODM4NTg1MzM4MzM5MzQ2NDc3MQ&filename=&opi=89354086",
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1WOFmg90qxK0ITnnSdPhDvnVtPATEA8zxyBuHydNP86qy57-BDOHdQ5wRy_X0e77S7Khucvu_IKAHN-RhEdiXh30WUvzzU4Ofw1qVoGqYpJNSN_P9iAs3qBxmq_1LNSypkj4QWtOK-lKwzwlyBMlnCsGu7uyITzaUcrjPpWHi3LogDxoxCBvIbeBpVyLRdncrZfdRktMQpAt0pszgSdFVmrd2mCY2h65BHWGrgJx8bdcd-ii63UnAclDo9r=w780",
+      "files": {
+        "html": ".stitch/designs/screen_4_repair_guide_copilot.html",
+        "image": ".stitch/designs/screen_4_repair_guide_copilot.png"
+      }
+    },
+    {
+      "id": "ff1c1939323d487ba556cb72d09d4c0e",
+      "title": "Screen 5 - Finish Repair",
+      "slug": "screen_5_finish_repair",
+      "width": 780,
+      "height": 3008,
+      "deviceType": "MOBILE",
+      "htmlUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzAwMDY1ZDdiZmU3OGJmNTEwNzllN2VhMTNkMTNmMzMzEgsSBxCpzt3NnhgYAZIBJAoKcHJvamVjdF9pZBIWQhQxODM4NTg1MzM4MzM5MzQ2NDc3MQ&filename=&opi=89354086",
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XBqtHHBtHmlI_F39uCNHxYF2QBYIfdU5-Id0svGFs0TMCfuW9LYwuPGdpL5Djm9qOPF5rH2aQ3DJTEa2mvf733f01bilcS7822Oekx4feKvY4bPVX-41jyoQBBnnEuRDMDNVqoH5ggVbnGkYPsUHxSPH3QrO01-crJpzWYsXnfRpUrdwU9IbXQAYtKimvelx83s2uqfkguMYnZN0qLJm3-20wuSeHQ9IG5ipu_VKp35znUCWQs1lIesD9l=w780",
+      "files": {
+        "html": ".stitch/designs/screen_5_finish_repair.html",
+        "image": ".stitch/designs/screen_5_finish_repair.png"
+      }
+    }
+  ]
+}

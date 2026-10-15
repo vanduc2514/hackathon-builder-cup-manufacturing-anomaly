@@ -48,10 +48,9 @@ ENV PATH="/opt/venv/bin:$PATH" \
     APP_ENV="production" \
     PORT="8080"
 
-# Copy backend modules, schemas, datasets, and simulation utilities
+# Copy backend modules, schemas, datasets, and scripts
 COPY --chown=appuser:appuser backend/ /app/backend/
 COPY --chown=appuser:appuser data/ /app/data/
-COPY --chown=appuser:appuser simulator/ /app/simulator/
 COPY --chown=appuser:appuser scripts/ /app/scripts/
 
 # Switch to non-root user

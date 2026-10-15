@@ -37,6 +37,9 @@ def test_dockerfile_multi_stage_structure():
     assert "HEALTHCHECK" in content
     assert "/health" in content
 
+    # Decoupled simulator (not copied to production Cloud Run container)
+    assert "simulator" not in content
+
 
 def test_dockerignore_exclusions():
     """Validates that .dockerignore excludes source repositories, virtualenvs, and test artifacts."""
@@ -132,3 +135,29 @@ def test_api_docs_are_served_only_outside_production(monkeypatch: pytest.MonkeyP
     finally:
         monkeypatch.undo()
         importlib.reload(main_module)
+
+
+def test_backend_has_zero_import_dependencies_on_simulator(monkeypatch: pytest.MonkeyPatch):
+    """Verifies that backend modules have zero import dependencies on simulator package."""
+    import importlib
+    import sys
+
+    # Simulate runtime environment without simulator on sys.path
+    monkeypatch.setitem(sys.modules, "simulator", None)
+    monkeypatch.setitem(sys.modules, "simulator.injection_engine", None)
+    monkeypatch.setitem(sys.modules, "simulator.conveyor_simulator", None)
+    monkeypatch.setitem(sys.modules, "simulator.machine_simulator", None)
+    monkeypatch.setitem(sys.modules, "simulator.models", None)
+
+    import backend.agents.agent_quality_inspector
+    import backend.agents.orchestrator
+    import backend.agents.workflow_nodes
+    import backend.api.main
+    import backend.api.routes_simulation
+
+    # Reload to verify imports do not reach out to simulator
+    importlib.reload(backend.agents.agent_quality_inspector)
+    importlib.reload(backend.agents.workflow_nodes)
+    importlib.reload(backend.api.routes_simulation)
+    importlib.reload(backend.agents.orchestrator)
+    importlib.reload(backend.api.main)

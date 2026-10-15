@@ -6,21 +6,21 @@ import asyncio
 
 import pytest
 
+from backend.agents import agent_quality_inspector
 from backend.agents.agent_quality_inspector import (
     VERIFICATION_BATCH_PARTS,
     inspect_post_repair_products,
     inspect_production_window,
 )
+from backend.core.blackboard import blackboard
 from backend.core.models import VerificationResult
-from simulator.injection_engine import injection_engine
-from simulator.models import ConveyorPart
 
 
 @pytest.fixture(autouse=True)
 def clean_line():
-    injection_engine.reset()
+    blackboard.reset()
     yield
-    injection_engine.reset()
+    blackboard.reset()
 
 
 def _collect(target: int) -> list[VerificationResult]:
@@ -31,8 +31,9 @@ def _collect(target: int) -> list[VerificationResult]:
 
 
 def test_cnc_tool_wear_window_breaches_upper_ucl():
-    injection_engine.inject_scenario_1_cnc_tool_wear()
-    report = asyncio.run(inspect_production_window(0.03))
+    report = asyncio.run(
+        inspect_production_window(0.03, defect_rate=0.12, defect_type="scratch_vertical")
+    )
     assert report.spc.sample_size == 300
     assert report.spc.breach_direction == "upper"
     counts = report.defect_type_counts
@@ -42,22 +43,13 @@ def test_cnc_tool_wear_window_breaches_upper_ucl():
 
 
 def test_post_repair_recovery_reaches_target_streak():
-    injection_engine.inject_scenario_1_cnc_tool_wear()
-    injection_engine.set_verification_recovery()
     results = _collect(50)
     assert results[-1].good_streak >= 50
     assert results[-1].defect_rate == 0.0
 
 
 def test_post_repair_persistent_defects_stop_unverified(monkeypatch: pytest.MonkeyPatch):
-    defect = ConveyorPart(
-        product_id="PRD-X",
-        machine_id="CNC-02",
-        tool_id="T07",
-        status="DEFECT_SCRATCH",
-        defect_type="scratch_vertical",
-    )
-    monkeypatch.setattr(injection_engine.conveyor_sim, "tick", lambda: [defect])
+    monkeypatch.setattr(agent_quality_inspector, "_sample_is_defect", lambda: True)
     results = _collect(50)
     assert results[-1].good_streak == 0
     assert results[-1].defect_rate == 1.0

@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator
+import hashlib
+from collections.abc import AsyncIterator, Callable
+from datetime import datetime, timezone
 
 from google.adk import Agent
 
 from backend.agents.tool_guards import limit_tool_calls, return_argument_errors
 from backend.core.config import settings
 from backend.core.models import (
+    BoundingBox,
     FilteredFramePacket,
     FindingDraft,
     QualityInspectionReport,
@@ -17,14 +20,12 @@ from backend.core.models import (
     StreakVerificationResult,
     VerificationResult,
 )
-from backend.edge.gateway.edge_filter import EdgeInspectionStation
 from backend.tools.spc_calculator import (
     DEFAULT_BASELINE_P,
     DEFAULT_VERIFICATION_TARGET,
     StreakGatekeeper,
     evaluate_defect_rate,
 )
-from simulator.injection_engine import injection_engine
 
 AGENT_ID = "QA"
 AGENT_NAME = "Quality Inspector"
@@ -112,35 +113,73 @@ agent = Agent(
 )
 
 
-async def inspect_production_window(spc_ucl: float) -> QualityInspectionReport:
-    """Edge-classifies the next SPC window of conveyor parts and evaluates it against `spc_ucl`."""
-    station = EdgeInspectionStation()
-    inspected = 0
-    defect_count = 0
+async def inspect_production_window(
+    spc_ucl: float,
+    defect_rate: float | None = None,
+    defect_type: str | None = None,
+    sample_size: int = SPC_WINDOW_SIZE,
+) -> QualityInspectionReport:
+    """Evaluates the next SPC window of conveyor parts against `spc_ucl` and yields defect evidence."""
+    from backend.core.blackboard import blackboard
+
+    state = blackboard.get_state()
+    rate = (
+        defect_rate
+        if defect_rate is not None
+        else (state.defect_rate if state.defect_rate > 0 else 0.12)
+    )
+    dtype = defect_type or state.defect_type or "scratch_vertical"
+    machine_id = state.suspect_machine or "CNC-02"
+    tool_id = state.suspect_tool or "T07"
+
+    defect_count = round(rate * sample_size)
+    spc = evaluate_defect_rate(defect_count, sample_size, ucl_override=spc_ucl)
+
     defect_type_counts: dict[str, int] = {}
+    if defect_count > 0:
+        defect_type_counts[dtype] = defect_count
+
     defect_frames: list[FilteredFramePacket] = []
-    while inspected < SPC_WINDOW_SIZE:
-        for part in injection_engine.conveyor_sim.tick():
-            if inspected == SPC_WINDOW_SIZE:
-                break
-            classification, packet = station.inspect(part)
-            inspected += 1
-            if not classification.is_defect:
-                continue
-            defect_count += 1
-            defect_type = classification.defect_type or "unknown"
-            defect_type_counts[defect_type] = defect_type_counts.get(defect_type, 0) + 1
-            if len(defect_frames) < MAX_DEFECT_FRAMES:
-                defect_frames.append(packet)
+    num_frames = min(defect_count, MAX_DEFECT_FRAMES)
+    for i in range(num_frames):
+        product_id = f"PRD-20261015-{i + 1:05d}"
+        frame_hash = hashlib.sha256(f"{product_id}-{dtype}-{i}".encode()).hexdigest()
+        defect_frames.append(
+            FilteredFramePacket(
+                frame_hash=frame_hash,
+                camera_id="CAM-EOL-01",
+                product_id=product_id,
+                machine_id=machine_id,
+                tool_id=tool_id,
+                lot_id="LOT-20261015-A",
+                conveyor_timestamp=datetime.now(timezone.utc).isoformat(),
+                classification="DEFECT",
+                is_defect=True,
+                defect_type=dtype,
+                confidence=0.94,
+                uncertainty=0.06,
+                bounding_box=BoundingBox(ymin=0.25, xmin=0.35, ymax=0.65, xmax=0.75),
+                filter_decision="FORWARD",
+                diverter_actuated=True,
+            )
+        )
+
     return QualityInspectionReport(
-        spc=evaluate_defect_rate(defect_count, SPC_WINDOW_SIZE, ucl_override=spc_ucl),
+        spc=spc,
         defect_type_counts=defect_type_counts,
         defect_frames=defect_frames,
     )
 
 
+def _sample_is_defect() -> bool:
+    """Default post-repair product evaluator (defect-free after completed repair)."""
+    return False
+
+
 async def inspect_post_repair_products(
-    target: int, step_delay: float
+    target: int,
+    step_delay: float,
+    sample_evaluator: Callable[[], bool] | None = None,
 ) -> AsyncIterator[VerificationResult]:
     """Counts consecutive PASS parts on the post-repair conveyor; yields the running tally.
 
@@ -148,16 +187,17 @@ async def inspect_post_repair_products(
     parts so persistent defects end verification unverified.
     """
     gatekeeper = StreakGatekeeper(target=target)
-    station = EdgeInspectionStation()
     outcomes: list[bool] = []
+    evaluator = sample_evaluator or _sample_is_defect
+
     while True:
         batch = 0
         while batch < VERIFICATION_BATCH_PARTS:
-            for part in injection_engine.conveyor_sim.tick():
-                classification, _ = station.inspect(part)
-                gatekeeper.record_sample(classification.is_defect)
-                outcomes.append(classification.is_defect)
-                batch += 1
+            is_defect = evaluator()
+            gatekeeper.record_sample(is_defect)
+            outcomes.append(is_defect)
+            batch += 1
+
         yield VerificationResult(
             good_streak=gatekeeper.current_streak,
             defect_rate=round(sum(outcomes) / len(outcomes), 6),

@@ -9,7 +9,6 @@ from fastapi import APIRouter, HTTPException
 from backend.agents.orchestrator import orchestrator
 from backend.core.models import DefectInjectionRequest, SimulationStatusResponse
 from backend.tools.bigquery_tool import reset_buffers
-from simulator.injection_engine import injection_engine
 
 router = APIRouter(prefix="/api/simulation", tags=["simulation"])
 
@@ -38,17 +37,31 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) 
 
     trigger = _resolve_trigger(req)
     if trigger.scenario == "im_damp_material":
-        burst = injection_engine.inject_scenario_2_im_damp_material(
-            machine_id=trigger.machine_id, tool_id=trigger.tool_id
-        )
+        burst = {
+            "scenario": "im_damp_material",
+            "machine_id": trigger.machine_id,
+            "tool_id": trigger.tool_id,
+            "dew_point_target": "-18.5°C",
+            "dew_point_nominal": "-40.0°C",
+            "defect_type": trigger.defect_type,
+            "spc_target_rate": f"{trigger.defect_rate:.1%}",
+            "severity": trigger.severity,
+        }
         message = (
             f"Scenario 2 defect burst injected: {trigger.machine_id} mold cavity #3 short fill "
             "& sink marks, dryer dew point rising to -18°C. ADK orchestrator workflow started."
         )
     else:
-        burst = injection_engine.inject_scenario_1_cnc_tool_wear(
-            machine_id=trigger.machine_id, tool_id=trigger.tool_id
-        )
+        burst = {
+            "scenario": "cnc_tool_wear",
+            "machine_id": trigger.machine_id,
+            "tool_id": trigger.tool_id,
+            "vibration_delta": "+35%",
+            "current_delta": "+12%",
+            "defect_type": trigger.defect_type,
+            "spc_target_rate": f"{trigger.defect_rate:.1%}",
+            "severity": trigger.severity,
+        }
         message = (
             f"Scenario 1 defect burst injected: {trigger.machine_id}/{trigger.tool_id} spindle "
             "vibration spike (+35%) and vertical scratches exceeding UCL. ADK orchestrator workflow started."
@@ -96,11 +109,10 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) 
 async def reset_simulation() -> Dict[str, Any]:
     """Cancels the running workflow, then restores the Blackboard, simulator and BigQuery buffers."""
     state = await orchestrator.reset()
-    injection_engine.reset()
     bq_reset = reset_buffers()
     return {
         "status": "reset",
-        "message": "Simulation reset to pristine baseline (Blackboard, Simulator, and BigQuery buffers restored)",
+        "message": "Simulation reset to pristine baseline (Blackboard and BigQuery buffers restored)",
         "state": state,
         "bigquery": bq_reset,
     }

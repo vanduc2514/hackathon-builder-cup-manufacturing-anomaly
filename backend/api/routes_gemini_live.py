@@ -31,6 +31,10 @@ from backend.core.models import (
     GeminiLiveServerMessage,
     GeminiLiveSessionStatus,
 )
+from backend.tools.gemini_vision_tool import (
+    get_gemini_client,
+    is_gemini_vision_available,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +152,55 @@ class SessionState:
             created_at=self.created_at,
             last_active_at=self.last_active_at,
         )
+
+
+LIVE_COPILOT_SYSTEM_INSTRUCTION = (
+    "You are Technician Copilot, an expert manufacturing assistant for factory technicians in Vietnam. "
+    "Respond in clear, natural Vietnamese. Keep guidance concise (2-4 sentences max), safety-focused, "
+    "and grounded in equipment SOPs and telemetry. Ground your advice in the active incident context."
+)
+
+
+async def generate_live_guidance_async(user_text: str, session: SessionState) -> Dict[str, str]:
+    """Generates guidance for technician. In live mode with Gemini credentials, queries Gemini Live model."""
+    if session.mode == "live" and not settings.gemini_live_simulation_mode and is_gemini_vision_available():
+        try:
+            from google.genai import types
+
+            client = get_gemini_client()
+            state = blackboard.get_state()
+            prompt = (
+                f"Frontline technician query: {user_text}\n"
+                f"Active Incident Context:\n"
+                f"- Machine: {state.suspect_machine or 'CNC-02'}\n"
+                f"- Tool: {state.suspect_tool or 'T07'}\n"
+                f"- Defect: {state.defect_type or 'surface_scratches'}\n"
+                f"- Incident Status: {state.status}\n"
+                f"- Diagnostic Request: {state.diagnostic_request or 'None'}\n"
+                f"Provide concise, immediate repair/diagnostic instructions in Vietnamese."
+            )
+            resp = await asyncio.to_thread(
+                client.models.generate_content,
+                model=settings.gemini_live_model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=LIVE_COPILOT_SYSTEM_INSTRUCTION,
+                    temperature=0.2,
+                    max_output_tokens=512,
+                ),
+            )
+            if resp and resp.text:
+                return {
+                    "transcription": resp.text.strip(),
+                    "freq": "480",
+                }
+        except Exception as exc:
+            logger.warning(
+                "Gemini Live model invocation failed, falling back to grounded domain response: %s",
+                exc,
+            )
+
+    return generate_grounded_response(user_text)
 
 
 class SessionManager:
@@ -399,9 +452,9 @@ async def gemini_live_websocket(
                         citation=ev_payload.citation,
                     )
                     blackboard.attach_field_evidence(finding, ev_payload)
-                    resp = generate_grounded_response("ảnh camera kiểm định")
+                    resp = await generate_live_guidance_async("ảnh camera kiểm định", session)
                 else:
-                    resp = generate_grounded_response("bị gì")
+                    resp = await generate_live_guidance_async("bị gì", session)
 
                 # Cancel any ongoing speech if active
                 if session.active_generation_task and not session.active_generation_task.done():
@@ -534,7 +587,7 @@ async def gemini_live_websocket(
                         pass
 
                 # Start streaming grounded response
-                resp = generate_grounded_response(user_text)
+                resp = await generate_live_guidance_async(user_text, session)
                 session.active_generation_task = asyncio.create_task(
                     stream_simulated_speech(
                         websocket,

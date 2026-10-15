@@ -203,3 +203,97 @@ def test_gemini_live_session_resumption_workflow(client: TestClient) -> None:
     with client.websocket_connect(url) as ws2:
         handshake2 = ws2.receive_json()
         assert handshake2["session_id"] == session_id, "Resumed session should keep same session_id"
+
+
+def test_gemini_live_status_simulation_mode_toggle(client: TestClient, monkeypatch) -> None:
+    """Asserts that the status endpoint reflects simulation mode toggle and configured model."""
+    from backend.core.config import settings
+
+    monkeypatch.setattr(settings, "gemini_live_simulation_mode", False)
+    monkeypatch.setattr(settings, "gemini_live_model", "gemini-2.0-flash")
+
+    response = client.get("/api/gemini-live/status")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["simulation_mode"] is False
+    assert data["default_model"] == "gemini-2.0-flash"
+
+
+def test_gemini_live_session_live_mode(client: TestClient) -> None:
+    """Asserts that sessions created in live mode report active status and live mode."""
+    create_resp = client.post("/api/gemini-live/session?mode=live")
+    assert create_resp.status_code == 200
+    session_data = create_resp.json()
+    assert session_data["mode"] == "live"
+    assert session_data["status"] == "active"
+
+
+def test_gemini_live_default_live_mode_when_simulation_disabled(
+    client: TestClient, monkeypatch
+) -> None:
+    """Asserts that when simulation mode is disabled (as in prod Cloud Run), default mode is live."""
+    from backend.core.config import settings
+
+    monkeypatch.setattr(settings, "gemini_live_simulation_mode", False)
+
+    create_resp = client.post("/api/gemini-live/session")
+    assert create_resp.status_code == 200
+    session_data = create_resp.json()
+    assert session_data["mode"] == "live"
+    assert session_data["status"] == "active"
+
+
+def test_gemini_live_websocket_live_mode_conversation(client: TestClient) -> None:
+    """Asserts bidirectional WebSocket communication in live mode."""
+    with client.websocket_connect("/api/gemini-live/ws?mode=live") as ws:
+        handshake = ws.receive_json()
+        assert handshake["type"] == "setup_complete"
+
+        # Send query
+        query_msg = {
+            "type": "client_content",
+            "client_content": {
+                "text": "Kiểm tra tình trạng dao CNC-02",
+            },
+        }
+        ws.send_text(json.dumps(query_msg))
+
+        # Input transcription
+        msg1 = ws.receive_json()
+        assert msg1["type"] == "server_content"
+        assert msg1["server_content"]["input_transcription"] == "Kiểm tra tình trạng dao CNC-02"
+
+        # Output transcription
+        msg2 = ws.receive_json()
+        assert msg2["type"] == "server_content"
+        assert msg2["server_content"]["output_transcription"]
+
+
+@pytest.mark.asyncio
+async def test_gemini_live_guidance_async_real_model(monkeypatch) -> None:
+    """Asserts that generate_live_guidance_async queries Gemini Live model when live mode is active."""
+    from unittest.mock import MagicMock
+
+    from backend.api.routes_gemini_live import SessionState, generate_live_guidance_async
+    from backend.core.config import settings
+
+    monkeypatch.setattr(settings, "gemini_live_simulation_mode", False)
+    monkeypatch.setattr(settings, "gemini_live_model", "gemini-2.0-flash-exp")
+
+    # Mock Gemini availability and client
+    monkeypatch.setattr("backend.api.routes_gemini_live.is_gemini_vision_available", lambda: True)
+
+    mock_client = MagicMock()
+    mock_resp = MagicMock()
+    mock_resp.text = "Hướng dẫn thực tế từ Gemini Live: dừng trục chính và kiểm tra mòn dao."
+    mock_client.models.generate_content.return_value = mock_resp
+    monkeypatch.setattr("backend.api.routes_gemini_live.get_gemini_client", lambda: mock_client)
+
+    session = SessionState(session_id="test-live", mode="live")
+    result = await generate_live_guidance_async("sửa dao thế nào", session)
+
+    assert "Hướng dẫn thực tế từ Gemini Live" in result["transcription"]
+    mock_client.models.generate_content.assert_called_once()
+    called_model = mock_client.models.generate_content.call_args.kwargs["model"]
+    assert called_model == "gemini-2.0-flash-exp"
+

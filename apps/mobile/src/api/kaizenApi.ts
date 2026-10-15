@@ -10,6 +10,7 @@ import type {
   GeminiLiveServiceStatus,
   GeminiLiveSessionStatus,
   IncidentState,
+  IncidentSummary,
   MultiMachineTelemetryResponse,
   TelemetryBaselineResponse,
 } from '../types';
@@ -38,6 +39,14 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function fetchCurrentIncident(): Promise<IncidentState> {
   return getJson<IncidentState>('/api/incidents/current');
+}
+
+export function fetchIncidentHistory(limit = 20, status?: string): Promise<IncidentSummary[]> {
+  const params = new URLSearchParams();
+  if (limit) params.set('limit', String(limit));
+  if (status) params.set('status', status);
+  const q = params.toString();
+  return getJson<IncidentSummary[]>(`/api/incidents/history${q ? `?${q}` : ''}`);
 }
 
 /** `POST /api/incidents/evidence`: one technician photo plus optional notes. */

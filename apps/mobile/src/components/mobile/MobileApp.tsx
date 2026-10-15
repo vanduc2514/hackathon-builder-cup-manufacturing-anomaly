@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import type { IncidentState } from '../../types';
+import type { IncidentState, IncidentSummary } from '../../types';
 import type {
   EvidenceItem,
   MobileNotification,
@@ -7,8 +7,8 @@ import type {
   WorkOrder,
   WorkStage,
 } from '../../types/mobile';
-import { ROLE_LABEL, logout, useSession } from '../../api/auth';
-import { dataUrlToBlob, uploadIncidentEvidence } from '../../api/kaizenApi';
+import { logout, useSession } from '../../api/auth';
+import { dataUrlToBlob, fetchIncidentHistory, uploadIncidentEvidence } from '../../api/kaizenApi';
 import { useTelemetry } from '../../hooks/useTelemetry';
 import MobileNav, { type MobileTab } from './MobileNav';
 import MobileWorkList from './MobileWorkList';
@@ -21,11 +21,13 @@ import MobileNotifications from './MobileNotifications';
 import MobileSettings from './MobileSettings';
 import {
   INITIAL_NOTIFICATIONS,
-  INITIAL_PROFILE,
   INITIAL_WORK_ORDERS,
   type LiveCapture,
   applyIncident,
+  buildHistoryNotifications,
+  createTechnicianProfile,
   getLeadName,
+  summaryToWorkOrder,
 } from './mobileData';
 import './mobile.css';
 
@@ -43,6 +45,7 @@ interface Toast {
 
 interface MobileAppProps {
   incident?: IncidentState | null;
+  history?: IncidentSummary[];
 }
 
 function nowTime(): string {
@@ -120,16 +123,74 @@ function statusNotification(incident: IncidentState): NewNotification | null {
 }
 
 /** Technician mobile app shell: tab state, Work List navigation stack, and shared data. */
-export default function MobileApp({ incident }: MobileAppProps): React.ReactElement {
+export default function MobileApp({ incident, history }: MobileAppProps): React.ReactElement {
   const [tab, setTab] = useState<MobileTab>('work-list');
   const [workTab, setWorkTab] = useState<WorkStage>('active');
   const [stack, setStack] = useState<Route[]>([]);
-  const [baseOrders, setBaseOrders] = useState<WorkOrder[]>(INITIAL_WORK_ORDERS);
-  const [notifications, setNotifications] = useState<MobileNotification[]>(INITIAL_NOTIFICATIONS);
   const session = useSession();
-  const [profile, setProfile] = useState<TechnicianProfile>(() =>
-    session ? { ...INITIAL_PROFILE, role: ROLE_LABEL[session.user.role] } : INITIAL_PROFILE,
+  const [profile, setProfile] = useState<TechnicianProfile>(() => createTechnicianProfile(session?.user));
+  const leadName = getLeadName(profile, incident);
+
+  const [baseOrders, setBaseOrders] = useState<WorkOrder[]>(() =>
+    history ? history.map((s) => summaryToWorkOrder(s, leadName)) : INITIAL_WORK_ORDERS,
   );
+  const [notifications, setNotifications] = useState<MobileNotification[]>(() =>
+    history ? buildHistoryNotifications(history) : INITIAL_NOTIFICATIONS,
+  );
+
+  // Sync profile when auth session changes
+  useEffect(() => {
+    if (session?.user) {
+      setProfile((prev) => ({
+        ...prev,
+        ...createTechnicianProfile(session.user),
+      }));
+    }
+  }, [session?.user]);
+
+  // Sync history into base orders & notifications when history prop updates or load fallback
+  useEffect(() => {
+    if (history) {
+      setBaseOrders((prev) => {
+        const mapped = history.map((s) => summaryToWorkOrder(s, leadName));
+        if (prev.length === 0) return mapped;
+        const prevMap = new Map(prev.map((o) => [o.id, o]));
+        return mapped.map((ho) => prevMap.get(ho.id) ?? ho);
+      });
+      setNotifications((prev) => {
+        const histNotifs = buildHistoryNotifications(history);
+        const liveNotifs = prev.filter((n) => n.id.startsWith('n-'));
+        return [...liveNotifs, ...histNotifs];
+      });
+      return;
+    }
+
+    let cancelled = false;
+    fetchIncidentHistory(20)
+      .then((items) => {
+        if (!cancelled && items.length > 0) {
+          setBaseOrders((prev) => {
+            const mapped = items.map((s) => summaryToWorkOrder(s, leadName));
+            if (prev.length === 0) return mapped;
+            const prevMap = new Map(prev.map((o) => [o.id, o]));
+            return mapped.map((ho) => prevMap.get(ho.id) ?? ho);
+          });
+          setNotifications((prev) => {
+            const histNotifs = buildHistoryNotifications(items);
+            const liveNotifs = prev.filter((n) => n.id.startsWith('n-'));
+            return [...liveNotifs, ...histNotifs];
+          });
+        }
+      })
+      .catch(() => {
+        // Keep fallback data if backend is offline
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [history, leadName]);
+
   const [toast, setToast] = useState<Toast | null>(null);
   const [submitting, setSubmitting] = useState(false);
   // Photos taken for the live incident, keyed by incident so a new incident starts clean.
@@ -145,7 +206,6 @@ export default function MobileApp({ incident }: MobileAppProps): React.ReactElem
   const seenAlertsRef = useRef<Set<string>>(new Set());
 
   const telemetry = useTelemetry(incident?.suspect_machine);
-  const leadName = getLeadName(profile, incident);
   const captures = liveCaptures.incidentId === incident?.incident_id ? liveCaptures.items : NO_CAPTURES;
   const orders = useMemo(
     () => applyIncident(baseOrders, incident, leadName, telemetry, captures),

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from sse_starlette.sse import EventSourceResponse
 
 from backend.agents.agent_technician_copilot import (
@@ -15,7 +15,7 @@ from backend.agents.agent_technician_copilot import (
 )
 from backend.agents.orchestrator import orchestrator
 from backend.core.blackboard import blackboard
-from backend.core.models import AgentFinding, IncidentState
+from backend.core.models import AgentFinding, IncidentState, IncidentSummary
 
 router = APIRouter(prefix="/api/incidents", tags=["incidents"])
 
@@ -26,6 +26,16 @@ router = APIRouter(prefix="/api/incidents", tags=["incidents"])
 async def get_current_incident():
     """Returns the current snapshot of the incident blackboard."""
     return blackboard.get_state()
+
+
+@router.get("/history", response_model=List[IncidentSummary])
+async def get_incident_history(
+    limit: int = Query(20, ge=1, le=100),
+    status: Optional[str] = Query(None),
+) -> List[IncidentSummary]:
+    """Returns past incident history records from Firestore or local fallback."""
+    incidents = blackboard.list_incidents(limit=limit, status=status)
+    return [IncidentSummary.from_incident(inc) for inc in incidents]
 
 
 @router.get("/events")

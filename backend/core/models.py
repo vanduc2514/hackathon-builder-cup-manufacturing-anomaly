@@ -477,6 +477,10 @@ class IncidentState(BaseModel):
         default=None,
         description="ISO 8601 UTC timestamp when the incident was opened",
     )
+    closed_at: Optional[str] = Field(
+        default=None,
+        description="ISO 8601 UTC timestamp when the incident was resolved or closed",
+    )
     severity: str = Field(
         default="medium",
         description="Severity level: low, medium, high, critical",
@@ -493,6 +497,70 @@ class IncidentState(BaseModel):
         default=15,
         description="Target MTTR in minutes for SLA countdown",
     )
+
+
+class IncidentSummary(BaseModel):
+    """Compact summary of an incident for history listing and dashboard feeds."""
+
+    incident_id: str = Field(description="Incident identifier, e.g. INC-0412")
+    status: str = Field(description="Incident status lifecycle state")
+    status_reason: Optional[str] = Field(
+        default=None, description="Reason for escalation, error, or dismissal"
+    )
+    severity: str = Field(
+        default="medium", description="Severity level: low, medium, high, critical"
+    )
+    defect_type: Optional[str] = Field(default=None, description="Classified defect symptom name")
+    defect_rate: float = Field(default=0.0, description="Defect rate at capture or closure")
+    spc_ucl: float = Field(default=0.030, description="Upper specification/control limit")
+    suspect_machine: Optional[str] = Field(
+        default=None, description="Target suspect equipment ID"
+    )
+    suspect_tool: Optional[str] = Field(
+        default=None, description="Suspect cutter or tool identifier"
+    )
+    root_cause: Optional[str] = Field(default=None, description="Identified root cause summary")
+    repair_done: bool = Field(default=False, description="Whether repair has been executed")
+    approved: bool = Field(
+        default=False, description="Whether incident has shift-leader sign-off"
+    )
+    verification_count: int = Field(
+        default=0, description="Consecutive verified parts count"
+    )
+    verification_target: int = Field(default=50, description="Target verified parts count")
+    opened_at: Optional[str] = Field(
+        default=None, description="ISO timestamp when incident opened"
+    )
+    closed_at: Optional[str] = Field(
+        default=None, description="ISO timestamp when incident closed"
+    )
+    updated_at: Optional[str] = Field(default=None, description="ISO timestamp of last update")
+    impact: Optional[ImpactMetrics] = Field(
+        default=None, description="Calculated impact metrics if closed"
+    )
+
+    @classmethod
+    def from_incident(cls, incident: IncidentState) -> IncidentSummary:
+        return cls(
+            incident_id=incident.incident_id,
+            status=incident.status,
+            status_reason=incident.status_reason,
+            severity=incident.severity,
+            defect_type=incident.defect_type,
+            defect_rate=incident.defect_rate,
+            spc_ucl=incident.spc_ucl,
+            suspect_machine=incident.suspect_machine,
+            suspect_tool=incident.suspect_tool,
+            root_cause=incident.root_cause,
+            repair_done=incident.repair_done,
+            approved=incident.approved,
+            verification_count=incident.verification_count,
+            verification_target=incident.verification_target,
+            opened_at=incident.opened_at,
+            closed_at=incident.closed_at,
+            updated_at=incident.updated_at,
+            impact=incident.impact,
+        )
 
 
 class DefectInjectionRequest(BaseModel):

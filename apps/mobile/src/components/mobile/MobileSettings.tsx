@@ -41,7 +41,8 @@ export default function MobileSettings({
             <span className="material-symbols-outlined">engineering</span>
           </div>
           <div className="m-col" style={{ gap: 2, flex: 1 }}>
-            <div className="m-h2">{profile.role}</div>
+            <div className="m-h2">{profile.name || profile.role}</div>
+            {profile.name && <div className="m-sub" style={{ fontSize: 12 }}>{profile.role}</div>}
             <div className="m-row" style={{ gap: 6, marginTop: 4 }}>
               <span className="m-chip plain m-mono">{profile.employeeId}</span>
               <span className="m-chip indigo plain">{profile.bay}</span>

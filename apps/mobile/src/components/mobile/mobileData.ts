@@ -7,8 +7,8 @@ import type {
   EvidenceItem,
   LiveIncidentInfo,
   MobileNotification,
+  NotificationTone,
   ProcessingInfo,
-  RepairStep,
   SensorReading,
   TechnicianProfile,
   WorkKind,
@@ -17,7 +17,7 @@ import type {
 } from '../../types/mobile';
 import type { TelemetryContext } from '../../hooks/useTelemetry';
 import { getRepairParts, getRepairSteps } from './oemRepairManuals';
-import type { AgentFinding, IncidentState } from '../../types';
+import type { AgentFinding, AuthUser, IncidentState, IncidentSummary } from '../../types';
 
 export const IMG = {
   lathe: '/mobile/lathe.jpg',
@@ -26,317 +26,10 @@ export const IMG = {
   spindle: '/mobile/spindle.jpg',
 };
 
-const COLLAR_STEPS: RepairStep[] = [
-  {
-    id: 1,
-    title: 'Isolate power & lock out spindle',
-    instruction: 'Switch Bay C breaker #04 OFF, attach your padlock and confirm zero energy.',
-    instructionVi: 'Ngắt CB #04 khu C, khóa an toàn và xác nhận không còn điện.',
-    target: '0.0 V',
-    tolerance: 'Zero energy',
-    reference: 'SOP-LOTO §2.1',
-    copilotVi: 'Tôi thấy CB đã ở vị trí OFF. Hãy gắn ổ khóa rồi chạm đồng hồ đo vào cực L1.',
-    copilotEn: 'Breaker is OFF. Attach your lock, then touch the meter to terminal L1.',
-  },
-  {
-    id: 2,
-    title: 'Remove cracked collar & O-ring',
-    instruction: 'Loosen the 4× M6 hex bolts, slide the collar out and clean the seating face.',
-    instructionVi: 'Tháo 4 bu-lông M6, rút vòng kẹp ra và lau sạch mặt tựa.',
-    target: 'Clean seat',
-    tolerance: 'No debris',
-    reference: 'OEM v4.2 §8.2',
-    copilotVi: 'Có vết mạt kim loại ở góc 2 giờ. Lau sạch trước khi lắp vòng mới.',
-    copilotEn: 'Metal chips at the 2 o’clock position. Wipe them before fitting the new collar.',
-  },
-  {
-    id: 3,
-    title: 'Tighten collar bolts to 45 Nm',
-    instruction: 'Fit the new collar, then tighten in a star pattern 1-3-2-4 in two passes.',
-    instructionVi: 'Lắp vòng mới, siết chéo theo thứ tự 1-3-2-4 qua hai lượt.',
-    target: '45.0 Nm',
-    tolerance: '± 1.5 Nm',
-    reference: 'OEM v4.2 §8.4',
-    copilotVi: 'Đã nhận diện ốc số 2. Chuyển sang ốc số 4 đối diện, siết ở mức 45 Nm.',
-    copilotEn: 'Bolt 2 confirmed. Move to bolt 4 on the opposite side, tighten to 45 Nm.',
-  },
-  {
-    id: 4,
-    title: 'Check spindle runout',
-    instruction: 'Sweep the dial indicator through a full 360° turn of the spindle.',
-    instructionVi: 'Quay trục chính 360° và đọc đồng hồ so.',
-    target: '< 0.015 mm',
-    tolerance: 'Radial runout',
-    reference: 'OEM v4.2 §9.1',
-    copilotVi: 'Giá trị đọc 0.008 mm — đạt yêu cầu. Bạn có thể tiếp tục.',
-    copilotEn: 'Reading 0.008 mm — within spec. You can continue.',
-  },
-  {
-    id: 5,
-    title: 'Dry run at 500 RPM',
-    instruction: 'Run the spindle for 10 s with no load and keep the camera on the toolhead.',
-    instructionVi: 'Chạy không tải 500 RPM trong 10 giây, giữ camera hướng vào đầu dao.',
-    target: '< 0.8 mm/s',
-    tolerance: 'RMS vibration',
-    reference: 'QA-VIB-03',
-    copilotVi: 'Rung động 0.41 mm/s, ổn định. Sửa chữa hoàn tất.',
-    copilotEn: 'Vibration 0.41 mm/s and steady. Repair complete.',
-  },
-];
 
-const NOZZLE_STEPS: RepairStep[] = [
-  {
-    id: 1,
-    title: 'Stop coolant pump',
-    instruction: 'Press coolant OFF on the HMI and wait for flow to stop.',
-    instructionVi: 'Tắt bơm dung dịch trên màn hình HMI và chờ ngừng chảy.',
-    target: '0 bar',
-    tolerance: 'Line pressure',
-    reference: 'SOP-CL-01',
-    copilotVi: 'Áp suất đã về 0. Bạn có thể tháo đầu phun.',
-    copilotEn: 'Pressure is at 0. You can remove the nozzle.',
-  },
-  {
-    id: 2,
-    title: 'Flush nozzle manifold',
-    instruction: 'Remove nozzle #3 and blow out chips with compressed air.',
-    instructionVi: 'Tháo đầu phun số 3 và thổi sạch phoi bằng khí nén.',
-    target: 'Clear bore',
-    tolerance: 'No blockage',
-    reference: 'SOP-CL-01 §3',
-    copilotVi: 'Lỗ phun đã thông. Lắp lại và siết tay.',
-    copilotEn: 'Bore is clear. Refit and hand-tighten.',
-  },
-  {
-    id: 3,
-    title: 'Restart & confirm pressure',
-    instruction: 'Turn coolant ON and confirm pressure on the gauge.',
-    instructionVi: 'Bật lại bơm và kiểm tra áp suất trên đồng hồ.',
-    target: '14.0 bar',
-    tolerance: '± 0.5 bar',
-    reference: 'SOP-CL-01 §4',
-    copilotVi: 'Áp suất 14.2 bar — đạt. Hoàn tất.',
-    copilotEn: 'Pressure 14.2 bar — OK. Done.',
-  },
-];
 
-export const INITIAL_WORK_ORDERS: WorkOrder[] = [
-  {
-    id: 'INC-8924',
-    kind: 'evidence',
-    stage: 'active',
-    priority: 'P1',
-    title: 'Spindle vibration drift',
-    machine: 'CNC Mill 04',
-    location: 'Line 04 · Bay B',
-    summary: 'Vibration at 3,450 RPM is 18 dB over baseline. AI needs photos to confirm the cause.',
-    image: IMG.mill,
-    aiConfidence: 64,
-    createdAt: '10 min ago',
-    estMinutes: 8,
-    rootCause: 'Possible micro-crack or heat damage on the cutting insert',
-    suspectTool: 'Carbide insert WNMG-080408',
-    aiRequest:
-      'I can’t tell yet if this is a cracked insert or a loose collar. A close-up of the insert edge and a short clip of the spindle running will settle it.',
-    sensors: [
-      { label: 'Vibration', value: '4.8', unit: 'mm/s', trend: 'up', alert: true },
-      { label: 'Spindle temp', value: '61', unit: '°C', trend: 'up', alert: false },
-      { label: 'Defect rate', value: '2.1', unit: '%', trend: 'up', alert: true },
-    ],
-    evidence: [
-      {
-        id: 'e1',
-        label: 'Vibration spectrum',
-        hint: 'Peak at 172 Hz',
-        mediaType: 'photo',
-        captured: true,
-        source: 'sensor',
-        capturedAt: '14:02',
-      },
-      {
-        id: 'e2',
-        label: 'Inline camera frame',
-        hint: 'Chatter marks on part #3381',
-        mediaType: 'photo',
-        captured: true,
-        source: 'camera',
-        thumbnail: IMG.mill,
-        capturedAt: '14:05',
-      },
-      {
-        id: 'e3',
-        label: 'Insert cutting edge',
-        hint: 'Close-up photo · 45° angle',
-        mediaType: 'photo',
-        captured: false,
-        guidance: [
-          'Stop the spindle and open the guard',
-          'Hold the phone about 10 cm from the insert',
-          'Tilt 45° so the light hits the cutting edge',
-        ],
-      },
-      {
-        id: 'e4',
-        label: 'Collar seating face',
-        hint: 'Photo · straight on',
-        mediaType: 'photo',
-        captured: false,
-        guidance: [
-          'Point straight at the clamping collar',
-          'Make sure all 4 bolts are in frame',
-          'Turn on the flash if it’s dark',
-        ],
-      },
-      {
-        id: 'e5',
-        label: 'Spindle running',
-        hint: 'Video · 10 s at 500 RPM',
-        mediaType: 'video',
-        captured: false,
-        guidance: [
-          'Close the guard and run at 500 RPM',
-          'Keep the phone steady on the toolhead',
-          'Record at least 10 seconds with sound',
-        ],
-      },
-    ],
-    steps: [],
-    partsNeeded: [],
-  },
-  {
-    id: 'INC-8919',
-    kind: 'fix',
-    stage: 'active',
-    priority: 'P1',
-    title: 'Replace collar & torque bolts',
-    machine: 'CNC Lathe 02',
-    location: 'Line 02 · Bay C',
-    summary: 'Cracked clamping collar is causing toolhead chatter. Parts are ready in Locker 3B.',
-    image: IMG.lathe,
-    aiConfidence: 92,
-    createdAt: '25 min ago',
-    estMinutes: 25,
-    rootCause: 'Micro-crack in clamping collar causing runout',
-    suspectTool: 'Carbide insert T-410 · ISO 40 holder',
-    sensors: [
-      { label: 'Vibration', value: '3.9', unit: 'mm/s', trend: 'up', alert: true },
-      { label: 'Runout', value: '0.047', unit: 'mm', trend: 'up', alert: true },
-      { label: 'Spindle temp', value: '58', unit: '°C', trend: 'flat', alert: false },
-    ],
-    evidence: [],
-    steps: COLLAR_STEPS,
-    partsNeeded: ['Clamping collar CL-40 (×1)', 'O-ring 42×2 mm (×1)', 'Torque wrench 20–100 Nm'],
-  },
-  {
-    id: 'INC-8927',
-    kind: 'fix',
-    stage: 'active',
-    priority: 'P3',
-    title: 'Clear clogged coolant nozzle',
-    machine: 'CNC Lathe 05',
-    location: 'Line 02 · Bay D',
-    summary: 'Coolant pressure dropped to 9 bar. Nozzle #3 is likely blocked with chips.',
-    image: IMG.insert,
-    aiConfidence: 88,
-    createdAt: '1 h ago',
-    estMinutes: 10,
-    rootCause: 'Chip build-up in nozzle #3',
-    suspectTool: 'Coolant manifold N-3',
-    sensors: [
-      { label: 'Coolant', value: '9.1', unit: 'bar', trend: 'down', alert: true },
-      { label: 'Tool temp', value: '74', unit: '°C', trend: 'up', alert: false },
-      { label: 'Defect rate', value: '0.6', unit: '%', trend: 'flat', alert: false },
-    ],
-    evidence: [],
-    steps: NOZZLE_STEPS,
-    partsNeeded: ['Compressed air gun', 'Nozzle wrench 13 mm'],
-  },
-  {
-    id: 'INC-8916',
-    kind: 'fix',
-    stage: 'processing',
-    priority: 'P2',
-    title: 'Bearing preload adjusted',
-    machine: 'CNC Lathe 01',
-    location: 'Line 01 · Bay A',
-    summary: 'Repair done. Inline camera is checking the next 50 parts before the lead signs off.',
-    image: IMG.spindle,
-    aiConfidence: 90,
-    createdAt: '2 h ago',
-    estMinutes: 0,
-    sensors: [],
-    evidence: [],
-    steps: [],
-    partsNeeded: [],
-    processing: {
-      submittedAt: '12:40',
-      verified: 38,
-      target: 50,
-      lead: 'Tuan Nguyen',
-      aiNote: 'Vibration back to 0.42 mm/s. No defects in the last 38 parts.',
-    },
-  },
-  {
-    id: 'INC-8902',
-    kind: 'fix',
-    stage: 'completed',
-    priority: 'P2',
-    title: 'Spindle collar re-seated',
-    machine: 'Haas ST-10',
-    location: 'Line 03',
-    summary: 'Replaced collar and insert. Runout now 0.008 mm.',
-    image: IMG.lathe,
-    aiConfidence: 95,
-    createdAt: 'Today',
-    estMinutes: 0,
-    sensors: [],
-    evidence: [],
-    steps: [],
-    partsNeeded: [],
-    completedAt: '11:30',
-    outcome: '50/50 parts passed · Approved by Shift Leader',
-  },
-  {
-    id: 'INC-8898',
-    kind: 'evidence',
-    stage: 'completed',
-    priority: 'P3',
-    title: 'Coolant flow photos',
-    machine: 'CNC Lathe 02',
-    location: 'Line 02',
-    summary: 'Photos confirmed swarf in manifold. Ticket handed to maintenance.',
-    image: IMG.insert,
-    aiConfidence: 91,
-    createdAt: 'Today',
-    estMinutes: 0,
-    sensors: [],
-    evidence: [],
-    steps: [],
-    partsNeeded: [],
-    completedAt: '09:15',
-    outcome: 'Root cause confirmed · AI confidence 91%',
-  },
-  {
-    id: 'INC-8890',
-    kind: 'fix',
-    stage: 'completed',
-    priority: 'P3',
-    title: 'Belt tension adjusted',
-    machine: 'CNC Mill 03',
-    location: 'Line 04',
-    summary: 'Re-tensioned spindle belt to 180 Hz.',
-    image: IMG.mill,
-    aiConfidence: 89,
-    createdAt: 'Yesterday',
-    estMinutes: 0,
-    sensors: [],
-    evidence: [],
-    steps: [],
-    partsNeeded: [],
-    completedAt: 'Yesterday 16:45',
-    outcome: '50/50 parts passed · Approved by Shift Leader',
-  },
-];
+/** Empty fallback work order list; work orders are loaded dynamically from /api/incidents/history. */
+export const INITIAL_WORK_ORDERS: WorkOrder[] = [];
 
 /** Resolves the Shift Leader / approver identity. */
 export function getLeadName(profile?: TechnicianProfile, incident?: IncidentState | null): string {
@@ -731,74 +424,160 @@ export function applyIncident(
   return [live, ...orders.filter((o) => o.id !== live.id)];
 }
 
-export const INITIAL_NOTIFICATIONS: MobileNotification[] = [
-  {
-    id: 'n1',
-    icon: 'photo_camera',
-    tone: 'red',
-    title: 'Evidence needed · CNC Mill 04',
-    body: 'AI is 64% sure. Take 2 photos and 1 short video.',
-    time: '2m',
-    group: 'Today',
-    unread: true,
-    workId: 'INC-8924',
-  },
-  {
-    id: 'n2',
-    icon: 'build',
-    tone: 'indigo',
-    title: 'New repair assigned',
-    body: 'Replace collar on CNC Lathe 02. Parts in Locker 3B.',
-    time: '25m',
-    group: 'Today',
-    unread: true,
-    workId: 'INC-8919',
-  },
-  {
-    id: 'n3',
-    icon: 'fact_check',
-    tone: 'blue',
-    title: 'Verification running',
-    body: '38 of 50 parts passed on CNC Lathe 01.',
-    time: '1h',
-    group: 'Today',
-    unread: false,
-    workId: 'INC-8916',
-  },
-  {
-    id: 'n4',
-    icon: 'verified',
-    tone: 'green',
-    title: 'Approved by Shift Leader',
-    body: 'Spindle collar re-seat on Haas ST-10 is closed.',
-    time: '3h',
-    group: 'Today',
-    unread: false,
-    workId: 'INC-8902',
-  },
-  {
-    id: 'n5',
-    icon: 'schedule',
-    tone: 'orange',
-    title: 'Shift handover in 30 min',
-    body: 'Add notes to any open work before 18:00.',
-    time: 'Yesterday',
-    group: 'Earlier',
-    unread: false,
-  },
-];
+/** Converts an IncidentSummary from /api/incidents/history to a WorkOrder card. */
+export function summaryToWorkOrder(summary: IncidentSummary, leadName: string): WorkOrder {
+  const machine = summary.suspect_machine ?? 'Machine not identified yet';
+  const defectName = formatDefectName(summary.defect_type);
+  const status = summary.status;
 
-export const INITIAL_PROFILE: TechnicianProfile = {
-  employeeId: 'TECH-0427',
-  role: 'Maintenance Technician',
-  phone: '+84 90 123 4567',
-  email: 'technician@apex-factory.vn',
-  shift: 'Shift A · 06:00–14:00',
-  bay: 'Bay 4',
-  leadName: 'Shift Leader (Duty)',
-  language: 'vi-VN',
-  voiceGuidance: true,
-  pushAlerts: true,
-  haptics: true,
-};
+  let stage: WorkStage;
+  if (summary.approved || status === 'closed' || status === 'dismissed') {
+    stage = 'completed';
+  } else if (summary.repair_done || status === 'verifying') {
+    stage = 'processing';
+  } else {
+    stage = 'active';
+  }
+
+  const kind: WorkKind =
+    summary.repair_done || status === 'repairing' || status === 'verifying' || status === 'closed' || Boolean(summary.root_cause)
+      ? 'fix'
+      : 'evidence';
+
+  let title: string;
+  let summaryText: string;
+  if (kind === 'evidence') {
+    title = summary.defect_type ? `Investigate ${defectName}` : 'Investigate quality alert';
+    summaryText = summary.status_reason ?? `Defect rate ${(summary.defect_rate * 100).toFixed(1)}% vs UCL ${(summary.spc_ucl * 100).toFixed(1)}%`;
+  } else {
+    title = summary.root_cause ? `Fix: ${firstSentence(summary.root_cause)}` : `Repair ${defectName}`;
+    summaryText = summary.root_cause ?? summary.status_reason ?? `Root cause confirmed on ${machine}.`;
+  }
+
+  let processing: ProcessingInfo | undefined;
+  if (stage === 'processing') {
+    processing = {
+      submittedAt: summary.updated_at ?? 'Recent',
+      verified: summary.verification_count,
+      target: summary.verification_target,
+      lead: leadName,
+      aiNote: 'Inline camera is checking parts after the repair.',
+    };
+  }
+
+  let outcome: string | undefined;
+  let completedAt: string | undefined;
+  if (stage === 'completed') {
+    completedAt = summary.closed_at ?? summary.updated_at ?? 'Completed';
+    if (status === 'dismissed') {
+      outcome = `Dismissed · ${summary.status_reason ?? 'No anomaly confirmed'}`;
+    } else {
+      const scrap = summary.impact ? ` · ${summary.impact.scrap_avoided} scrap avoided` : '';
+      outcome = `${summary.verification_count}/${summary.verification_target} parts verified · ${summary.approved ? `Approved by ${leadName}` : 'Closed'}${scrap}`;
+    }
+  }
+
+  const overUcl = summary.defect_rate > summary.spc_ucl;
+  const isP1 = summary.severity === 'critical' || summary.severity === 'high' || status === 'escalated' || overUcl;
+  const isP2 = summary.severity === 'medium';
+
+  return {
+    id: summary.incident_id,
+    kind,
+    stage,
+    priority: isP1 ? 'P1' : isP2 ? 'P2' : 'P3',
+    title,
+    machine,
+    location: getMachineLocation(summary.suspect_machine),
+    summary: summaryText,
+    image: machine.toUpperCase().startsWith('IM') ? IMG.insert : IMG.lathe,
+    aiConfidence: summary.root_cause ? 92 : null,
+    createdAt: summary.opened_at ?? summary.updated_at ?? 'Today',
+    rootCause: summary.root_cause ?? undefined,
+    suspectTool: summary.suspect_tool ?? undefined,
+    sensors: [],
+    evidence: [],
+    steps: getRepairSteps(summary.suspect_machine),
+    partsNeeded: getRepairParts(summary.suspect_machine),
+    processing,
+    completedAt,
+    outcome,
+    statusReason: summary.status_reason ?? undefined,
+  };
+}
+
+/** Generates notifications from past and recent incidents. */
+export function buildHistoryNotifications(history: IncidentSummary[]): MobileNotification[] {
+  if (!history || history.length === 0) return [];
+  return history.slice(0, 10).map((inc, idx) => {
+    const isToday = idx < 5;
+    let icon = 'notifications';
+    let tone: NotificationTone = 'blue';
+    let title = `Incident ${inc.incident_id}`;
+    let body = inc.status_reason || (inc.defect_type ? `Defect ${formatDefectName(inc.defect_type)}` : 'System notice');
+
+    if (inc.status === 'closed' || inc.approved) {
+      icon = 'verified';
+      tone = 'green';
+      title = `Approved · ${inc.suspect_machine ?? 'Equipment'}`;
+      body = `Verification completed (${inc.verification_count}/${inc.verification_target} parts). Closed.`;
+    } else if (inc.status === 'awaiting_evidence') {
+      icon = 'photo_camera';
+      tone = 'red';
+      title = `Evidence needed · ${inc.suspect_machine ?? 'Equipment'}`;
+      body = inc.root_cause || 'AI requests visual inspection photos.';
+    } else if (inc.status === 'repairing') {
+      icon = 'build';
+      tone = 'indigo';
+      title = `Repair in progress · ${inc.suspect_machine ?? 'Equipment'}`;
+      body = inc.root_cause || 'Corrective action assigned.';
+    } else if (inc.status === 'verifying') {
+      icon = 'fact_check';
+      tone = 'blue';
+      title = `Verification running · ${inc.suspect_machine ?? 'Equipment'}`;
+      body = `${inc.verification_count} of ${inc.verification_target} parts verified so far.`;
+    } else if (inc.status === 'escalated' || inc.status === 'error') {
+      icon = 'warning';
+      tone = 'red';
+      title = `Escalated · ${inc.suspect_machine ?? 'Equipment'}`;
+      body = inc.status_reason || 'Shift leader intervention required.';
+    }
+
+    return {
+      id: `hist-${inc.incident_id}-${idx}`,
+      icon,
+      tone,
+      title,
+      body,
+      time: inc.closed_at ? 'Closed' : inc.opened_at ? 'Recent' : 'Today',
+      group: isToday ? 'Today' : 'Earlier',
+      unread: !inc.closed_at && !inc.approved,
+      workId: inc.incident_id,
+    };
+  });
+}
+
+/** Fallback empty notification list; real notifications are derived from history & SSE. */
+export const INITIAL_NOTIFICATIONS: MobileNotification[] = [];
+
+/** Constructs technician profile from authenticated session user. */
+export function createTechnicianProfile(user?: AuthUser | null): TechnicianProfile {
+  const isLead = user?.role === 'shift_leader';
+  return {
+    employeeId: user?.username ? `EMP-${user.username.toUpperCase()}` : 'TECH-0427',
+    name: user?.display_name || (isLead ? 'Shift Leader' : 'Maintenance Technician'),
+    role: isLead ? 'Shift Leader' : 'Maintenance Technician',
+    phone: '+84 90 123 4567',
+    email: user?.username ? `${user.username}@apex-factory.vn` : 'technician@apex-factory.vn',
+    shift: 'Shift A · 06:00–14:00',
+    bay: 'Bay 4',
+    leadName: isLead ? 'Plant Manager' : 'Shift Leader (Duty)',
+    language: 'vi-VN',
+    voiceGuidance: true,
+    pushAlerts: true,
+    haptics: true,
+  };
+}
+
+export const INITIAL_PROFILE: TechnicianProfile = createTechnicianProfile(null);
 

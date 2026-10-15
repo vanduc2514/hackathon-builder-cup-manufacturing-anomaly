@@ -15,6 +15,15 @@ output "service_url" {
   value       = google_cloud_run_v2_service.backend.uri
 }
 
+output "factory_service_name" {
+  value = google_cloud_run_v2_service.factory.name
+}
+
+output "factory_service_url" {
+  description = "Cloud Run factory service URL."
+  value       = google_cloud_run_v2_service.factory.uri
+}
+
 output "runtime_service_account_email" {
   description = "Share the Google Drive folder with this account for hybrid RAG."
   value       = google_service_account.backend.email

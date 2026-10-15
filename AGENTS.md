@@ -47,7 +47,12 @@ This file is the authoritative reference for AI coding agents and human contribu
 │   ├── models.py               # Pydantic schemas for machine & conveyor packets
 │   ├── machine_simulator.py    # Multi-CNC telemetry generator (vibration, current)
 │   ├── conveyor_simulator.py   # Discrete serialization & optical inspection
+│   ├── injection_engine.py     # Deterministic defect injection controller
 │   ├── mqtt_publisher.py       # Async EMQX MQTT publisher
+│   ├── server.py               # Standalone Factory Client API & SSE live stream
+│   ├── requirements.txt        # Standalone Factory Client dependencies
+│   ├── Dockerfile              # Multi-stage production container for Cloud Run
+│   ├── ui/                     # Factory Floor Web UI (React 19 + Vite + TypeScript, :3002)
 │   └── main.py                 # Service runner & CLI entrypoint
 │
 ├── apps/                       # Frontend apps (React + Vite + TypeScript)
@@ -108,9 +113,9 @@ async def inspect(defect_rate: float) -> AgentFinding:
     ...
 ```
 
-### TypeScript / React (apps/web, apps/mobile)
+### TypeScript / React (apps/web, apps/mobile, simulator/ui)
 
-- **Language:** TypeScript (`.ts`, `.tsx`) with strict type checking enabled (`strict: true`). Avoid `any`; define domain types in `apps/<app>/src/types/` mirroring backend Pydantic models.
+- **Language:** TypeScript (`.ts`, `.tsx`) with strict type checking enabled (`strict: true`). Avoid `any`; define domain types in `apps/<app>/src/types/` (or `simulator/ui/src/types/`) mirroring Pydantic models. All frontend applications live in `apps/web/`, `apps/mobile/`, or the standalone decoupled factory client `simulator/ui/`.
 - **Style:** ESLint + Prettier (2-space indent, single quotes, semicolons allowed).
 - **Components:** Functional components only — no class components. One component per file. File name matches the exported component name.
 - **Props:** Strongly typed via interfaces. Destructure props in the function signature.

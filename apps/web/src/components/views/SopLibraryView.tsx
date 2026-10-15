@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import type { ToastTone } from '../../App';
 import SopDetailDrawer, { sopCode } from '../knowledge/SopDetailDrawer';
 import { SOPS, SOP_CATEGORIES, type Sop } from '../../lib/knowledge';
+import { useApi } from '../../lib/api';
 
 interface SopLibraryViewProps {
   requestedCode: number | null;
@@ -12,10 +13,11 @@ interface SopLibraryViewProps {
 
 type SortKey = 'recent' | 'numeric';
 
-/** The most recent AI-proposed revision is surfaced as the single action item above the table. */
-const PENDING_REVIEW = SOPS[0];
-
 export default function SopLibraryView({ requestedCode, onOpenWalkthrough, onNotify }: SopLibraryViewProps): React.ReactElement {
+  const { data: remoteSops } = useApi<Sop[]>('/api/knowledge/sops');
+  const allSops = remoteSops && remoteSops.length > 0 ? remoteSops : SOPS;
+  const pendingReview = allSops[0];
+
   const [query, setQuery] = useState<string>('');
   const [category, setCategory] = useState<string>('All');
   const [sort, setSort] = useState<SortKey>('recent');
@@ -23,16 +25,16 @@ export default function SopLibraryView({ requestedCode, onOpenWalkthrough, onNot
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = SOPS.filter(
+    const list = allSops.filter(
       (s) =>
         (category === 'All' || s.category === category) &&
         (!q || `${sopCode(s.code)} ${s.code} ${s.title} ${s.station} ${s.category}`.toLowerCase().includes(q)),
     );
     return sort === 'numeric' ? [...list].sort((a, b) => a.code - b.code) : list;
-  }, [query, category, sort]);
+  }, [allSops, query, category, sort]);
 
-  const open = SOPS.find((s) => s.code === openCode) ?? null;
-  const latest = PENDING_REVIEW.changes[0];
+  const open = allSops.find((s) => s.code === openCode) ?? null;
+  const latest = pendingReview?.changes[0];
 
   const exportCsv = () => {
     const rows = [
@@ -55,7 +57,7 @@ export default function SopLibraryView({ requestedCode, onOpenWalkthrough, onNot
         <div>
           <h1 className="page-title">SOP Library</h1>
           <p className="muted" style={{ fontSize: '0.9rem', marginTop: 4 }}>
-            {SOPS.length} active procedures · click a row to see details and the change log
+            {allSops.length} active procedures · click a row to see details and the change log
           </p>
         </div>
         <div className="row wrap" style={{ gap: 10 }}>
@@ -70,23 +72,25 @@ export default function SopLibraryView({ requestedCode, onOpenWalkthrough, onNot
         </div>
       </header>
 
-      <button type="button" id="sop-review-revision" className="glass action-strip" onClick={() => setOpenCode(PENDING_REVIEW.code)}>
-        <span className="chip" style={{ background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)' }}>
-          Needs review
-        </span>
-        <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-          <b className="mono" style={{ color: 'var(--accent)' }}>
-            {sopCode(PENDING_REVIEW.code)}
-          </b>{' '}
-          revised to Rev {latest.rev} · {latest.reason}
-        </span>
-        <span className="row" style={{ gap: 4, fontWeight: 650, color: 'var(--accent)', whiteSpace: 'nowrap' }}>
-          Review changes
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-            arrow_forward
+      {pendingReview && latest && (
+        <button type="button" id="sop-review-revision" className="glass action-strip" onClick={() => setOpenCode(pendingReview.code)}>
+          <span className="chip" style={{ background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)' }}>
+            Needs review
           </span>
-        </span>
-      </button>
+          <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+            <b className="mono" style={{ color: 'var(--accent)' }}>
+              {sopCode(pendingReview.code)}
+            </b>{' '}
+            revised to Rev {latest.rev} · {latest.reason}
+          </span>
+          <span className="row" style={{ gap: 4, fontWeight: 650, color: 'var(--accent)', whiteSpace: 'nowrap' }}>
+            Review changes
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+              arrow_forward
+            </span>
+          </span>
+        </button>
+      )}
 
       <section className="glass fleet-card">
         <div className="row wrap fleet-toolbar">
@@ -101,10 +105,10 @@ export default function SopLibraryView({ requestedCode, onOpenWalkthrough, onNot
               filter_list
             </span>
             <select id="sop-category" value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Filter by category">
-              <option value="All">All categories ({SOPS.length})</option>
+              <option value="All">All categories ({allSops.length})</option>
               {SOP_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
-                  {c} ({SOPS.filter((s) => s.category === c).length})
+                  {c} ({allSops.filter((s) => s.category === c).length})
                 </option>
               ))}
             </select>

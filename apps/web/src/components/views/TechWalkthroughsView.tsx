@@ -5,7 +5,8 @@ import SideDrawer from '../SideDrawer';
 import WalkthroughPlayer from '../knowledge/WalkthroughPlayer';
 import WalkthroughRow from '../knowledge/WalkthroughRow';
 import TagChip from '../knowledge/TagChip';
-import { WALKTHROUGHS, WALKTHROUGH_STATIONS, formatDuration } from '../../lib/knowledge';
+import { WALKTHROUGHS, WALKTHROUGH_STATIONS, formatDuration, type Walkthrough } from '../../lib/knowledge';
+import { useApi } from '../../lib/api';
 
 interface TechWalkthroughsViewProps {
   requestedId: string | null;
@@ -22,6 +23,9 @@ const STATION_ICON: Record<string, string> = {
 };
 
 export default function TechWalkthroughsView({ requestedId, onOpenSop, onNotify }: TechWalkthroughsViewProps): React.ReactElement {
+  const { data: remoteWalkthroughs } = useApi<Walkthrough[]>('/api/knowledge/walkthroughs');
+  const allWalkthroughs = remoteWalkthroughs && remoteWalkthroughs.length > 0 ? remoteWalkthroughs : WALKTHROUGHS;
+
   const [query, setQuery] = useState<string>('');
   const [station, setStation] = useState<string>('All');
   const [requiredOnly, setRequiredOnly] = useState<boolean>(false);
@@ -31,18 +35,18 @@ export default function TechWalkthroughsView({ requestedId, onOpenSop, onNotify 
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return WALKTHROUGHS.filter(
+    return allWalkthroughs.filter(
       (w) =>
         (station === 'All' || w.station === station) &&
         (!requiredOnly || w.required) &&
         (!watchlistOnly || saved.has(w.id)) &&
         (!q || `${w.title} ${w.asset} ${w.author.name} ${w.station} ${w.category}`.toLowerCase().includes(q)),
     );
-  }, [query, station, requiredOnly, watchlistOnly, saved]);
+  }, [allWalkthroughs, query, station, requiredOnly, watchlistOnly, saved]);
 
   const groups = WALKTHROUGH_STATIONS.map((s) => ({ station: s, items: visible.filter((w) => w.station === s) })).filter((g) => g.items.length > 0);
-  const open = WALKTHROUGHS.find((w) => w.id === openId) ?? null;
-  const required = WALKTHROUGHS.filter((w) => w.required);
+  const open = allWalkthroughs.find((w) => w.id === openId) ?? null;
+  const required = allWalkthroughs.filter((w) => w.required);
 
   const toggleSave = (id: string) =>
     setSaved((prev) => {
@@ -115,7 +119,7 @@ export default function TechWalkthroughsView({ requestedId, onOpenSop, onNotify 
         <div className="row wrap" style={{ gap: 8 }} role="tablist" aria-label="Machine stations">
           {['All', ...WALKTHROUGH_STATIONS].map((s) => {
             const on = station === s;
-            const count = s === 'All' ? WALKTHROUGHS.length : WALKTHROUGHS.filter((w) => w.station === s).length;
+            const count = s === 'All' ? allWalkthroughs.length : allWalkthroughs.filter((w) => w.station === s).length;
             return (
               <button key={s} type="button" role="tab" aria-selected={on} className={`pill pill-lg ${on ? 'pill-on' : ''}`} onClick={() => setStation(s)}>
                 {s !== 'All' && (

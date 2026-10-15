@@ -53,6 +53,115 @@ class KnowledgeDocumentMeta(BaseModel):
     tags: List[str] = Field(default_factory=list)
 
 
+class SopMetric(BaseModel):
+    """Key metric or tolerance associated with a Standard Operating Procedure."""
+
+    label: str
+    value: str
+    tone: Optional[str] = None
+
+
+class SopChangeLine(BaseModel):
+    """Diff line for SOP revision history."""
+
+    op: Literal["+", "-"]
+    text: str
+
+
+class SopChange(BaseModel):
+    """Audit revision entry for an SOP."""
+
+    rev: str
+    date: str
+    author: str
+    reason: str
+    lines: List[SopChangeLine] = Field(default_factory=list)
+
+
+class SopNoteTrail(BaseModel):
+    """Supplemental status indicator or visual trail on an SOP card."""
+
+    kind: Literal["spark", "text", "status"] = "text"
+    value: str = ""
+
+
+class SopSideLink(BaseModel):
+    """Contextual side action link on an SOP card."""
+
+    icon: str = "schema"
+    label: str = "Schematic"
+
+
+class SopDocument(BaseModel):
+    """Standard Operating Procedure model compliant with Knowledge Hub."""
+
+    code: int
+    station: str
+    rev: str
+    updated: str
+    category: str
+    title: str
+    summary: str
+    tags: List[Dict[str, Any]] = Field(default_factory=list)
+    metrics: List[SopMetric] = Field(default_factory=list)
+    note: str = ""
+    note_trail: SopNoteTrail = Field(default_factory=SopNoteTrail, alias="noteTrail")
+    side_link: SopSideLink = Field(default_factory=SopSideLink, alias="sideLink")
+    action: str = "Launch Procedure"
+    safety: Optional[bool] = False
+    walkthrough_id: Optional[str] = Field(default=None, alias="walkthroughId")
+    changes: List[SopChange] = Field(default_factory=list)
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class WalkthroughChapter(BaseModel):
+    """Video chapter timestamp marker."""
+
+    at: int
+    label: str
+
+
+class WalkthroughGate(BaseModel):
+    """Interactive inspection checkpoint during video walkthrough playback."""
+
+    at: int
+    text: str
+
+
+class WalkthroughAuthor(BaseModel):
+    """Author attribution for technician video walkthrough."""
+
+    initials: str
+    name: str
+    role: str
+
+
+class WalkthroughMetadata(BaseModel):
+    """Metadata schema for expert technician video walkthroughs."""
+
+    id: str
+    station: str
+    title: str
+    short_title: str = Field(..., alias="shortTitle")
+    category: str
+    asset: str
+    duration_sec: int = Field(..., alias="durationSec")
+    image: str
+    badge: Dict[str, Any]
+    description: str
+    author: WalkthroughAuthor
+    views: int = 0
+    helpful: str = "100% helpful"
+    topics: List[str] = Field(default_factory=list)
+    required: Optional[bool] = False
+    chapters: Optional[List[WalkthroughChapter]] = Field(default_factory=list)
+    gates: Optional[List[WalkthroughGate]] = Field(default_factory=list)
+    sop: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class GoogleDriveDocument(BaseModel):
     """Schema for document stored or discovered in remote Google Drive."""
 

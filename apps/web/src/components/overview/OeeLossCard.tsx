@@ -21,8 +21,17 @@ const pts = (v: number) => `${(v * 100).toFixed(1)} pts`;
 export default function OeeLossCard({ losses, oee, onSelectMachine }: OeeLossCardProps): React.ReactElement {
   return (
     <section className="glass card-pad col loss-card">
-      <div className="row between" style={{ gap: 8, alignItems: 'baseline' }}>
-        <h2 className="card-title">Where OEE Is Lost</h2>
+      <div className="row between wrap" style={{ gap: 8, alignItems: 'center' }}>
+        <div className="row" style={{ alignItems: 'center', gap: 8 }}>
+          <h2 className="card-title">Where OEE Is Lost</h2>
+          <span
+            className="chip chip-neutral"
+            style={{ fontSize: 10, padding: '2px 6px' }}
+            title="Derived from real-time telemetry, defect rate and standard production model"
+          >
+            Modeled Loss Attribution
+          </span>
+        </div>
         <span className="kpi-hint">100% − losses = OEE</span>
       </div>
 

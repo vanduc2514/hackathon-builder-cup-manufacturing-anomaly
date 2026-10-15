@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from types import ModuleType
 from uuid import uuid4
 
@@ -79,9 +80,12 @@ async def open_incident(ctx: Context, node_input: DefectInjectionRequest) -> Inc
     ctx.state["reopen_count"] = 0
     ctx.state["step_delay"] = ctx.state.get("step_delay", settings.simulation_step_delay)
     blackboard.reset()
+    opened_at = datetime.now(timezone.utc).isoformat()
     blackboard.update_status(
         "detecting",
         incident_id=f"INC-{uuid4().hex[:6].upper()}",
+        opened_at=opened_at,
+        severity=node_input.severity,
         defect_type=node_input.defect_type,
         defect_rate=node_input.defect_rate,
         verification_count=0,

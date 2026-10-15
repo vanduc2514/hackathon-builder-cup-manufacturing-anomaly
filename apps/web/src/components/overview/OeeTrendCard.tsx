@@ -109,10 +109,19 @@ export default function OeeTrendCard({
     <section className="glass card-pad col oee-trend" style={{ gap: 10 }}>
       <div className="row between wrap" style={{ gap: 10, alignItems: 'flex-start' }}>
         <div className="col" style={{ gap: 4 }}>
-          <span className="eyebrow kpi-eyebrow">
-            OEE · {scope ?? LINE_NAME}
-            {range !== null ? ` · last ${rangeLabel}` : telemetry?.time_window ? ` · ${telemetry.time_window}` : ''}
-          </span>
+          <div className="row" style={{ alignItems: 'center', gap: 8 }}>
+            <span className="eyebrow kpi-eyebrow">
+              OEE · {scope ?? LINE_NAME}
+              {range !== null ? ` · last ${rangeLabel}` : telemetry?.time_window ? ` · ${telemetry.time_window}` : ''}
+            </span>
+            <span
+              className="chip chip-neutral"
+              style={{ fontSize: 10, padding: '2px 6px' }}
+              title="Derived from real-time telemetry, defect rate and standard production model"
+            >
+              Modeled Estimate
+            </span>
+          </div>
           <div className="row wrap" style={{ alignItems: 'baseline', gap: 10 }}>
             <span className="kpi-value mono">{current ? pct(current.oee) : '—'}</span>
             {delta !== null && (

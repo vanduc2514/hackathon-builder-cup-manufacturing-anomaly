@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
@@ -451,6 +451,26 @@ class IncidentState(BaseModel):
     diagnostic_request: Optional[str] = None
     visual_evidence: Optional[VisualEvidencePayload] = None
     updated_at: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
+    opened_at: Optional[str] = Field(
+        default=None,
+        description="ISO 8601 UTC timestamp when the incident was opened",
+    )
+    severity: str = Field(
+        default="medium",
+        description="Severity level: low, medium, high, critical",
+    )
+    line_id: str = Field(
+        default="cell-line-1",
+        description="Production line identifier",
+    )
+    product: str = Field(
+        default="Gearbox Casing",
+        description="Active product part name",
+    )
+    mttr_target_minutes: int = Field(
+        default=15,
+        description="Target MTTR in minutes for SLA countdown",
+    )
 
 
 class DefectInjectionRequest(BaseModel):
@@ -1019,3 +1039,51 @@ class DemoAccount(BaseModel):
     username: str
     display_name: str
     role: AuthRole
+
+
+class OeeFactors(BaseModel):
+    """Core OEE availability, performance, and quality factors."""
+
+    availability: float = Field(ge=0.0, le=1.0, description="Availability ratio (0.0 to 1.0)")
+    performance: float = Field(ge=0.0, le=1.0, description="Performance ratio (0.0 to 1.0)")
+    quality: float = Field(ge=0.0, le=1.0, description="Quality ratio (0.0 to 1.0)")
+    oee: float = Field(ge=0.0, le=1.0, description="Overall Equipment Effectiveness: A * P * Q")
+
+
+class OeePoint(OeeFactors):
+    """A point in time bucket for OEE trending."""
+
+    timestamp: str = Field(description="ISO 8601 timestamp at bucket end")
+
+
+class OeeLoss(BaseModel):
+    """Categorized loss contributing to 1 - OEE."""
+
+    kind: Literal["planned_stop", "unplanned_downtime", "speed", "quality"] = Field(
+        description="Category of OEE loss"
+    )
+    points: float = Field(ge=0.0, le=1.0, description="OEE points lost (0.0 to 1.0)")
+    machine_id: Optional[str] = Field(default=None, description="Suspect or stopped machine ID")
+    reason: Optional[str] = Field(default=None, description="Human-readable reason for loss")
+    incident_id: Optional[str] = Field(
+        default=None, description="Related incident ID if applicable"
+    )
+
+
+class MachineOee(OeeFactors):
+    """Station-level OEE metrics and historical trend series."""
+
+    machine_id: str = Field(description="Machine identifier, e.g. CNC-01, CNC-02")
+    good_parts: int = Field(default=0, ge=0, description="Count of conforming parts")
+    total_parts: int = Field(default=0, ge=0, description="Total parts produced in window")
+    series: List[OeePoint] = Field(default_factory=list, description="Trend data points")
+
+
+class LineOeeResponse(OeeFactors):
+    """Cell line-level OEE response schema."""
+
+    line_id: str = Field(description="Production line identifier, e.g. cell-line-1")
+    target: float = Field(default=0.85, ge=0.0, le=1.0, description="Configured line OEE target")
+    series: List[OeePoint] = Field(default_factory=list, description="Line trend series")
+    machines: List[MachineOee] = Field(default_factory=list, description="Station-level breakdowns")
+    losses: List[OeeLoss] = Field(default_factory=list, description="Loss attribution breakdown")

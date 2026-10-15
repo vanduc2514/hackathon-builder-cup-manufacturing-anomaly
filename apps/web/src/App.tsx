@@ -158,7 +158,8 @@ export default function App(): React.ReactElement {
   useEffect(() => {
     if (!isIncidentOpen(incident)) return;
     const id = incident.incident_id;
-    setOpenedAt((prev) => (prev[id] ? prev : { ...prev, [id]: Date.now() }));
+    const initialTime = incident.opened_at ? new Date(incident.opened_at).getTime() : Date.now();
+    setOpenedAt((prev) => (prev[id] ? prev : { ...prev, [id]: initialTime }));
     if (alertedId.current !== id) {
       alertedId.current = id;
       if (soundOn) playAlertTone();

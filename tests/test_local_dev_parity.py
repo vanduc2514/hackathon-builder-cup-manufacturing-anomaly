@@ -33,8 +33,11 @@ def test_zero_credential_orchestrator_mock_workflow():
     """Verify entire ADK multi-agent workflow runs end-to-end with AI_PROVIDER=mock."""
     saved = LlmAgent._default_model
     try:
+        import random
+
         LlmAgent.set_default_model(MockLlm())
         injection_engine.reset()
+        injection_engine.conveyor_sim.rng = random.Random(42)
         injection_engine.inject_scenario_1_cnc_tool_wear()
         orch = Orchestrator(step_delay=0)
         req = DefectInjectionRequest(

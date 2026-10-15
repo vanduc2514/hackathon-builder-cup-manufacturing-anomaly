@@ -12,10 +12,10 @@ _Checked against `backend/` on 2026-10-14. This replaces section 2 ("missing fro
 
 | # | Gap | Priority | Frontend workaround today |
 |---|---|---|---|
-| 1 | No OEE data (availability, performance, quality, losses) | P1 | Modelled in `src/lib/oee.ts` from telemetry + the defect rate |
+| 1 | No OEE data (availability, performance, quality, losses) | P1 | Schemas in `backend/core/models.py`; UI displays "Modeled Estimate" badges; modelled in `src/lib/oee.ts` |
 | 2 | `/api/telemetry/history` hardcodes the onset and window, has no relative range, and holds 1 h of seed data | P1 | Client-side range filter (15m / 30m / 1h / All) over whatever is loaded |
 | 3 | No line / station registry | P2 | `FLEET_REGISTRY` and line constants hardcoded in `src/lib/fleet.ts` |
-| 4 | Incident has no `opened_at`, severity, line or product; all timestamps are `HH:MM:SS` with no date | P2 | SLA clock starts when the browser first sees the incident; severity guessed from defect rate / UCL |
+| 4 | Incident metadata (opened_at, severity, line, product, mttr_target) | Resolved (P2) | `opened_at`, `severity`, `line_id`, `product`, `mttr_target_minutes` added to `backend/core/models.py` & workflow nodes; SLA timer persists across reloads |
 | 5 | No incident history or ESG ledger | P2 | ESG ledger stored in browser `localStorage` |
 | 6 | Only one incident at a time; no list endpoint | P2 | Dashboard supports several tabs but only ever gets one |
 | 7 | `POST /api/incidents/approve` ignores which incident is approved | P2 | Dashboard re-checks `/current` before approving |
@@ -88,6 +88,9 @@ class LineOeeResponse(OeeFactors):
     losses: List[OeeLoss]        # must sum to 1 − oee
 ```
 
+> **Implemented:** The Pydantic models above (`OeeFactors`, `OeePoint`, `OeeLoss`, `MachineOee`, `LineOeeResponse`) are defined in `backend/core/models.py`. UI components (`OeeTrendCard`, `OeeLossCard`) display visible "Modeled Estimate" and "Modeled Loss Attribution" chips so operators and judges understand the distinction from raw sensor feeds.
+
+
 With this endpoint, the frontend deletes `machineOee`, `oeeTrend`, `oeeLosses` and `computeOee` and renders the response directly.
 
 ---
@@ -120,18 +123,17 @@ Needed: `GET /api/lines/{line_id}` returning the line name, the product currentl
 
 ---
 
-## 4. Incident metadata (P2)
+## 4. Incident metadata (Resolved)
 
-`IncidentState` in `backend/core/models.py` is missing:
+`IncidentState` in `backend/core/models.py` now includes all required tracking fields:
 
-| Field | Why the dashboard needs it | Today |
+| Field | Description / Binding | Resolution Status |
 |---|---|---|
-| `opened_at` (ISO 8601) | MTTR SLA countdown on the Incidents KPI; incident duration | Clock starts when the browser first receives the incident, so it **resets on page reload** |
-| `severity` / `priority` | "High severity" in the banner, "1 Critical" KPI | `incidentSeverity()` guesses: `defect_rate / spc_ucl ≥ 1.5` → critical |
-| `line_id`, `product` | Multi-line / multi-product views | Assumes Cell Line 1, Gearbox Casing |
-| `mttr_target_minutes` | SLA countdown | `MTTR_TARGET_MIN = 15` |
-
-Also: `IncidentState.updated_at` and `AgentFinding.timestamp` are `datetime.now().strftime("%H:%M:%S")`: local time, **no date, no timezone**. The dashboard has to assume "today in the browser's timezone". Switch to `datetime.now(timezone.utc).isoformat()`, as the other models in the same file already do.
+| `opened_at` (ISO 8601 UTC) | Persisted incident start timestamp emitted by `workflow_nodes.open_incident` | Wired in `App.tsx` so the SLA countdown persists across browser reloads |
+| `severity` | Severity level: `low`, `medium`, `high`, `critical` | Sourced from `DefectInjectionRequest.severity` and prioritized in `fleet.ts:incidentSeverity` |
+| `line_id` | Production line identifier (default: `"cell-line-1"`) | Added to `IncidentState` model & TypeScript interface |
+| `product` | Part name (default: `"Gearbox Casing"`) | Added to `IncidentState` model & TypeScript interface |
+| `mttr_target_minutes` | Target MTTR in minutes (default: `15`) | Used dynamically in `ActiveIncidentsCard.tsx` SLA target calculation |
 
 ---
 

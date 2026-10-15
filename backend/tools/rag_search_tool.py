@@ -16,7 +16,10 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from backend.core.config import settings
 from backend.core.models import (
     CitationReference,
+    KnowledgeDocumentMeta,
+    KnowledgeSection,
     RAGSearchResult,
+    WalkthroughMeta,
 )
 from backend.tools.gdrive_tool import GoogleDriveConnector, gdrive_connector
 
@@ -1423,3 +1426,297 @@ def get_oem_manual_citations(asset: str, symptom: str) -> List[CitationReference
         source="vertex_ai_search",
     )
     return result.citations
+
+
+_DOCS_CACHE: Dict[str, List[KnowledgeDocumentMeta]] = {}
+
+
+def search_knowledge_free_text(
+    query: str,
+    asset: Optional[str] = None,
+    limit: int = 10,
+    data_dir: Optional[Path | str] = None,
+) -> RAGSearchResult:
+    """Free-text plain-language search over domain knowledge documents.
+
+    If dual query keys (defect_symptom + suspect_asset) resolve from the query or parameters,
+    delegates to search_knowledge_base_sync. Otherwise falls back to local BM25 with a
+    token-overlap relevance guard and deduplication.
+    """
+    clean_query = query.strip()
+    if not clean_query:
+        return RAGSearchResult(
+            defect_symptom="",
+            suspect_asset=asset or "",
+            query=clean_query,
+            citations=[],
+            confidence=0.0,
+            summary="Empty query provided.",
+            engine="local_bm25",
+            total_found=0,
+        )
+
+    dual_keys_resolved = False
+    symptom = ""
+    resolved_asset = asset or ""
+    try:
+        symptom, resolved_asset, _ = _resolve_dual_keys(
+            suspect_asset=asset,
+            query=clean_query,
+        )
+        dual_keys_resolved = True
+    except ValueError:
+        pass
+
+    if dual_keys_resolved:
+        result = search_knowledge_base_sync(
+            defect_symptom=symptom,
+            suspect_asset=resolved_asset,
+            query=clean_query,
+            max_results=limit * 2,
+            data_dir=data_dir,
+        )
+        raw_citations = result.citations
+        engine = result.engine
+    else:
+        retriever = LocalBM25Retriever(Path(data_dir)) if data_dir else _local_retriever
+        raw_citations = retriever.search(
+            defect_symptom="",
+            suspect_asset=asset or "",
+            query=clean_query,
+            max_results=max(50, limit * 5),
+        )
+        engine = "local_bm25"
+
+    # Token-overlap guard: a chunk must share >= 1 non-stopword query token with its text
+    query_tokens = set(_tokenize(clean_query))
+    if asset:
+        query_tokens.update(_tokenize(asset))
+
+    filtered_citations: List[CitationReference] = []
+    seen: Set[Tuple[str, Optional[int]]] = set()
+
+    for c in raw_citations:
+        chunk_text = f"{c.title} {c.section or ''} {c.snippet}"
+        chunk_tokens = set(_tokenize(chunk_text))
+        if not (query_tokens & chunk_tokens):
+            continue
+
+        key = (c.document_id, c.page_number)
+        if key in seen:
+            continue
+        seen.add(key)
+        filtered_citations.append(c)
+        if len(filtered_citations) >= limit:
+            break
+
+    if not filtered_citations:
+        return RAGSearchResult(
+            defect_symptom=symptom,
+            suspect_asset=resolved_asset,
+            query=clean_query,
+            citations=[],
+            confidence=0.0,
+            summary=f"No verified knowledge base documents matched query '{clean_query}'.",
+            engine=engine,
+            total_found=0,
+        )
+
+    top_score = max(c.relevance_score for c in filtered_citations)
+    avg_score = sum(c.relevance_score for c in filtered_citations) / len(filtered_citations)
+    confidence = round(min(1.0, (0.7 * top_score) + (0.3 * avg_score)), 2)
+
+    return RAGSearchResult(
+        defect_symptom=symptom,
+        suspect_asset=resolved_asset,
+        query=clean_query,
+        citations=filtered_citations,
+        confidence=confidence,
+        summary=f"Retrieved {len(filtered_citations)} verified citations via {engine}.",
+        engine=engine,
+        total_found=len(filtered_citations),
+    )
+
+
+async def search_knowledge_free_text_async(
+    query: str,
+    asset: Optional[str] = None,
+    limit: int = 10,
+    data_dir: Optional[Path | str] = None,
+) -> RAGSearchResult:
+    """Async wrapper for search_knowledge_free_text."""
+    return await asyncio.to_thread(
+        search_knowledge_free_text,
+        query=query,
+        asset=asset,
+        limit=limit,
+        data_dir=data_dir,
+    )
+
+
+def list_knowledge_documents(
+    data_dir: Optional[Path | str] = None,
+) -> List[KnowledgeDocumentMeta]:
+    """Load and return the curated knowledge base document catalogue.
+
+    Merges index.json manifest metadata with document frontmatter and cached in-memory.
+    """
+    base_dir = Path(data_dir) if data_dir else DEFAULT_KNOWLEDGE_DIR
+    cache_key = str(base_dir.resolve())
+    if cache_key in _DOCS_CACHE:
+        return _DOCS_CACHE[cache_key]
+
+    index_file = base_dir / "index.json"
+    manifest_docs: Dict[str, Dict[str, Any]] = {}
+    if index_file.exists():
+        try:
+            manifest_data = json.loads(index_file.read_text(encoding="utf-8"))
+            for d in manifest_data.get("documents", []):
+                manifest_docs[d["document_id"]] = d
+        except Exception as exc:
+            logger.warning("Failed to parse index.json in list_knowledge_documents: %s", exc)
+
+    documents: List[KnowledgeDocumentMeta] = []
+
+    doc_ids = list(manifest_docs.keys()) if manifest_docs else []
+    for md_path in sorted(base_dir.rglob("*.md")):
+        if "drive" in md_path.parts or ".git" in md_path.parts:
+            continue
+        rel_id = str(md_path.relative_to(base_dir))
+        if rel_id not in doc_ids:
+            doc_ids.append(rel_id)
+
+    for doc_id in doc_ids:
+        manifest_info = manifest_docs.get(doc_id, {})
+        doc_file = base_dir / doc_id
+        meta: Dict[str, Any] = {}
+        raw_text = ""
+        if doc_file.exists():
+            raw_text = doc_file.read_text(encoding="utf-8")
+            meta, _ = _local_retriever._parse_frontmatter(raw_text)
+
+        title = meta.get("title") or manifest_info.get("title", doc_id)
+        category = meta.get("category") or manifest_info.get("category", "manual")
+        pages = int(manifest_info.get("total_pages", meta.get("pages", 1)))
+        revision = meta.get("revision") or manifest_info.get("revision")
+        effective_date = meta.get("effective_date") or meta.get("incident_date")
+        last_revised = _extract_last_revised_date(meta, raw_text) or effective_date
+
+        machines: List[str] = []
+        if "machine_id" in meta and meta["machine_id"]:
+            machines.append(str(meta["machine_id"]).upper())
+        elif "machines" in meta and meta["machines"]:
+            machines.extend([str(m).upper() for m in meta["machines"]])
+        elif "machines" in manifest_info:
+            machines.extend([str(m).upper() for m in manifest_info["machines"]])
+
+        component = meta.get("component")
+        machine_id = meta.get("machine_id") or (machines[0] if len(machines) == 1 else None)
+
+        tags: List[str] = []
+        if "tags" in meta and isinstance(meta["tags"], list):
+            tags.extend(str(t) for t in meta["tags"])
+        if "key_topics" in manifest_info and isinstance(manifest_info["key_topics"], list):
+            for t in manifest_info["key_topics"]:
+                if t not in tags:
+                    tags.append(t)
+
+        linked_sops: List[str] = []
+        if meta.get("effective_sop"):
+            sop_match = re.search(r"SOP-[A-Z0-9\-]+", str(meta["effective_sop"]))
+            if sop_match:
+                linked_sops.append(sop_match.group(0))
+        for sop in re.findall(r"\bSOP-[A-Z0-9\-]+\b", raw_text):
+            if sop not in linked_sops:
+                linked_sops.append(sop)
+
+        sections: List[KnowledgeSection] = []
+        page_anchors = manifest_info.get("page_anchors", {})
+        if isinstance(page_anchors, dict):
+            for p_str, p_title in sorted(
+                page_anchors.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 0
+            ):
+                sections.append(
+                    KnowledgeSection(
+                        page=int(p_str) if p_str.isdigit() else 1,
+                        title=str(p_title),
+                    )
+                )
+
+        key_citations: List[CitationReference] = []
+        for cit in manifest_info.get("critical_citations", []):
+            snippet = cit.get("snippet", "")
+            page_num = cit.get("page_number")
+            section = cit.get("section")
+            cit_revised = _extract_last_revised_date({}, snippet) or last_revised
+            ref = CitationReference(
+                document_id=doc_id,
+                title=title,
+                page_number=page_num,
+                section=section,
+                snippet=snippet,
+                relevance_score=1.0,
+                last_revised=cit_revised,
+            )
+            ref.citation = ref.formatted_citation()
+            key_citations.append(ref)
+
+        summary = meta.get("summary") or meta.get("description")
+        if not summary:
+            if key_citations:
+                summary = key_citations[0].snippet
+            else:
+                summary = f"{title} ({category})"
+
+        doc_meta = KnowledgeDocumentMeta(
+            document_id=doc_id,
+            title=title,
+            category=category,
+            machine_id=machine_id,
+            component=component,
+            version=str(revision or "1.0"),
+            pages=pages,
+            last_revised=last_revised,
+            tags=tags,
+            machines=machines,
+            revision=str(revision) if revision else None,
+            effective_date=str(effective_date) if effective_date else None,
+            linked_sops=linked_sops,
+            sections=sections,
+            key_citations=key_citations,
+            summary=summary,
+        )
+        documents.append(doc_meta)
+
+    _DOCS_CACHE[cache_key] = documents
+    return documents
+
+
+def list_walkthroughs(
+    data_dir: Optional[Path | str] = None,
+) -> List[WalkthroughMeta]:
+    """Scan and return expert technician video walkthrough metadata.
+
+    Loads JSON descriptors from expert_videos/*.json, skipping malformed files with a warning.
+    """
+    base_dir = Path(data_dir) if data_dir else DEFAULT_KNOWLEDGE_DIR
+    videos_dir = base_dir / "expert_videos"
+    if not videos_dir.exists() or not videos_dir.is_dir():
+        return []
+
+    walkthroughs: List[WalkthroughMeta] = []
+    for json_file in sorted(videos_dir.glob("*.json")):
+        try:
+            content = json_file.read_text(encoding="utf-8")
+            data = json.loads(content)
+            if not isinstance(data, dict):
+                logger.warning("Walkthrough %s is not a valid JSON dict; skipping.", json_file.name)
+                continue
+            if "id" not in data:
+                data["id"] = json_file.stem
+            wt = WalkthroughMeta(**data)
+            walkthroughs.append(wt)
+        except Exception as exc:
+            logger.warning("Failed to parse walkthrough JSON from %s: %s", json_file.name, exc)
+
+    return walkthroughs

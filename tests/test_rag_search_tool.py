@@ -463,3 +463,41 @@ def test_multi_query_expansion():
     # Checks for OEM terminology and Vietnamese equivalent
     assert any("flank wear" in q for q in queries)
     assert any("xước" in q for q in queries)
+
+
+def test_search_knowledge_free_text_dual_keys_and_bm25():
+    """Verify search_knowledge_free_text delegates when dual keys resolve and falls back to BM25."""
+    from backend.tools.rag_search_tool import search_knowledge_free_text
+
+    # Dual keys resolve from query
+    res_dual = search_knowledge_free_text("spindle vibration on CNC-02")
+    assert isinstance(res_dual, RAGSearchResult)
+    assert res_dual.confidence > 0.0
+    assert len(res_dual.citations) > 0
+
+    # Plain text question uses BM25 fallback
+    res_plain = search_knowledge_free_text("Why does CNC-02 leave scratches?")
+    assert res_plain.engine == "local_bm25"
+    assert res_plain.confidence > 0.8
+    assert len(res_plain.citations) > 0
+
+
+def test_search_knowledge_free_text_async():
+    """Verify async wrapper returns valid search results."""
+    import asyncio
+
+    from backend.tools.rag_search_tool import search_knowledge_free_text_async
+
+    res = asyncio.run(search_knowledge_free_text_async("Why does CNC-02 leave scratches?"))
+    assert isinstance(res, RAGSearchResult)
+    assert len(res.citations) > 0
+
+
+def test_list_knowledge_documents_caching():
+    """Verify list_knowledge_documents returns 7 items and caches result."""
+    from backend.tools.rag_search_tool import list_knowledge_documents
+
+    docs1 = list_knowledge_documents()
+    docs2 = list_knowledge_documents()
+    assert len(docs1) == 7
+    assert docs1 is docs2

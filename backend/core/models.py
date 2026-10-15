@@ -39,6 +39,13 @@ class CitationReference(BaseModel):
         return ", ".join(parts)
 
 
+class KnowledgeSection(BaseModel):
+    """A page anchor or section header within a knowledge document."""
+
+    page: int
+    title: str
+
+
 class KnowledgeDocumentMeta(BaseModel):
     """Metadata schema for curated domain documents in the knowledge base."""
 
@@ -51,6 +58,13 @@ class KnowledgeDocumentMeta(BaseModel):
     pages: int = 1
     last_revised: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
+    machines: List[str] = Field(default_factory=list)
+    revision: Optional[str] = None
+    effective_date: Optional[str] = None
+    linked_sops: List[str] = Field(default_factory=list)
+    sections: List[KnowledgeSection] = Field(default_factory=list)
+    key_citations: List[CitationReference] = Field(default_factory=list)
+    summary: Optional[str] = None
 
 
 class GoogleDriveDocument(BaseModel):
@@ -293,6 +307,31 @@ class RepairVideoAnalysis(BaseModel):
     )
 
 
+class WalkthroughChapter(BaseModel):
+    """Chapter checkpoint in a technician repair walkthrough video."""
+
+    label: str
+    at: int = 0
+
+
+class WalkthroughMeta(BaseModel):
+    """Metadata schema for expert technician video walkthroughs."""
+
+    id: str
+    title: str
+    description: Optional[str] = None
+    asset: Optional[str] = None
+    category: Optional[str] = None
+    duration_sec: int = 0
+    video_uri: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    chapters: List[WalkthroughChapter] = Field(default_factory=list)
+    key_steps: List[str] = Field(default_factory=list)
+    linked_sop: Optional[str] = None
+    required: bool = False
+    tags: List[str] = Field(default_factory=list)
+
+
 class VerificationResult(BaseModel):
     """Post-repair conveyor verification outcome."""
 
@@ -513,27 +552,17 @@ class IncidentSummary(BaseModel):
     defect_type: Optional[str] = Field(default=None, description="Classified defect symptom name")
     defect_rate: float = Field(default=0.0, description="Defect rate at capture or closure")
     spc_ucl: float = Field(default=0.030, description="Upper specification/control limit")
-    suspect_machine: Optional[str] = Field(
-        default=None, description="Target suspect equipment ID"
-    )
+    suspect_machine: Optional[str] = Field(default=None, description="Target suspect equipment ID")
     suspect_tool: Optional[str] = Field(
         default=None, description="Suspect cutter or tool identifier"
     )
     root_cause: Optional[str] = Field(default=None, description="Identified root cause summary")
     repair_done: bool = Field(default=False, description="Whether repair has been executed")
-    approved: bool = Field(
-        default=False, description="Whether incident has shift-leader sign-off"
-    )
-    verification_count: int = Field(
-        default=0, description="Consecutive verified parts count"
-    )
+    approved: bool = Field(default=False, description="Whether incident has shift-leader sign-off")
+    verification_count: int = Field(default=0, description="Consecutive verified parts count")
     verification_target: int = Field(default=50, description="Target verified parts count")
-    opened_at: Optional[str] = Field(
-        default=None, description="ISO timestamp when incident opened"
-    )
-    closed_at: Optional[str] = Field(
-        default=None, description="ISO timestamp when incident closed"
-    )
+    opened_at: Optional[str] = Field(default=None, description="ISO timestamp when incident opened")
+    closed_at: Optional[str] = Field(default=None, description="ISO timestamp when incident closed")
     updated_at: Optional[str] = Field(default=None, description="ISO timestamp of last update")
     impact: Optional[ImpactMetrics] = Field(
         default=None, description="Calculated impact metrics if closed"

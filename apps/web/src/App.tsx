@@ -1,15 +1,14 @@
 // App shell: owns the SSE incident subscription, backend health, ESG ledger, simulation polling and the glass chrome.
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar, { type BackendLink, type DashboardTab, type IncidentTab } from './components/Sidebar';
 import TopHeader from './components/TopHeader';
 import DemoController from './components/DemoController';
 import Dashboard from './pages/Dashboard';
 import { ACTIVE_PRODUCT, productIncidents } from './lib/incident';
-import { isIncidentOpen, type EsgLedgerEntry } from './lib/fleet';
-import { buildSolution } from './lib/eightD';
+import { isIncidentOpen, toEsgTotals, toLedgerEntries } from './lib/fleet';
 import { streamUrl } from './lib/api';
 import { authFetch, withToken } from './lib/auth';
-import type { IncidentState, SimulationStatusResponse } from './types';
+import type { EsgLedgerResponse, IncidentState, SimulationStatusResponse } from './types';
 
 export type ToastTone = 'success' | 'error' | 'info';
 
@@ -23,7 +22,6 @@ interface OpenIncidentTab extends IncidentTab {
   snapshot: IncidentState;
 }
 
-const ESG_KEY = 'kaizen.esgLedger.v1';
 const SOUND_KEY = 'kaizen.alertSound';
 
 const CRUMB: Record<DashboardTab, string> = {
@@ -80,9 +78,7 @@ export default function App(): React.ReactElement {
   const [simOpen, setSimOpen] = useState<boolean>(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [link, setLink] = useState<BackendLink | null>(null);
-  const [esgLedger, setEsgLedger] = useState<EsgLedgerEntry[]>(() =>
-    readStorage<EsgLedgerEntry[]>(ESG_KEY, []).filter((e) => e.solution?.approved),
-  );
+  const [ledger, setLedger] = useState<EsgLedgerResponse | null>(null);
   const [openedAt, setOpenedAt] = useState<Record<string, number>>({});
   const [soundOn, setSoundOn] = useState<boolean>(() => readStorage<boolean>(SOUND_KEY, true));
   const alertedId = useRef<string | null>(null);
@@ -166,21 +162,25 @@ export default function App(): React.ReactElement {
     }
   }, [incident, soundOn]);
 
-  // Each signed-off incident is booked into the ESG ledger: backend impact (CO2 totals) plus its verified-solution snapshot.
-  // Closed-but-unsigned 8Ds stay on the incident page until the shift leader approves them.
+  const refreshLedger = useCallback(async () => {
+    try {
+      const res = await authFetch('/api/impact/ledger');
+      if (res.ok) {
+        const data = (await res.json()) as EsgLedgerResponse;
+        setLedger(data);
+      }
+    } catch (err) {
+      console.warn('ESG ledger fetch failed:', err);
+    }
+  }, []);
+
   useEffect(() => {
-    if (!incident?.impact || !incident.approved) return;
-    const solution = buildSolution(incident);
-    const entry: EsgLedgerEntry = { incidentId: incident.incident_id, impact: incident.impact, solution };
-    setEsgLedger((prev) => {
-      const old = prev.find((e) => e.incidentId === entry.incidentId);
-      // Keep the first-recorded time so the table order and dates don't jump on every SSE update.
-      const keep = old?.solution ? { ...entry, solution: { ...solution, recordedAt: old.solution.recordedAt } } : entry;
-      const next = old ? prev.map((e) => (e.incidentId === entry.incidentId ? keep : e)) : [...prev, entry];
-      writeStorage(ESG_KEY, next);
-      return next;
-    });
-  }, [incident]);
+    refreshLedger();
+  }, [refreshLedger]);
+
+  useEffect(() => {
+    refreshLedger();
+  }, [incident?.incident_id, incident?.status, incident?.approved, refreshLedger]);
 
   const toggleSound = () => {
     setSoundOn((v) => {
@@ -253,6 +253,26 @@ export default function App(): React.ReactElement {
     if (currentTab === 'incident-detail') setCurrentTab(next ? 'incident-detail' : 'overview');
   };
 
+  const esgLedger = useMemo(() => (ledger ? toLedgerEntries(ledger) : []), [ledger]);
+  const esgTotals = useMemo(
+    () =>
+      toEsgTotals(
+        ledger?.totals ?? {
+          incidents: 0,
+          scrap_avoided: 0,
+          downtime_minutes: 0,
+          energy_kwh: 0,
+          co2_kg: 0,
+          energy_co2_kg: 0,
+          material_co2_kg: 0,
+          cost_savings_usd: 0,
+        },
+      ),
+    [ledger],
+  );
+  const downtimeMinutes = ledger?.totals.downtime_minutes ?? 0;
+  const factoryType = ledger?.factory_type ?? 'aluminum_cnc';
+
   const openCount = isIncidentOpen(incident) ? 1 : 0;
   const activeTab = incidentTabs.find((t) => t.id === activeIncidentId);
   const openIncident = activeTab
@@ -303,6 +323,9 @@ export default function App(): React.ReactElement {
           openIncident={openIncident}
           openedAt={isIncidentOpen(incident) ? openedAt[incident.incident_id] ?? null : null}
           esgLedger={esgLedger}
+          esgTotals={esgTotals}
+          downtimeMinutes={downtimeMinutes}
+          factoryType={factoryType}
           onRefreshIncident={refreshIncident}
           onSelectTab={setCurrentTab}
           onOpenIncident={openIncidentTab}
@@ -319,6 +342,7 @@ export default function App(): React.ReactElement {
         onStatusChange={() => {
           refreshSimStatus();
           refreshIncident();
+          refreshLedger();
         }}
         onNotify={notify}
       />

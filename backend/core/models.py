@@ -691,6 +691,52 @@ class IncidentSummary(BaseModel):
         )
 
 
+class EsgLedgerTotals(BaseModel):
+    """Cumulative ESG and operational savings across signed-off incidents."""
+
+    incidents: int = Field(default=0, description="Total signed-off incidents in the ledger")
+    scrap_avoided: int = Field(default=0, description="Cumulative scrap parts avoided")
+    downtime_minutes: int = Field(default=0, description="Cumulative downtime minutes prevented")
+    energy_kwh: float = Field(default=0.0, description="Cumulative energy savings in kWh")
+    co2_kg: float = Field(default=0.0, description="Cumulative CO2 emission savings in kg")
+    energy_co2_kg: float = Field(
+        default=0.0, description="Cumulative energy-related CO2 savings in kg"
+    )
+    material_co2_kg: float = Field(
+        default=0.0, description="Cumulative material-related CO2 savings in kg"
+    )
+    cost_savings_usd: float = Field(default=0.0, description="Cumulative cost savings in USD")
+
+
+class EsgLedgerEntryResponse(BaseModel):
+    """One signed-off incident booked into the ESG ledger."""
+
+    incident_id: str = Field(description="Incident identifier, e.g. INC-0412")
+    closed_at: Optional[str] = Field(
+        default=None, description="ISO timestamp when incident was closed"
+    )
+    approved: bool = Field(
+        default=True, description="Whether incident has shift-leader sign-off"
+    )
+    impact: ImpactMetrics = Field(description="Impact metrics computed upon incident resolution")
+    incident: IncidentState = Field(
+        description="Full incident snapshot for client-side 8D / verified solution derivation"
+    )
+
+
+class EsgLedgerResponse(BaseModel):
+    """ESG impact ledger: cumulative totals plus per-incident entries (newest first)."""
+
+    totals: EsgLedgerTotals = Field(description="Cumulative totals across all booked entries")
+    entries: List[EsgLedgerEntryResponse] = Field(
+        default_factory=list, description="Signed-off incident ledger entries (newest first)"
+    )
+    factory_type: str = Field(
+        default="aluminum_cnc",
+        description="Factory type of the newest entry, or aluminum_cnc if empty",
+    )
+
+
 class DefectInjectionRequest(BaseModel):
     """Defect signal the Orchestrator receives to open an incident (demo inject; edge/SPC later)."""
 

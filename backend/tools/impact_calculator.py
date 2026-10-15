@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from backend.core.models import (
+    EsgLedgerEntryResponse,
+    EsgLedgerResponse,
+    EsgLedgerTotals,
     ImpactCalculationRequest,
     ImpactMetrics,
+    IncidentState,
     ManufacturingBenchmark,
 )
 
@@ -279,4 +283,69 @@ async def calculate_impact_adk_tool(
         factory_type=factory_type,
         earlier_detection_minutes=earlier_detection_minutes,
         line_speed_parts_per_min=line_speed_parts_per_min,
+    )
+
+
+def build_esg_ledger(incidents: Iterable[IncidentState]) -> EsgLedgerResponse:
+    """Aggregates cumulative ESG savings and entries for closed, signed-off incidents.
+
+    - Filters for status == "closed", approved is True, and impact is not None
+    - De-duplicates by incident_id (keeps newest entry)
+    - Orders entries newest-first by closed_at (fallback updated_at)
+    - Sums 7 numeric metrics into EsgLedgerTotals with floats rounded to 2 decimal places
+    - Resolves factory_type from the newest entry (default "aluminum_cnc")
+    """
+    candidates = [
+        inc
+        for inc in incidents
+        if inc.status == "closed" and inc.approved and inc.impact is not None
+    ]
+    candidates.sort(
+        key=lambda inc: inc.closed_at or inc.updated_at or "",
+        reverse=True,
+    )
+    seen: set[str] = set()
+    entries: List[EsgLedgerEntryResponse] = []
+    for inc in candidates:
+        if inc.incident_id not in seen:
+            seen.add(inc.incident_id)
+            entries.append(
+                EsgLedgerEntryResponse(
+                    incident_id=inc.incident_id,
+                    closed_at=inc.closed_at,
+                    approved=inc.approved,
+                    impact=inc.impact,
+                    incident=inc,
+                )
+            )
+
+    scrap_avoided = sum(e.impact.scrap_avoided for e in entries)
+    downtime_minutes = sum(e.impact.downtime_minutes for e in entries)
+    energy_kwh = round(sum(e.impact.energy_kwh for e in entries), 2)
+    co2_kg = round(sum(e.impact.co2_kg for e in entries), 2)
+    energy_co2_kg = round(sum(e.impact.energy_co2_kg for e in entries), 2)
+    material_co2_kg = round(sum(e.impact.material_co2_kg for e in entries), 2)
+    cost_savings_usd = round(sum(e.impact.cost_savings_usd for e in entries), 2)
+
+    totals = EsgLedgerTotals(
+        incidents=len(entries),
+        scrap_avoided=scrap_avoided,
+        downtime_minutes=downtime_minutes,
+        energy_kwh=energy_kwh,
+        co2_kg=co2_kg,
+        energy_co2_kg=energy_co2_kg,
+        material_co2_kg=material_co2_kg,
+        cost_savings_usd=cost_savings_usd,
+    )
+
+    factory_type = (
+        entries[0].impact.factory_type or "aluminum_cnc"
+        if entries
+        else "aluminum_cnc"
+    )
+
+    return EsgLedgerResponse(
+        totals=totals,
+        entries=entries,
+        factory_type=factory_type,
     )

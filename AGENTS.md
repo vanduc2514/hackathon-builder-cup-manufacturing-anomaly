@@ -320,7 +320,7 @@ Agents should never violate these:
 
 1. **`backend/core/models.py` is the single schema source of truth.** All Pydantic models live here. Never define a competing schema elsewhere.
 2. **All incident input and output goes through the Orchestrator.** External events (defect/SPC signal), technician input and shift-leader approval enter via `backend/agents/orchestrator.py` (`Orchestrator.start_incident` / `approve` / `reset`); API routes never write `backend/core/blackboard.py`. Agents receive the board snapshot from the workflow, return a draft (`FindingDraft`, `VerificationResult`, …) and never touch the Blackboard or call each other; workflow nodes in `workflow_nodes.py` are the only Blackboard writers. Exceptions:
-   - Read-only output transport: `GET /api/incidents/current` and the SSE stream read the Blackboard directly.
+   - Read-only output transport: `GET /api/incidents/current`, `GET /api/incidents/history`, `GET /api/impact/ledger`, and the SSE stream read the Blackboard directly.
    - Read-only agent tool lookups (BigQuery, RAG, Gemini) are data queries, not incident I/O.
    - Data-plane ingestion: Pub/Sub → BigQuery raw telemetry/traceability storage.
    - Technician Copilot ↔ technician live voice/camera stream (Gemini Live); the Orchestrator starts/ends the session and receives its outcome.

@@ -1,5 +1,7 @@
 // Line Overview data helpers: merges telemetry + the live incident into fleet rows, OEE, severity and shift info.
 import type {
+  EsgLedgerResponse,
+  EsgLedgerTotals,
   FleetRegistryResponse,
   ImpactMetrics,
   IncidentState,
@@ -7,7 +9,7 @@ import type {
   TelemetryPoint,
 } from '../types';
 import { isIncidentActive } from './incident';
-import type { VerifiedSolution } from './eightD';
+import { buildSolution, type VerifiedSolution } from './eightD';
 
 export const LINE_NAME = 'Cell Line 1';
 export const LINE_LABEL = 'Cell Line 1: Turning & Milling';
@@ -179,4 +181,31 @@ export function sumEsg(entries: EsgLedgerEntry[]): EsgTotals {
 
 export function formatCo2(kg: number): string {
   return kg >= 1000 ? `${(kg / 1000).toFixed(2)} t` : `${kg.toFixed(1)} kg`;
+}
+
+
+export function toLedgerEntries(res: EsgLedgerResponse): EsgLedgerEntry[] {
+  return (res.entries ?? []).map((e) => {
+    const solution = buildSolution(e.incident);
+    return {
+      incidentId: e.incident_id,
+      impact: e.impact,
+      solution: {
+        ...solution,
+        recordedAt: e.closed_at ?? e.incident.updated_at,
+      },
+    };
+  });
+}
+
+export function toEsgTotals(t: EsgLedgerTotals): EsgTotals {
+  return {
+    co2: t.co2_kg,
+    energyCo2: t.energy_co2_kg,
+    materialCo2: t.material_co2_kg,
+    energyKwh: t.energy_kwh,
+    scrap: t.scrap_avoided,
+    cost: t.cost_savings_usd,
+    incidents: t.incidents,
+  };
 }

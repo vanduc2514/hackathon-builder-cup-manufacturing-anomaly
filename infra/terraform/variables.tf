@@ -62,6 +62,18 @@ variable "gemini_model" {
   default     = "gemini-2.5-flash-lite"
 }
 
+variable "gemini_live_model" {
+  description = "Gemini Live model used for multimodal technician copilot WebSocket streaming."
+  type        = string
+  default     = "gemini-2.0-flash-exp"
+}
+
+variable "gemini_live_simulation_mode" {
+  description = "Whether Gemini Live runs in local simulation mode (true) or live API mode (false)."
+  type        = bool
+  default     = false
+}
+
 variable "gdrive_folder_id" {
   description = "Google Drive folder ID for hybrid RAG; GDRIVE_FOLDER_ID is omitted when null."
   type        = string

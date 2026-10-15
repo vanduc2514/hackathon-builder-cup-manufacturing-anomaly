@@ -11,6 +11,7 @@ from backend.core.config import settings
 from backend.core.firestore_adapter import FirestoreAdapter, get_firestore_adapter
 from backend.core.models import (
     AgentFinding,
+    HandoverNote,
     IncidentState,
     MachineTelemetryPayload,
     TelemetryAlert,
@@ -101,6 +102,14 @@ class Blackboard:
         self._persist()
         return self._state
 
+    def add_handover_note(self, note: HandoverNote) -> IncidentState:
+        """Appends a technician shift handover note to the incident and persists/notifies."""
+        self._state.handover_notes.append(note)
+        self._record_in_history(self._state)
+        self._notify()
+        self._persist()
+        return self._state
+
     def attach_field_evidence(
         self,
         finding: AgentFinding,
@@ -114,7 +123,9 @@ class Blackboard:
         update_dict["diagnostic_request"] = None
         self._state = IncidentState(**update_dict)
         self._state.findings.append(finding)
+        self._record_in_history(self._state)
         self._notify()
+        self._persist()
         return self._state
 
     def record_telemetry(self, telemetry: MachineTelemetryPayload) -> IncidentState:

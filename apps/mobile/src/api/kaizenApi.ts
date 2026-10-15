@@ -9,6 +9,7 @@ import type {
   EvidenceUploadResponse,
   GeminiLiveServiceStatus,
   GeminiLiveSessionStatus,
+  HandoverNote,
   IncidentState,
   IncidentSummary,
   MultiMachineTelemetryResponse,
@@ -60,6 +61,16 @@ export function uploadIncidentEvidence(
   if (notes) form.append('notes', notes);
   return getJson<EvidenceUploadResponse>('/api/incidents/evidence', { method: 'POST', body: form });
 }
+
+/** `POST /api/incidents/handover`: records a technician shift handover note on the active incident. */
+export function postHandoverNote(note: string): Promise<HandoverNote> {
+  return getJson<HandoverNote>('/api/incidents/handover', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ note }),
+  });
+}
+
 
 export function fetchTelemetryBaseline(): Promise<TelemetryBaselineResponse> {
   return getJson<TelemetryBaselineResponse>('/api/telemetry/baseline');

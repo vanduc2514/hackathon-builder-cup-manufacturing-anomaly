@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
+
 from backend.core.blackboard import Blackboard
-from backend.core.models import AgentFinding
+from backend.core.models import AgentFinding, HandoverNote
 
 
 def test_blackboard_finding_addition():
@@ -85,4 +88,36 @@ def test_blackboard_list_incidents_in_memory_fallback():
     closed_only = bb.list_incidents(status="closed")
     assert all(i.status == "closed" for i in closed_only)
     assert any(i.incident_id == "INC-001" for i in closed_only)
+
+
+def test_blackboard_add_handover_note():
+    bb = Blackboard()
+    note1 = HandoverNote(author="Technician Jane", note="Tool insert replaced on CNC-02.")
+    note2 = HandoverNote(author="Shift Lead Bob", note="Verification batch running smoothly.")
+
+    listener_queue = asyncio.Queue()
+    bb._listeners.append(listener_queue)
+
+    try:
+        bb.add_handover_note(note1)
+        bb.add_handover_note(note2)
+
+        state = bb.get_state()
+        assert len(state.handover_notes) == 2
+        assert state.handover_notes[0].author == "Technician Jane"
+        assert state.handover_notes[0].note == "Tool insert replaced on CNC-02."
+        assert state.handover_notes[1].author == "Shift Lead Bob"
+        assert state.handover_notes[1].note == "Verification batch running smoothly."
+
+        # Verify event notifications were queued
+        assert listener_queue.qsize() == 2
+        payload1 = json.loads(listener_queue.get_nowait())
+        assert len(payload1.get("handover_notes", [])) == 1
+        payload2 = json.loads(listener_queue.get_nowait())
+        assert len(payload2.get("handover_notes", [])) == 2
+    finally:
+        if listener_queue in bb._listeners:
+            bb._listeners.remove(listener_queue)
+
+
 

@@ -141,6 +141,12 @@ export interface TelemetryAlert {
   message: string;
 }
 
+export interface HandoverNote {
+  author: string;
+  note: string;
+  created_at: string;
+}
+
 export interface IncidentState {
   incident_id: string;
   status: IncidentStatus;
@@ -161,6 +167,7 @@ export interface IncidentState {
   latest_telemetry?: MachineTelemetryPayload | null;
   telemetry_alerts?: TelemetryAlert[];
   diagnostic_request?: string | null;
+  handover_notes?: HandoverNote[];
   opened_at?: string | null;
   closed_at?: string | null;
   severity?: 'low' | 'medium' | 'high' | 'critical' | string | null;

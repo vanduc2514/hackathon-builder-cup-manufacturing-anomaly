@@ -24,11 +24,13 @@ from backend.core.models import (
     AgentFinding,
     DefectInjectionRequest,
     FindingDraft,
+    HandoverNote,
     IncidentState,
     QualityInspectionReport,
     RootCauseFindingDraft,
     ScribeDraft,
     VerificationResult,
+    VisualEvidencePayload,
 )
 
 logger = logging.getLogger(__name__)
@@ -321,3 +323,23 @@ async def record_learning(node_input: FindingDraft) -> None:
 async def escalate_incident(node_input: str) -> None:
     blackboard.update_status("escalated", status_reason=node_input)
     logger.warning("Incident %s escalated: %s", blackboard.get_state().incident_id, node_input)
+
+
+def record_handover_note(author: str, note: str) -> HandoverNote:
+    """Records a technician handover note on the Blackboard IncidentState."""
+    handover = HandoverNote(
+        author=author,
+        note=note,
+        created_at=datetime.now(timezone.utc),
+    )
+    blackboard.add_handover_note(handover)
+    return handover
+
+
+def record_field_evidence_payload(
+    finding: AgentFinding,
+    visual_evidence: VisualEvidencePayload | None = None,
+) -> IncidentState:
+    """Records technician diagnostic field evidence and optional visual payload on the Blackboard."""
+    return blackboard.attach_field_evidence(finding, visual_evidence)
+

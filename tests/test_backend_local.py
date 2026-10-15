@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 
 import pytest
 from fastapi.testclient import TestClient
@@ -222,3 +223,53 @@ def test_app_lifespan_startup_and_shutdown() -> None:
             assert isinstance(state, IncidentState)
 
     asyncio.run(_run())
+
+
+def test_incident_handover_endpoint() -> None:
+    """Verifies that POST /api/incidents/handover records a note on the incident via Orchestrator."""
+    client = TestClient(app)
+
+    response = client.post("/api/incidents/handover", json={"note": "Shift 1 completed insert swap on CNC-01"})
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["note"] == "Shift 1 completed insert swap on CNC-01"
+    assert data["author"] == "Test"
+    assert "created_at" in data
+
+    # Verify that the note is reflected on GET /api/incidents/current
+    current = client.get("/api/incidents/current").json()
+    notes = current.get("handover_notes", [])
+    assert len(notes) == 1
+    assert notes[0]["note"] == "Shift 1 completed insert swap on CNC-01"
+    assert notes[0]["author"] == "Test"
+
+
+def test_incident_handover_validation() -> None:
+    """Verifies that empty or whitespace-only handover notes are rejected with 422."""
+    client = TestClient(app)
+
+    for empty in ("", "   ", "\n\t"):
+        response = client.post("/api/incidents/handover", json={"note": empty})
+        assert response.status_code == 422
+
+
+def test_incident_evidence_routes_through_orchestrator(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verifies that POST /api/incidents/evidence calls orchestrator.attach_evidence (Key Invariant 2)."""
+    from backend.agents.orchestrator import orchestrator
+
+    called = False
+
+    def mock_attach_evidence(finding, visual_evidence=None):
+        nonlocal called
+        called = True
+        return blackboard.attach_field_evidence(finding, visual_evidence)
+
+    monkeypatch.setattr(orchestrator, "attach_evidence", mock_attach_evidence)
+
+    client = TestClient(app)
+    file_content = b"fake-jpeg-data"
+    files = {"file": ("test.jpg", io.BytesIO(file_content), "image/jpeg")}
+    response = client.post("/api/incidents/evidence", files=files, data={"notes": "Visual check confirmed"})
+    assert response.status_code == 200
+    assert called is True
+

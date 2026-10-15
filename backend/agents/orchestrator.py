@@ -37,6 +37,8 @@ from backend.agents.workflow_nodes import (
     rca_gate,
     record_detection,
     record_field_evidence,
+    record_field_evidence_payload,
+    record_handover_note,
     record_learning,
     record_process_analysis,
     record_resolution,
@@ -48,7 +50,14 @@ from backend.agents.workflow_nodes import (
 )
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
-from backend.core.models import DefectInjectionRequest, IncidentState, SimulationStatusResponse
+from backend.core.models import (
+    AgentFinding,
+    DefectInjectionRequest,
+    HandoverNote,
+    IncidentState,
+    SimulationStatusResponse,
+    VisualEvidencePayload,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -306,6 +315,18 @@ class Orchestrator:
         if state.status != "closed" or state.approved:
             return None
         return blackboard.update_status("closed", approved=True)
+
+    def add_handover_note(self, author: str, note: str) -> HandoverNote:
+        """Dispatches a technician handover note addition through the workflow node."""
+        return record_handover_note(author=author, note=note)
+
+    def attach_evidence(
+        self,
+        finding: AgentFinding,
+        visual_evidence: VisualEvidencePayload | None = None,
+    ) -> IncidentState:
+        """Dispatches technician field evidence through the workflow node (Key Invariant 2)."""
+        return record_field_evidence_payload(finding=finding, visual_evidence=visual_evidence)
 
     async def reset(self) -> IncidentState:
         """Cancels any running workflow and restores the baseline Blackboard."""

@@ -8,7 +8,7 @@ import type {
   WorkStage,
 } from '../../types/mobile';
 import { logout, useSession } from '../../api/auth';
-import { dataUrlToBlob, fetchIncidentHistory, uploadIncidentEvidence } from '../../api/kaizenApi';
+import { dataUrlToBlob, fetchIncidentHistory, postHandoverNote, uploadIncidentEvidence } from '../../api/kaizenApi';
 import { useTelemetry } from '../../hooks/useTelemetry';
 import MobileNav, { type MobileTab } from './MobileNav';
 import MobileWorkList from './MobileWorkList';
@@ -198,7 +198,7 @@ export default function MobileApp({ incident, history }: MobileAppProps): React.
     incidentId: '',
     items: {},
   });
-  // Handover notes have no backend endpoint yet; they stay on this device.
+  // Handover notes local cache for demo orders or offline resilience.
   const [handoverNotes, setHandoverNotes] = useState<Record<string, string>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevStatusRef = useRef<string | undefined>(undefined);
@@ -373,17 +373,24 @@ export default function MobileApp({ incident, history }: MobileAppProps): React.
   };
 
   /**
-   * Finishes the guided repair. There is no repair-complete endpoint: the backend records the
-   * repair itself (`record_resolution`). Posting to the evidence endpoint here would push the
-   * incident back to `analyzing`, so nothing is sent; the handover note stays on this device.
+   * Finishes the guided repair. Any handover notes are recorded via Orchestrator
+   * on the incident board and persisted in Firestore.
    */
-  const submitRepair = (target: WorkOrder, notes: string) => {
+  const submitRepair = async (target: WorkOrder, notes: string) => {
     if (!target.live) {
       const aiNote = notes ? `Repair notes: ${notes}` : 'Demo work order: all steps marked done.';
       moveDemoToProcessing(target, 50, aiNote, 'Demo order · not sent to the backend');
       return;
     }
-    if (notes.trim()) setHandoverNotes((prev) => ({ ...prev, [target.id]: notes.trim() }));
+    const trimmed = notes.trim();
+    if (trimmed) {
+      setHandoverNotes((prev) => ({ ...prev, [target.id]: trimmed }));
+      try {
+        await postHandoverNote(trimmed);
+      } catch (err) {
+        console.error('Failed to post handover note:', err);
+      }
+    }
     setStack([]);
     if (target.live.repairDone) {
       setWorkTab('processing');
@@ -392,6 +399,20 @@ export default function MobileApp({ incident, history }: MobileAppProps): React.
       showToast('Steps done · the AI records the repair when the copilot finishes');
     }
   };
+
+  const handleAddLiveHandoverNote = async (noteText: string) => {
+    const trimmed = noteText.trim();
+    if (!trimmed) return;
+    try {
+      await postHandoverNote(trimmed);
+      showToast('Handover note recorded on incident');
+    } catch (err) {
+      console.error('Failed to post handover note:', err);
+      showToast('Failed to save handover note');
+      throw err;
+    }
+  };
+
 
   const openNotification = (n: MobileNotification) => {
     setNotifications((list) => list.map((x) => (x.id === n.id ? { ...x, unread: false } : x)));
@@ -452,8 +473,10 @@ export default function MobileApp({ incident, history }: MobileAppProps): React.
           <MobileWorkStatus
             order={order}
             handoverNote={handoverNotes[order.id]}
+            handoverNotes={order.live ? incident?.handover_notes : undefined}
             onBack={pop}
             onPingLead={() => showToast(`Reminder sent to ${order.processing?.lead ?? leadName}`)}
+            onAddHandoverNote={order.live ? handleAddLiveHandoverNote : undefined}
           />
         );
       default:

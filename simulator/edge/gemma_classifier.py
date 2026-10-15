@@ -33,6 +33,7 @@ class GemmaEdgeClassifier:
         model_name: str = "gemma:2b",
         confidence_threshold: float = 0.85,
         timeout_seconds: float = 2.0,
+        async_client: Optional[httpx.AsyncClient] = None,
     ) -> None:
         if isinstance(mode, str):
             try:
@@ -47,6 +48,7 @@ class GemmaEdgeClassifier:
         self.model_name = model_name
         self.confidence_threshold = confidence_threshold
         self.timeout_seconds = timeout_seconds
+        self._client: Optional[httpx.AsyncClient] = async_client
 
         # Prior bounding boxes for known manufacturing defect signatures (normalized 0.0-1.0)
         self._defect_bbox_priors: Dict[str, BoundingBox] = {
@@ -59,6 +61,39 @@ class GemmaEdgeClassifier:
             "misalignment": BoundingBox(ymin=0.15, xmin=0.15, ymax=0.85, xmax=0.85),
         }
 
+    def _get_client(self) -> httpx.AsyncClient:
+        """Returns or lazily creates managed httpx.AsyncClient."""
+        if self._client is None or self._client.is_closed:
+            self._client = httpx.AsyncClient(timeout=self.timeout_seconds)
+        return self._client
+
+    async def aclose(self) -> None:
+        """Closes the underlying httpx.AsyncClient."""
+        if self._client is not None and not self._client.is_closed:
+            await self._client.aclose()
+            self._client = None
+
+    def close(self) -> None:
+        """Synchronously cleans up client connection if possible."""
+        if self._client is not None and not self._client.is_closed:
+            try:
+                import asyncio
+
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(self._client.aclose())
+                except RuntimeError:
+                    asyncio.run(self._client.aclose())
+            except Exception:
+                pass
+            self._client = None
+
+    async def __aenter__(self) -> GemmaEdgeClassifier:
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        await self.aclose()
+
     def _get_default_bbox(self, defect_type: Optional[str]) -> Optional[BoundingBox]:
         """Returns standard metrology bounding box coordinates for a defect signature."""
         if not defect_type:
@@ -69,7 +104,7 @@ class GemmaEdgeClassifier:
             BoundingBox(ymin=0.30, xmin=0.30, ymax=0.70, xmax=0.70),
         )
 
-    def classify_frame(self, frame: Any) -> EdgeClassificationResult:
+    async def classify_frame(self, frame: Any) -> EdgeClassificationResult:
         """Evaluates an inspection frame and outputs pass/fail status and metrology bounding box."""
         start_time = time.perf_counter()
 
@@ -100,7 +135,7 @@ class GemmaEdgeClassifier:
         raw_explanation: Optional[str] = None
 
         if self.mode == EdgeClassifierMode.OLLAMA:
-            result = self._classify_ollama(
+            result = await self._classify_ollama(
                 product_id=product_id,
                 machine_id=machine_id,
                 tool_id=tool_id,
@@ -260,7 +295,7 @@ class GemmaEdgeClassifier:
             "bounding_box": bbox,
         }
 
-    def _classify_ollama(
+    async def _classify_ollama(
         self,
         product_id: str,
         machine_id: str,
@@ -279,16 +314,16 @@ class GemmaEdgeClassifier:
         )
 
         try:
-            with httpx.Client(timeout=self.timeout_seconds) as client:
-                resp = client.post(
-                    f"{self.ollama_url}/api/generate",
-                    json={
-                        "model": self.model_name,
-                        "prompt": prompt,
-                        "stream": False,
-                        "format": "json",
-                    },
-                )
+            client = self._get_client()
+            resp = await client.post(
+                f"{self.ollama_url}/api/generate",
+                json={
+                    "model": self.model_name,
+                    "prompt": prompt,
+                    "stream": False,
+                    "format": "json",
+                },
+            )
             if resp.status_code == 200:
                 data = resp.json()
                 raw_text = data.get("response", "{}")

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from simulator.edge import (
     EdgeAlertSpool,
@@ -23,8 +26,10 @@ from simulator.models import (
     TraceabilityEventPayload,
 )
 
+pytestmark = pytest.mark.asyncio
 
-def test_edge_classifier_heuristic_evaluations() -> None:
+
+async def test_edge_classifier_heuristic_evaluations() -> None:
     """Verifies deterministic heuristic classification across normal parts and defects."""
     classifier = GemmaEdgeClassifier(mode=EdgeClassifierMode.HEURISTIC)
 
@@ -35,7 +40,7 @@ def test_edge_classifier_heuristic_evaluations() -> None:
         tool_id="T04",
         status="PASS",
     )
-    res_pass = classifier.classify_frame(pass_part)
+    res_pass = await classifier.classify_frame(pass_part)
     assert not res_pass.is_defect
     assert res_pass.defect_type is None
     assert res_pass.confidence >= 0.95
@@ -50,7 +55,7 @@ def test_edge_classifier_heuristic_evaluations() -> None:
         status="DEFECT_SCRATCH",
         defect_type="scratch_vertical",
     )
-    res_defect = classifier.classify_frame(defect_part)
+    res_defect = await classifier.classify_frame(defect_part)
     assert res_defect.is_defect
     assert res_defect.defect_type == "scratch_vertical"
     assert res_defect.confidence >= 0.90
@@ -66,13 +71,13 @@ def test_edge_classifier_heuristic_evaluations() -> None:
         cavity_id=3,
         status="PASS",
     )
-    res_cavity = classifier.classify_frame(cavity_part)
+    res_cavity = await classifier.classify_frame(cavity_part)
     assert res_cavity.is_defect
     assert res_cavity.defect_type == "short_fill"
     assert res_cavity.diverter_actuated
 
 
-def test_edge_classifier_dataset_playback_mode() -> None:
+async def test_edge_classifier_dataset_playback_mode() -> None:
     """Verifies classification by parsing MVTec AD dataset paths and inspection tokens."""
     classifier = GemmaEdgeClassifier(mode=EdgeClassifierMode.DATASET_PLAYBACK)
 
@@ -82,7 +87,7 @@ def test_edge_classifier_dataset_playback_mode() -> None:
         tool_id="T04",
         image_token="mvtec/capsule/good/005.png",
     )
-    res_good = classifier.classify_frame(part_good)
+    res_good = await classifier.classify_frame(part_good)
     assert not res_good.is_defect
 
     part_scratch = ConveyorPart(
@@ -91,12 +96,12 @@ def test_edge_classifier_dataset_playback_mode() -> None:
         tool_id="T07",
         image_token="mvtec/capsule/scratch/012.png",
     )
-    res_scratch = classifier.classify_frame(part_scratch)
+    res_scratch = await classifier.classify_frame(part_scratch)
     assert res_scratch.is_defect
     assert res_scratch.defect_type == "scratch_vertical"
 
 
-def test_edge_noise_filtering_95_percent_drop_ratio() -> None:
+async def test_edge_noise_filtering_95_percent_drop_ratio() -> None:
     """Verifies that EdgeNoiseFilter drops >= 95% of normal PASS frames and forwards 100% defects."""
     noise_filter = EdgeNoiseFilter(pass_drop_ratio=0.95, confidence_threshold=0.85)
     classifier = GemmaEdgeClassifier()
@@ -111,7 +116,7 @@ def test_edge_noise_filtering_95_percent_drop_ratio() -> None:
             tool_id="T04",
             status="PASS",
         )
-        cls_res = classifier.classify_frame(frame)
+        cls_res = await classifier.classify_frame(frame)
         packet = noise_filter.evaluate_frame(frame, cls_res)
         if packet.filter_decision == "DROP":
             dropped_count += 1
@@ -131,7 +136,7 @@ def test_edge_noise_filtering_95_percent_drop_ratio() -> None:
             status="DEFECT_SCRATCH",
             defect_type="scratch_vertical",
         )
-        cls_res = classifier.classify_frame(frame)
+        cls_res = await classifier.classify_frame(frame)
         packet = noise_filter.evaluate_frame(frame, cls_res)
         if packet.filter_decision == "FORWARD":
             defect_forwarded_count += 1
@@ -147,7 +152,7 @@ def test_edge_noise_filtering_95_percent_drop_ratio() -> None:
     assert stats.estimated_bandwidth_saved_mb > 0.0
 
 
-def test_edge_alert_spool_ring_buffer() -> None:
+async def test_edge_alert_spool_ring_buffer() -> None:
     """Verifies edge spool ring-buffer capacity bounding and draining."""
     spool = EdgeAlertSpool(maxsize=5)
     for i in range(7):
@@ -176,7 +181,7 @@ def test_edge_alert_spool_ring_buffer() -> None:
     assert len(spool) == 0
 
 
-def test_edge_inspection_station_batch_processing() -> None:
+async def test_edge_inspection_station_batch_processing() -> None:
     """Verifies EdgeInspectionStation filters and spools only forwarded packets."""
     forwarded_callback_records = []
 
@@ -199,14 +204,14 @@ def test_edge_inspection_station_batch_processing() -> None:
         ConveyorPart(product_id="PRD-3", machine_id="CNC-01", tool_id="T04", status="PASS"),
     ]
 
-    forwarded = station.process_batch(parts)
+    forwarded = await station.process_batch(parts)
     assert len(forwarded) == 1
     assert forwarded[0].product_id == "PRD-2"
     assert forwarded_callback_records == ["PRD-2"]
     assert len(station.spool) == 1
 
 
-def test_pubsub_dispatcher_offline_fallback() -> None:
+async def test_pubsub_dispatcher_offline_fallback() -> None:
     """Verifies EdgePubSubDispatcher records events in memory when offline or in dry-run mode."""
     dispatcher = EdgePubSubDispatcher(dry_run=True)
 
@@ -232,9 +237,9 @@ def test_pubsub_dispatcher_offline_fallback() -> None:
         status="DEFECT",
     )
 
-    assert dispatcher.publish_quality_event(quality_evt) is True
-    assert dispatcher.publish_telemetry(telemetry_evt) is True
-    assert dispatcher.publish_traceability(traceability_evt) is True
+    assert await dispatcher.publish_quality_event(quality_evt) is True
+    assert await dispatcher.publish_telemetry(telemetry_evt) is True
+    assert await dispatcher.publish_traceability(traceability_evt) is True
 
     events = dispatcher.get_published_events()
     assert len(events) == 3
@@ -248,7 +253,7 @@ def test_pubsub_dispatcher_offline_fallback() -> None:
     dispatcher.close()
 
 
-def test_pubsub_dispatcher_anomaly_dispatch_bundle() -> None:
+async def test_pubsub_dispatcher_anomaly_dispatch_bundle() -> None:
     """Verifies dispatch_anomaly broadcasts to all three topic channels."""
     dispatcher = EdgePubSubDispatcher(dry_run=True)
 
@@ -277,7 +282,7 @@ def test_pubsub_dispatcher_anomaly_dispatch_bundle() -> None:
         operating_status="ALARM",
     )
 
-    results = dispatcher.dispatch_anomaly(
+    results = await dispatcher.dispatch_anomaly(
         packet=packet,
         scenario="cnc_tool_wear",
         telemetry=telemetry,
@@ -289,14 +294,12 @@ def test_pubsub_dispatcher_anomaly_dispatch_bundle() -> None:
     assert len(dispatcher.get_published_events()) == 3
 
 
-def test_factory_simulator_service_with_edge_and_pubsub() -> None:
+async def test_factory_simulator_service_with_edge_and_pubsub() -> None:
     """Verifies FactorySimulatorService step executes edge inspection and exposes edge statistics."""
-    import asyncio
-
     service = FactorySimulatorService(speed=10.0, dry_run=True, pubsub=True, seed=42)
     service.trigger_anomaly(machine_id="CNC-02", scenario="cnc_tool_wear")
 
-    summary = asyncio.run(service.step())
+    summary = await service.step()
 
     assert summary.edge_stats is not None
     assert summary.edge_stats.total_frames_evaluated > 0
@@ -307,7 +310,82 @@ def test_factory_simulator_service_with_edge_and_pubsub() -> None:
     service.stop()
 
 
-def test_simulator_has_zero_import_dependencies_on_backend() -> None:
+async def test_edge_classifier_ollama_mode_async_post() -> None:
+    """Verifies GemmaEdgeClassifier OLLAMA mode queries Ollama asynchronously via httpx.AsyncClient."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "response": '{"is_defect": true, "defect_type": "scratch_vertical", "confidence": 0.94, "bounding_box": [0.2, 0.3, 0.8, 0.7]}'
+    }
+
+    mock_async_client = AsyncMock()
+    mock_async_client.post.return_value = mock_response
+    mock_async_client.is_closed = False
+
+    classifier = GemmaEdgeClassifier(
+        mode=EdgeClassifierMode.OLLAMA,
+        async_client=mock_async_client,
+    )
+
+    part = ConveyorPart(
+        product_id="PRD-ASYNC-1",
+        machine_id="CNC-02",
+        tool_id="T07",
+        status="DEFECT_SCRATCH",
+    )
+
+    result = await classifier.classify_frame(part)
+    assert result.is_defect is True
+    assert result.defect_type == "scratch_vertical"
+    assert result.confidence == 0.94
+    assert result.bounding_box is not None
+    assert result.bounding_box.ymin == 0.2
+    assert mock_async_client.post.await_count == 1
+    await classifier.aclose()
+
+
+async def test_pubsub_dispatcher_async_executor() -> None:
+    """Verifies EdgePubSubDispatcher publishes via loop executor when publisher is present."""
+    dispatcher = EdgePubSubDispatcher(project_id="test-proj")
+    mock_pub = MagicMock()
+    mock_future = MagicMock()
+    mock_future.result.return_value = "msg-id-123"
+    mock_pub.publish.return_value = mock_future
+    mock_pub.transport = MagicMock()
+
+    dispatcher._publisher = mock_pub
+
+    quality_evt = QualityEventPayload(
+        machine_id="CNC-02",
+        tool_id="T07",
+        defect_type="scratch_vertical",
+    )
+
+    res = await dispatcher.publish_quality_event(quality_evt)
+    assert res is True
+    assert mock_pub.publish.call_count == 1
+    assert len(dispatcher.get_published_events()) == 1
+
+    dispatcher.close()
+    assert dispatcher._publisher is None
+    assert mock_pub.transport.close.call_count == 1
+
+
+async def test_edge_classifier_and_dispatcher_resource_cleanup() -> None:
+    """Verifies proper lifecycle cleanup via aclose() and close()."""
+    classifier = GemmaEdgeClassifier()
+    _ = classifier._get_client()
+    assert classifier._client is not None
+    await classifier.aclose()
+    assert classifier._client is None
+
+    station = EdgeInspectionStation()
+    _ = station.classifier._get_client()
+    station.close()
+    assert station.classifier._client is None
+
+
+async def test_simulator_has_zero_import_dependencies_on_backend() -> None:
     """Audits the AST of every python file in simulator/ to ensure 0 imports of backend modules."""
     simulator_root = Path(__file__).resolve().parent.parent / "simulator"
     assert simulator_root.is_dir()

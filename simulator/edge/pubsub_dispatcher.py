@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from typing import Any, Dict, List, Optional, Union
@@ -62,7 +63,9 @@ class EdgePubSubDispatcher:
             )
             return None
 
-    def _publish(self, topic_name: str, payload_bytes: bytes, raw_dict: Dict[str, Any]) -> bool:
+    async def _publish(
+        self, topic_name: str, payload_bytes: bytes, raw_dict: Dict[str, Any]
+    ) -> bool:
         publisher = self._get_publisher()
         event_record = {"topic": topic_name, "payload": raw_dict}
 
@@ -72,9 +75,14 @@ class EdgePubSubDispatcher:
             return True
 
         topic_path = f"projects/{self.project_id}/topics/{topic_name}"
-        try:
+
+        def _sync_publish() -> None:
             future = publisher.publish(topic_path, payload_bytes)
             future.result(timeout=5.0)
+
+        try:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, _sync_publish)
             self._published_events.append(event_record)
             return True
         except Exception as exc:
@@ -87,15 +95,15 @@ class EdgePubSubDispatcher:
             self._published_events.append(event_record)
             return False
 
-    def publish_quality_event(
+    async def publish_quality_event(
         self, event: QualityEventPayload, topic_name: Optional[str] = None
     ) -> bool:
         """Publishes a QualityEventPayload to kaizen-quality-events topic."""
         topic = topic_name or settings.pubsub_quality_events_topic
         payload_data = event.model_dump_json().encode("utf-8")
-        return self._publish(topic, payload_data, event.model_dump())
+        return await self._publish(topic, payload_data, event.model_dump())
 
-    def publish_telemetry(
+    async def publish_telemetry(
         self,
         telemetry: Union[MachineTelemetry, MachineTelemetryPayload],
         topic_name: Optional[str] = None,
@@ -117,17 +125,17 @@ class EdgePubSubDispatcher:
         else:
             payload = telemetry
         payload_data = payload.model_dump_json().encode("utf-8")
-        return self._publish(topic, payload_data, payload.model_dump())
+        return await self._publish(topic, payload_data, payload.model_dump())
 
-    def publish_traceability(
+    async def publish_traceability(
         self, traceability: TraceabilityEventPayload, topic_name: Optional[str] = None
     ) -> bool:
         """Publishes a TraceabilityEventPayload to kaizen-traceability topic."""
         topic = topic_name or settings.pubsub_traceability_topic
         payload_data = traceability.model_dump_json().encode("utf-8")
-        return self._publish(topic, payload_data, traceability.model_dump())
+        return await self._publish(topic, payload_data, traceability.model_dump())
 
-    def dispatch_anomaly(
+    async def dispatch_anomaly(
         self,
         packet: FilteredFramePacket,
         scenario: str = "cnc_tool_wear",
@@ -147,7 +155,7 @@ class EdgePubSubDispatcher:
             severity="high" if packet.confidence >= 0.90 else "medium",
             filtered_frame=packet,
         )
-        results["quality_event"] = self.publish_quality_event(quality_evt)
+        results["quality_event"] = await self.publish_quality_event(quality_evt)
 
         # 2. Traceability Event
         traceability_evt = TraceabilityEventPayload(
@@ -158,11 +166,11 @@ class EdgePubSubDispatcher:
             lot_id=packet.lot_id,
             status="DEFECT" if packet.is_defect else "PASS",
         )
-        results["traceability"] = self.publish_traceability(traceability_evt)
+        results["traceability"] = await self.publish_traceability(traceability_evt)
 
         # 3. Telemetry Event (if provided)
         if telemetry is not None:
-            results["telemetry"] = self.publish_telemetry(telemetry)
+            results["telemetry"] = await self.publish_telemetry(telemetry)
 
         return results
 
@@ -176,4 +184,11 @@ class EdgePubSubDispatcher:
 
     def close(self) -> None:
         """Closes publisher client connection."""
+        if self._publisher is not None:
+            try:
+                transport = getattr(self._publisher, "transport", None)
+                if transport and hasattr(transport, "close"):
+                    transport.close()
+            except Exception as exc:
+                logger.debug("Error closing publisher transport: %s", exc)
         self._publisher = None

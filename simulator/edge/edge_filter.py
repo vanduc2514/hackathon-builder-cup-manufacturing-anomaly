@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import collections
 import hashlib
+import inspect as py_inspect
 import logging
 from typing import Any, Callable, Deque, List, Optional, Tuple
 
@@ -256,31 +257,41 @@ class EdgeInspectionStation:
         self.spool = spool or EdgeAlertSpool()
         self.forward_handler = forward_handler
 
-    def inspect(self, frame: Any) -> Tuple[EdgeClassificationResult, FilteredFramePacket]:
+    async def inspect(self, frame: Any) -> Tuple[EdgeClassificationResult, FilteredFramePacket]:
         """Runs end-to-end edge inference, noise filtering, metrology tagging, and spooling."""
-        classification = self.classifier.classify_frame(frame)
+        classification = await self.classifier.classify_frame(frame)
         packet = self.edge_filter.evaluate_frame(frame, classification)
 
         if packet.filter_decision == "FORWARD":
             self.spool.append(packet)
             if self.forward_handler:
                 try:
-                    self.forward_handler(packet)
+                    res = self.forward_handler(packet)
+                    if py_inspect.iscoroutine(res):
+                        await res
                 except Exception as exc:
                     logger.warning("Forward handler raised exception: %s", exc)
 
         return classification, packet
 
-    def process_part(self, frame: Any) -> Optional[FilteredFramePacket]:
+    async def process_part(self, frame: Any) -> Optional[FilteredFramePacket]:
         """Convenience method returning packet only if forwarded to cloud (None if dropped)."""
-        _, packet = self.inspect(frame)
+        _, packet = await self.inspect(frame)
         return packet if packet.filter_decision == "FORWARD" else None
 
-    def process_batch(self, frames: List[Any]) -> List[FilteredFramePacket]:
+    async def process_batch(self, frames: List[Any]) -> List[FilteredFramePacket]:
         """Processes a list of inspection frames, returning only the forwarded packets."""
         forwarded: List[FilteredFramePacket] = []
         for f in frames:
-            pkt = self.process_part(f)
+            pkt = await self.process_part(f)
             if pkt is not None:
                 forwarded.append(pkt)
         return forwarded
+
+    async def aclose(self) -> None:
+        """Closes resources associated with the inspection station."""
+        await self.classifier.aclose()
+
+    def close(self) -> None:
+        """Closes resources associated with the inspection station synchronously."""
+        self.classifier.close()

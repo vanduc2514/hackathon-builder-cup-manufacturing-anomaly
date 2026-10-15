@@ -6,7 +6,7 @@ import argparse
 import asyncio
 import logging
 import signal
-from typing import Optional
+from typing import Any, Optional
 
 from simulator.config import settings
 from simulator.conveyor_simulator import ConveyorSimulator
@@ -48,6 +48,7 @@ class FactorySimulatorService:
         self.edge_station = EdgeInspectionStation()
         self.publisher = MqttPublisher(dry_run=dry_run)
         self.pubsub_dispatcher = EdgePubSubDispatcher(dry_run=dry_run)
+        self._pending_tasks: list[asyncio.Task[Any]] = []
 
         if inject_on_start:
             self.trigger_anomaly(scenario=scenario)
@@ -77,7 +78,12 @@ class FactorySimulatorService:
                 mode="fast" if self.speed > 2.0 else "demo",
                 severity="high" if severity >= 1.0 else "medium",
             )
-            self.pubsub_dispatcher.publish_quality_event(quality_evt)
+            try:
+                loop = asyncio.get_running_loop()
+                task = loop.create_task(self.pubsub_dispatcher.publish_quality_event(quality_evt))
+                self._pending_tasks.append(task)
+            except RuntimeError:
+                asyncio.run(self.pubsub_dispatcher.publish_quality_event(quality_evt))
             logger.info(
                 "Published anomaly trigger quality-event to Pub/Sub (%s, %s)", target, scenario
             )
@@ -91,6 +97,10 @@ class FactorySimulatorService:
 
     async def step(self) -> SimulatorTickSummary:
         """Executes a single simulation tick."""
+        if self._pending_tasks:
+            await asyncio.gather(*self._pending_tasks)
+            self._pending_tasks.clear()
+
         self.tick_count += 1
         telemetry = self.machine_sim.tick()
         parts = self.conveyor_sim.tick()
@@ -102,14 +112,14 @@ class FactorySimulatorService:
         # Process parts through edge inspection station
         forwarded_packets = []
         for p in parts:
-            _, packet = self.edge_station.inspect(p)
+            _, packet = await self.edge_station.inspect(p)
             if packet.filter_decision == "FORWARD":
                 forwarded_packets.append(packet)
                 if self.pubsub:
                     m_telemetry = next(
                         (t for t in telemetry if t.machine_id == packet.machine_id), None
                     )
-                    self.pubsub_dispatcher.dispatch_anomaly(
+                    await self.pubsub_dispatcher.dispatch_anomaly(
                         packet=packet,
                         scenario=self.scenario,
                         mode="fast" if self.speed > 2.0 else "demo",
@@ -171,8 +181,14 @@ class FactorySimulatorService:
             return
         self._stopped = True
         self.running = False
+        if self._pending_tasks:
+            for task in self._pending_tasks:
+                if not task.done():
+                    task.cancel()
+            self._pending_tasks.clear()
         self.publisher.close()
         self.pubsub_dispatcher.close()
+        self.edge_station.close()
         logger.info("Factory Simulator stopped.")
 
 

@@ -48,7 +48,7 @@ export default function MobileLogin(): React.ReactElement {
         <span className="b3" />
       </div>
 
-      <div className="m-screen" style={{ height: '100%', justifyContent: 'center' }}>
+      <div className="m-screen" style={{ height: '100%', justifyContent: 'center', paddingBottom: 0 }}>
         <section className="m-glass m-card m-col" style={{ gap: 14 }}>
           <div className="m-col" style={{ gap: 4, alignItems: 'center', textAlign: 'center' }}>
             <div className="m-avatar lg" style={{ margin: '0 auto' }}>

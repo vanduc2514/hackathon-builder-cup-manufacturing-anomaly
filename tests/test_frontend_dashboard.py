@@ -82,3 +82,57 @@ def test_frontend_sse_stream_contract() -> None:
     current_data = response.json()
     assert current_data["incident_id"] == "INC-0412"
     assert len(current_data["findings"]) == 1
+
+
+def test_mobile_dock_clearance_and_tap_target_invariants() -> None:
+    """Verifies AGENTS.md §6 mobile tap target (>=44px) and bottom dock clearance (Issue #145).
+
+    The mobile dock occupies bottom: 14px + height: 66px = 80px of the viewport.
+    .m-screen must declare bottom padding >= 80px so that scrollable content (e.g. Sign out
+    button in MobileSettings.tsx) is not obscured by nav.m-dock, preserving >=44px tap target.
+    """
+    mobile_css_path = APPS_DIR / "mobile" / "src" / "components" / "mobile" / "mobile.css"
+    assert mobile_css_path.is_file(), f"{mobile_css_path} must exist"
+    css_content = mobile_css_path.read_text(encoding="utf-8")
+
+    # Invariant 1: .m-btn tap target height >= 44px per AGENTS.md §6
+    assert "min-height: 44px" in css_content, ".m-btn must declare min-height: 44px per AGENTS.md §6"
+    assert "height: 50px" in css_content, ".m-btn must declare height: 50px"
+
+    # Invariant 2: .m-screen has bottom padding >= 80px to clear .m-dock (14px + 66px)
+    import re
+    screen_rule_match = re.search(r"\.m-screen\s*\{([^}]+)\}", css_content)
+    assert screen_rule_match is not None, "Could not find .m-screen CSS rule in mobile.css"
+    screen_rule_body = screen_rule_match.group(1)
+
+    # Check padding declaration in .m-screen
+    padding_match = re.search(r"padding:\s*([0-9a-zA-Z\s]+);", screen_rule_body)
+    assert padding_match is not None, ".m-screen must declare padding"
+    padding_tokens = padding_match.group(1).strip().split()
+
+    # If 3 or 4 tokens, last/third token is bottom padding (e.g. "0 16px 96px")
+    if len(padding_tokens) == 3:
+        bottom_pad_str = padding_tokens[2]
+    elif len(padding_tokens) == 4:
+        bottom_pad_str = padding_tokens[2]
+    elif len(padding_tokens) == 1:
+        bottom_pad_str = padding_tokens[0]
+    else:
+        # Check padding-bottom explicitly
+        pb_match = re.search(r"padding-bottom:\s*(\d+)px", screen_rule_body)
+        assert pb_match is not None, ".m-screen must specify bottom padding >= 80px"
+        bottom_pad_str = pb_match.group(1) + "px"
+
+    assert bottom_pad_str.endswith("px"), f"Expected px unit in {bottom_pad_str}"
+    bottom_padding_val = int(bottom_pad_str.replace("px", ""))
+    assert bottom_padding_val >= 80, (
+        f".m-screen bottom padding {bottom_padding_val}px is insufficient to clear .m-dock (80px)"
+    )
+
+    # Invariant 3: MobileSettings renders #m-sign-out with .m-btn class
+    settings_tsx_path = APPS_DIR / "mobile" / "src" / "components" / "mobile" / "MobileSettings.tsx"
+    assert settings_tsx_path.is_file(), f"{settings_tsx_path} must exist"
+    settings_content = settings_tsx_path.read_text(encoding="utf-8")
+    assert 'id="m-sign-out"' in settings_content, "MobileSettings must render #m-sign-out button"
+    assert 'className="m-btn glass"' in settings_content or 'm-btn' in settings_content
+

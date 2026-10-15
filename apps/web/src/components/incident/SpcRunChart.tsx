@@ -38,6 +38,15 @@ export default function SpcRunChart({ peak, ucl, mean }: SpcRunChartProps): Reac
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
+      <div style={{ position: 'absolute', top: 4, right: 8, zIndex: 2 }}>
+        <span
+          className="chip chip-neutral"
+          style={{ fontSize: 10, padding: '2px 6px' }}
+          title="SPC run chart modeled from sample defect rate and statistical upper control limits"
+        >
+          Statistical Distribution
+        </span>
+      </div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H, display: 'block', overflow: 'visible' }}>
         {over.length > 0 && (
           <rect x={bandStart} y={y(ucl) - 4} width={bandEnd - bandStart} height={H - pad.b - y(ucl) + 4} fill="rgba(229,72,77,0.12)" />

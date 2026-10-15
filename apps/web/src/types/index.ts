@@ -160,6 +160,12 @@ export interface IncidentState {
   documents: Record<string, unknown>;
   latest_telemetry?: MachineTelemetryPayload | null;
   telemetry_alerts?: TelemetryAlert[];
+  diagnostic_request?: string | null;
+  opened_at?: string | null;
+  severity?: 'low' | 'medium' | 'high' | 'critical' | string | null;
+  line_id?: string | null;
+  product?: string | null;
+  mttr_target_minutes?: number | null;
   updated_at: string;
 }
 
@@ -327,3 +333,40 @@ export interface DemoAccount {
   display_name: string;
   role: AuthRole;
 }
+
+export interface OeeFactors {
+  availability: number;
+  performance: number;
+  quality: number;
+  oee: number;
+}
+
+export interface OeePoint extends OeeFactors {
+  timestamp: string;
+}
+
+export type OeeLossKind = 'planned_stop' | 'unplanned_downtime' | 'speed' | 'quality';
+
+export interface OeeLoss {
+  kind: OeeLossKind;
+  points: number;
+  machine_id?: string | null;
+  reason?: string | null;
+  incident_id?: string | null;
+}
+
+export interface MachineOeeMetric extends OeeFactors {
+  machine_id: string;
+  good_parts: number;
+  total_parts: number;
+  series: OeePoint[];
+}
+
+export interface LineOeeResponse extends OeeFactors {
+  line_id: string;
+  target: number;
+  series: OeePoint[];
+  machines: MachineOeeMetric[];
+  losses: OeeLoss[];
+}
+

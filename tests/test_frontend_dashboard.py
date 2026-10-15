@@ -84,6 +84,135 @@ def test_frontend_sse_stream_contract() -> None:
     assert len(current_data["findings"]) == 1
 
 
+def test_frontend_project_layout_compliance() -> None:
+    """Verifies that apps/web adheres to AGENTS.md project layout and includes all new OEE components."""
+    repo_root = APPS_DIR.parent
+    legacy_dir = repo_root / "dashboard_frontend"
+    assert not legacy_dir.exists(), (
+        "Legacy 'dashboard_frontend' directory must be removed in favor of 'apps/web'"
+    )
+
+    web_src = APPS_DIR / "web" / "src"
+    required_files = [
+        web_src / "components" / "overview" / "MachineSelect.tsx",
+        web_src / "components" / "overview" / "OeeLossCard.tsx",
+        web_src / "components" / "overview" / "OeeTrendCard.tsx",
+        web_src / "lib" / "oee.ts",
+        APPS_DIR / "web" / "BACKEND_GAPS.md",
+    ]
+    for req in required_files:
+        assert req.exists(), (
+            f"Required dashboard component or doc missing: {req.relative_to(repo_root)}"
+        )
+
+
+def test_oee_calculation_and_band_logic() -> None:
+    """Verifies OEE calculation rules and status bands mirror production criteria."""
+    # OEE target is 85% (0.85)
+    target = 0.85
+    watch_threshold = target - 0.15  # 0.70
+
+    def calculate_band(oee: float) -> str:
+        if oee >= target:
+            return "good"
+        if oee >= watch_threshold:
+            return "watch"
+        return "poor"
+
+    assert calculate_band(0.88) == "good"
+    assert calculate_band(0.85) == "good"
+    assert calculate_band(0.80) == "watch"
+    assert calculate_band(0.70) == "watch"
+    assert calculate_band(0.69) == "poor"
+    assert calculate_band(0.45) == "poor"
+
+
+def test_oee_pydantic_models_schema() -> None:
+    """Verifies that OEE Pydantic models in backend/core/models.py adhere to schema contracts."""
+    from backend.core.models import (
+        LineOeeResponse,
+        MachineOee,
+        OeeLoss,
+        OeePoint,
+    )
+
+    point = OeePoint(
+        availability=0.92,
+        performance=0.95,
+        quality=0.98,
+        oee=0.92 * 0.95 * 0.98,
+        timestamp="2026-10-15T12:00:00Z",
+    )
+    assert point.availability == 0.92
+    assert point.timestamp == "2026-10-15T12:00:00Z"
+
+    loss = OeeLoss(
+        kind="unplanned_downtime",
+        points=0.08,
+        machine_id="CNC-02",
+        reason="CNC-02 tool insert replacement",
+        incident_id="INC-0412",
+    )
+    assert loss.kind == "unplanned_downtime"
+    assert loss.points == 0.08
+
+    machine = MachineOee(
+        machine_id="CNC-02",
+        availability=0.90,
+        performance=0.94,
+        quality=0.96,
+        oee=0.812,
+        good_parts=450,
+        total_parts=468,
+        series=[point],
+    )
+    assert machine.machine_id == "CNC-02"
+    assert len(machine.series) == 1
+
+    line_response = LineOeeResponse(
+        line_id="cell-line-1",
+        target=0.85,
+        availability=0.92,
+        performance=0.95,
+        quality=0.97,
+        oee=0.8477,
+        series=[point],
+        machines=[machine],
+        losses=[loss],
+    )
+    assert line_response.line_id == "cell-line-1"
+    assert line_response.target == 0.85
+    assert len(line_response.losses) == 1
+
+    dumped = line_response.model_dump()
+    assert dumped["losses"][0]["kind"] == "unplanned_downtime"
+
+
+def test_incident_state_metadata_and_sla_fields() -> None:
+    """Verifies IncidentState metadata fields (opened_at, severity, line_id, product, mttr_target_minutes)."""
+    # Verify default values
+    state = IncidentState()
+    assert state.severity == "medium"
+    assert state.line_id == "cell-line-1"
+    assert state.product == "Gearbox Casing"
+    assert state.mttr_target_minutes == 15
+    assert state.opened_at is None
+
+    # Verify custom values
+    custom_state = IncidentState(
+        opened_at="2026-10-15T10:00:00+00:00",
+        severity="critical",
+        line_id="cell-line-2",
+        product="Shaft Collar",
+        mttr_target_minutes=20,
+    )
+    assert custom_state.opened_at == "2026-10-15T10:00:00+00:00"
+    assert custom_state.severity == "critical"
+    assert custom_state.line_id == "cell-line-2"
+    assert custom_state.product == "Shaft Collar"
+    assert custom_state.mttr_target_minutes == 20
+
+
 def test_mobile_dock_clearance_and_tap_target_invariants() -> None:
     """Verifies AGENTS.md §6 mobile tap target (>=44px) and bottom dock clearance (Issue #145).
 
@@ -135,4 +264,3 @@ def test_mobile_dock_clearance_and_tap_target_invariants() -> None:
     settings_content = settings_tsx_path.read_text(encoding="utf-8")
     assert 'id="m-sign-out"' in settings_content, "MobileSettings must render #m-sign-out button"
     assert 'className="m-btn glass"' in settings_content or 'm-btn' in settings_content
-

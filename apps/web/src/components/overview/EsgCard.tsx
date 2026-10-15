@@ -35,25 +35,24 @@ export default function EsgCard({ ledger, factoryType, onOpenHub }: EsgCardProps
   return (
     <article className="glass kpi-card tone-green-soft">
       <div className="row between" style={{ gap: 8 }}>
-        <span className="eyebrow kpi-eyebrow">ESG · CO₂ reduction</span>
-        <span className={`chip ${hasLedger ? 'chip-green' : ''}`}>
+        <span className="eyebrow kpi-eyebrow">CO₂e avoided</span>
+        <button type="button" className={`chip chip-btn ${hasLedger ? 'chip-green' : ''}`} onClick={onOpenHub} title="Open Knowledge Base">
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
             eco
           </span>
-          {hasLedger ? `${totals?.incidents} resolved` : 'Projected / incident'}
-        </span>
+          {hasLedger ? `${totals?.incidents} resolved` : 'Projected'}
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+            arrow_forward
+          </span>
+        </button>
       </div>
       <div className="row" style={{ alignItems: 'baseline', gap: 8 }}>
         <span className="kpi-value mono" style={{ color: '#0e8a43' }}>
           {totals ? formatCo2(totals.co2) : '—'}
         </span>
-        <span className="kpi-hint">CO₂e avoided</span>
+        <span className="kpi-hint">{totals ? `${totals.scrap} pcs · ${totals.energyKwh.toFixed(0)} kWh saved` : ''}</span>
       </div>
-      <div className="col" style={{ gap: 8, marginTop: 'auto' }}>
-        <div className="bar bar-split" aria-label="Energy versus material CO2 split">
-          <span style={{ width: `${split * 100}%` }} />
-          <span style={{ width: `${(1 - split) * 100}%` }} />
-        </div>
+      <div className="col" style={{ gap: 5, marginTop: 'auto' }}>
         <div className="row between kpi-line">
           <span className="row" style={{ gap: 6 }}>
             <i className="legend-dot" style={{ background: '#12a150' }} />
@@ -64,16 +63,10 @@ export default function EsgCard({ ledger, factoryType, onOpenHub }: EsgCardProps
             Material {totals ? formatCo2(totals.materialCo2) : '—'}
           </span>
         </div>
-        <div className="divider" />
-        <div className="row between kpi-line">
-          <span>Scrap · Energy saved</span>
-          <span className="mono">
-            {totals ? `${totals.scrap} pcs · ${totals.energyKwh.toFixed(0)} kWh` : '—'}
-          </span>
+        <div className="bar bar-split" aria-label="Energy versus material CO2 split">
+          <span style={{ width: `${split * 100}%` }} />
+          <span style={{ width: `${(1 - split) * 100}%` }} />
         </div>
-        <button type="button" className="link-btn" style={{ alignSelf: 'flex-start' }} onClick={onOpenHub}>
-          Open Knowledge Base →
-        </button>
       </div>
     </article>
   );

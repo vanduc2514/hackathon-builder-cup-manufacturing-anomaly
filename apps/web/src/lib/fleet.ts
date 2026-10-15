@@ -134,6 +134,11 @@ export function computeOee(
 export type Severity = 'critical' | 'minor';
 
 export function incidentSeverity(inc: IncidentState): Severity {
+  if (inc.severity) {
+    const s = inc.severity.toLowerCase();
+    if (s === 'critical' || s === 'high') return 'critical';
+    if (s === 'low' || s === 'medium' || s === 'minor') return 'minor';
+  }
   return inc.spc_ucl > 0 && inc.defect_rate / inc.spc_ucl >= 1.5 ? 'critical' : 'minor';
 }
 

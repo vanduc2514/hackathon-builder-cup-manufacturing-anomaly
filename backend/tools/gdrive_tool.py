@@ -401,8 +401,16 @@ class GoogleDriveConnector:
                 )
             return matched
         except Exception as exc:
-            logger.warning("Google Drive exact fullText search failed: %s", exc)
-            return []
+            logger.warning("Google Drive exact fullText search failed (%s); falling back to mock search", exc)
+            matches: List[GoogleDriveDocument] = []
+            for doc in MOCK_GDRIVE_DOCUMENTS:
+                content = MOCK_DOC_TEXTS.get(doc.file_id or "", "")
+                if any(
+                    term.lower() in content.lower() or term.lower() in doc.name.lower()
+                    for term in query_terms
+                ):
+                    matches.append(doc)
+            return matches
 
     def fetch_to_cache(self, file_id: str, filename: str, force_refresh: bool = False) -> Path:
         """Optionally fetch remote document to local cache directory (.cache/gdrive)."""

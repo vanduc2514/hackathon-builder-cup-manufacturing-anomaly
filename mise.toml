@@ -187,6 +187,14 @@ run = "ruff format backend simulator tests"
 description = "Seed mock BigQuery / Firestore data"
 run = "python scripts/seed_bigquery.py"
 
+[tasks."pr:review"]
+description = "Review all open PRs against linked issues, submit verdict, and squash-merge if approved"
+run = "python scripts/review_pr.py --all-open"
+
+[tasks."pr:review:dry"]
+description = "Dry-run review of open PRs (prints review without submitting or merging)"
+run = "python scripts/review_pr.py --all-open --dry-run"
+
 # =============================================================================
 # Factory Simulator Service (Edge Telemetry & Conveyor)
 # =============================================================================

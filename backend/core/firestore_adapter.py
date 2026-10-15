@@ -70,6 +70,12 @@ class FirestoreAdapter:
                 raise
 
         # Production Cloud Firestore (Application Default Credentials / Cloud Run IAM)
+        if self._project == "kaizen-local" and not os.environ.get("GCP_PROJECT_ID"):
+            logger.info(
+                "Firestore placeholder project kaizen-local without emulator; operating with in-memory Blackboard"
+            )
+            return None
+
         try:
             client = firestore.Client(project=self._project)
             logger.info(

@@ -397,7 +397,60 @@ class TestBuildSpcSeries:
         )
         res = build_spc_series(records, ucl=0.03, subgroup=20)
         assert res.points[-1].defect_rate == 0.05
+        assert all(not p.out_of_control for p in res.points[:19])
         assert res.points[-1].out_of_control is True
         rule_1_violations = [v for v in res.violations if v.rule_id == 1]
-        assert len(rule_1_violations) >= 1
+        assert len(rule_1_violations) == 1
         assert 19 in rule_1_violations[0].violation_indices
+
+    def test_all_pass_window_zero_ooc_and_empty_violations(self):
+        records = [
+            {
+                "product_id": f"P{i}",
+                "timestamp": f"2026-10-05T09:{i:02d}:00Z",
+                "machine_id": "CNC-02",
+                "is_defect": False,
+            }
+            for i in range(40)
+        ]
+        res = build_spc_series(records, ucl=0.03, subgroup=20, centerline=0.005)
+        assert len(res.points) == 40
+        ooc_count = sum(1 for p in res.points if p.out_of_control)
+        assert ooc_count == 0
+        assert res.violations == []
+
+    def test_single_excursion_only_excursion_points_ooc(self):
+        records = [
+            {
+                "product_id": f"P{i}",
+                "timestamp": f"2026-10-05T09:{i:02d}:00Z",
+                "machine_id": "CNC-02",
+                "is_defect": (i == 25),
+            }
+            for i in range(40)
+        ]
+        res = build_spc_series(records, ucl=0.03, subgroup=20, centerline=0.005)
+        # Prior to defect at 25, defect rate is 0.0 <= UCL -> out_of_control must be False
+        assert all(not p.out_of_control for p in res.points[:25])
+        # At index 25, rate is 1/20 = 0.05 > 0.03 -> out_of_control is True
+        assert res.points[25].out_of_control is True
+        # Verify strictly that out_of_control matches rate > ucl
+        for p in res.points:
+            assert p.out_of_control == (p.defect_rate > 0.03)
+
+    def test_no_duplicate_rule_id_and_merged_unique_indices(self):
+        records = [
+            {
+                "product_id": f"P{i}",
+                "timestamp": f"2026-10-05T09:{i:02d}:00Z",
+                "machine_id": "CNC-02",
+                "is_defect": (i >= 15 and i <= 25),
+            }
+            for i in range(35)
+        ]
+        res = build_spc_series(records, ucl=0.03, subgroup=10, centerline=0.005)
+        rule_ids = [v.rule_id for v in res.violations]
+        assert len(rule_ids) == len(set(rule_ids)), f"Duplicate rule IDs found: {rule_ids}"
+        for v in res.violations:
+            assert v.violation_indices == sorted(set(v.violation_indices))
+            assert len(v.violation_indices) > 0

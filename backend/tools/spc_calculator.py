@@ -454,6 +454,7 @@ def build_spc_series(
         else:
             ts_str = str(ts)
 
+        is_ooc = rate > ucl or rate < lcl
         points.append(
             SpcSeriesPoint(
                 index=i,
@@ -463,11 +464,11 @@ def build_spc_series(
                 is_defect=bool(r.get("is_defect", False)),
                 defect_rate=rate,
                 subgroup_n=subgroup_n,
-                out_of_control=False,
+                out_of_control=is_ooc,
             )
         )
 
-    violations = evaluate_nelson_rules(
+    raw_violations = evaluate_nelson_rules(
         rates=rates,
         centerline=centerline,
         sigma=sigma,
@@ -475,10 +476,30 @@ def build_spc_series(
         lcl=lcl,
     )
 
-    ooc_indices = {idx for v in violations for idx in v.violation_indices}
-    for i, p in enumerate(points):
-        if i in ooc_indices or p.defect_rate > ucl or p.defect_rate < lcl:
-            p.out_of_control = True
+    # Filter violations to those with >= 1 index where rate > centerline
+    filtered_violations = [
+        v
+        for v in raw_violations
+        if any(0 <= idx < len(rates) and rates[idx] > centerline for idx in v.violation_indices)
+    ]
+
+    # Report each rule_id once with merged, sorted, unique indices
+    merged_by_rule: Dict[int, NelsonRuleViolation] = {}
+    for v in filtered_violations:
+        if v.rule_id not in merged_by_rule:
+            merged_by_rule[v.rule_id] = NelsonRuleViolation(
+                rule_id=v.rule_id,
+                rule_name=v.rule_name,
+                description=v.description,
+                violation_indices=sorted(set(v.violation_indices)),
+            )
+        else:
+            existing = merged_by_rule[v.rule_id]
+            existing.violation_indices = sorted(
+                set(existing.violation_indices) | set(v.violation_indices)
+            )
+
+    violations = sorted(merged_by_rule.values(), key=lambda v: v.rule_id)
 
     peak_rate = round(max((p.defect_rate for p in points), default=0.0), 6)
 

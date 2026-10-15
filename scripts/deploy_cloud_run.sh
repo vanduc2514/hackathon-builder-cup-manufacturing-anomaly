@@ -18,6 +18,7 @@ REGION="${GCP_REGION:-asia-southeast1}"
 SERVICE_NAME="${SERVICE_NAME:-kaizen-backend}"
 REPO_NAME="${ARTIFACT_REPO:-kaizen-agent}"
 IMAGE_TAG="${IMAGE_TAG:-$(git -C "$ROOT_DIR" rev-parse --short HEAD)}"
+DOCKERFILE="${DOCKERFILE:-${ROOT_DIR}/Dockerfile}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -49,6 +50,10 @@ while [[ $# -gt 0 ]]; do
       REPO_NAME="$2"
       shift 2
       ;;
+    --dockerfile)
+      DOCKERFILE="$2"
+      shift 2
+      ;;
     --help|-h)
       echo "Usage: $0 [OPTIONS]"
       echo "Infrastructure (service, repo, IAM) is provisioned by Terraform: mise run infra:apply"
@@ -60,6 +65,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --service-name <NAME>  Cloud Run service name (default: kaizen-backend)"
       echo "  --image-tag <TAG>      Container image tag (default: git short SHA)"
       echo "  --repo <REPO>          Artifact Registry repository name (default: kaizen-agent)"
+      echo "  --dockerfile <FILE>    Dockerfile path (default: Dockerfile)"
       echo "  --help, -h             Show this help message"
       exit 0
       ;;
@@ -105,7 +111,7 @@ echo "==========================================================================
 echo "--- Step 1: Building Production Docker Container ---"
 log_exec docker build \
   --platform linux/amd64 \
-  --file "${ROOT_DIR}/Dockerfile" \
+  --file "${DOCKERFILE}" \
   --tag "${IMAGE_URI}" \
   "${ROOT_DIR}"
 

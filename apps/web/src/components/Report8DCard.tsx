@@ -4,7 +4,6 @@ import type { IncidentState } from '../types';
 import type { ToastTone } from '../App';
 import { authFetch } from '../lib/auth';
 import {
-  FALLBACK_FIVE_WHYS,
   formatClock,
   formatIncidentDate,
   friendlyDefectName,
@@ -20,16 +19,16 @@ interface Report8DCardProps {
 const STAGE_ORDER = ['detecting', 'tracing', 'analyzing', 'investigating', 'awaiting_evidence', 'repairing', 'verifying', 'closed'];
 
 function build8D(incident: IncidentState) {
-  const machine = incident.suspect_machine ?? 'CNC-02';
-  const tool = incident.suspect_tool ?? 'T07';
+  const machine = incident.suspect_machine;
+  const tool = incident.suspect_tool;
   const stage = STAGE_ORDER.indexOf(incident.status);
   const done = (minStage: string) => incident.status === 'closed' || (stage >= 0 && stage >= STAGE_ORDER.indexOf(minStage));
   return [
     { code: 'D1', title: 'Team', desc: 'Kaizen agent team + Marcus Vance (TECH-902), Devon Vance (Lead Ops)', done: done('detecting') },
     { code: 'D2', title: 'Problem', desc: `${friendlyDefectName(incident.defect_type)} spike ${(incident.defect_rate * 100).toFixed(2)}% > UCL ${(incident.spc_ucl * 100).toFixed(1)}%`, done: done('detecting') },
-    { code: 'D3', title: 'Containment', desc: `Suspect lot quarantined; ${machine} feed held`, done: done('tracing') },
-    { code: 'D4', title: 'Root Cause', desc: incident.root_cause ?? `Tool ${tool} wear — analysis in progress`, done: done('repairing') },
-    { code: 'D5', title: 'Corrective Action', desc: `Replace / index ${tool}, patch PLC tool-life offset`, done: done('repairing') },
+    { code: 'D3', title: 'Containment', desc: machine ? `Suspect lot quarantined; ${machine} feed held` : 'Suspect lot quarantined; feed held', done: done('tracing') },
+    { code: 'D4', title: 'Root Cause', desc: incident.root_cause ?? (tool ? `Tool ${tool} — analysis in progress` : 'Root cause analysis in progress'), done: done('repairing') },
+    { code: 'D5', title: 'Corrective Action', desc: tool ? `Replace / index ${tool}, patch PLC tool-life offset` : 'Corrective action pending root-cause confirmation', done: done('repairing') },
     { code: 'D6', title: 'Validation', desc: `${incident.verification_count}/${incident.verification_target} consecutive good parts`, done: incident.verification_count >= incident.verification_target },
     { code: 'D7', title: 'Prevention', desc: 'SOP #209 rev 4.2 · PLC hard-tripwire at cycle 440', done: done('closed') },
     { code: 'D8', title: 'Recognition', desc: incident.approved ? 'Signed off by shift leader' : 'Awaiting shift-leader sign-off', done: incident.approved },
@@ -63,7 +62,11 @@ export default function Report8DCard({ incident, isLive, onNotify }: Report8DCar
   };
 
   const download = () => {
-    const whys = findings.find((f) => f.five_whys?.length)?.five_whys ?? FALLBACK_FIVE_WHYS;
+    const whys = findings.find((f) => f.five_whys?.length)?.five_whys;
+    const whyLines =
+      whys && whys.length > 0
+        ? whys.map((w) => `${w.level}. ${w.why} — ${w.answer}`)
+        : ['_Root cause analysis pending — no 5-Whys from the Root Cause agent yet._'];
     const lines = [
       `# 8D Report — ${incident.incident_id}`,
       '',
@@ -73,7 +76,7 @@ export default function Report8DCard({ incident, isLive, onNotify }: Report8DCar
       '',
       ...steps.map((s) => `## ${s.code} ${s.title}\n${s.desc}\n`),
       '## 5-Whys',
-      ...whys.map((w) => `${w.level}. ${w.why} — ${w.answer}`),
+      ...whyLines,
       '',
       '## Agent findings',
       ...findings.map((f) => `- [${formatClock(f.timestamp)}] ${f.agent_name} (${(f.confidence * 100).toFixed(1)}%): ${f.finding} — ${f.citation}`),
@@ -147,7 +150,7 @@ export default function Report8DCard({ incident, isLive, onNotify }: Report8DCar
               {closed
                 ? 'Product evidence complete. Approving releases the station to full cadence and archives the record.'
                 : `Locked until the incident closes on product evidence (${incident.verification_count}/${incident.verification_target} good parts).`}
-              {!isLive && ' Archived reference — connect the backend to sign live incidents.'}
+              {!isLive && ' Connect the backend to sign live incidents.'}
             </div>
           </>
         )}

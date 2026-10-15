@@ -19,9 +19,6 @@ import { useApi } from '../../lib/api';
 import { authFetch } from '../../lib/auth';
 import { LINE_NAME } from '../../lib/fleet';
 import {
-  DEMO_INCIDENT,
-  FALLBACK_FIVE_WHYS,
-  FALLBACK_ISHIKAWA,
   STATUS_LABEL,
   STEP_OF_STATUS,
   computeIncidentDuration,
@@ -67,7 +64,6 @@ export default function IncidentCommandView({ incident, product, onNavigateHome,
   const status = incident.status;
   const closed = status === 'closed';
   const approved = incident.approved || released;
-  const isDemo = id === DEMO_INCIDENT.incident_id;
   const machine = incident.suspect_machine;
   const tool = incident.suspect_tool;
   const rate = incident.defect_rate;
@@ -93,14 +89,10 @@ export default function IncidentCommandView({ incident, product, onNavigateHome,
   const scribe = byAgent('incident_scribe');
   const learning = byAgent('continuous_learning');
 
-  const builtChain = buildCausalChain(incident);
-  const chain: CausalChain =
-    builtChain.nodes.length === 0 && isDemo
-      ? { origin: 'agent', nodes: FALLBACK_FIVE_WHYS.map((w) => ({ level: w.level, question: w.why, answer: w.answer, source: 'Root Cause agent', evidence: w.evidence })) }
-      : builtChain;
-  const rawIshikawa = rca?.ishikawa ?? findings.slice().reverse().find((f) => f.ishikawa && Object.keys(f.ishikawa).length > 0)?.ishikawa ?? (isDemo ? FALLBACK_ISHIKAWA : null);
+  const chain: CausalChain = buildCausalChain(incident);
+  const rawIshikawa = rca?.ishikawa ?? findings.slice().reverse().find((f) => f.ishikawa && Object.keys(f.ishikawa).length > 0)?.ishikawa ?? null;
   const ishikawa = rawIshikawa && Object.values(rawIshikawa).some((items) => items.length > 0) ? rawIshikawa : null;
-  const impact = incident.impact ?? (isDemo ? DEMO_INCIDENT.impact : null);
+  const impact = incident.impact ?? null;
 
   // Peak defect rate: the backend resets defect_rate after repair, so keep the highest value seen plus the detection figure.
   const peakSeen = useRef<number>(rate);
@@ -161,7 +153,7 @@ export default function IncidentCommandView({ incident, product, onNavigateHome,
     setOpen(new Set(approved ? [] : [currentNumber]));
   }, [currentNumber, approved]);
 
-  const history = useApi<MultiMachineTelemetryResponse>(machine && !isDemo && open.has(2) ? '/api/telemetry/history' : null, closed || approved ? 0 : 15000);
+  const history = useApi<MultiMachineTelemetryResponse>(machine && open.has(2) ? '/api/telemetry/history' : null, closed || approved ? 0 : 15000);
 
   const toggle = (n: number) =>
     setOpen((prev) => {
@@ -180,9 +172,6 @@ export default function IncidentCommandView({ incident, product, onNavigateHome,
   const release = async () => {
     setReleasing(true);
     try {
-      if (isDemo) {
-        throw new Error('Archived reference incident cannot release live factory lines.');
-      }
       // Guard against stale tabs approving a different backend incident
       const currentRes = await authFetch('/api/incidents/current');
       if (currentRes.ok) {
@@ -262,7 +251,6 @@ export default function IncidentCommandView({ incident, product, onNavigateHome,
           <p style={{ fontSize: '0.86rem', color: 'var(--text)' }}>
             {product} · found at end-of-line inspection · opened {formatClock(firstTime).substring(0, 5)} ·{' '}
             {closed || approved ? `resolved in ${duration}` : `open for ${duration}`}
-            {isDemo ? ' · archived reference incident' : ''}
           </p>
         </header>
 

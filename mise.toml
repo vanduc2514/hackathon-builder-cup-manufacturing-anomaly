@@ -48,8 +48,8 @@ TF_VAR_global_prefix = "kaizen-lab"
 
 # Install everything — backend pip deps + npm deps of both frontend apps
 [tasks.install]
-description = "Install all dependencies (backend + apps/web + apps/mobile)"
-depends = ["install:backend", "install:web", "install:mobile"]
+description = "Install all dependencies (backend + apps/web + apps/mobile + simulator/ui)"
+depends = ["install:backend", "install:web", "install:mobile", "install:factory"]
 
 [tasks."install:backend"]
 description = "Install backend Python dependencies"
@@ -63,6 +63,11 @@ run = "npm install"
 [tasks."install:mobile"]
 description = "Install apps/mobile npm dependencies"
 dir = "{{config_root}}/apps/mobile"
+run = "npm install"
+
+[tasks."install:factory"]
+description = "Install simulator/ui npm dependencies"
+dir = "{{config_root}}/simulator/ui"
 run = "npm install"
 
 [tasks."mqtt:listen"]
@@ -377,6 +382,7 @@ run = [
 description = "Build simulator/ui against factory origin and deploy it to Firebase Hosting (target factory)"
 depends = ["firebase:targets"]
 run = [
+  { task = "install:factory" },
   'origin="$(terraform -chdir=infra/terraform output -raw factory_service_url 2>/dev/null || terraform -chdir=infra/terraform output -raw service_url)" && cd simulator/ui && VITE_STREAM_ORIGIN="$origin" npm run build',
   'firebase deploy --only hosting:factory --project "$TF_VAR_project_id"',
 ]

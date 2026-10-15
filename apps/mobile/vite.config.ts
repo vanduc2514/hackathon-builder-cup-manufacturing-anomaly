@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 // Vite configuration for the technician mobile app: serves on :3001, proxies /api requests (HTTP, SSE and the Gemini Live WebSocket) to the FastAPI backend.
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -20,5 +21,8 @@ export default defineConfig({
   preview: {
     port: 3001,
     strictPort: true,
+  },
+  test: {
+    environment: 'jsdom',
   },
 });

@@ -138,6 +138,11 @@ description = "TypeScript typecheck of apps/mobile"
 dir = "{{config_root}}/apps/mobile"
 run = "npm run typecheck"
 
+[tasks."mobile:test"]
+description = "Run unit tests for apps/mobile"
+dir = "{{config_root}}/apps/mobile"
+run = "npm test"
+
 [tasks.build]
 description = "Production build of all frontend apps"
 depends = ["web:build", "mobile:build"]

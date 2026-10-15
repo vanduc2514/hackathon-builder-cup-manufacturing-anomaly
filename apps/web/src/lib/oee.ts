@@ -2,7 +2,7 @@
 // Uses the same model as computeOee in fleet.ts, so machine, trend and KPI numbers agree.
 import type { IncidentState, MultiMachineTelemetryResponse, TelemetryPoint } from '../types';
 import type { FleetRow } from './fleet';
-import { OEE_TARGET, PLANNED_AVAILABILITY } from './fleet';
+import { OEE_TARGET } from './fleet';
 
 /** Machine is unavailable while the technician is repairing it. */
 const isDown = (row: FleetRow, incident: IncidentState | null) =>
@@ -55,10 +55,11 @@ export function machineOee(
   row: FleetRow,
   telemetry: MultiMachineTelemetryResponse | null,
   incident: IncidentState | null,
+  plannedAvailability: number = 0.92,
 ): MachineOee {
   const points = telemetry?.series?.[row.id] ?? [];
   const down = isDown(row, incident);
-  const availability = down ? 0 : row.status === 'offline' ? 0 : PLANNED_AVAILABILITY;
+  const availability = down ? 0 : row.status === 'offline' ? 0 : plannedAvailability;
   const performance = points.length ? speedRatio(points[points.length - 1].spindle_speed_rpm, medianRpm(points)) : 1;
   const quality = 1 - defectOn(row.id, incident);
   return {
@@ -120,6 +121,7 @@ export function oeeTrend(
   rows: FleetRow[],
   scope: string | null,
   windowMin: number | null = null,
+  plannedAvailability: number = 0.92,
 ): OeeTrend {
   const empty: OeeTrend = { points: [], onsetIdx: -1, onsetClipped: false };
   const full = telemetry?.series ?? {};
@@ -156,7 +158,7 @@ export function oeeTrend(
 
   const fleet = rows.filter((r) => r.status !== 'offline' && (!scope || r.id === scope));
   const live = fleet.length || 1;
-  const nowAvailability = PLANNED_AVAILABILITY * ((live - fleet.filter((r) => isDown(r, incident)).length) / live);
+  const nowAvailability = plannedAvailability * ((live - fleet.filter((r) => isDown(r, incident)).length) / live);
   const defect = scope ? defectOn(scope, incident) : Math.max(0, Math.min(1, incident?.defect_rate ?? 0));
   const nominal = Object.fromEntries(ids.map((id) => [id, medianRpm(full[id])]));
 
@@ -175,7 +177,7 @@ export function oeeTrend(
       anomalous ||= slice.some((p) => p.is_anomalous);
     }
     const performance = ratioSum / ids.length;
-    const availability = b === n - 1 ? nowAvailability : PLANNED_AVAILABILITY;
+    const availability = b === n - 1 ? nowAvailability : plannedAvailability;
     // Scrap builds up linearly in time from the defect onset to the current end-of-line rate.
     const t = ms(bucketEnd(b));
     const ramp =
@@ -211,7 +213,13 @@ export interface OeeLoss {
  * @deprecated Prefer backend loss attribution from GET /api/oee (calculate_production_stats)
  * which provides 4-category OEE waterfall attribution based on BigQuery telemetry and incident state.
  */
-export function oeeLosses(machines: MachineOee[], rows: FleetRow[], incident: IncidentState | null, defectLabel: string): OeeLoss[] {
+export function oeeLosses(
+  machines: MachineOee[],
+  rows: FleetRow[],
+  incident: IncidentState | null,
+  defectLabel: string,
+  plannedAvailability: number = 0.92,
+): OeeLoss[] {
   const live = machines.filter((m) => rows.find((r) => r.id === m.id)?.status !== 'offline');
   if (!live.length) return [];
   const a = live.reduce((s, m) => s + m.availability, 0) / live.length;
@@ -226,7 +234,7 @@ export function oeeLosses(machines: MachineOee[], rows: FleetRow[], incident: In
       kind: 'planned',
       label: 'Planned stops',
       detail: 'Breaks, changeovers, warm-up',
-      value: 1 - PLANNED_AVAILABILITY,
+      value: 1 - plannedAvailability,
       machine: null,
       incidentId: null,
     },
@@ -234,7 +242,7 @@ export function oeeLosses(machines: MachineOee[], rows: FleetRow[], incident: In
       kind: 'downtime',
       label: 'Unplanned downtime',
       detail: downMachine ? `${downMachine.id} stopped for repair` : 'No breakdowns',
-      value: PLANNED_AVAILABILITY - a,
+      value: plannedAvailability - a,
       machine: downMachine?.id ?? null,
       incidentId: downMachine ? incidentId : null,
     },

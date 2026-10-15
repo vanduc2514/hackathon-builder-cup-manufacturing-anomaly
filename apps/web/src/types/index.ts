@@ -431,3 +431,21 @@ export interface SpcSeriesResponse {
   violations: NelsonRuleViolation[];
   source: "bigquery" | "mock_buffer" | "seed";
 }
+
+export interface FleetAsset {
+  machine_id: string;
+  machine_type: "cnc" | "im";
+  bay: string;
+  part: string;
+  operation: string;
+  on_demand: boolean;
+}
+
+export interface FleetRegistryResponse {
+  line_id: string;
+  line_name: string;
+  planned_availability: number;
+  mttr_target_minutes: number;
+  oee_target: number;
+  assets: FleetAsset[];
+}

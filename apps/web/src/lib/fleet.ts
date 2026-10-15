@@ -1,6 +1,12 @@
 // Line Overview data helpers: merges telemetry + the live incident into fleet rows, OEE, severity and shift info.
-import type { ImpactMetrics, IncidentState, MultiMachineTelemetryResponse, TelemetryPoint } from '../types';
-import { ACTIVE_PRODUCT, isIncidentActive } from './incident';
+import type {
+  FleetRegistryResponse,
+  ImpactMetrics,
+  IncidentState,
+  MultiMachineTelemetryResponse,
+  TelemetryPoint,
+} from '../types';
+import { isIncidentActive } from './incident';
 import type { VerifiedSolution } from './eightD';
 
 export const LINE_NAME = 'Cell Line 1';
@@ -9,27 +15,7 @@ export const LINE_LABEL = 'Cell Line 1: Turning & Milling';
 /** Motor current at 100% spindle load; spindle load % is derived from live current draw. */
 export const RATED_SPINDLE_CURRENT_A = 25;
 
-/** Shift-plan availability (planned stops excluded); the backend has no downtime log yet. */
-export const PLANNED_AVAILABILITY = 0.92;
-
 export const OEE_TARGET = 0.85;
-
-/** Mean-time-to-repair target used for the incident SLA countdown. */
-export const MTTR_TARGET_MIN = 15;
-
-interface FleetAsset {
-  id: string;
-  bay: string;
-  part: string;
-  op: string;
-}
-
-/** Static cell layout; live values come from /api/telemetry/history and the incident board. */
-const FLEET_REGISTRY: FleetAsset[] = [
-  { id: 'CNC-01', bay: 'Bay 2', part: ACTIVE_PRODUCT, op: 'Op-10 · Rough turn' },
-  { id: 'CNC-02', bay: 'Bay 4', part: ACTIVE_PRODUCT, op: 'Op-20 · Face mill' },
-  { id: 'CNC-03', bay: 'Bay 5', part: ACTIVE_PRODUCT, op: 'Op-30 · Drill & tap' },
-];
 
 export type FleetStatus = 'nominal' | 'watch' | 'critical' | 'signoff' | 'offline';
 
@@ -59,9 +45,11 @@ function latestPoint(series: TelemetryPoint[] | undefined): TelemetryPoint | nul
 export function buildFleetRows(
   telemetry: MultiMachineTelemetryResponse | null,
   incident: IncidentState | null,
+  fleet: FleetRegistryResponse | null = null,
 ): FleetRow[] {
   const series = telemetry?.series ?? {};
-  const ids = [...FLEET_REGISTRY.map((a) => a.id)];
+  const baseAssets = fleet?.assets?.filter((a) => !a.on_demand) ?? [];
+  const ids: string[] = baseAssets.map((a) => a.machine_id);
   for (const id of Object.keys(series)) if (!ids.includes(id)) ids.push(id);
   const suspect = incident?.suspect_machine ?? null;
   if (suspect && !ids.includes(suspect)) ids.push(suspect);
@@ -70,7 +58,7 @@ export function buildFleetRows(
   const vibWarn = telemetry?.vibration_warning_threshold ?? Infinity;
 
   return ids.map((id) => {
-    const asset = FLEET_REGISTRY.find((a) => a.id === id);
+    const asset = fleet?.assets?.find((a) => a.machine_id === id);
     const point = latestPoint(series[id]);
     const live = incident?.latest_telemetry?.machine_id === id ? incident.latest_telemetry : null;
 
@@ -89,7 +77,7 @@ export function buildFleetRows(
       id,
       bay: asset?.bay ?? '—',
       part: asset?.part ?? '—',
-      op: asset?.op ?? '',
+      op: asset?.operation ?? '',
       vibration,
       load,
       rpm,
@@ -112,6 +100,7 @@ export function computeOee(
   telemetry: MultiMachineTelemetryResponse | null,
   incident: IncidentState | null,
   rows: FleetRow[],
+  plannedAvailability: number = 0.92,
 ): OeeBreakdown {
   const ratios: number[] = [];
   for (const pts of Object.values(telemetry?.series ?? {})) {
@@ -124,8 +113,8 @@ export function computeOee(
   const performance = ratios.length ? ratios.reduce((s, r) => s + r, 0) / ratios.length : 1;
 
   const down = incident?.status === 'repairing' ? 1 : 0;
-  const fleet = Math.max(rows.filter((r) => r.status !== 'offline').length, 1);
-  const availability = PLANNED_AVAILABILITY * ((fleet - down) / fleet);
+  const activeFleet = Math.max(rows.filter((r) => r.status !== 'offline').length, 1);
+  const availability = plannedAvailability * ((activeFleet - down) / activeFleet);
 
   const quality = 1 - Math.max(0, Math.min(1, incident?.defect_rate ?? 0));
   return { availability, performance, quality, oee: availability * performance * quality };
@@ -149,11 +138,12 @@ export function shiftLabel(now: Date): string {
   return 'Shift C · 22:00 - 06:00';
 }
 
+
 export function formatCountdown(ms: number): string {
   const total = Math.max(0, Math.floor(Math.abs(ms) / 1000));
   const m = Math.floor(total / 60);
   const s = total % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 export interface EsgLedgerEntry {

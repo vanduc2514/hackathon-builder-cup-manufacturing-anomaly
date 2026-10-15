@@ -18,6 +18,7 @@ interface OeeTrendCardProps {
   onScope: (machineId: string | null) => void;
   loading: boolean;
   oeeResponse?: LineOeeResponse | null;
+  plannedAvailability?: number;
 }
 
 type SeriesKey = 'oee' | 'availability' | 'performance' | 'quality';
@@ -49,6 +50,7 @@ export default function OeeTrendCard({
   onScope,
   loading,
   oeeResponse,
+  plannedAvailability,
 }: OeeTrendCardProps): React.ReactElement {
   const [ref, W] = useElementWidth<HTMLDivElement>(720);
   const [hidden, setHidden] = useState<Set<SeriesKey>>(new Set());
@@ -56,8 +58,8 @@ export default function OeeTrendCard({
   const [range, setRange] = useState<number | null>(null);
   const span = useMemo(() => telemetrySpanMin(telemetry), [telemetry]);
   const trend = useMemo(
-    () => oeeTrend(telemetry, incident, rows, scope, range),
-    [telemetry, incident, rows, scope, range],
+    () => oeeTrend(telemetry, incident, rows, scope, range, plannedAvailability),
+    [telemetry, incident, rows, scope, range, plannedAvailability],
   );
   const rangeLabel = RANGES.find((r) => r.min === range)?.label ?? 'All';
 

@@ -105,6 +105,11 @@ class Settings(BaseSettings):
     # Pause between simulated conveyor verification batches (seconds)
     simulation_step_delay: float = 0.4
 
+    # Planned production targets & cell availability
+    planned_availability: float = 0.92
+    mttr_target_minutes: int = 15
+    oee_target: float = 0.85
+
     @model_validator(mode="before")
     @classmethod
     def _resolve_network_settings(cls, data: Any) -> Any:

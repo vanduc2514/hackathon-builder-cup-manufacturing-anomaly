@@ -21,13 +21,13 @@ from backend.tools.bigquery_tool import (
     get_mock_traceability_records,
     query_traceability_topology,
 )
+from backend.tools.fleet_registry import DEFAULT_LINE_ID, default_machine_ids
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_LINE_ID = "cell-line-1"
-DEFAULT_TARGET_OEE = 0.85
-DEFAULT_PLANNED_AVAILABILITY = 0.92
-DEFAULT_MACHINES = ("CNC-01", "CNC-02", "CNC-03")
+DEFAULT_TARGET_OEE = settings.oee_target
+DEFAULT_PLANNED_AVAILABILITY = settings.planned_availability
+DEFAULT_MACHINES = default_machine_ids()
 NOMINAL_SPINDLE_RPM = 12000
 VIBRATION_WARNING_THRESHOLD = 1.95
 CURRENT_WARNING_THRESHOLD = 13.0
@@ -414,7 +414,7 @@ def query_traceability_counts(
 ) -> Dict[str, Dict[str, Any]]:
     """Aggregates part counts and defect stats per machine and across the line."""
     machine_counts: Dict[str, Dict[str, int]] = {
-        m: {"total_parts": 0, "defect_count": 0, "good_parts": 0} for m in DEFAULT_MACHINES
+        m: {"total_parts": 0, "defect_count": 0, "good_parts": 0} for m in default_machine_ids()
     }
 
     try:
@@ -497,9 +497,12 @@ def calculate_availability(
     incident: Optional[IncidentState] = None,
     window_minutes: int = 60,
     machine_id: Optional[str] = None,
-    planned_availability: float = DEFAULT_PLANNED_AVAILABILITY,
+    planned_availability: Optional[float] = None,
 ) -> float:
     """Calculates availability taking into account repair downtime from incident timestamps."""
+    if planned_availability is None:
+        planned_availability = settings.planned_availability
+
     if incident is None:
         incident = blackboard.get_state()
 
@@ -547,7 +550,7 @@ def calculate_availability(
     if machine_id is not None:
         return round(max(0.0, min(1.0, planned_availability * (1.0 - downtime_ratio))), 4)
     else:
-        num_machines = len(DEFAULT_MACHINES)
+        num_machines = len(default_machine_ids())
         line_impact = downtime_ratio / num_machines
         return round(max(0.0, min(1.0, planned_availability * (1.0 - line_impact))), 4)
 
@@ -573,7 +576,7 @@ def calculate_oee_losses(
     availability: float,
     performance: float,
     quality: float,
-    planned_availability: float = DEFAULT_PLANNED_AVAILABILITY,
+    planned_availability: Optional[float] = None,
     suspect_machine: Optional[str] = None,
     incident_id: Optional[str] = None,
     defect_label: Optional[str] = None,
@@ -583,6 +586,8 @@ def calculate_oee_losses(
     slowest_rpm: Optional[int] = None,
 ) -> List[OeeLoss]:
     """Calculates standard 4-category OEE loss waterfall summing to 1.0 - OEE."""
+    if planned_availability is None:
+        planned_availability = settings.planned_availability
     loss_planned = round(max(0.0, 1.0 - planned_availability), 4)
     loss_downtime = round(max(0.0, planned_availability - availability), 4)
     dt_reason = (
@@ -702,7 +707,7 @@ def calculate_production_stats(
 
     all_telemetry = fetch_telemetry_points()
 
-    for mid in DEFAULT_MACHINES:
+    for mid in default_machine_ids():
         m_counts = counts.get(
             mid, {"total_parts": 0, "defect_count": 0, "good_parts": 0, "quality": 1.0}
         )
@@ -715,6 +720,7 @@ def calculate_production_stats(
             incident=incident,
             window_minutes=window_minutes,
             machine_id=mid,
+            planned_availability=settings.planned_availability,
         )
         m_qual = float(m_counts.get("quality", 1.0))
         m_oee = round(m_avail * m_perf * m_qual, 4)
@@ -738,6 +744,7 @@ def calculate_production_stats(
         incident=incident,
         window_minutes=window_minutes,
         machine_id=None,
+        planned_availability=settings.planned_availability,
     )
     line_perf = round(sum(machine_perfs.values()) / max(len(machine_perfs), 1), 4)
     line_qual = float(line_counts.get("quality", 1.0))
@@ -757,7 +764,7 @@ def calculate_production_stats(
         availability=line_avail,
         performance=line_perf,
         quality=line_qual,
-        planned_availability=DEFAULT_PLANNED_AVAILABILITY,
+        planned_availability=settings.planned_availability,
         suspect_machine=suspect_m,
         incident_id=inc_id,
         defect_label=defect_label,
@@ -769,7 +776,7 @@ def calculate_production_stats(
 
     return LineOeeResponse(
         line_id=line_id,
-        target=DEFAULT_TARGET_OEE,
+        target=settings.oee_target,
         availability=line_avail,
         performance=line_perf,
         quality=line_qual,

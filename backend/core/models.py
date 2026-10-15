@@ -51,10 +51,10 @@ class KnowledgeDocumentMeta(BaseModel):
 
     document_id: str
     title: str
-    category: str  # manual, maint_log, 8d_report, spec, etc.
+    category: str = "other"
     machine_id: Optional[str] = None
     component: Optional[str] = None
-    version: str = "1.0"
+    version: Optional[str] = None
     pages: int = 1
     last_revised: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
@@ -552,17 +552,27 @@ class IncidentSummary(BaseModel):
     defect_type: Optional[str] = Field(default=None, description="Classified defect symptom name")
     defect_rate: float = Field(default=0.0, description="Defect rate at capture or closure")
     spc_ucl: float = Field(default=0.030, description="Upper specification/control limit")
-    suspect_machine: Optional[str] = Field(default=None, description="Target suspect equipment ID")
+    suspect_machine: Optional[str] = Field(
+        default=None, description="Target suspect equipment ID"
+    )
     suspect_tool: Optional[str] = Field(
         default=None, description="Suspect cutter or tool identifier"
     )
     root_cause: Optional[str] = Field(default=None, description="Identified root cause summary")
     repair_done: bool = Field(default=False, description="Whether repair has been executed")
-    approved: bool = Field(default=False, description="Whether incident has shift-leader sign-off")
-    verification_count: int = Field(default=0, description="Consecutive verified parts count")
+    approved: bool = Field(
+        default=False, description="Whether incident has shift-leader sign-off"
+    )
+    verification_count: int = Field(
+        default=0, description="Consecutive verified parts count"
+    )
     verification_target: int = Field(default=50, description="Target verified parts count")
-    opened_at: Optional[str] = Field(default=None, description="ISO timestamp when incident opened")
-    closed_at: Optional[str] = Field(default=None, description="ISO timestamp when incident closed")
+    opened_at: Optional[str] = Field(
+        default=None, description="ISO timestamp when incident opened"
+    )
+    closed_at: Optional[str] = Field(
+        default=None, description="ISO timestamp when incident closed"
+    )
     updated_at: Optional[str] = Field(default=None, description="ISO timestamp of last update")
     impact: Optional[ImpactMetrics] = Field(
         default=None, description="Calculated impact metrics if closed"

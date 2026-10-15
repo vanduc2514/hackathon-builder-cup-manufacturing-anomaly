@@ -9,6 +9,7 @@ from backend.tools.spc_calculator import (
     DEFAULT_BASELINE_P,
     DEFAULT_VERIFICATION_TARGET,
     StreakGatekeeper,
+    build_spc_series,
     calculate_p_chart_limits,
     evaluate_defect_rate,
     evaluate_nelson_rules,
@@ -298,3 +299,158 @@ class TestIncidentStateIntegration:
         assert res.recurrence_detected is True
         assert incident.verification_count == 0
         assert incident.status == "investigating"
+
+
+class TestBuildSpcSeries:
+    """Tests for pure build_spc_series defect proportion run chart generator."""
+
+    def test_empty_records_returns_empty_points(self):
+        res = build_spc_series([], ucl=0.03, subgroup=20, centerline=0.005)
+        assert res.points == []
+        assert res.peak_rate == 0.0
+        assert res.violations == []
+        assert res.ucl == 0.03
+        assert res.centerline == 0.005
+        assert res.subgroup == 20
+        assert res.source == "seed"
+
+    def test_hand_built_rates_and_subgroup_trailing_window(self):
+        records = [
+            {
+                "product_id": "P0",
+                "timestamp": "2026-10-05T09:00:00Z",
+                "machine_id": "CNC-01",
+                "is_defect": False,
+            },
+            {
+                "product_id": "P1",
+                "timestamp": "2026-10-05T09:01:00Z",
+                "machine_id": "CNC-01",
+                "is_defect": False,
+            },
+            {
+                "product_id": "P2",
+                "timestamp": "2026-10-05T09:02:00Z",
+                "machine_id": "CNC-01",
+                "is_defect": True,
+            },
+            {
+                "product_id": "P3",
+                "timestamp": "2026-10-05T09:03:00Z",
+                "machine_id": "CNC-01",
+                "is_defect": False,
+            },
+            {
+                "product_id": "P4",
+                "timestamp": "2026-10-05T09:04:00Z",
+                "machine_id": "CNC-01",
+                "is_defect": False,
+            },
+        ]
+        res = build_spc_series(records, ucl=0.03, subgroup=3)
+        assert len(res.points) == 5
+        assert res.points[0].subgroup_n == 1
+        assert res.points[0].defect_rate == 0.0
+        assert res.points[1].subgroup_n == 2
+        assert res.points[1].defect_rate == 0.0
+        assert res.points[2].subgroup_n == 3
+        assert res.points[2].defect_rate == 0.333333
+        assert res.points[3].subgroup_n == 3
+        assert res.points[3].defect_rate == 0.333333
+        assert res.points[4].subgroup_n == 3
+        assert res.points[4].defect_rate == 0.333333
+
+    def test_ucl_passthrough_and_peak_rate(self):
+        records = [
+            {
+                "product_id": f"P{i}",
+                "timestamp": "2026-10-05T09:00:00Z",
+                "machine_id": "CNC-02",
+                "is_defect": i % 5 == 0,
+            }
+            for i in range(10)
+        ]
+        custom_ucl = 0.045
+        res = build_spc_series(records, ucl=custom_ucl, subgroup=5)
+        assert res.ucl == custom_ucl
+        expected_max = max(p.defect_rate for p in res.points)
+        assert res.peak_rate == expected_max
+        assert res.peak_rate > 0.0
+
+    def test_out_of_control_on_synthetic_spike_and_nelson_rule_1(self):
+        records = [
+            {
+                "product_id": f"P{i}",
+                "timestamp": f"2026-10-05T09:{i:02d}:00Z",
+                "machine_id": "CNC-02",
+                "is_defect": False,
+            }
+            for i in range(19)
+        ]
+        records.append(
+            {
+                "product_id": "P19",
+                "timestamp": "2026-10-05T09:20:00Z",
+                "machine_id": "CNC-02",
+                "is_defect": True,
+            }
+        )
+        res = build_spc_series(records, ucl=0.03, subgroup=20)
+        assert res.points[-1].defect_rate == 0.05
+        assert all(not p.out_of_control for p in res.points[:19])
+        assert res.points[-1].out_of_control is True
+        rule_1_violations = [v for v in res.violations if v.rule_id == 1]
+        assert len(rule_1_violations) == 1
+        assert 19 in rule_1_violations[0].violation_indices
+
+    def test_all_pass_window_zero_ooc_and_empty_violations(self):
+        records = [
+            {
+                "product_id": f"P{i}",
+                "timestamp": f"2026-10-05T09:{i:02d}:00Z",
+                "machine_id": "CNC-02",
+                "is_defect": False,
+            }
+            for i in range(40)
+        ]
+        res = build_spc_series(records, ucl=0.03, subgroup=20, centerline=0.005)
+        assert len(res.points) == 40
+        ooc_count = sum(1 for p in res.points if p.out_of_control)
+        assert ooc_count == 0
+        assert res.violations == []
+
+    def test_single_excursion_only_excursion_points_ooc(self):
+        records = [
+            {
+                "product_id": f"P{i}",
+                "timestamp": f"2026-10-05T09:{i:02d}:00Z",
+                "machine_id": "CNC-02",
+                "is_defect": (i == 25),
+            }
+            for i in range(40)
+        ]
+        res = build_spc_series(records, ucl=0.03, subgroup=20, centerline=0.005)
+        # Prior to defect at 25, defect rate is 0.0 <= UCL -> out_of_control must be False
+        assert all(not p.out_of_control for p in res.points[:25])
+        # At index 25, rate is 1/20 = 0.05 > 0.03 -> out_of_control is True
+        assert res.points[25].out_of_control is True
+        # Verify strictly that out_of_control matches rate > ucl
+        for p in res.points:
+            assert p.out_of_control == (p.defect_rate > 0.03)
+
+    def test_no_duplicate_rule_id_and_merged_unique_indices(self):
+        records = [
+            {
+                "product_id": f"P{i}",
+                "timestamp": f"2026-10-05T09:{i:02d}:00Z",
+                "machine_id": "CNC-02",
+                "is_defect": (i >= 15 and i <= 25),
+            }
+            for i in range(35)
+        ]
+        res = build_spc_series(records, ucl=0.03, subgroup=10, centerline=0.005)
+        rule_ids = [v.rule_id for v in res.violations]
+        assert len(rule_ids) == len(set(rule_ids)), f"Duplicate rule IDs found: {rule_ids}"
+        for v in res.violations:
+            assert v.violation_indices == sorted(set(v.violation_indices))
+            assert len(v.violation_indices) > 0

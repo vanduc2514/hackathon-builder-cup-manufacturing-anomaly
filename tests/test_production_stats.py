@@ -14,6 +14,7 @@ from backend.tools.production_stats import (
     calculate_production_stats,
     fetch_telemetry_points,
     get_inspection_window,
+    get_inspection_window_with_source,
     query_traceability_counts,
 )
 
@@ -187,3 +188,96 @@ def test_get_inspection_window():
     assert "is_defect" in records[0]
     assert "timestamp" in records[0]
     assert isinstance(records[0]["is_defect"], bool)
+
+
+def test_get_inspection_window_with_source_seed_fallback():
+    records, source = get_inspection_window_with_source(limit=5)
+    assert source == "seed"
+    assert len(records) == 5
+    timestamps = [r["timestamp"] for r in records]
+    assert timestamps == sorted(timestamps)
+
+
+def test_get_inspection_window_with_source_machine_filter():
+    records, source = get_inspection_window_with_source(limit=10, machine_id="CNC-02")
+    assert all(r["machine_id"] == "CNC-02" for r in records)
+    assert len(records) > 0
+
+
+def test_get_inspection_window_with_source_mock_buffer():
+    from backend.tools.bigquery_tool import (
+        MOCK_TRACEABILITY_RECORDS,
+        clear_mock_traceability_records,
+    )
+
+    clear_mock_traceability_records()
+    try:
+        MOCK_TRACEABILITY_RECORDS.append(
+            {
+                "product_id": "PRD-MOCK-1",
+                "timestamp": "2026-10-05T12:00:00Z",
+                "machine_id": "CNC-02",
+                "status": "DEFECT_BURR",
+            }
+        )
+        records, source = get_inspection_window_with_source(limit=5, machine_id="CNC-02")
+        assert source == "mock_buffer"
+        assert any(r["product_id"] == "PRD-MOCK-1" for r in records)
+        assert records[-1]["product_id"] == "PRD-MOCK-1"
+        assert records[-1]["is_defect"] is True
+    finally:
+        clear_mock_traceability_records()
+
+
+def test_get_inspection_window_with_source_bigquery_parameterized():
+    from unittest.mock import MagicMock, patch
+
+    mock_client = MagicMock()
+    mock_client.project = "test-project"
+
+    mock_rows = [
+        {
+            "product_id": "PRD-02",
+            "timestamp": "2026-10-05T10:01:00Z",
+            "machine_id": "CNC-02",
+            "status": "DEFECT_SCRATCH",
+        },
+        {
+            "product_id": "PRD-01",
+            "timestamp": "2026-10-05T10:00:00Z",
+            "machine_id": "CNC-02",
+            "status": "PASS",
+        },
+    ]
+
+    with (
+        patch("backend.tools.production_stats.get_bigquery_client", return_value=mock_client),
+        patch("backend.tools.bigquery_tool._run_query", return_value=mock_rows) as mock_run_query,
+    ):
+        records, source = get_inspection_window_with_source(limit=2, machine_id="CNC-02")
+        assert source == "bigquery"
+        assert len(records) == 2
+        assert records[0]["product_id"] == "PRD-01"
+        assert records[1]["product_id"] == "PRD-02"
+
+        mock_run_query.assert_called_once()
+        sql = mock_run_query.call_args[0][1]
+        params = mock_run_query.call_args[0][2]
+
+        assert "CNC-02" not in sql
+        assert "@limit" in sql
+        assert "@machine_id" in sql
+
+        param_names = {p.name: p for p in params}
+        assert "limit" in param_names
+        assert param_names["limit"].value == 2
+        assert param_names["limit"].type_ == "INT64"
+        assert "machine_id" in param_names
+        assert param_names["machine_id"].value == "CNC-02"
+        assert param_names["machine_id"].type_ == "STRING"
+
+
+def test_get_inspection_window_wrapper():
+    records = get_inspection_window(limit=5)
+    assert isinstance(records, list)
+    assert len(records) == 5

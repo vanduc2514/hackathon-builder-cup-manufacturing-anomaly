@@ -399,3 +399,35 @@ export interface LineOeeResponse extends OeeFactors {
   losses: OeeLoss[];
 }
 
+export interface NelsonRuleViolation {
+  rule_id: number;
+  rule_name: string;
+  description: string;
+  violation_indices: number[];
+}
+
+export interface SpcSeriesPoint {
+  index: number;
+  product_id: string;
+  timestamp: string;
+  machine_id: string;
+  is_defect: boolean;
+  defect_rate: number;
+  subgroup_n: number;
+  out_of_control: boolean;
+}
+
+export interface SpcSeriesResponse {
+  machine_id: string | null;
+  window: number;
+  subgroup: number;
+  centerline: number;
+  ucl: number;
+  ucl_3sigma: number;
+  lcl: number;
+  sigma: number;
+  peak_rate: number;
+  points: SpcSeriesPoint[];
+  violations: NelsonRuleViolation[];
+  source: "bigquery" | "mock_buffer" | "seed";
+}

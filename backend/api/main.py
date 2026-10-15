@@ -14,6 +14,7 @@ from backend.api.routes_incidents import router as incidents_router
 from backend.api.routes_knowledge import router as knowledge_router
 from backend.api.routes_oee import router as oee_router
 from backend.api.routes_simulation import router as simulation_router
+from backend.api.routes_spc import router as spc_router
 from backend.api.routes_telemetry import router as telemetry_router
 from backend.core.auth import require_user
 from backend.core.blackboard import blackboard
@@ -84,6 +85,7 @@ app.include_router(impact_router, dependencies=_auth)
 app.include_router(telemetry_router, dependencies=_auth)
 app.include_router(knowledge_router, dependencies=_auth)
 app.include_router(oee_router, dependencies=_auth)
+app.include_router(spc_router, dependencies=_auth)
 
 
 @app.get("/healthz", include_in_schema=False)

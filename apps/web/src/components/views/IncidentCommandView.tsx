@@ -39,7 +39,6 @@ interface IncidentCommandViewProps {
   onNotify: (text: string, tone?: ToastTone) => void;
 }
 
-const NOMINAL_RATE = 0.0044;
 const STEP_LABELS = ['Inspection', 'Traceability', 'Analysis', 'Repair & Proof', 'Sign-off'];
 const APPROVER = 'Shift Leader';
 
@@ -307,7 +306,7 @@ export default function IncidentCommandView({ incident, product, onNavigateHome,
                   — limit {pct(ucl)}
                 </span>
               </div>
-              <SpcRunChart peak={peak} ucl={ucl} mean={NOMINAL_RATE} />
+              <SpcRunChart machineId={incident.suspect_machine ?? null} />
             </div>
           </div>
           <div className="inset step-grid" style={{ alignItems: 'center' }}>

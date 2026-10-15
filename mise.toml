@@ -214,6 +214,10 @@ run = "python scripts/review_pr.py --all-open --dry-run"
 description = "Start the standalone factory floor & conveyor simulator (1x real-time)"
 run = "python -m simulator.main"
 
+[tasks."factory:server"]
+description = "Start standalone factory client API server & real-time SSE stream (:8010)"
+run = "python -m simulator.server --port 8010"
+
 [tasks."sim:fast"]
 description = "Run factory simulator at 5x accelerated speed for testing"
 run = "python -m simulator.main --speed 5"

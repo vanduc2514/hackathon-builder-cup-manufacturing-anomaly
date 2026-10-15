@@ -69,7 +69,17 @@ class FirestoreAdapter:
                     return None
                 raise
 
-        # Production Cloud Firestore (Application Default Credentials / Cloud Run IAM)
+        # Production Cloud Firestore (Application Default Credentials / Cloud Run IAM).
+        # Gate on the configured project *value*, not on whether GCP_PROJECT_ID happens to be
+        # set in the environment: mise/docker-compose/CI may export GCP_PROJECT_ID=kaizen-local
+        # explicitly, and requiring the var to be absent let that placeholder slip through to a
+        # real (failing, slow-to-fail) Firestore client. bigquery_tool.py gates the same way.
+        if self._project == "kaizen-local":
+            logger.info(
+                "Firestore placeholder project kaizen-local without emulator; operating with in-memory Blackboard"
+            )
+            return None
+
         try:
             client = firestore.Client(project=self._project)
             logger.info(

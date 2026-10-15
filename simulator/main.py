@@ -6,12 +6,13 @@ import argparse
 import asyncio
 import logging
 import signal
-from typing import Optional
+from typing import Any, Optional
 
 from simulator.config import settings
 from simulator.conveyor_simulator import ConveyorSimulator
+from simulator.edge import EdgeInspectionStation, EdgePubSubDispatcher
 from simulator.machine_simulator import MachineSimulator
-from simulator.models import SimulatorTickSummary
+from simulator.models import QualityEventPayload, SimulatorTickSummary
 from simulator.mqtt_publisher import MqttPublisher
 
 logging.basicConfig(
@@ -44,7 +45,10 @@ class FactorySimulatorService:
         include_im = scenario == "im_damp_material"
         self.machine_sim = MachineSimulator(include_im=include_im, seed=seed)
         self.conveyor_sim = ConveyorSimulator(include_im=include_im, seed=seed)
+        self.edge_station = EdgeInspectionStation()
         self.publisher = MqttPublisher(dry_run=dry_run)
+        self.pubsub_dispatcher = EdgePubSubDispatcher(dry_run=dry_run)
+        self._pending_tasks: list[asyncio.Task[Any]] = []
 
         if inject_on_start:
             self.trigger_anomaly(scenario=scenario)
@@ -66,34 +70,37 @@ class FactorySimulatorService:
             self.conveyor_sim.set_anomaly(target, active=True, scenario="cnc_tool_wear")
 
         if self.pubsub:
+            quality_evt = QualityEventPayload(
+                machine_id=target,
+                tool_id="MOLD-03" if scenario == "im_damp_material" else "T07",
+                defect_type="short_fill" if scenario == "im_damp_material" else "scratch_vertical",
+                scenario=scenario,
+                mode="fast" if self.speed > 2.0 else "demo",
+                severity="high" if severity >= 1.0 else "medium",
+            )
             try:
-                from backend.core.models import QualityEventPayload
-                from backend.core.pubsub_manager import pubsub_manager
-
-                quality_evt = QualityEventPayload(
-                    machine_id=target,
-                    tool_id="MOLD-03" if scenario == "im_damp_material" else "T07",
-                    defect_type="short_fill"
-                    if scenario == "im_damp_material"
-                    else "scratch_vertical",
-                    scenario=scenario,
-                    mode="fast" if self.speed > 2.0 else "demo",
-                    severity="high" if severity >= 1.0 else "medium",
-                )
-                pubsub_manager.publish_quality_event(quality_evt)
-                logger.info(
-                    "Published anomaly trigger quality-event to Pub/Sub (%s, %s)", target, scenario
-                )
-            except Exception as exc:
-                logger.debug("Pub/Sub quality event dispatch in simulator skipped: %s", exc)
+                loop = asyncio.get_running_loop()
+                task = loop.create_task(self.pubsub_dispatcher.publish_quality_event(quality_evt))
+                self._pending_tasks.append(task)
+            except RuntimeError:
+                asyncio.run(self.pubsub_dispatcher.publish_quality_event(quality_evt))
+            logger.info(
+                "Published anomaly trigger quality-event to Pub/Sub (%s, %s)", target, scenario
+            )
 
     def reset_baseline(self) -> None:
         """Restores all machinery to normal baseline."""
         self.machine_sim.reset()
         self.conveyor_sim.reset()
+        self.edge_station.edge_filter.reset_statistics()
+        self.edge_station.spool.clear()
 
     async def step(self) -> SimulatorTickSummary:
         """Executes a single simulation tick."""
+        if self._pending_tasks:
+            await asyncio.gather(*self._pending_tasks)
+            self._pending_tasks.clear()
+
         self.tick_count += 1
         telemetry = self.machine_sim.tick()
         parts = self.conveyor_sim.tick()
@@ -102,6 +109,23 @@ class FactorySimulatorService:
         self.publisher.publish_telemetry(telemetry)
         self.publisher.publish_parts(parts)
 
+        # Process parts through edge inspection station
+        forwarded_packets = []
+        for p in parts:
+            _, packet = await self.edge_station.inspect(p)
+            if packet.filter_decision == "FORWARD":
+                forwarded_packets.append(packet)
+                if self.pubsub:
+                    m_telemetry = next(
+                        (t for t in telemetry if t.machine_id == packet.machine_id), None
+                    )
+                    await self.pubsub_dispatcher.dispatch_anomaly(
+                        packet=packet,
+                        scenario=self.scenario,
+                        mode="fast" if self.speed > 2.0 else "demo",
+                        telemetry=m_telemetry,
+                    )
+
         # Formatted log summary
         cnc_summaries = []
         for t in telemetry:
@@ -109,36 +133,24 @@ class FactorySimulatorService:
             cnc_summaries.append(f"{t.machine_id}: {t.spindle_vibration:.2f}mm/s{flag}")
 
         defects = [p for p in parts if p.status != "PASS"]
-        if self.pubsub and defects:
-            try:
-                from backend.core.models import QualityEventPayload
-                from backend.core.pubsub_manager import pubsub_manager
-
-                for d in defects:
-                    quality_evt = QualityEventPayload(
-                        machine_id=d.machine_id,
-                        tool_id=d.tool_id,
-                        defect_type=d.defect_type or "scratch_vertical",
-                        scenario=self.scenario,
-                        mode="fast" if self.speed > 2.0 else "demo",
-                    )
-                    pubsub_manager.publish_quality_event(quality_evt)
-            except Exception as exc:
-                logger.debug("Pub/Sub quality event dispatch in simulator step skipped: %s", exc)
-
         defect_str = f" ({len(defects)} defect)" if defects else ""
+        forward_str = f" [{len(forwarded_packets)} forwarded]" if forwarded_packets else ""
         logger.info(
-            "Tick #%d | %s | %d parts%s",
+            "Tick #%d | %s | %d parts%s%s",
             self.tick_count,
             " | ".join(cnc_summaries),
             len(parts),
             defect_str,
+            forward_str,
         )
 
+        edge_stats = self.edge_station.edge_filter.get_statistics()
         return SimulatorTickSummary(
             tick_index=self.tick_count,
             telemetry=telemetry,
             parts=parts,
+            edge_stats=edge_stats,
+            forwarded_packets=forwarded_packets,
         )
 
     async def run(self, max_ticks: int = 0) -> None:
@@ -169,7 +181,14 @@ class FactorySimulatorService:
             return
         self._stopped = True
         self.running = False
+        if self._pending_tasks:
+            for task in self._pending_tasks:
+                if not task.done():
+                    task.cancel()
+            self._pending_tasks.clear()
         self.publisher.close()
+        self.pubsub_dispatcher.close()
+        self.edge_station.close()
         logger.info("Factory Simulator stopped.")
 
 

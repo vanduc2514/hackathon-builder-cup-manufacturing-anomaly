@@ -136,8 +136,12 @@ def get_bigquery_client() -> Any:
                 client_options={"api_endpoint": endpoint},
             )
 
-        if settings.bigquery_fallback_to_mock and settings.gcp_project_id == "kaizen-local":
-            raise RuntimeError("BigQuery live client disabled for local development ('kaizen-local')")
+        if settings.gcp_project_id == "kaizen-local":
+            if settings.bigquery_fallback_to_mock:
+                logger.info("Local dev with kaizen-local: BigQuery using mock fallback")
+                raise RuntimeError(
+                    "BigQuery live client skipped for kaizen-local placeholder project"
+                )
 
         return bigquery.Client(project=settings.gcp_project_id)
 

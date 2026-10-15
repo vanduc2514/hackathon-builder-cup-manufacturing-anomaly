@@ -427,6 +427,28 @@ class VisualEvidencePayload(BaseModel):
     )
 
 
+class VisualInspectionResult(BaseModel):
+    """Structured inspection result returned by Gemini Vision metrology analysis."""
+
+    analysis: str = Field(
+        description="Detailed visual inspection and metrology assessment of the uploaded photo."
+    )
+    defect_detected: bool = Field(
+        default=True,
+        description="Whether a physical defect, wear pattern, or anomaly is confirmed in the image.",
+    )
+    wear_measurement_mm: Optional[float] = Field(
+        default=None,
+        description="Quantitative measurement of tool flank wear (VB), chip width, or defect size in mm if visible.",
+    )
+    confidence: float = Field(
+        default=0.92,
+        ge=0.0,
+        le=1.0,
+        description="Confidence score between 0.0 and 1.0 of the visual analysis.",
+    )
+
+
 class IncidentState(BaseModel):
     incident_id: str = "INC-0412"
     # normal, detecting, tracing, investigating, analyzing, awaiting_evidence, repairing,

@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
+import traceback
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from google.adk import Workflow
@@ -84,6 +88,12 @@ WORKFLOW_NAME = "kaizen_incident"
 MAX_LLM_CALLS_PER_INCIDENT = 100
 # Shown to the technician instead of the raw Vertex 429/RESOURCE_EXHAUSTED error + doc URL.
 GEMINI_RATE_LIMIT_MESSAGE = "The AI service is busy right now. Please try again in a minute."
+# Shown for any other failure instead of leaking exception class names/messages (ADK
+# internals, tool error text, stack traces) to the technician. The full exception is still
+# logged server-side (logger.exception) and captured in the crash dump for debugging.
+GENERIC_FAILURE_MESSAGE = (
+    "Something went wrong while analyzing this incident. Please retry or notify a shift leader."
+)
 
 
 resolution_join = JoinNode(name="resolution_join")
@@ -135,6 +145,34 @@ incident_workflow = Workflow(
         (close_incident, agent_continuous_learning.agent, record_learning),
     ],
 )
+
+
+def dump_crash(
+    state: IncidentState,
+    exc: Exception,
+    output_dir: Path | None = None,
+) -> Path | None:
+    """Serializes the exact IncidentState context to crash_<incident_id>_<timestamp>.json upon failure."""
+    try:
+        ts = int(time.time())
+        filename = f"crash_{state.incident_id}_{ts}.json"
+        target_dir = output_dir or Path.cwd()
+        target_dir.mkdir(parents=True, exist_ok=True)
+        crash_path = target_dir / filename
+        data = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "incident_id": state.incident_id,
+            "error_type": type(exc).__name__,
+            "error_message": str(exc),
+            "traceback": traceback.format_exc(),
+            "state": state.model_dump(mode="json"),
+        }
+        crash_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        logger.info("Serialized crash dump to %s", crash_path)
+        return crash_path
+    except Exception as dump_err:
+        logger.error("Failed to write crash dump: %s", dump_err)
+        return None
 
 
 class Orchestrator:
@@ -212,10 +250,12 @@ class Orchestrator:
             if exc.code == 429:
                 blackboard.update_status("error", status_reason=GEMINI_RATE_LIMIT_MESSAGE)
             else:
-                blackboard.update_status("error", status_reason=f"{type(exc).__name__}: {exc}")
+                blackboard.update_status("error", status_reason=GENERIC_FAILURE_MESSAGE)
+            dump_crash(blackboard.get_state(), exc)
         except Exception as exc:
             logger.exception("incident workflow failed")
-            blackboard.update_status("error", status_reason=f"{type(exc).__name__}: {exc}")
+            blackboard.update_status("error", status_reason=GENERIC_FAILURE_MESSAGE)
+            dump_crash(blackboard.get_state(), exc)
         return blackboard.get_state()
 
     async def cancel(self) -> None:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import datetime
 import logging
 import re
@@ -22,6 +21,15 @@ from backend.core.models import (
     RAGSearchResult,
     RepairCheckpoint,
     VisualEvidencePayload,
+)
+from backend.tools.gemini_vision_tool import (
+    analyze_visual_evidence_frame as analyze_visual_evidence_frame,
+)
+from backend.tools.gemini_vision_tool import (
+    analyze_visual_evidence_frame_async as analyze_visual_evidence_frame_async,
+)
+from backend.tools.gemini_vision_tool import (
+    mock_visual_evidence_analysis as mock_visual_evidence_analysis,
 )
 from backend.tools.rag_search_tool import search_knowledge_base
 
@@ -453,46 +461,6 @@ def build_contextual_diagnostic_probe_vi(
     )
 
 
-def analyze_visual_evidence_frame(
-    image_bytes: bytes,
-    machine_id: str = "CNC-02",
-    tool_id: str | None = "T07",
-    filename: str | None = None,
-) -> VisualEvidencePayload:
-    """Analyzes a close-up photo frame captured by frontline technician's mobile camera."""
-    is_im = "IM" in machine_id.upper()
-    size_bytes = len(image_bytes)
-    b64_preview = base64.b64encode(image_bytes[:512]).decode("ascii") if image_bytes else None
-
-    if is_im:
-        analysis_text = (
-            "Close-up optical inspection of Dryer-03 desiccant canister confirms severe moisture saturation "
-            "(color shifted from blue to pink) and oil contamination on O-ring seal FLT-ABS-04."
-        )
-        citation = DEFAULT_DIAGNOSTIC_IM_CITATION
-        wear_mm = None
-    else:
-        target_tool = tool_id or "T07"
-        analysis_text = (
-            f"Macro optical inspection of cutting insert {target_tool} confirms abrasive flank wear "
-            "exceeding tolerance (VB = 0.35 mm > 0.30 mm limit) and micro-chipping on primary cutting edge, "
-            "corroborating workpiece vertical scratches."
-        )
-        citation = f"Technician diagnostic camera stream via Gemini Live ({machine_id} {target_tool} macro inspection)"
-        wear_mm = 0.35
-
-    return VisualEvidencePayload(
-        filename=filename or ("evidence_photo.jpg" if not is_im else "dryer_photo.jpg"),
-        mime_type="image/jpeg",
-        size_bytes=size_bytes,
-        image_base64=b64_preview,
-        analysis=analysis_text,
-        defect_detected=True,
-        wear_measurement_mm=wear_mm,
-        citation=citation,
-    )
-
-
 # =============================================================================
 # Technician Copilot Session Class
 # =============================================================================
@@ -613,7 +581,7 @@ class TechnicianCopilot:
         notes: str | None = None,
     ) -> tuple[CopilotTurn, VisualEvidencePayload, AgentFinding]:
         """Ingests visual photo evidence from technician, updates blackboard, and appends turn."""
-        evidence_payload = analyze_visual_evidence_frame(
+        evidence_payload = await analyze_visual_evidence_frame_async(
             image_bytes=image_bytes,
             machine_id=self.machine_id,
             tool_id=self.tool_id,

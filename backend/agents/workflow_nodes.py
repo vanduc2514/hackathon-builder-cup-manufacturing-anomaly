@@ -30,7 +30,6 @@ from backend.core.models import (
     ScribeDraft,
     VerificationResult,
 )
-from simulator.injection_engine import injection_engine
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +94,18 @@ async def open_incident(ctx: Context, node_input: DefectInjectionRequest) -> Inc
 
 async def inspect_production(ctx: Context, node_input: dict) -> Event:
     """Quality Inspector measures the conveyor window; only an upper SPC breach opens Phase A."""
-    report = await agent_quality_inspector.inspect_production_window(blackboard.get_state().spc_ucl)
+    state = blackboard.get_state()
+    trigger = ctx.state.get("trigger", {})
+    rate = trigger.get("defect_rate")
+    if rate is None:
+        rate = state.defect_rate if state.defect_rate > 0 else 0.12
+    dtype = trigger.get("defect_type") or state.defect_type or "scratch_vertical"
+
+    report = await agent_quality_inspector.inspect_production_window(
+        state.spc_ucl,
+        defect_rate=rate,
+        defect_type=dtype,
+    )
     ctx.state["qi_report"] = report.model_dump()
     spc = report.spc
     if spc.breach_direction == "upper":
@@ -241,8 +251,6 @@ async def record_resolution(node_input: dict) -> IncidentState:
     scribe = ScribeDraft.model_validate(node_input[agent_incident_scribe.agent.name])
     _record(agent_technician_copilot, copilot)
     _record(agent_incident_scribe, scribe)
-    # Simulated plant: the completed repair restores the line before post-repair inspection.
-    injection_engine.set_verification_recovery()
     blackboard.set_repair_done(True)
     blackboard.update_status(
         "verifying",

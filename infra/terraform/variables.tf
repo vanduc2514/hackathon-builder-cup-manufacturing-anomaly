@@ -20,6 +20,12 @@ variable "service_name" {
   default     = "kaizen-backend"
 }
 
+variable "factory_service_name" {
+  description = "Cloud Run service name for factory simulator client."
+  type        = string
+  default     = "kaizen-factory"
+}
+
 variable "artifact_repo" {
   description = "Artifact Registry docker repository ID."
   type        = string

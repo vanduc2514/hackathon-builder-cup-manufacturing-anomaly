@@ -185,8 +185,7 @@ class MockLlm(BaseLlm):
                     ),
                     "confidence": self.rca_confidence,
                     "citation": (
-                        "Vertex AI Search: CNC Manual p.112 + Maintenance Log T07 + "
-                        "8D-2026-03-12"
+                        "Vertex AI Search: CNC Manual p.112 + Maintenance Log T07 + 8D-2026-03-12"
                     ),
                     "work_order": "N/A",
                     "report_8d": "N/A",

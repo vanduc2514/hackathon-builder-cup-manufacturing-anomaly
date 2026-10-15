@@ -21,6 +21,20 @@ class SimulatorSettings(BaseSettings):
     tick_interval_sec: float = float(os.getenv("SIMULATOR_TICK_SEC", "2.0"))
     speed_multiplier: float = float(os.getenv("SIMULATOR_SPEED", "1.0"))
 
+    # Google Cloud Pub/Sub & Edge Dispatch
+    gcp_project_id: str = os.getenv("GCP_PROJECT_ID", "kaizen-local")
+    pubsub_emulator_host: str | None = os.getenv("PUBSUB_EMULATOR_HOST", None)
+    pubsub_enabled: bool = os.getenv("SIMULATOR_PUBSUB_ENABLED", "false").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
+    pubsub_quality_events_topic: str = os.getenv(
+        "PUBSUB_QUALITY_EVENTS_TOPIC", "kaizen-quality-events"
+    )
+    pubsub_telemetry_topic: str = os.getenv("PUBSUB_TELEMETRY_TOPIC", "kaizen-telemetry")
+    pubsub_traceability_topic: str = os.getenv("PUBSUB_TRACEABILITY_TOPIC", "kaizen-traceability")
+
     # Logging
     log_level: str = os.getenv("LOG_LEVEL", "INFO")
 

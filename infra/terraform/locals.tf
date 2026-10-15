@@ -30,10 +30,11 @@ locals {
   # project-scoped names use the plain kaizen- prefix.
   kb_bucket = "${var.global_prefix}-kb"
 
-  # firebase.json hosting target => site ID (apps/web, apps/mobile).
+  # firebase.json hosting target => site ID (apps/web, apps/mobile, simulator/ui).
   hosting_sites = {
-    web    = "${var.global_prefix}-web"
-    mobile = "${var.global_prefix}-mobile"
+    web     = "${var.global_prefix}-web"
+    mobile  = "${var.global_prefix}-mobile"
+    factory = "${var.global_prefix}-factory"
   }
   hosting_urls = { for target, site in local.hosting_sites : target => "https://${site}.web.app" }
 

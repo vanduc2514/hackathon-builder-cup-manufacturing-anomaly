@@ -191,7 +191,11 @@ class GoogleDriveConnector:
             request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
             return request.execute()
         except Exception as exc:
-            logger.warning("Error streaming document bytes for file_id '%s' (%s); falling back to mock content", file_id, exc)
+            logger.warning(
+                "Error streaming document bytes for file_id '%s' (%s); falling back to mock text",
+                file_id,
+                exc,
+            )
             text = MOCK_DOC_TEXTS.get(file_id, "Mock document content for offline parity.")
             return text.encode("utf-8")
 
@@ -210,8 +214,12 @@ class GoogleDriveConnector:
             content_bytes = request.execute()
             return content_bytes.decode("utf-8", errors="replace")
         except Exception as exc:
-            logger.error("Error exporting Google Doc '%s': %s", file_id, exc)
-            raise RuntimeError(f"Failed to export Google Doc '{file_id}': {exc}") from exc
+            logger.warning(
+                "Error exporting Google Doc '%s' (%s); falling back to mock text",
+                file_id,
+                exc,
+            )
+            return MOCK_DOC_TEXTS.get(file_id, "")
 
     def extract_document_text(
         self,

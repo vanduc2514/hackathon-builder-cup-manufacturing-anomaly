@@ -98,7 +98,7 @@ All fields are now shown (see the field table at the top).
 
 ### 1c. Computed in the backend but not exposed by any endpoint (needs a backend change)
 
-- **Repair checkpoints:** `RepairCheckpoint` from `OEM_REPAIR_MANUALS`. The app keeps a hand-synced copy in `components/mobile/oemRepairManuals.ts` and maps it with `checkpointToStep()`. An endpoint would remove the copy.
+- **Repair checkpoints:** Resolved via `GET /api/copilot/manuals/{machine_id}` (`OemRepairManual` + `RepairCheckpoint[]`). Dynamically loaded by `useOemManual`.
 - **Copilot session:** `CopilotSessionTelemetry` (`checkpoints_passed`, `verified_metrics`, `transcript[]`, …).
 - **Field-evidence checklist:** only the `diagnostic_request` string is exposed, so the live order asks for one photo.
 - **Structured work order:** the `WorkOrder` model (`parts_required`, `priority`); the Scribe returns plain text, shown as-is.
@@ -134,7 +134,7 @@ Testing note: with `AI_PROVIDER=mock` the RCA confidence is always ≥ 0.88, so 
 
 | Data point | Hardcoded value | Backend has |
 |---|---|---|
-| Repair steps | Live: copy of `OEM_REPAIR_MANUALS` checkpoints. Demo: `COLLAR_STEPS`, `NOZZLE_STEPS` with scripted copilot lines | `RepairCheckpoint` list exists but isn't exposed (see 1c) |
+| Repair steps | Dynamically loaded via `useOemManual` hook | `GET /api/copilot/manuals/{machine_id}` returns `OemRepairManual` with `RepairCheckpoint[]` |
 | Step verification | Confirmed by the technician (no auto-verify) | Copilot `validate_metric_measurement()` exists but isn't exposed |
 | Copilot voice/camera | Live: `WS /api/gemini-live/ws` text turns + audio; camera stays local. Demo: scripted lines | The socket has no microphone transcription path the app can use yet (audio chunks are answered with a fixed probe) |
 | Submit repair + handover note | Live: repair completion handled by copilot workflow; handover note posted to `POST /api/incidents/handover` | `POST /api/incidents/handover` records note via Orchestrator onto Blackboard & Firestore |

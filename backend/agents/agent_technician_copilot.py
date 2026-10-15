@@ -31,6 +31,10 @@ from backend.tools.gemini_vision_tool import (
 from backend.tools.gemini_vision_tool import (
     mock_visual_evidence_analysis as mock_visual_evidence_analysis,
 )
+from backend.tools.manual_loader import (
+    get_oem_repair_manual,
+    load_oem_repair_manuals_dict,
+)
 from backend.tools.rag_search_tool import search_knowledge_base
 
 logger = logging.getLogger(__name__)
@@ -101,181 +105,7 @@ VIETNAMESE_MANUFACTURING_VOCABULARY: dict[str, dict[str, str]] = {
 # Verified OEM Equipment Manuals Database (Strict Grounding Sources)
 # =============================================================================
 
-OEM_REPAIR_MANUALS: dict[str, dict[str, Any]] = {
-    "CNC-02": {
-        "equipment_name": "Máy CNC phay/tiện tự động CNC-02 (DMG MORI / Fanuc)",
-        "manual_title": "Sổ tay hướng dẫn vận hành & bảo trì CNC-02 (OEM Manual 2024)",
-        "primary_citation": "Sổ tay hướng dẫn CNC-02 trang 112, mục 4.2",
-        "supported_actions": [
-            "thay mảnh cắt",
-            "thay insert",
-            "kiểm tra độ đảo",
-            "đo độ đảo",
-            "đo đồng hồ so",
-            "ngắt nguồn",
-            "loto",
-            "nắp chắn",
-            "siết vít",
-            "chạy thử",
-        ],
-        "checkpoints": [
-            {
-                "step_number": 1,
-                "title_vi": "Khóa an toàn LOTO & ngắt nguồn",
-                "instruction_vi": (
-                    "Theo sổ tay hướng dẫn máy CNC-02 trang 112 mục 4.2.1, nhấn nút dừng "
-                    "khẩn cấp E-Stop, ngắt cầu dao nguồn chính và treo biển cảnh báo LOTO "
-                    "trước khi can thiệp vào khoang máy."
-                ),
-                "citation": "Sổ tay hướng dẫn CNC-02 trang 112, mục 4.2.1",
-                "metric_name": None,
-                "target_threshold": None,
-                "comparator": "<=",
-                "unit": None,
-            },
-            {
-                "step_number": 2,
-                "title_vi": "Mở nắp chắn an toàn & kiểm tra mảnh cắt insert T07",
-                "instruction_vi": (
-                    "Theo sổ tay hướng dẫn máy CNC-02 trang 112 mục 4.2.2, mở nắp chắn bảo vệ "
-                    "bên trái khoang gia công, dùng đèn kiểm tra mảnh cắt insert T07. "
-                    "Quan sát dấu hiệu mòn mặt sau (flank wear) hoặc mẻ lưỡi cắt."
-                ),
-                "citation": "Sổ tay hướng dẫn CNC-02 trang 112, mục 4.2.2",
-                "metric_name": None,
-                "target_threshold": None,
-                "comparator": "<=",
-                "unit": None,
-            },
-            {
-                "step_number": 3,
-                "title_vi": "Tháo insert cũ & lắp mảnh cắt mới chuẩn lực siết",
-                "instruction_vi": (
-                    "Theo sổ tay hướng dẫn máy CNC-02 trang 112 mục 4.2.3, dùng khóa lục giác "
-                    "nới vít kẹp, tháo insert T07 đã mòn. Vệ sinh sạch hốc gá dao, lắp mảnh cắt "
-                    "mới mã WNMG-080408 và siết với lực siết định mức 4.2 N·m bằng cờ lê lực."
-                ),
-                "citation": "Sổ tay hướng dẫn CNC-02 trang 112, mục 4.2.3",
-                "metric_name": None,
-                "target_threshold": None,
-                "comparator": "<=",
-                "unit": None,
-            },
-            {
-                "step_number": 4,
-                "title_vi": "Đo độ đảo trục chính / đầu dao bằng đồng hồ so",
-                "instruction_vi": (
-                    "Theo sổ tay hướng dẫn máy CNC-02 trang 112 mục 4.2.4, gá đồng hồ so lên "
-                    "bàn máy, rà đầu kim vào mặt chuẩn của đầu dao/trục chính. Quay nhẹ trục chính "
-                    "bằng tay 360 độ. Độ đảo trục chính (spindle runout) bắt buộc phải nhỏ hơn "
-                    "hoặc bằng dung sai tối đa 0.005 mm."
-                ),
-                "citation": "Sổ tay hướng dẫn CNC-02 trang 112, mục 4.2.4",
-                "metric_name": "Độ đảo trục chính (spindle runout)",
-                "target_threshold": 0.005,
-                "comparator": "<=",
-                "unit": "mm",
-            },
-            {
-                "step_number": 5,
-                "title_vi": "Đóng nắp chắn an toàn & chạy thử không tải",
-                "instruction_vi": (
-                    "Theo sổ tay hướng dẫn máy CNC-02 trang 112 mục 4.2.5, thu dọn dụng cụ, "
-                    "đóng nắp chắn bảo vệ, mở khóa E-Stop, reset cảnh báo trên màn hình CNC "
-                    "và chạy thử trục chính không tải ở 1,500 RPM trong 60 giây."
-                ),
-                "citation": "Sổ tay hướng dẫn CNC-02 trang 112, mục 4.2.5",
-                "metric_name": None,
-                "target_threshold": None,
-                "comparator": "<=",
-                "unit": None,
-            },
-        ],
-    },
-    "IM-05": {
-        "equipment_name": "Máy ép phun nhựa IM-05 & Phễu sấy ABS",
-        "manual_title": "Sổ tay bảo trì máy ép phun nhựa IM-05 & Hệ thống sấy ABS (OEM Manual 2024)",
-        "primary_citation": "SOP-MOLD-02 trang 45, mục 3",
-        "supported_actions": [
-            "thay lọc",
-            "thay bộ lọc",
-            "đo điểm sương",
-            "kiểm tra điểm sương",
-            "sấy hạt nhựa",
-            "ngắt nhiệt",
-            "khóa khí nén",
-        ],
-        "checkpoints": [
-            {
-                "step_number": 1,
-                "title_vi": "Khóa nhiệt & cô lập áp khí nén phễu sấy",
-                "instruction_vi": (
-                    "Theo tài liệu SOP-MOLD-02 trang 45 mục 3.1, ngắt điện trở sấy nhiệt, "
-                    "khóa van cấp khí nén vào phễu sấy và xả hết áp dư trên van an toàn."
-                ),
-                "citation": "SOP-MOLD-02 trang 45, mục 3.1",
-                "metric_name": None,
-                "target_threshold": None,
-                "comparator": "<=",
-                "unit": None,
-            },
-            {
-                "step_number": 2,
-                "title_vi": "Tháo bộ lọc máy sấy cũ bị nghẹt dầu",
-                "instruction_vi": (
-                    "Theo tài liệu SOP-MOLD-02 trang 45 mục 3.2, mở khóa ngàm tháo cốc lọc, "
-                    "lấy lõi lọc cũ đã nghẹt dầu và vệ sinh sạch khoang chứa cốc lọc."
-                ),
-                "citation": "SOP-MOLD-02 trang 45, mục 3.2",
-                "metric_name": None,
-                "target_threshold": None,
-                "comparator": "<=",
-                "unit": None,
-            },
-            {
-                "step_number": 3,
-                "title_vi": "Lắp lõi lọc tách ẩm mới mã FLT-ABS-04",
-                "instruction_vi": (
-                    "Theo tài liệu SOP-MOLD-02 trang 45 mục 3.3, lắp lõi lọc mới FLT-ABS-04, "
-                    "thay vòng đệm gioăng cao su chịu nhiệt O-ring và siết chặt cốc lọc."
-                ),
-                "citation": "SOP-MOLD-02 trang 45, mục 3.3",
-                "metric_name": None,
-                "target_threshold": None,
-                "comparator": "<=",
-                "unit": None,
-            },
-            {
-                "step_number": 4,
-                "title_vi": "Đo kiểm tra điểm sương luồng khí sấy",
-                "instruction_vi": (
-                    "Theo tài liệu SOP-MOLD-02 trang 46 mục 3.4, bật trạm khí khô, gắn đầu đo "
-                    "điểm sương (dew point sensor). Điểm sương phải đạt dưới mức tiêu chuẩn "
-                    "-30.0 °C trước khi đưa vật liệu vào."
-                ),
-                "citation": "SOP-MOLD-02 trang 46, mục 3.4",
-                "metric_name": "Điểm sương khí sấy",
-                "target_threshold": -30.0,
-                "comparator": "<=",
-                "unit": "°C",
-            },
-            {
-                "step_number": 5,
-                "title_vi": "Bật gia nhiệt & duy trì sấy hạt nhựa ABS trong 4 giờ",
-                "instruction_vi": (
-                    "Theo tài liệu SOP-MOLD-02 trang 46 mục 3.5, cài đặt nhiệt độ sấy 85 °C và "
-                    "duy trì sấy lại hạt nhựa ABS trong tối thiểu 4 giờ trước khi mở van cấp liệu "
-                    "xuống cụm ép phun cavity 3."
-                ),
-                "citation": "SOP-MOLD-02 trang 46, mục 3.5",
-                "metric_name": None,
-                "target_threshold": None,
-                "comparator": "<=",
-                "unit": None,
-            },
-        ],
-    },
-}
+OEM_REPAIR_MANUALS: dict[str, dict[str, Any]] = load_oem_repair_manuals_dict()
 
 REFUSAL_MESSAGE_VI = (
     "Không có quy trình chính thức được ghi nhận trong tài liệu hướng dẫn OEM cho yêu cầu này. "
@@ -338,17 +168,24 @@ Khi tất cả các bước hoàn thành, phát tín hiệu xác nhận sửa ch
 
 def get_oem_manual_citations(equipment_id: str) -> list[str]:
     """Retrieves all verified citations for a given equipment."""
-    manual = OEM_REPAIR_MANUALS.get(equipment_id)
-    if not manual:
+    manual = get_oem_repair_manual(equipment_id)
+    if manual:
+        return [cp.citation for cp in manual.checkpoints]
+    manual_dict = OEM_REPAIR_MANUALS.get(equipment_id)
+    if not manual_dict:
         return []
-    return [step["citation"] for step in manual.get("checkpoints", [])]
+    return [step["citation"] for step in manual_dict.get("checkpoints", [])]
 
 
 def is_action_grounded(equipment_id: str, query: str) -> bool:
     """Verifies whether a requested repair query is supported by OEM documentation."""
-    if equipment_id not in OEM_REPAIR_MANUALS:
+    manual = get_oem_repair_manual(equipment_id)
+    if manual:
+        supported = manual.supported_actions
+    elif equipment_id in OEM_REPAIR_MANUALS:
+        supported = OEM_REPAIR_MANUALS[equipment_id].get("supported_actions", [])
+    else:
         return False
-    supported = OEM_REPAIR_MANUALS[equipment_id].get("supported_actions", [])
     query_lower = query.lower()
     return any(action in query_lower for action in supported)
 
@@ -502,6 +339,9 @@ class TechnicianCopilot:
 
     def _load_checkpoints(self) -> list[RepairCheckpoint]:
         """Loads checkpoints from verified OEM database for target machine."""
+        manual = get_oem_repair_manual(self.machine_id)
+        if manual:
+            return manual.checkpoints
         manual_data = OEM_REPAIR_MANUALS.get(self.machine_id)
         if not manual_data:
             return []

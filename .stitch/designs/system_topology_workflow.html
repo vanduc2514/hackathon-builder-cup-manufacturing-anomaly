@@ -599,7 +599,7 @@ body {
 /* Floating Navigation Controls */
 .canvas-floating-controls {
   position: absolute;
-  top: 16px;
+  top: 76px;
   right: 16px;
   z-index: 50;
   display: flex;
@@ -868,6 +868,452 @@ body {
 .log-time { color: #64748b; }
 .log-level-ok { color: #22c55e; font-weight: 600; }
 .log-msg { color: #f1f5f9; }
+
+
+/* =====================================================================
+   TWO-WINDOW ARCHITECTURE BOUNDARIES (TKT-050 / ISSUE #225)
+   ===================================================================== */
+.window-boundary-card {
+  width: 100%;
+  border-radius: 20px;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Window 1: Factory Floor (On-Premises Edge) */
+.window-1-boundary {
+  background: rgba(248, 250, 252, 0.72);
+  border: 1.5px solid rgba(71, 85, 105, 0.45);
+  box-shadow: 0 4px 20px -4px rgba(71, 85, 105, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 22px 24px;
+}
+.window-1-boundary:hover {
+  border-color: rgba(71, 85, 105, 0.65);
+}
+
+/* Window 2: Cloud Control Plane (Multi-Agent Swarm) */
+.window-2-boundary {
+  background: rgba(240, 244, 255, 0.62);
+  border: 1.5px solid rgba(99, 102, 241, 0.38);
+  box-shadow: 0 6px 24px -4px rgba(99, 102, 241, 0.10), 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 22px 24px;
+}
+.window-2-boundary:hover {
+  border-color: rgba(99, 102, 241, 0.58);
+}
+
+/* Boundary Header */
+.window-boundary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.4);
+}
+.window-title-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.window-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.window-1-pill {
+  background: rgba(51, 65, 85, 0.12);
+  color: #1e293b;
+  border: 1px solid rgba(71, 85, 105, 0.25);
+}
+.window-2-pill {
+  background: rgba(99, 102, 241, 0.12);
+  color: #3730a3;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+.window-icon {
+  font-size: 16px;
+}
+.window-tag {
+  font-weight: 800;
+  font-family: var(--font-display);
+}
+.window-separator {
+  opacity: 0.5;
+}
+.window-name {
+  font-weight: 600;
+}
+.window-badges-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.chip-slate {
+  background: rgba(226, 232, 240, 0.85);
+  color: #334155;
+  border-color: rgba(203, 213, 225, 0.8);
+}
+
+/* Quick-Launch CTA button for Window 1 (:3002) */
+.btn-quick-launch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  background: #1e293b;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.12);
+}
+.btn-quick-launch:hover {
+  background: #0f172a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(15, 23, 42, 0.18);
+  color: #ffffff;
+}
+.btn-quick-launch:active {
+  transform: translateY(0);
+}
+
+/* Cross-Window Decoupled Bridge (Pub/Sub) */
+.cross-window-bridge {
+  width: 100%;
+  max-width: 960px;
+  position: relative;
+  z-index: 3;
+  margin: -10px 0;
+}
+.bridge-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1.5px dashed rgba(91, 91, 240, 0.45);
+  border-radius: 14px;
+  box-shadow: 0 4px 16px -4px rgba(91, 91, 240, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.3s var(--ease);
+}
+.bridge-card:hover {
+  border-color: rgba(91, 91, 240, 0.75);
+  box-shadow: 0 6px 20px -2px rgba(91, 91, 240, 0.20);
+}
+.bridge-icon-tile {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(91, 91, 240, 0.15), rgba(124, 108, 255, 0.25));
+  color: #4338ca;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.bridge-content {
+  flex: 1;
+  min-width: 0;
+}
+.bridge-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.bridge-title {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  color: #1e293b;
+}
+.bridge-subtitle {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+}
+.bridge-metric-tile {
+  text-align: right;
+  flex-shrink: 0;
+  padding-left: 12px;
+  border-left: 1px solid rgba(226, 232, 240, 0.8);
+}
+.bridge-metric-val {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #4338ca;
+  font-family: var(--font-mono);
+}
+.bridge-metric-lbl {
+  font-size: 10px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* =====================================================================
+   TIER 1 GLANCE: PHASE STEPPER BAR (TKT-050 / ISSUE #225)
+   ===================================================================== */
+.phase-stepper-bar-wrapper {
+  width: 100%;
+  padding: 10px 24px;
+  background: rgba(255, 255, 255, 0.65);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: relative;
+  z-index: 10;
+}
+.phase-stepper-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  max-width: 1380px;
+  margin: 0 auto;
+}
+.stepper-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1.5px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 44px;
+  user-select: none;
+}
+.stepper-step:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+.stepper-step:active {
+  transform: translateY(0);
+}
+.step-indicator {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 13px;
+  font-family: var(--font-display);
+  flex-shrink: 0;
+  transition: all 0.25s var(--ease);
+}
+.step-content {
+  flex: 1;
+  min-width: 0;
+}
+.step-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+.step-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.step-status-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.step-desc {
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.step-chevron {
+  font-size: 16px;
+  color: #94a3b8;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+/* Stepper States */
+.stepper-step.step-idle {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(226, 232, 240, 0.7);
+}
+.stepper-step.step-idle .step-indicator {
+  background: rgba(226, 232, 240, 0.75);
+  color: #64748b;
+}
+.stepper-step.step-idle .step-status-chip {
+  background: rgba(241, 245, 249, 0.8);
+  color: #64748b;
+}
+
+.stepper-step.step-active {
+  background: rgba(240, 244, 255, 0.9);
+  border-color: rgba(91, 91, 240, 0.6);
+  box-shadow: 0 0 0 1px rgba(91, 91, 240, 0.3), 0 4px 16px rgba(91, 91, 240, 0.12);
+}
+.stepper-step.step-active .step-indicator {
+  background: #5b5bf0;
+  color: #ffffff;
+}
+.stepper-step.step-active .step-title {
+  color: #3730a3;
+}
+.stepper-step.step-active .step-status-chip {
+  background: rgba(91, 91, 240, 0.15);
+  color: #4338ca;
+}
+
+.stepper-step.step-completed {
+  background: rgba(240, 253, 244, 0.85);
+  border-color: rgba(34, 197, 94, 0.45);
+}
+.stepper-step.step-completed .step-indicator {
+  background: #16a34a;
+  color: #ffffff;
+}
+.stepper-step.step-completed .step-status-chip {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+.stepper-step.step-warning {
+  background: rgba(254, 243, 199, 0.85);
+  border-color: rgba(245, 165, 36, 0.55);
+}
+.stepper-step.step-warning .step-indicator {
+  background: #f5a524;
+  color: #ffffff;
+}
+.stepper-step.step-warning .step-status-chip {
+  background: rgba(245, 165, 36, 0.18);
+  color: #b45309;
+}
+
+.stepper-step.step-danger {
+  background: rgba(254, 242, 242, 0.85);
+  border-color: rgba(229, 72, 77, 0.55);
+}
+.stepper-step.step-danger .step-indicator {
+  background: #e5484d;
+  color: #ffffff;
+}
+.stepper-step.step-danger .step-status-chip {
+  background: rgba(229, 72, 77, 0.18);
+  color: #b91c1c;
+}
+
+/* =====================================================================
+   CALM TECH ALERT GLOW & SINUSOIDAL BREATHING PULSE (TKT-050)
+   ===================================================================== */
+@keyframes calmBreathingIndigo {
+  0% {
+    box-shadow: 0 0 0 1px rgba(91, 91, 240, 0.35), 0 0 10px rgba(91, 91, 240, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 1.5px rgba(91, 91, 240, 0.65), 0 0 22px 3px rgba(91, 91, 240, 0.28);
+  }
+  100% {
+    box-shadow: 0 0 0 1px rgba(91, 91, 240, 0.35), 0 0 10px rgba(91, 91, 240, 0.15);
+  }
+}
+
+@keyframes calmBreathingAmber {
+  0% {
+    box-shadow: 0 0 0 1px rgba(245, 165, 36, 0.35), 0 0 10px rgba(245, 165, 36, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(245, 165, 36, 0.70), 0 0 24px 4px rgba(245, 165, 36, 0.30);
+  }
+  100% {
+    box-shadow: 0 0 0 1px rgba(245, 165, 36, 0.35), 0 0 10px rgba(245, 165, 36, 0.18);
+  }
+}
+
+@keyframes calmBreathingCrimson {
+  0% {
+    box-shadow: 0 0 0 1.5px rgba(229, 72, 77, 0.40), 0 0 12px rgba(229, 72, 77, 0.20);
+  }
+  50% {
+    box-shadow: 0 0 0 2.5px rgba(229, 72, 77, 0.85), 0 0 28px 5px rgba(229, 72, 77, 0.38);
+  }
+  100% {
+    box-shadow: 0 0 0 1.5px rgba(229, 72, 77, 0.40), 0 0 12px rgba(229, 72, 77, 0.20);
+  }
+}
+
+.calm-pulse-active {
+  animation: calmBreathingIndigo 2.4s ease-in-out infinite !important;
+  border-color: rgba(91, 91, 240, 0.75) !important;
+}
+
+.calm-pulse-warning {
+  animation: calmBreathingAmber 2.0s ease-in-out infinite !important;
+  border-color: rgba(245, 165, 36, 0.75) !important;
+}
+
+.calm-pulse-danger {
+  animation: calmBreathingCrimson 1.8s ease-in-out infinite !important;
+  border-color: rgba(229, 72, 77, 0.85) !important;
+}
+
+/* Reduced Motion Fallback */
+@media (prefers-reduced-motion: reduce) {
+  .calm-pulse-active,
+  .calm-pulse-warning,
+  .calm-pulse-danger {
+    animation: none !important;
+  }
+  .calm-pulse-active {
+    box-shadow: 0 0 0 2px rgba(91, 91, 240, 0.8) !important;
+  }
+  .calm-pulse-warning {
+    box-shadow: 0 0 0 2px rgba(245, 165, 36, 0.85) !important;
+  }
+  .calm-pulse-danger {
+    box-shadow: 0 0 0 2.5px rgba(229, 72, 77, 0.9) !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .phase-stepper-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .canvas-floating-controls {
+    top: 130px !important;
+  }
+}
 
 /* Top-to-Bottom Vertical Pipeline Structure */
 .vertical-pipeline {
@@ -1919,6 +2365,70 @@ body {
       </div>
 
       <!-- Viewport & Drag Canvas -->
+            <!-- Tier 1 Glance: Phase Stepper Bar -->
+      <div class="phase-stepper-bar-wrapper">
+        <div class="phase-stepper-bar" id="phase-stepper-bar">
+          <!-- Phase A -->
+          <div class="stepper-step step-idle" id="step-phase-a" onclick="scrollToLayer('phase-1')">
+            <div class="step-indicator">
+              <span class="material-symbols-outlined step-icon">sensors</span>
+            </div>
+            <div class="step-content">
+              <div class="step-title-row">
+                <span class="step-title">Phase A: Detection</span>
+                <span class="step-status-chip">Idle</span>
+              </div>
+              <div class="step-desc">Edge Gemma 3 · MQTT 100Hz · UCL 3.0%</div>
+            </div>
+            <span class="material-symbols-outlined step-chevron">chevron_right</span>
+          </div>
+
+          <!-- Phase B -->
+          <div class="stepper-step step-idle" id="step-phase-b" onclick="scrollToLayer('phase-3')">
+            <div class="step-indicator">
+              <span class="material-symbols-outlined step-icon">psychology</span>
+            </div>
+            <div class="step-content">
+              <div class="step-title-row">
+                <span class="step-title">Phase B: Tracing &amp; RCA</span>
+                <span class="step-status-chip">Idle</span>
+              </div>
+              <div class="step-desc">BigQuery Lots · FFT Drift · 5-Whys Swarm</div>
+            </div>
+            <span class="material-symbols-outlined step-chevron">chevron_right</span>
+          </div>
+
+          <!-- Phase C -->
+          <div class="stepper-step step-idle" id="step-phase-c" onclick="scrollToLayer('node-copilot-live')">
+            <div class="step-indicator">
+              <span class="material-symbols-outlined step-icon">support_agent</span>
+            </div>
+            <div class="step-content">
+              <div class="step-title-row">
+                <span class="step-title">Phase C: Resolution</span>
+                <span class="step-status-chip">Idle</span>
+              </div>
+              <div class="step-desc">Gemini Live Copilot · Field Repair · WO-8812</div>
+            </div>
+            <span class="material-symbols-outlined step-chevron">chevron_right</span>
+          </div>
+
+          <!-- Phase D -->
+          <div class="stepper-step step-idle" id="step-phase-d" onclick="scrollToLayer('phase-5')">
+            <div class="step-indicator">
+              <span class="material-symbols-outlined step-icon">verified</span>
+            </div>
+            <div class="step-content">
+              <div class="step-title-row">
+                <span class="step-title">Phase D: Streak &amp; Release</span>
+                <span class="step-status-chip">Idle</span>
+              </div>
+              <div class="step-desc">Invariant #3 (50/50) · E-Sign · ESG Ledger</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="canvas-viewport" id="canvas-viewport">
         <div class="canvas-transform-layer" id="canvas-transform-layer">
           
@@ -1962,6 +2472,32 @@ body {
           <!-- Top-to-Bottom Vertical Pipeline Container (5 Architecture Layers) -->
           <div class="vertical-pipeline" id="vertical-pipeline">
             
+            <!-- =================================================================
+                 WINDOW 1: FACTORY FLOOR (ON-PREMISES EDGE DATA & GATEWAY)
+                 ================================================================= -->
+            <div class="window-boundary-card window-1-boundary" id="window-1-container">
+              <div class="window-boundary-header">
+                <div class="window-title-group">
+                  <div class="window-pill window-1-pill">
+                    <span class="material-symbols-outlined window-icon">factory</span>
+                    <span class="window-tag">WINDOW 1</span>
+                    <span class="window-separator">·</span>
+                    <span class="window-name">FACTORY FLOOR (ON-PREMISES EDGE)</span>
+                  </div>
+                  <div class="window-badges-row">
+                    <span class="chip chip-sm chip-slate"><span class="status-dot green"></span>CNC-02 Spindle 3200 RPM</span>
+                    <span class="chip chip-sm chip-slate">OPC-UA / MQTT 100 Hz</span>
+                    <span class="chip chip-sm chip-slate">Gemma 3 2B IPC (&lt;50ms)</span>
+                  </div>
+                </div>
+                <div class="window-actions">
+                  <a href="http://localhost:3002" target="_blank" rel="noopener noreferrer" class="btn-quick-launch" title="Open Standalone Factory Floor Console (Window 1 :3002)">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">precision_manufacturing</span>
+                    <span>Factory Floor Console ↗</span>
+                  </a>
+                </div>
+              </div>
+
             <!-- ==========================================
                  LAYER 1: FACTORY FLOOR · EDGE DATA SOURCES
                  ========================================== -->
@@ -2131,6 +2667,56 @@ body {
                 </div>
               </div>
             </section>
+
+            </div><!-- /window-1-container -->
+
+            <!-- =================================================================
+                 CROSS-WINDOW EVENT CONDUIT: GOOGLE CLOUD PUB/SUB INGESTION BUS
+                 ================================================================= -->
+            <div class="cross-window-bridge" id="pubsub-cross-bridge">
+              <div class="bridge-card">
+                <div class="bridge-icon-tile">
+                  <span class="material-symbols-outlined">cloud_sync</span>
+                </div>
+                <div class="bridge-content">
+                  <div class="bridge-title-row">
+                    <span class="bridge-title">Google Cloud Pub/Sub · Asynchronous Telemetry &amp; Event Ingestion Bus</span>
+                    <span class="chip chip-sm chip-blue"><span class="chip-dot blue"></span>Cross-Window Event Conduit</span>
+                  </div>
+                  <div class="bridge-subtitle">
+                    Decoupled 100 Hz OPC-UA telemetry buffer &amp; anomalous defect frames stream · Ingestion SLA &lt; 80ms
+                  </div>
+                </div>
+                <div class="bridge-metric-tile">
+                  <span class="bridge-metric-val">100 Hz</span>
+                  <span class="bridge-metric-lbl">Stream Ingest</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- =================================================================
+                 WINDOW 2: CLOUD CONTROL PLANE (AI MULTI-AGENT SWARM & REASONING)
+                 ================================================================= -->
+            <div class="window-boundary-card window-2-boundary" id="window-2-container">
+              <div class="window-boundary-header">
+                <div class="window-title-group">
+                  <div class="window-pill window-2-pill">
+                    <span class="material-symbols-outlined window-icon">cloud</span>
+                    <span class="window-tag">WINDOW 2</span>
+                    <span class="window-separator">·</span>
+                    <span class="window-name">CLOUD CONTROL PLANE (AI AGENT SWARM)</span>
+                  </div>
+                  <div class="window-badges-row">
+                    <span class="chip chip-sm chip-blue"><span class="chip-dot blue"></span>GCP us-central1</span>
+                    <span class="chip chip-sm chip-blue">Cloud Run Orchestrator :8000</span>
+                    <span class="chip chip-sm chip-blue">Firestore Shared Blackboard</span>
+                    <span class="chip chip-sm chip-blue">BigQuery Lot Graph</span>
+                  </div>
+                </div>
+                <div class="window-actions">
+                  <span class="chip chip-sm chip-blue" id="window-2-status-chip">Swarm Active</span>
+                </div>
+              </div>
 
             <!-- ==========================================
                  LAYER 3: GOOGLE CLOUD · DATA & AI PLATFORM
@@ -2637,6 +3223,8 @@ body {
                 </div>
               </div>
             </section>
+
+            </div><!-- /window-2-container -->
 
           </div><!-- /vertical-pipeline -->
         </div><!-- /canvas-transform-layer -->
@@ -4085,9 +4673,87 @@ window.addEventListener('click', (e) => {
   }
 });
 
+
+/* Phase Stepper Bar & Smooth Scrolling */
+function scrollToLayer(layerId) {
+  const el = document.getElementById(layerId);
+  if (!el) return;
+  const viewport = document.getElementById('canvas-viewport');
+  const container = document.getElementById('canvas-transform-layer');
+  if (!viewport || !container) return;
+  const targetOffset = el.getBoundingClientRect().top - container.getBoundingClientRect().top;
+  viewport.scrollTo({ top: Math.max(0, targetOffset - 30), behavior: 'smooth' });
+}
+
+function updateStepperBar(scenario) {
+  const stepA = document.getElementById('step-phase-a');
+  const stepB = document.getElementById('step-phase-b');
+  const stepC = document.getElementById('step-phase-c');
+  const stepD = document.getElementById('step-phase-d');
+  const win2Card = document.getElementById('window-2-container');
+  const win2Chip = document.getElementById('window-2-status-chip');
+  if (!stepA || !stepB || !stepC || !stepD) return;
+
+  function setStep(el, state, chipText, icon) {
+    el.className = 'stepper-step step-' + state;
+    const chip = el.querySelector('.step-status-chip');
+    if (chip) chip.innerText = chipText;
+    const ic = el.querySelector('.step-icon');
+    if (ic && icon) ic.innerText = icon;
+  }
+
+  // Remove calm-pulse classes from window containers
+  if (win2Card) {
+    win2Card.classList.remove('calm-pulse-active', 'calm-pulse-warning', 'calm-pulse-danger');
+  }
+
+  if (scenario === 'nominal') {
+    setStep(stepA, 'idle', 'Idle', 'sensors');
+    setStep(stepB, 'idle', 'Idle', 'psychology');
+    setStep(stepC, 'idle', 'Idle', 'support_agent');
+    setStep(stepD, 'idle', 'Idle', 'verified');
+    if (win2Chip) win2Chip.innerText = 'Standby Nominal';
+  } else if (scenario === 'detecting') {
+    setStep(stepA, 'completed', 'Detected', 'check_circle');
+    setStep(stepB, 'active', 'RCA Active', 'psychology');
+    setStep(stepC, 'idle', 'Queued', 'support_agent');
+    setStep(stepD, 'idle', 'Locked', 'lock');
+    if (win2Card) win2Card.classList.add('calm-pulse-active');
+    if (win2Chip) win2Chip.innerText = 'RCA In-Flight';
+  } else if (scenario === 'low_confidence') {
+    setStep(stepA, 'completed', 'Detected', 'check_circle');
+    setStep(stepB, 'warning', 'Evidence Req', 'warning');
+    setStep(stepC, 'idle', 'Queued', 'support_agent');
+    setStep(stepD, 'idle', 'Locked', 'lock');
+    if (win2Card) win2Card.classList.add('calm-pulse-warning');
+    if (win2Chip) win2Chip.innerText = 'Diagnostic Loop (<0.70)';
+  } else if (scenario === 'streak_verifying') {
+    setStep(stepA, 'completed', 'Resolved', 'check_circle');
+    setStep(stepB, 'completed', 'RCA OK', 'check_circle');
+    setStep(stepC, 'completed', 'Repaired', 'check_circle');
+    setStep(stepD, 'active', '42 / 50', 'sync');
+    if (win2Card) win2Card.classList.add('calm-pulse-active');
+    if (win2Chip) win2Chip.innerText = 'Verifying Streak (42/50)';
+  } else if (scenario === 'streak_reset') {
+    setStep(stepA, 'completed', 'Resolved', 'check_circle');
+    setStep(stepB, 'completed', 'RCA OK', 'check_circle');
+    setStep(stepC, 'completed', 'Repaired', 'check_circle');
+    setStep(stepD, 'danger', '0 / 50 Reset', 'error');
+    if (win2Card) win2Card.classList.add('calm-pulse-danger');
+    if (win2Chip) win2Chip.innerText = 'Defect Alarm (0/50)';
+  } else if (scenario === 'approved') {
+    setStep(stepA, 'completed', 'Verified', 'check_circle');
+    setStep(stepB, 'completed', 'Verified', 'check_circle');
+    setStep(stepC, 'completed', 'Verified', 'check_circle');
+    setStep(stepD, 'completed', '50/50 Certified', 'verified');
+    if (win2Chip) win2Chip.innerText = 'Closed & Certified';
+  }
+}
+
 /* Scenarios Application */
 function applyScenario(scenario, btn) {
   currentScenario = scenario;
+  updateStepperBar(scenario);
 
   // Update header dropdown trigger UI
   const meta = SCENARIO_META[scenario];

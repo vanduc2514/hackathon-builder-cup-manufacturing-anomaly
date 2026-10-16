@@ -226,8 +226,9 @@ export default function App(): React.ReactElement {
   );
 
   const openIncidents = () => {
-    if (isIncidentOpen(incident)) {
-      openIncidentTab(incident.incident_id);
+    const entries = Object.values(productIncidents(incident));
+    if (entries.length > 0) {
+      openIncidentTab(entries[0].incident_id);
       return;
     }
     const last = incidentTabs[incidentTabs.length - 1];
@@ -236,7 +237,8 @@ export default function App(): React.ReactElement {
       setCurrentTab('incident-detail');
       return;
     }
-    notify('No open incidents on Cell Line 1', 'info');
+    setActiveIncidentId(null);
+    setCurrentTab('incident-detail');
   };
 
   const selectIncident = useCallback((id: string) => {

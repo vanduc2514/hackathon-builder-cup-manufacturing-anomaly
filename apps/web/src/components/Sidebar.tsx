@@ -43,6 +43,7 @@ function NavItem({ id, icon, label, active, onClick, trailing }: NavItemProps): 
       id={id}
       type="button"
       onClick={onClick}
+      aria-current={active ? 'page' : undefined}
       className="row between"
       style={{
         width: '100%',

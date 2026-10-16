@@ -227,16 +227,19 @@ body {
 
 /* Top Header */
 .top-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
   border-radius: var(--radius-lg);
-  background: var(--glass-bg);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  border-bottom: 1px solid var(--hair-strong);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
 }
 .top-header-left {
   display: flex;
@@ -426,7 +429,7 @@ body {
   top: calc(100% + 8px);
   right: 0;
   min-width: 320px;
-  z-index: 1000;
+  z-index: 1100;
   border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, .96);
   backdrop-filter: blur(24px) saturate(180%);
@@ -502,16 +505,19 @@ body {
 
 /* Toolbar & Scenario Bar */
 .topology-toolbar {
+  position: sticky;
+  top: 58px;
+  z-index: 90;
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 14px 20px;
   border-radius: var(--radius-lg);
-  background: var(--glass-bg);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  border-bottom: 1px solid var(--hair);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
 }
 .toolbar-header {
   display: flex;
@@ -595,7 +601,7 @@ body {
   position: absolute;
   top: 16px;
   right: 16px;
-  z-index: 10;
+  z-index: 50;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1332,10 +1338,10 @@ body {
 .drawer-scrim {
   position: fixed;
   inset: 0;
-  background: rgba(11, 18, 32, .25);
+  background: rgba(15, 23, 42, .32);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  z-index: 99;
+  z-index: 1200;
   opacity: 0;
   pointer-events: none;
   transition: opacity .25s var(--ease);
@@ -1345,7 +1351,8 @@ body {
   pointer-events: auto;
 }
 
-.node-drawer {
+.node-drawer,
+.topology-drawer {
   position: fixed;
   top: 12px;
   bottom: 12px;
@@ -1358,11 +1365,22 @@ body {
   border: 1px solid var(--glass-border);
   box-shadow: -12px 0 40px rgba(15, 23, 42, .15);
   border-radius: var(--radius-xl);
-  z-index: 100;
+  z-index: 1300;
   display: flex;
   flex-direction: column;
   transform: translateX(110%);
-  transition: transform .3s var(--ease);
+  transition: transform .3s var(--ease), width .25s var(--ease), max-width .25s var(--ease), right .25s var(--ease), top .25s var(--ease), bottom .25s var(--ease), height .25s var(--ease);
+}
+.node-drawer.fullscreen-width,
+.topology-drawer.fullscreen-width {
+  width: calc(100vw - 32px) !important;
+  max-width: calc(100vw - 32px) !important;
+  right: 16px !important;
+  top: 16px !important;
+  bottom: 16px !important;
+  height: calc(100vh - 32px) !important;
+  border-radius: var(--radius-2xl) !important;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.32) !important;
 }
 .node-drawer.open {
   transform: translateX(0);
@@ -1517,6 +1535,138 @@ body {
     padding: 14px;
   }
 }
+
+/* ==========================================================================
+   Decision Diamonds & Decision Gates (Gate 1 & Gate 2)
+   ========================================================================== */
+.decision-diamond-wrapper {
+  margin: 40px auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.decision-diamond-card {
+  position: relative;
+  background: #ffffff;
+  border: 1.5px solid #818cf8;
+  border-radius: 16px;
+  padding: 18px 24px;
+  width: 480px;
+  max-width: 92%;
+  box-shadow: 0 4px 18px rgba(99, 102, 241, 0.12);
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s var(--ease);
+  z-index: 2;
+}
+
+.decision-diamond-card:hover {
+  border-color: #6366f1;
+  box-shadow: 0 8px 28px rgba(99, 102, 241, 0.22);
+  transform: translateY(-2px);
+}
+
+.decision-diamond-card.selected,
+.decision-diamond-card.highlighted {
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35), 0 10px 28px rgba(99, 102, 241, 0.25) !important;
+}
+
+.diamond-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #e0e7ff;
+  color: #4f46e5;
+  margin-bottom: 8px;
+}
+
+.diamond-badge .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.diamond-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.diamond-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.diamond-branches {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--hair-strong);
+  font-size: 11.5px;
+}
+
+.diamond-branch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.diamond-branch-pill.red {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.diamond-branch-pill.green {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+/* Ensure row below decision diamond has proper breathing space */
+.decision-diamond-wrapper + .node-row-2,
+.decision-diamond-wrapper + .node-card,
+.decision-diamond-wrapper + .node-row-1,
+.decision-diamond-wrapper + .node-row-3 {
+  margin-top: 48px;
+}
+
+.btn-icon {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+.btn-sm.btn-icon {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+}
+
 </style>
 </head>
 <body>
@@ -2448,7 +2598,7 @@ body {
 
 <!-- Side Drawer (Deep-Dive Tier 3) -->
 <div class="drawer-scrim" id="drawer-scrim" onclick="closeDrawer()"></div>
-<aside class="node-drawer" id="node-drawer">
+<aside class="node-drawer topology-drawer" id="node-drawer">
   <div class="drawer-header">
     <div class="drawer-title-col">
       <div class="drawer-icon-tile" id="drawer-icon"><span class="material-symbols-outlined">account_tree</span></div>
@@ -2457,9 +2607,14 @@ body {
         <div class="drawer-sub" id="drawer-subtitle">System Component Subtitle</div>
       </div>
     </div>
-    <button class="drawer-close" onclick="closeDrawer()" title="Close Drawer">
-      <span class="material-symbols-outlined">close</span>
-    </button>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button class="btn btn-sm btn-icon" id="drawer-expand-btn" onclick="toggleDrawerFullscreen()" title="Toggle full width">
+        <span class="material-symbols-outlined" id="drawer-expand-icon">open_in_full</span>
+      </button>
+      <button class="drawer-close" onclick="closeDrawer()" title="Close Drawer">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
   </div>
 
   <div class="drawer-body">
@@ -3749,17 +3904,28 @@ function renderSvgEdges() {
       pathD = `M ${x1} ${y1} H ${xTrack} V ${y2} H ${x2}`;
     }
     else {
-      // Standard top-to-bottom vertical connection (Orthogonal Right-Angled Step)
-      const x1 = (fromRect.left + fromRect.width / 2 - containerRect.left) / zoomScale;
-      const y1 = (fromRect.bottom - containerRect.top) / zoomScale;
-      const x2 = (toRect.left + toRect.width / 2 - containerRect.left) / zoomScale;
-      const y2 = (toRect.top - containerRect.top) / zoomScale;
-
-      if (Math.abs(x1 - x2) < 2) {
-        pathD = `M ${x1} ${y1} V ${y2}`;
+      // Special clear routing for Decision Gate 1 branching past Row 6 (Diagnostic Loop)
+      if (edge.from === 'decision-gate-1' && (edge.to === 'node-copilot-live' || edge.to === 'node-agent-scribe')) {
+        const diagEl = document.getElementById('node-diagnostic-agent');
+        const x1 = (fromRect.left + fromRect.width / 2 - containerRect.left) / zoomScale;
+        const y1 = (fromRect.bottom - containerRect.top) / zoomScale;
+        const x2 = (toRect.left + toRect.width / 2 - containerRect.left) / zoomScale;
+        const y2 = (toRect.top - containerRect.top) / zoomScale;
+        const yClear = diagEl ? (diagEl.getBoundingClientRect().bottom - containerRect.top) / zoomScale + 18 : (y1 + y2) / 2;
+        pathD = `M ${x1} ${y1} V ${yClear} H ${x2} V ${y2}`;
       } else {
-        const midY = (y1 + y2) / 2;
-        pathD = `M ${x1} ${y1} V ${midY} H ${x2} V ${y2}`;
+        // Standard top-to-bottom vertical connection (Orthogonal Right-Angled Step)
+        const x1 = (fromRect.left + fromRect.width / 2 - containerRect.left) / zoomScale;
+        const y1 = (fromRect.bottom - containerRect.top) / zoomScale;
+        const x2 = (toRect.left + toRect.width / 2 - containerRect.left) / zoomScale;
+        const y2 = (toRect.top - containerRect.top) / zoomScale;
+
+        if (Math.abs(x1 - x2) < 2) {
+          pathD = `M ${x1} ${y1} V ${y2}`;
+        } else {
+          const midY = (y1 + y2) / 2;
+          pathD = `M ${x1} ${y1} V ${midY} H ${x2} V ${y2}`;
+        }
       }
     }
 
@@ -4150,7 +4316,7 @@ function highlightConnections(elementId) {
   }
 
   // Clear previous temporary highlights but keep selected if any
-  document.querySelectorAll('.node-card, .decision-gateway').forEach(n => {
+  document.querySelectorAll('.node-card, .decision-diamond-card, .decision-gateway').forEach(n => {
     n.classList.remove('highlighted', 'connected-neighbor');
   });
 
@@ -4186,7 +4352,7 @@ function clearHighlights() {
   document.querySelectorAll('.edge-path').forEach(p => {
     p.classList.remove('edge-highlighted', 'edge-dimmed');
   });
-  document.querySelectorAll('.node-card, .decision-gateway').forEach(n => {
+  document.querySelectorAll('.node-card, .decision-diamond-card, .decision-gateway').forEach(n => {
     if (n.id !== selectedNodeId) {
       n.classList.remove('highlighted', 'connected-neighbor');
     }
@@ -4194,7 +4360,7 @@ function clearHighlights() {
 }
 
 function setupComponentInteractions() {
-  const components = document.querySelectorAll('.node-card, .decision-gateway');
+  const components = document.querySelectorAll('.node-card, .decision-diamond-card, .decision-gateway');
   components.forEach(el => {
     el.addEventListener('mouseenter', () => {
       highlightConnections(el.id);
@@ -4280,7 +4446,7 @@ function openNodeDrawer(nodeId) {
   const logsBox = document.getElementById('drawer-logs-box');
   if (logsBox) logsBox.classList.remove('open');
 
-  document.querySelectorAll('.node-card, .decision-gateway').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.node-card, .decision-diamond-card, .decision-gateway').forEach(c => c.classList.remove('selected'));
   if (card) card.classList.add('selected');
 
   highlightConnections(domId);
@@ -4295,7 +4461,7 @@ function openDecisionDrawer(num) {
   activeDrawerComponentId = domId;
 
   const gateEl = document.getElementById(domId);
-  document.querySelectorAll('.node-card, .decision-gateway').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.node-card, .decision-diamond-card, .decision-gateway').forEach(c => c.classList.remove('selected'));
   if (gateEl) gateEl.classList.add('selected');
 
   highlightConnections(domId);
@@ -4381,13 +4547,34 @@ function openDecisionDrawer(num) {
   document.getElementById('node-drawer').classList.add('open');
 }
 
+function toggleDrawerFullscreen() {
+  const drawer = document.getElementById('node-drawer');
+  const icon = document.getElementById('drawer-expand-icon');
+  if (!drawer) return;
+  drawer.classList.toggle('fullscreen-width');
+  const isFull = drawer.classList.contains('fullscreen-width');
+  if (icon) {
+    icon.innerText = isFull ? 'close_fullscreen' : 'open_in_full';
+  }
+}
+
 function closeDrawer() {
   document.getElementById('drawer-scrim').classList.remove('open');
-  document.getElementById('node-drawer').classList.remove('open');
-  document.querySelectorAll('.node-card, .decision-gateway').forEach(c => c.classList.remove('selected', 'highlighted', 'connected-neighbor'));
+  const drawer = document.getElementById('node-drawer');
+  if (drawer) {
+    drawer.classList.remove('open');
+    drawer.classList.remove('fullscreen-width');
+  }
+  const expandIcon = document.getElementById('drawer-expand-icon');
+  if (expandIcon) expandIcon.innerText = 'open_in_full';
+  document.querySelectorAll('.node-card, .decision-diamond-card, .decision-gateway').forEach(c => c.classList.remove('selected', 'highlighted', 'connected-neighbor'));
   selectedNodeId = null;
   activeDrawerComponentId = null;
   clearHighlights();
+}
+
+function closeTopologyDrawer() {
+  closeDrawer();
 }
 
 /* Interactive Actions & Simulation Handlers */

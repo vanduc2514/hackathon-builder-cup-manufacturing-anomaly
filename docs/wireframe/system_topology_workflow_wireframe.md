@@ -425,7 +425,7 @@ To provide technicians and systems engineers with intuitive situational awarenes
 
 ```text
 +-------------------------------------------------------------+
-| TOPOLOGY NODE DEEP DIVE                                 [X] |
+| TOPOLOGY NODE DEEP DIVE                           [<>]  [X] |
 +-------------------------------------------------------------+
 | (icon: psychology)  Root Cause Agent                        |
 | ADK Multi-Agent Swarm · Tier 4 Focus Engine                 |
@@ -573,3 +573,5 @@ To provide technicians and systems engineers with intuitive situational awarenes
 - [x] **AC-TOP-15 (26 Modular Components & Dual Decision Gates):** All 26 modular system component cards and 2 decision diamonds are rendered with crisp orthogonal step routing, live telemetry indicators, and distinct layer-specific color badges.
 - [x] **AC-TOP-16 (Live Real States & UI Deep References):** Every component and decision gate dynamically reflects real-time status across 6 simulation scenarios and provides direct deep-link references to corresponding production surfaces (<MachineFleetTable />, <OpticalEdgeTerminal />, <OrchestratorBlackboardFeed />, <ConfidenceGateBanner />, <ConveyorStreakMonitor />, etc.).
 - [x] **AC-TOP-17 (Directional Relationship Connectors & Dynamic Flow Arrows):** All 32 inter-node connections across the 5 architectural layers are rendered as crisp SVG orthogonal right-angled paths with clear directional arrowheads (`marker-end="url(#marker-arrow...)"`). Connector lines dynamically respond to scenario changes (active pulsing dashed indigo lines, amber warning paths for Gate 1 low confidence, red danger paths for Gate 2 streak reset, green completed paths for closed states, and dedicated left-gutter loopback tracks for feedback cycles) with zero clipping or rendering drops.
+- [x] **AC-TOP-18 (Fullscreen Width Side Drawer with Safe Viewport Padding):** SideDrawer header features a responsive expand toggle button (`#drawer-expand-btn` with icon `open_in_full` / `close_fullscreen`), allowing operators to expand the drawer to `calc(100vw - 32px)` with strict 16px viewport padding, 32px blur frosted glass, and seamless state reset on drawer close.
+- [x] **AC-TOP-19 (Sticky Header Z-Index Layering & Decision Gate Isolation):** The Top Header (`z-index: 100`) and Topology Toolbar (`z-index: 90`, `top: 58px`) are fixed sticky and shielded against underlying canvas card bleed (`.canvas-wrapper` with `z-index: 10; overflow: hidden;`). Scenario dropdown is elevated to `z-index: 1100`, Side Drawer to `z-index: 1300`. Both Decision Gates (Gate 1 & Gate 2) are isolated with white frosted glass cards, explicit branch badges, generous vertical margin (`margin: 40px auto;` and `margin-top: 48px;` for following rows), and dedicated collision-free SVG orthogonal step routing.

@@ -37,8 +37,9 @@ def test_dockerfile_multi_stage_structure():
     assert "HEALTHCHECK" in content
     assert "/health" in content
 
-    # Decoupled simulator (not copied to production Cloud Run container)
+    # Decoupled simulator and local ollama (not copied or bundled in production Cloud Run container)
     assert "simulator" not in content
+    assert "ollama" not in content.lower()
 
 
 def test_dockerignore_exclusions():

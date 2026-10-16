@@ -1,4 +1,10 @@
-"""Gateway: Local Gemma 3 pass/fail inference, edge vision classification, and metrology tagging."""
+"""Gateway: On-premise local Gemma 3 pass/fail inference, edge vision classification, and metrology tagging.
+
+Note on Architecture:
+    GemmaEdgeClassifier operates strictly on factory-floor edge nodes (IPC, Jetson, or edge simulator)
+    to enforce sub-50ms scrap diverter response and 95%+ bandwidth pre-filtering. It is not hosted
+    in Google Cloud Run; central cloud intelligence is handled by Gemini 2.0 via Vertex AI.
+"""
 
 from __future__ import annotations
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { EvidenceItem, MediaType, WorkOrder } from '../../types/mobile';
 import { readFileAsDataUrl, useCamera } from '../../hooks/useCamera';
+import PresetGallerySheet from './PresetGallerySheet';
 
 interface MobileEvidenceCaptureProps {
   order: WorkOrder;
@@ -29,6 +30,7 @@ export default function MobileEvidenceCapture({
   const [torch, setTorch] = useState(false);
   const [shot, setShot] = useState<string | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
+  const [showPresetGallery, setShowPresetGallery] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const camera = useCamera(phase !== 'review');
   const { grab, setTorch: applyTorch } = camera;
@@ -183,6 +185,37 @@ export default function MobileEvidenceCapture({
             </div>
           )}
 
+          <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0', zIndex: 10 }}>
+            <button
+              type="button"
+              className="m-btn glass"
+              style={{
+                minHeight: 44,
+                minWidth: 44,
+                padding: '0 16px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                background: 'rgba(255, 255, 255, 0.25)',
+                color: '#fff',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                borderRadius: 22,
+              }}
+              onClick={() => setShowPresetGallery(true)}
+              aria-label="Chọn ảnh mẫu"
+              id="m-open-preset-gallery"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                photo_library
+              </span>
+              Chọn ảnh mẫu
+            </button>
+          </div>
+
           <div className="m-shutter-row">
             <div className="m-sub" style={{ color: 'rgba(255,255,255,.8)', fontSize: 11 }}>
               {mode === 'video' ? 'A still from the clip is sent' : mode === item.mediaType ? 'Required format' : `AI asked for ${item.mediaType}`}
@@ -230,6 +263,16 @@ export default function MobileEvidenceCapture({
       )}
 
       {flash && <div className="m-flash" />}
+
+      <PresetGallerySheet
+        open={showPresetGallery}
+        status={order.live?.status ?? (order.kind === 'evidence' ? 'awaiting_evidence' : 'normal')}
+        onClose={() => setShowPresetGallery(false)}
+        onSelectSuccess={(preset) => {
+          setShowPresetGallery(false);
+          onSave(item.id, preset.thumbnail_url);
+        }}
+      />
     </div>
   );
 }

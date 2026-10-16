@@ -812,6 +812,10 @@ class DefectInjectionRequest(BaseModel):
         default="T07",
         description="Target cutting tool or mold cavity identifier",
     )
+    require_evidence: bool = Field(
+        default=False,
+        description="If True, forces the workflow to enter awaiting_evidence even if initial RCA confidence is high",
+    )
 
 
 class FactorySyncResult(BaseModel):

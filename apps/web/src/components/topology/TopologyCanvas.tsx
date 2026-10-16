@@ -164,7 +164,7 @@ export default function TopologyCanvas({
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     // Only drag on canvas background (not interactive cards/buttons)
     const target = e.target as HTMLElement;
-    if (target.closest('.node-card') || target.closest('.decision-diamond-card') || target.closest('button')) {
+    if (target.closest('.node-card') || target.closest('.decision-diamond-card') || target.closest('button') || target.closest('a') || target.closest('.btn-quick-launch')) {
       return;
     }
     setIsPanning(true);

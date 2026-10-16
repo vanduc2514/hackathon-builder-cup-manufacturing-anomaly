@@ -6,7 +6,9 @@ import {
   TOPOLOGY_NODES,
   TOPOLOGY_SCENARIOS,
   deriveNodeStates,
+  deriveWindow2State,
 } from '../../lib/topology';
+import PhaseStepperBar from '../topology/PhaseStepperBar';
 import TopologyCanvas from '../topology/TopologyCanvas';
 import TopologyNode from '../topology/TopologyNode';
 import DecisionGateNode from '../topology/DecisionGateNode';
@@ -36,6 +38,11 @@ export default function SystemTopologyView({
     }
     return deriveNodeStates(incident, activeScenario);
   }, [incident, activeScenario]);
+
+  const window2State = useMemo(
+    () => deriveWindow2State(incident, activeScenario),
+    [incident, activeScenario],
+  );
 
   const selectedNode = useMemo(
     () => TOPOLOGY_NODES.find((n) => n.id === selectedNodeId) ?? null,
@@ -209,12 +216,66 @@ export default function SystemTopologyView({
         </div>
       </div>
 
+      {/* Tier 1 Glance: Phase Stepper Bar (AC-TOP-23, Issue #227) */}
+      <PhaseStepperBar
+        incident={incident}
+        scenario={activeScenario}
+        onScrollToLayer={(layerId) => {
+          const el = document.getElementById(layerId);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }}
+      />
+
       {/* 5-Layer Vertical Architecture Canvas */}
       <TopologyCanvas nodeStates={nodeStates} selectedNodeId={selectedNodeId}>
         <div className="vertical-pipeline topology-swimlanes-grid">
-          {/* ========================================================
-              LAYER 1: FACTORY FLOOR · EDGE DATA SOURCES
-              ======================================================== */}
+          {/* =================================================================
+              WINDOW 1: FACTORY FLOOR (ON-PREMISES EDGE DATA & GATEWAY)
+              ================================================================= */}
+          <div className="window-boundary-card window-1-boundary" id="window-1-container">
+            <div className="window-boundary-header">
+              <div className="window-title-group">
+                <div
+                  className="window-pill window-1-pill"
+                  aria-label="Window 1 · Factory Floor (Edge & On-Premises)"
+                >
+                  <span className="material-symbols-outlined window-icon" aria-hidden="true">
+                    factory
+                  </span>
+                  <span className="window-tag">WINDOW 1</span>
+                  <span className="window-separator">·</span>
+                  <span className="window-name">Factory Floor (Edge &amp; On-Premises)</span>
+                </div>
+                <div className="window-badges-row">
+                  <span className="chip chip-sm chip-slate">
+                    <span className="status-dot green" />CNC-02 Spindle 3200 RPM
+                  </span>
+                  <span className="chip chip-sm chip-slate">OPC-UA / MQTT 100 Hz</span>
+                  <span className="chip chip-sm chip-slate">Gemma 3 2B IPC (&lt;50ms)</span>
+                </div>
+              </div>
+              <div className="window-actions">
+                <a
+                  href="http://localhost:3002"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-quick-launch"
+                  title="Open Standalone Factory Floor Console (Window 1 :3002)"
+                  aria-label="Factory Floor Console ↗"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }} aria-hidden="true">
+                    precision_manufacturing
+                  </span>
+                  <span>Factory Floor Console ↗</span>
+                </a>
+              </div>
+            </div>
+
+            {/* ========================================================
+                LAYER 1: FACTORY FLOOR · EDGE DATA SOURCES
+                ======================================================== */}
           <section
             id="phase-1"
             className="pipeline-phase topology-swimlane-card"
@@ -295,6 +356,73 @@ export default function SystemTopologyView({
               })}
             </div>
           </section>
+        </div>
+
+        {/* =================================================================
+            CROSS-WINDOW EVENT CONDUIT: GOOGLE CLOUD PUB/SUB INGESTION BUS
+            ================================================================= */}
+        <div className="cross-window-bridge" id="pubsub-cross-bridge">
+          <div className="bridge-card">
+            <div className="bridge-icon-tile">
+              <span className="material-symbols-outlined" aria-hidden="true">
+                cloud_sync
+              </span>
+            </div>
+            <div className="bridge-content">
+              <div className="bridge-title-row">
+                <span className="bridge-title">
+                  Google Cloud Pub/Sub · Asynchronous Telemetry &amp; Event Ingestion Bus
+                </span>
+                <span className="chip chip-sm chip-blue">
+                  <span className="chip-dot blue" />Cross-Window Event Conduit
+                </span>
+              </div>
+              <div className="bridge-subtitle">
+                Decoupled 100 Hz OPC-UA telemetry buffer &amp; anomalous defect frames stream · Ingestion SLA &lt; 80ms
+              </div>
+            </div>
+            <div className="bridge-metric-tile">
+              <span className="bridge-metric-val">100 Hz</span>
+              <span className="bridge-metric-lbl">Stream Ingest</span>
+            </div>
+          </div>
+        </div>
+
+        {/* =================================================================
+            WINDOW 2: CLOUD CONTROL PLANE (GOOGLE CLOUD & ADK SWARM)
+            ================================================================= */}
+        <div
+          className={`window-boundary-card window-2-boundary ${window2State.pulseClass}`}
+          id="window-2-container"
+        >
+          <div className="window-boundary-header">
+            <div className="window-title-group">
+              <div
+                className="window-pill window-2-pill"
+                aria-label="Window 2 · Cloud Control Plane (Google Cloud & ADK Swarm)"
+              >
+                <span className="material-symbols-outlined window-icon" aria-hidden="true">
+                  cloud
+                </span>
+                <span className="window-tag">WINDOW 2</span>
+                <span className="window-separator">·</span>
+                <span className="window-name">Cloud Control Plane (Google Cloud &amp; ADK Swarm)</span>
+              </div>
+              <div className="window-badges-row">
+                <span className="chip chip-sm chip-blue">
+                  <span className="chip-dot blue" />GCP us-central1
+                </span>
+                <span className="chip chip-sm chip-blue">Cloud Run Orchestrator :8000</span>
+                <span className="chip chip-sm chip-blue">Firestore Shared Blackboard</span>
+                <span className="chip chip-sm chip-blue">BigQuery Lot Graph</span>
+              </div>
+            </div>
+            <div className="window-actions">
+              <span className="chip chip-sm chip-blue" id="window-2-status-chip">
+                {window2State.statusText}
+              </span>
+            </div>
+          </div>
 
           {/* ========================================================
               LAYER 3: GOOGLE CLOUD · DATA & AI PLATFORM
@@ -491,7 +619,8 @@ export default function SystemTopologyView({
             </div>
           </section>
         </div>
-      </TopologyCanvas>
+      </div>
+    </TopologyCanvas>
 
       {/* Deep-dive Node Inspection SideDrawer */}
       <TopologyNodeDrawer

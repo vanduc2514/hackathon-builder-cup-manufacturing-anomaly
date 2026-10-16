@@ -14,6 +14,7 @@ import StatusReasonBanner from '../incident/StatusReasonBanner';
 import StreakGate from '../incident/StreakGate';
 import CausalTreeTabs from '../incident/CausalTreeTabs';
 import EightDReportCard from '../incident/EightDReportCard';
+import PresetEvidenceModal from '../incident/PresetEvidenceModal';
 import { buildCausalChain, buildSolution, rootCauseOf, type CausalChain } from '../../lib/eightD';
 import { useApi } from '../../lib/api';
 import { authFetch } from '../../lib/auth';
@@ -65,6 +66,7 @@ export default function IncidentCommandView({
 }: IncidentCommandViewProps): React.ReactElement {
   const [releasing, setReleasing] = useState<boolean>(false);
   const [released, setReleased] = useState<boolean>(false);
+  const [showPresetModal, setShowPresetModal] = useState<boolean>(false);
 
   const id = incident.incident_id;
   const status = incident.status;
@@ -251,6 +253,20 @@ export default function IncidentCommandView({
               <span style={{ color: 'var(--faint)' }}>/</span>
               <span className="mono chip chip-accent">#{id}</span>
             </nav>
+            {status === 'awaiting_evidence' && (
+              <button
+                id="btn-open-preset-evidence-modal"
+                type="button"
+                className="btn btn-sm btn-accent"
+                onClick={() => setShowPresetModal(true)}
+                style={{ gap: 6, fontWeight: 600 }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  photo_library
+                </span>
+                <span>Chọn ảnh mẫu (IM-05)</span>
+              </button>
+            )}
             {onOpenTopology && (
               <button
                 id="incident-view-topology"
@@ -434,6 +450,42 @@ export default function IncidentCommandView({
           summary={cause ?? 'Working out why…'}
           trailing={rca && <span className="chip mono">{(rca.confidence * 100).toFixed(0)}% confident</span>}
         >
+          {status === 'awaiting_evidence' && (
+            <div
+              className="inset row between wrap"
+              style={{
+                gap: 12,
+                alignItems: 'center',
+                background: 'rgba(235, 94, 40, 0.08)',
+                borderColor: 'rgba(235, 94, 40, 0.3)',
+                padding: '12px 16px',
+                borderRadius: 8,
+              }}
+              data-testid="step-3-awaiting-evidence-callout"
+            >
+              <div className="col" style={{ gap: 2 }}>
+                <span style={{ fontWeight: 650, color: 'var(--accent)' }}>
+                  Đang chờ bằng chứng thực địa (Awaiting Evidence)
+                </span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text)' }}>
+                  {incident.diagnostic_request ?? 'Hệ thống yêu cầu kiểm tra thực địa và nạp ảnh bề mặt phôi IM-05.'}
+                </span>
+              </div>
+              <button
+                id="step-3-open-preset-evidence"
+                type="button"
+                className="btn btn-accent"
+                onClick={() => setShowPresetModal(true)}
+                style={{ gap: 6, fontWeight: 600 }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  photo_library
+                </span>
+                <span>Chọn ảnh mẫu</span>
+              </button>
+            </div>
+          )}
+
           <div className="inset row" style={{ gap: 12, alignItems: 'flex-start', background: 'var(--ink)', color: '#fff', borderColor: 'var(--ink)' }}>
             <span className="material-symbols-outlined icon-fill" style={{ fontSize: 22 }}>
               target
@@ -572,6 +624,13 @@ export default function IncidentCommandView({
         </StepSection>
       </div>
       <StepRail steps={rail} onSelect={(sid) => openStep(Number(sid.replace('step-', '')))} />
+
+      <PresetEvidenceModal
+        open={showPresetModal}
+        incident={incident}
+        onClose={() => setShowPresetModal(false)}
+        onNotify={onNotify}
+      />
     </>
   );
 }

@@ -36,6 +36,7 @@ class PubSubManager:
         self._cached_available: Optional[bool] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._seen_events: OrderedDict[str, float] = OrderedDict()
+        self._machine_cooldowns: Dict[str, float] = {}
         self._dedup_lock: threading.Lock = threading.Lock()
 
     @property
@@ -75,6 +76,7 @@ class PubSubManager:
         self._loop = None
         with self._dedup_lock:
             self._seen_events.clear()
+            self._machine_cooldowns.clear()
 
     def get_publisher_client(self) -> pubsub_v1.PublisherClient:
         """Returns a cached PublisherClient configured for emulator or production ADC."""
@@ -258,7 +260,14 @@ class PubSubManager:
             message.nack()
 
     def _handle_quality_event_message(self, message: Any) -> None:
-        """Callback receiving quality-events to trigger Orchestrator (single-flight)."""
+        """Callback receiving quality-events to trigger Orchestrator (exclusive production ingress).
+
+        Enforces:
+        1. Stale event check (drops events older than quality_event_max_age_seconds).
+        2. Duplicate event_id check (deduplication within quality_event_dedup_ttl_seconds).
+        3. Machine debounce cooldown guard (prevents duplicate incidents for same machine_id within 10s).
+        4. Single-flight guard (acknowledges and ignores duplicate events when orchestrator is active).
+        """
         try:
             data_str = message.data.decode("utf-8")
             event = QualityEventPayload.model_validate_json(data_str)
@@ -287,7 +296,7 @@ class PubSubManager:
                     exc,
                 )
 
-            # 2. Duplicate event_id check: ack + drop duplicate event_id seen within TTL
+            # 2. Duplicate event_id check & Machine debounce cooldown guard
             with self._dedup_lock:
                 now_mono = time.monotonic()
                 while self._seen_events:
@@ -309,15 +318,42 @@ class PubSubManager:
                     message.ack()
                     return
 
+                # Prune machine cooldowns older than debounce window
+                stale_machines = [
+                    mid
+                    for mid, t in self._machine_cooldowns.items()
+                    if now_mono - t > settings.quality_event_debounce_seconds
+                ]
+                for mid in stale_machines:
+                    del self._machine_cooldowns[mid]
+
+                # Check debounce cooldown for the same machine_id
+                if event.machine_id in self._machine_cooldowns:
+                    elapsed = now_mono - self._machine_cooldowns[event.machine_id]
+                    logger.info(
+                        "Dropped debounced quality event %s for machine %s (%.1fs < %.1fs cooldown)",
+                        event.event_id,
+                        event.machine_id,
+                        elapsed,
+                        settings.quality_event_debounce_seconds,
+                    )
+                    self._seen_events[event.event_id] = now_mono
+                    message.ack()
+                    return
+
             # 3. Single-flight guard: ignore & ack duplicate events when incident is active
             from backend.agents.orchestrator import orchestrator
 
             if orchestrator.is_running:
                 logger.info(
-                    "Ignored duplicate quality event %s while incident is active", event.event_id
+                    "Ignored duplicate quality event %s while incident is active (machine: %s)",
+                    event.event_id,
+                    event.machine_id,
                 )
                 with self._dedup_lock:
-                    self._seen_events[event.event_id] = time.monotonic()
+                    now_mono = time.monotonic()
+                    self._seen_events[event.event_id] = now_mono
+                    self._machine_cooldowns[event.machine_id] = now_mono
                 message.ack()
                 return
 
@@ -329,12 +365,16 @@ class PubSubManager:
                 started = orchestrator.start_incident(trigger)
             logger.info("Quality event %s dispatched to Orchestrator: %s", event.event_id, started)
             with self._dedup_lock:
-                self._seen_events[event.event_id] = time.monotonic()
+                now_mono = time.monotonic()
+                self._seen_events[event.event_id] = now_mono
+                self._machine_cooldowns[event.machine_id] = now_mono
             message.ack()
         except Exception as exc:
             if "event" in locals() and hasattr(event, "event_id"):
                 with self._dedup_lock:
                     self._seen_events.pop(event.event_id, None)
+                    if hasattr(event, "machine_id"):
+                        self._machine_cooldowns.pop(event.machine_id, None)
             logger.error("Error processing Pub/Sub quality event message: %s", exc)
             message.nack()
 

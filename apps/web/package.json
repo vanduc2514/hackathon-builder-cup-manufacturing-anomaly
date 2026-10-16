@@ -1,7 +1,7 @@
 {
   "name": "kaizen-agent-dashboard",
   "version": "0.1.0",
-  "description": "Kaizen Agent: Plant Ops Dashboard — React + Vite + TypeScript",
+  "description": "Kaizen Agent: Plant Ops Dashboard \u2014 React + Vite + TypeScript",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -10,6 +10,7 @@ import DefectRateCard from '../overview/DefectRateCard';
 import ActiveIncidentsCard from '../overview/ActiveIncidentsCard';
 import EsgCard from '../overview/EsgCard';
 import MachineFleetTable from '../overview/MachineFleetTable';
+import FactoryDigitalTwin from '../overview/FactoryDigitalTwin';
 import DiagnosticsModal from '../overview/DiagnosticsModal';
 import OeeTrendCard from '../overview/OeeTrendCard';
 import OeeLossCard from '../overview/OeeLossCard';
@@ -299,6 +300,8 @@ export default function LineOverviewView({
           isLive={Boolean(oeeApi.data)}
         />
       </div>
+
+      <FactoryDigitalTwin incident={incident} />
 
       <MachineFleetTable rows={rows} loading={telemetry.loading || fleet.loading} onOpenIncident={onOpenIncident} onDiagnostics={setDiagId} />
 

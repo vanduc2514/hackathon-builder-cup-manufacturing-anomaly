@@ -1,7 +1,7 @@
 // LoginScreen: shift-leader sign-in card; the role is fixed, so only the password is asked.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { AuthRole, DemoAccount } from '../types';
-import { ROLE_ICON, ROLE_LABEL, fetchDemoAccounts, login } from '../lib/auth';
+import { ROLE_ICON, ROLE_LABEL, fetchDemoAccounts, login, takeLoginPrefill } from '../lib/auth';
 
 const LOGIN_ROLE: AuthRole = 'shift_leader';
 
@@ -32,10 +32,18 @@ const AVATAR_STYLE: React.CSSProperties = {
 export default function LoginScreen(): React.ReactElement {
   // undefined while loading, null when the server offers no shift-leader account.
   const [account, setAccount] = useState<DemoAccount | null | undefined>(undefined);
-  const [password, setPassword] = useState<string>('');
+  const hasPrefill = useRef<boolean>(false);
+  const [password, setPassword] = useState<string>(() => {
+    const initial = takeLoginPrefill();
+    if (initial) {
+      hasPrefill.current = true;
+    }
+    return initial;
+  });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let alive = true;
@@ -46,6 +54,12 @@ export default function LoginScreen(): React.ReactElement {
       alive = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (hasPrefill.current && account) {
+      submitButtonRef.current?.focus();
+    }
+  }, [account]);
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -102,7 +116,7 @@ export default function LoginScreen(): React.ReactElement {
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  autoFocus
+                  autoFocus={!hasPrefill.current}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   style={{ ...INPUT_STYLE, paddingRight: 48 }}
@@ -134,6 +148,7 @@ export default function LoginScreen(): React.ReactElement {
               </span>
             </label>
             <button
+              ref={submitButtonRef}
               id="login-submit"
               type="submit"
               className="btn btn-dark btn-block"

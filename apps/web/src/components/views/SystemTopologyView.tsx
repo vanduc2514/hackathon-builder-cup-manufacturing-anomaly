@@ -31,6 +31,10 @@ export default function SystemTopologyView({
   const [selectedNodeId, setSelectedNodeId] = useState<TopologyNodeId | null>(null);
   const [activeScenario, setActiveScenario] = useState<TopologyScenarioId | 'live'>('live');
 
+  const factoryFloorUrl =
+    (import.meta.env.VITE_FACTORY_FLOOR_URL as string | undefined) ||
+    'https://kaizen-lab-factory.web.app';
+
   // Derive node states: live incident or scenario override
   const nodeStates = useMemo(() => {
     if (activeScenario === 'live') {
@@ -258,12 +262,12 @@ export default function SystemTopologyView({
               </div>
               <div className="window-actions">
                 <a
-                  href="http://localhost:3002"
+                  href={factoryFloorUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-quick-launch"
-                  title="Open Standalone Factory Floor Console (Window 1 :3002)"
-                  aria-label="Factory Floor Console ↗"
+                  title="Open Standalone Factory Floor Console in new tab"
+                  aria-label="Open Standalone Factory Floor Console in new tab"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }} aria-hidden="true">
                     precision_manufacturing

@@ -383,9 +383,12 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     // Quick-Launch Button
     const quickLaunchBtn = screen.getByRole('link', { name: /factory floor console/i });
     expect(quickLaunchBtn).toBeDefined();
-    expect(quickLaunchBtn.getAttribute('href')).toBe('http://localhost:3002');
+    expect(quickLaunchBtn.getAttribute('href')).toBe('https://kaizen-lab-factory.web.app');
     expect(quickLaunchBtn.getAttribute('target')).toBe('_blank');
     expect(quickLaunchBtn.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(quickLaunchBtn.getAttribute('aria-label')).toBe(
+      'Open Standalone Factory Floor Console in new tab',
+    );
     expect(quickLaunchBtn.className).toContain('btn-quick-launch');
 
     // Verify Window 1 contains Layer 1 and Layer 2
@@ -501,8 +504,31 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     // Quick-Launch link attributes
     const qlLink = container.querySelector('.btn-quick-launch');
     expect(qlLink).not.toBeNull();
-    expect(qlLink?.getAttribute('href')).toBe('http://localhost:3002');
+    expect(qlLink?.getAttribute('href')).toBe('https://kaizen-lab-factory.web.app');
     expect(qlLink?.getAttribute('target')).toBe('_blank');
     expect(qlLink?.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(qlLink?.getAttribute('aria-label')).toBe(
+      'Open Standalone Factory Floor Console in new tab',
+    );
+  });
+
+  it('supports VITE_FACTORY_FLOOR_URL override and falls back to production URL (TKT-055 #240)', () => {
+    // 1. Default fallback to production URL
+    const { unmount } = render(<SystemTopologyView incident={mockIncident} />);
+    const defaultLink = screen.getByRole('link', { name: /factory floor console/i });
+    expect(defaultLink.getAttribute('href')).toBe('https://kaizen-lab-factory.web.app');
+    expect(defaultLink.getAttribute('target')).toBe('_blank');
+    expect(defaultLink.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(defaultLink.getAttribute('aria-label')).toBe(
+      'Open Standalone Factory Floor Console in new tab',
+    );
+    unmount();
+
+    // 2. Custom override via environment variable
+    vi.stubEnv('VITE_FACTORY_FLOOR_URL', 'http://localhost:3002');
+    render(<SystemTopologyView incident={mockIncident} />);
+    const overriddenLink = screen.getByRole('link', { name: /factory floor console/i });
+    expect(overriddenLink.getAttribute('href')).toBe('http://localhost:3002');
+    vi.unstubAllEnvs();
   });
 });

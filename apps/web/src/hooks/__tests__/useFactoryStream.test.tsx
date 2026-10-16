@@ -204,4 +204,48 @@ describe("useFactoryStream hook", () => {
 
     vi.useRealTimers();
   });
+
+  it("detects a silent death via watchdog timeout and auto-reconnects without onerror firing", () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() =>
+      useFactoryStream({ reconnectIntervalMs: 500, watchdogTimeoutMs: 1000 })
+    );
+    const es = MockEventSource.instances[0];
+
+    act(() => {
+      es.simulateOpen();
+    });
+    expect(result.current.connected).toBe(true);
+
+    const mockPacket: FactoryTickPacket = {
+      tick_index: 1,
+      machines: [],
+      recent_parts: [],
+      edge_stats: null,
+      active_anomaly: null,
+    };
+    act(() => {
+      es.simulateEvent("factory_tick", mockPacket);
+    });
+    expect(result.current.hasReceivedData).toBe(true);
+    expect(result.current.isStale).toBe(false);
+
+    // Connection goes silent: no onerror, no further events — just advance past the watchdog budget.
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(result.current.connected).toBe(false);
+    expect(result.current.isStale).toBe(true);
+    expect(result.current.error).toContain("timed out");
+    expect(es.closed).toBe(true);
+    expect(MockEventSource.instances.length).toBe(1);
+
+    // After the reconnect interval, a fresh EventSource is created automatically.
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(MockEventSource.instances.length).toBe(2);
+
+    vi.useRealTimers();
+  });
 });

@@ -1,6 +1,7 @@
-// Interactive topology node card for the 4-phase execution graph (Issue #205).
+// Interactive topology node card for the 5-layer workflow architecture (Issue #205 & Issue #211).
 import React from 'react';
 import type { TopologyNodeDefinition, TopologyNodeState } from '../../types';
+import DecisionGateNode from './DecisionGateNode';
 
 interface TopologyNodeProps {
   node: TopologyNodeDefinition;
@@ -15,11 +16,16 @@ const STATUS_CONFIG: Record<
 > = {
   idle: {
     label: 'Standby',
-    chipClass: 'chip-muted',
+    chipClass: 'chip-neutral',
     borderColor: 'var(--glass-border)',
   },
+  nominal: {
+    label: 'Nominal',
+    chipClass: 'chip-neutral',
+    borderColor: 'rgba(15,23,42,0.12)',
+  },
   active: {
-    label: 'Executing',
+    label: 'Active',
     chipClass: 'chip-blue',
     dotClass: 'animate-pulse-glow',
     borderColor: 'rgba(91,91,240,0.45)',
@@ -32,6 +38,20 @@ const STATUS_CONFIG: Record<
     borderColor: 'rgba(245,165,36,0.45)',
     ringColor: '0 0 0 2px rgba(245,165,36,0.2)',
   },
+  warning: {
+    label: 'Warning',
+    chipClass: 'chip-amber',
+    dotClass: 'animate-pulse-glow',
+    borderColor: 'rgba(245,165,36,0.5)',
+    ringColor: '0 0 0 2px rgba(245,165,36,0.25)',
+  },
+  danger: {
+    label: 'Breach / Alarm',
+    chipClass: 'chip-danger',
+    dotClass: 'animate-pulse-glow',
+    borderColor: 'rgba(229,72,77,0.5)',
+    ringColor: '0 0 0 2px rgba(229,72,77,0.25)',
+  },
   pending_approval: {
     label: 'Approval Required',
     chipClass: 'chip-amber',
@@ -39,14 +59,24 @@ const STATUS_CONFIG: Record<
     borderColor: 'rgba(245,165,36,0.5)',
     ringColor: '0 0 0 2px rgba(245,165,36,0.25)',
   },
+  locked: {
+    label: 'Locked',
+    chipClass: 'chip-neutral',
+    borderColor: 'rgba(15,23,42,0.18)',
+  },
   done: {
     label: 'Verified',
     chipClass: 'chip-green',
     borderColor: 'rgba(18,161,80,0.35)',
   },
+  completed: {
+    label: 'Completed',
+    chipClass: 'chip-green',
+    borderColor: 'rgba(18,161,80,0.35)',
+  },
   error: {
     label: 'Alert',
-    chipClass: 'chip-red',
+    chipClass: 'chip-danger',
     dotClass: 'animate-pulse-glow',
     borderColor: 'rgba(229,72,77,0.5)',
     ringColor: '0 0 0 2px rgba(229,72,77,0.25)',
@@ -59,11 +89,16 @@ export default function TopologyNode({
   selected,
   onSelect,
 }: TopologyNodeProps): React.ReactElement {
-  const cfg = STATUS_CONFIG[state.status];
+  if (node.isDecisionGate) {
+    return <DecisionGateNode node={node} state={state} selected={selected} onSelect={onSelect} />;
+  }
+
+  const cfg = STATUS_CONFIG[state.status] || STATUS_CONFIG.idle;
 
   return (
     <div
-      id={`topology-node-${node.id}`}
+      id={`node-${node.id}`}
+      data-node={node.id}
       data-node-id={node.id}
       data-status={state.status}
       data-selected={selected ? 'true' : 'false'}
@@ -71,7 +106,7 @@ export default function TopologyNode({
       tabIndex={0}
       aria-label={`${node.label} (${node.tier}) - Status: ${cfg.label}. Click to inspect details.`}
       aria-expanded={selected}
-      className={`glass topology-node-card ${selected ? 'topology-node-selected' : ''}`}
+      className={`node-card topology-node-card ${selected ? 'selected topology-node-selected' : ''}`}
       onClick={() => onSelect(node.id)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -79,160 +114,44 @@ export default function TopologyNode({
           onSelect(node.id);
         }
       }}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.65rem',
-        padding: '0.85rem 1rem',
-        borderRadius: 'var(--r-md)',
-        cursor: 'pointer',
-        textAlign: 'left',
-        outline: 'none',
-        border: selected ? '2px solid var(--accent)' : `1px solid ${cfg.borderColor}`,
-        boxShadow: selected
-          ? '0 8px 24px -4px rgba(91,91,240,0.28), inset 0 1px 0 rgba(255,255,255,0.95)'
-          : cfg.ringColor
-            ? `${cfg.ringColor}, var(--glass-shadow)`
-            : 'var(--glass-shadow)',
-        background: selected ? 'rgba(255,255,255,0.9)' : 'var(--glass-bg)',
-        transition: 'all 0.25s var(--ease)',
-        minHeight: 110,
-        position: 'relative',
-      }}
     >
-      {/* Top row: Tier badge and live status chip */}
-      <div className="row between" style={{ gap: '0.5rem', width: '100%' }}>
-        <span
-          className="chip"
-          style={{
-            fontSize: '0.7rem',
-            fontWeight: 650,
-            padding: '2px 8px',
-            background: 'rgba(15,23,42,0.06)',
-            color: 'var(--ink-2)',
-            borderRadius: 6,
-          }}
-        >
-          {node.tier}
-        </span>
-        <span
-          className={`chip ${cfg.chipClass} row`}
-          style={{
-            fontSize: '0.7rem',
-            padding: '2px 8px',
-            gap: 5,
-            borderRadius: 999,
-          }}
-        >
+      {/* Node Header: Icon, Name, Sublabel and Status Badge */}
+      <div className="node-header">
+        <div className="node-icon-title">
+          <div className="node-icon-tile">
+            <span className="material-symbols-outlined">{node.icon}</span>
+          </div>
+          <div>
+            <div className="node-name">{node.label}</div>
+            <div className="node-sublabel">{node.sublabel}</div>
+          </div>
+        </div>
+        <span className={`chip chip-sm ${cfg.chipClass} status-badge`}>
           {cfg.dotClass && <span className={`dot ${cfg.dotClass}`} style={{ width: 6, height: 6 }} />}
           {state.badgeText ?? cfg.label}
         </span>
       </div>
 
-      {/* Main row: Icon and Node identification */}
-      <div className="row" style={{ gap: '0.75rem', alignItems: 'center' }}>
-        <div
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 10,
-            background: selected
-              ? 'linear-gradient(145deg, var(--accent), var(--accent-2))'
-              : 'rgba(15,23,42,0.06)',
-            color: selected ? '#ffffff' : 'var(--ink)',
-            display: 'grid',
-            placeItems: 'center',
-            flexShrink: 0,
-            transition: 'background 0.2s var(--ease), color 0.2s var(--ease)',
-          }}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
-            {node.icon}
-          </span>
-        </div>
-        <div className="col" style={{ minWidth: 0, flex: 1 }}>
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: '0.92rem',
-              color: 'var(--ink)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {node.label}
-          </div>
-          <div
-            style={{
-              fontSize: '0.75rem',
-              color: 'var(--muted)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {node.sublabel}
-          </div>
-        </div>
-      </div>
+      {/* JTBD / Summary */}
+      <p className="node-jtbd">{state.summary || node.jtbd}</p>
 
-      {/* Summary message */}
-      <div
-        style={{
-          fontSize: '0.78rem',
-          lineHeight: 1.35,
-          color: 'var(--text)',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}
-      >
-        {state.summary}
-      </div>
-
-      {/* Footer tags */}
-      <div className="row wrap" style={{ gap: 4, marginTop: 'auto', paddingTop: '0.2rem' }}>
+      {/* Node Footer: Primary Metrics / Specs */}
+      <div className="node-footer">
+        <span className="node-metric">
+          Tier: <b>{node.tier}</b>
+        </span>
         {state.isInferred && (
           <span
-            className="chip"
-            style={{
-              fontSize: '0.66rem',
-              padding: '1px 6px',
-              background: 'rgba(91,91,240,0.08)',
-              color: 'var(--accent)',
-              borderRadius: 4,
-            }}
-            title="Operational state inferred from incident lifecycle without direct cloud telemetry polling"
+            className="chip chip-sm chip-blue"
+            style={{ fontSize: '10px', padding: '1px 6px' }}
+            title="Operational state inferred from incident blackboard lifecycle"
           >
-            Inferred Data Plane
+            Inferred
           </span>
         )}
-        {node.techStack.slice(0, 2).map((tech) => (
-          <span
-            key={tech}
-            className="chip"
-            style={{
-              fontSize: '0.66rem',
-              padding: '1px 6px',
-              background: 'rgba(15,23,42,0.04)',
-              color: 'var(--muted)',
-              borderRadius: 4,
-            }}
-          >
-            {tech}
-          </span>
-        ))}
-        {node.techStack.length > 2 && (
-          <span
-            style={{
-              fontSize: '0.66rem',
-              color: 'var(--faint)',
-              alignSelf: 'center',
-            }}
-          >
-            +{node.techStack.length - 2}
+        {node.techStack && node.techStack.length > 0 && (
+          <span className="node-metric">
+            <b>{node.techStack[0]}</b>
           </span>
         )}
       </div>

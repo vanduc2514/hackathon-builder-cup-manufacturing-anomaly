@@ -231,3 +231,17 @@ How UI components change across both surfaces through an incident lifecycle:
 | **`closed`** | Desktop: Step 5 `Approve 8D & Release Line` unlocks (`Button` variant `primary`). Mobile: `Awaiting lead`. |
 | **approved** | Mobile: order moves to Completed. Knowledge Base gains a signed-off 8D row and its KPI cards increment. |
 | **`escalated` / `error`** | Desktop: StatusReasonBanner. Mobile: `Chip` tone `danger` `Escalated` + `Incident Notice` card. |
+
+---
+
+## 9. Demo & Pitch Assets (TKT-#42, draft)
+
+Not a product screen — storyboard, screen choreography, and VO assets for the 90-second hackathon demo video and pitch deck. All DRAFT pending the real Cloud Run run (#80).
+
+| Asset | Purpose | File |
+|---|---|---|
+| 90s storyboard | 4-phase incident lifecycle × 4 scoring-pillar timeline | [`05_demo_storyboard_90s.md`](./05_demo_storyboard_90s.md) |
+| Screen choreography | Split-screen wireframe: dashboard Andon lamps (left) + mobile camera/Live Copilot (right) | [`06_demo_screen_choreography.md`](./06_demo_screen_choreography.md) |
+| Voiceover script (vi) | Technician/Copilot dialogue + narrator VO draft | [`07_demo_voiceover_script_vi.md`](./07_demo_voiceover_script_vi.md) |
+| Pitch deck skeleton | Slide-by-slide layout brief for architecture + impact slides | [`08_demo_pitch_deck_skeleton.md`](./08_demo_pitch_deck_skeleton.md) |
+| HTML prototype | Lumina Slate-fidelity static render of the Beat-4 split-screen moment | [`../../.stitch/designs/demo_split_screen_choreography.html`](../../.stitch/designs/demo_split_screen_choreography.html) |

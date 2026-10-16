@@ -11,6 +11,18 @@
       "file": "designs/kaizen_ui_design_system.html",
       "screenshot": "designs/kaizen_ui_design_system.png",
       "deviceType": "DESKTOP"
+    },
+    {
+      "id": "system_topology_workflow",
+      "title": "Kaizen System Topology & Multi-Agent Execution Graph",
+      "file": "designs/system_topology_workflow.html",
+      "deviceType": "DESKTOP"
+    },
+    {
+      "id": "demo_split_screen_choreography",
+      "title": "Demo Split-Screen Choreography — Repair + Gatekeeper (TKT-#42 draft)",
+      "file": "designs/demo_split_screen_choreography.html",
+      "deviceType": "DESKTOP"
     }
   ]
 }

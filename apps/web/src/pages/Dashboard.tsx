@@ -80,6 +80,7 @@ export default function Dashboard({
           incident={incident}
           onOpenIncident={onOpenIncident}
           onNotify={onNotify}
+          onNavigateToTab={onSelectTab}
         />
       )}
       {currentTab === 'incident-detail' && openIncident && (

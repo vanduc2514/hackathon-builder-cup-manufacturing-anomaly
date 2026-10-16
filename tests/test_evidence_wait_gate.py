@@ -282,3 +282,51 @@ def test_gemini_live_routes_notify_evidence(monkeypatch: pytest.MonkeyPatch):
     )
     assert response.status_code == 200
     assert called is True
+
+
+@pytest.mark.asyncio
+async def test_require_evidence_flag_forces_awaiting_evidence(monkeypatch: pytest.MonkeyPatch):
+    """Setting require_evidence=True forces workflow to enter awaiting_evidence even with high RCA confidence."""
+    import backend.agents.orchestrator as orch_mod
+    from backend.core.config import settings
+    orch = orch_mod.Orchestrator()
+    blackboard.reset()
+
+    monkeypatch.setattr(settings, "evidence_wait_seconds", 5)
+
+    trigger = DefectInjectionRequest(
+        scenario="im_damp_material",
+        mode="demo",
+        require_evidence=True,
+    )
+
+    task = asyncio.create_task(orch.run_incident(trigger))
+    try:
+        reached = False
+        for _ in range(60):
+            await asyncio.sleep(0.05)
+            if blackboard.get_state().status == "awaiting_evidence":
+                reached = True
+                break
+        assert reached is True
+        assert blackboard.get_state().status == "awaiting_evidence"
+    finally:
+        await orch.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+
+
+@pytest.mark.asyncio
+async def test_require_evidence_false_preserves_standard_behavior():
+    """Default require_evidence=False proceeds without awaiting_evidence when RCA confidence is high."""
+    import backend.agents.orchestrator as orch_mod
+    orch = orch_mod.Orchestrator()
+    blackboard.reset()
+
+    trigger = DefectInjectionRequest(
+        scenario="im_damp_material",
+        mode="fast",
+        require_evidence=False,
+    )
+
+    final_state = await orch.run_incident(trigger)
+    assert final_state.status in ("repairing", "verifying", "closed")

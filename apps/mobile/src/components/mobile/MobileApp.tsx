@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import type { IncidentState, IncidentSummary } from '../../types';
+import type { IncidentState, IncidentSummary, VisualEvidencePreset } from '../../types';
 import type {
   EvidenceItem,
   MobileNotification,
@@ -373,6 +373,27 @@ export default function MobileApp({ incident, history }: MobileAppProps): React.
   };
 
   /**
+   * Attached a visual preset for the live incident.
+   * Mirrors submitEvidence success flow: resets live captures, emits notification,
+   * dismisses navigation stack, and displays confirmation toast.
+   */
+  const handlePresetAttached = (target: WorkOrder, preset: VisualEvidencePreset) => {
+    setLiveCaptures({ incidentId: target.id, items: {} });
+    notify(
+      {
+        icon: 'send',
+        tone: 'blue',
+        title: `Evidence sent · ${target.machine}`,
+        body: preset.analysis || `Preset "${preset.title}" attached for AI visual analysis.`, 
+        workId: target.id,
+      },
+      false,
+    );
+    setStack([]);
+    showToast('Evidence received · AI is re-analysing');
+  };
+
+  /**
    * Finishes the guided repair. Any handover notes are recorded via Orchestrator
    * on the incident board and persisted in Firestore.
    */
@@ -454,6 +475,7 @@ export default function MobileApp({ incident, history }: MobileAppProps): React.
             item={item}
             onClose={pop}
             onSave={(itemId, thumb) => saveCapture(order, itemId, thumb)}
+            onPresetAttached={(target, preset) => handlePresetAttached(target, preset)}
           />
         );
       }

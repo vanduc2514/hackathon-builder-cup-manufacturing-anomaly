@@ -77,8 +77,11 @@ def _record_verification(finding: str, evidence: str, confidence: float) -> None
 
 async def open_incident(ctx: Context, node_input: DefectInjectionRequest) -> IncidentState:
     """Initialises workflow state and opens a fresh incident on the Blackboard."""
-    ctx.state["trigger"] = node_input.model_dump()
+    trigger_dict = node_input.model_dump()
+    ctx.state["trigger"] = trigger_dict
     ctx.state["evidence_rounds"] = 0
+    if trigger_dict.get("require_evidence"):
+        ctx.state["require_evidence"] = True
     ctx.state["reopen_count"] = 0
     ctx.state["step_delay"] = ctx.state.get("step_delay", settings.simulation_step_delay)
     blackboard.reset()
@@ -200,7 +203,9 @@ async def rca_gate(ctx: Context, node_input: RootCauseFindingDraft) -> Event:
     # converges with confidence >= 0.85 before proceeding to Phase C repair.
     threshold = SECONDARY_CONFIDENCE_THRESHOLD if rounds >= 1 else RCA_CONFIDENCE_THRESHOLD
 
-    if confidence >= threshold:
+    force_evidence = bool(ctx.state.get("require_evidence")) and rounds == 0
+
+    if confidence >= threshold and not force_evidence:
         blackboard.update_status(
             "repairing", root_cause=node_input.finding, diagnostic_request=None
         )

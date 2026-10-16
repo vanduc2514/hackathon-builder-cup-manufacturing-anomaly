@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaizen System Topology & 4-Phase Multi-Agent Execution Workflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
+
+<style>
+/* =============================================================================
+   Kaizen UI — Lumina Slate Design Tokens (docs/DESIGN.md §2.3, §2.5, §2.7)
+   ============================================================================= */
+:root {
+  /* Canvas */
+  --bg-app: #eef1fb;
+
+  /* Typography Colors */
+  --ink: #0b1220;
+  --ink-2: #1e2638;
+  --text: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+
+  /* Hairlines & Borders */
+  --hair: rgba(15, 23, 42, .07);
+  --hair-strong: rgba(15, 23, 42, .12);
+
+  /* Brand / Active Accents */
+  --accent: #5b5bf0;
+  --accent-2: #7c6cff;
+  --accent-soft: rgba(91, 91, 240, .1);
+  --accent-ring: rgba(91, 91, 240, .28);
+
+  /* Status Colors */
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, .1);
+  --warning: #f5a524;
+  --warning-soft: rgba(245, 165, 36, .12);
+  --success: #12a150;
+  --success-soft: rgba(18, 161, 80, .1);
+  --info: #3b82f6;
+  --info-soft: rgba(59, 130, 246, .1);
+
+  /* Glass Surfaces */
+  --glass-bg: rgba(255, 255, 255, .62);
+  --glass-bg-strong: rgba(255, 255, 255, .82);
+  --glass-border: rgba(255, 255, 255, .78);
+  --glass-shadow: 0 1px 1px rgba(15, 23, 42, .03), 0 8px 24px -6px rgba(30, 41, 90, .1), 0 24px 48px -24px rgba(30, 41, 90, .12);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 0 0 1px rgba(255, 255, 255, .4);
+
+  /* Fonts */
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Geist', 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-full: 999px;
+
+  /* Easing */
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --ease-spring: cubic-bezier(.34, 1.4, .5, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  position: relative;
+  min-height: 100vh;
+  font-family: var(--font-main);
+  font-feature-settings: 'cv11', 'ss01';
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* App Backdrop: Pastel radial washes + 24px dot grid (DESIGN.md §2.4) */
+.app-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 22% at 10% 5%, rgba(139, 132, 255, .28) 0%, transparent 70%),
+    radial-gradient(35% 20% at 90% 10%, rgba(96, 165, 250, .22) 0%, transparent 70%),
+    radial-gradient(45% 24% at 75% 60%, rgba(244, 170, 210, .2) 0%, transparent 70%),
+    radial-gradient(40% 22% at 20% 90%, rgba(125, 211, 252, .18) 0%, transparent 70%),
+    linear-gradient(180deg, #f4f6fd 0%, #eceffa 100%);
+}
+
+.app-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(15, 23, 42, .07) 1px, transparent 1px);
+  background-size: 24px 24px;
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, .6), rgba(0, 0, 0, .15));
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, .6), rgba(0, 0, 0, .15));
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: 20px;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* UI Layout Container */
+.page-container {
+  position: relative;
+  z-index: 1;
+  max-width: 1720px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Header Bar */
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.title-cluster {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 920px;
+}
+
+/* Chips & Badges */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.chip-blue {
+  background: var(--info-soft);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, .25);
+}
+
+.chip-green {
+  background: var(--success-soft);
+  color: #0e8a43;
+  border-color: rgba(18, 161, 80, .25);
+}
+
+.chip-amber {
+  background: var(--warning-soft);
+  color: #b4710a;
+  border-color: rgba(245, 165, 36, .25);
+}
+
+.chip-red {
+  background: var(--danger-soft);
+  color: #c9343a;
+  border-color: rgba(229, 72, 77, .25);
+}
+
+.chip-muted {
+  background: rgba(15, 23, 42, .05);
+  color: var(--muted);
+  border-color: var(--hair-strong);
+}
+
+/* Glass Card */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-shadow);
+  position: relative;
+}
+
+.glass-card-strong {
+  background: var(--glass-bg-strong);
+  border-color: rgba(255, 255, 255, .85);
+}
+
+/* Controls & Simulation Toolbar */
+.control-cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  min-width: 44px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-main);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--hair-strong);
+  background: rgba(255, 255, 255, .85);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+  transition: all 0.18s var(--ease);
+  user-select: none;
+}
+
+.btn:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .08);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: var(--radius-md);
+}
+
+.btn-primary {
+  background: linear-gradient(160deg, #1f2937 0%, #0b1220 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, .1);
+  box-shadow: 0 4px 14px -2px rgba(11, 18, 32, .3);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(160deg, #2d3748 0%, #111827 100%);
+  color: #ffffff;
+}
+
+.btn-accent {
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 12px rgba(91, 91, 240, .28);
+}
+
+.select-control {
+  height: 38px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hair-strong);
+  background: rgba(255, 255, 255, .88);
+  font-family: var(--font-main);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  outline: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.select-control:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ring);
+}
+
+/* Operational Tier Legend Bar */
+.legend-bar {
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tier-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tier-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(15, 23, 42, .04);
+}
+
+.status-swatches {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.swatch {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dot-red { background: var(--danger); box-shadow: 0 0 8px rgba(229, 72, 77, .5); }
+.dot-amber { background: var(--warning); box-shadow: 0 0 8px rgba(245, 165, 36, .5); }
+.dot-blue { background: var(--accent); box-shadow: 0 0 8px rgba(91, 91, 240, .5); }
+.dot-green { background: var(--success); box-shadow: 0 0 8px rgba(18, 161, 80, .5); }
+.dot-idle { background: var(--hair-strong); }
+
+/* Canvas Area */
+.canvas-viewport {
+  position: relative;
+  width: 100%;
+  min-height: 880px;
+  border-radius: var(--radius-xl);
+  overflow: visible;
+  transition: transform 0.25s var(--ease);
+}
+
+.canvas-transform {
+  position: relative;
+  width: 100%;
+  transform-origin: top left;
+  transition: transform 0.2s var(--ease);
+}
+
+/* SVG Connection Overlay */
+.svg-connection-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  overflow: visible;
+}
+
+.flow-path {
+  fill: none;
+  stroke: rgba(15, 23, 42, .18);
+  stroke-width: 2px;
+  stroke-linecap: round;
+  transition: stroke 0.3s var(--ease), stroke-width 0.3s var(--ease);
+}
+
+.flow-path.active {
+  stroke: var(--accent);
+  stroke-width: 2.5px;
+  stroke-dasharray: 6, 6;
+  animation: flowDash 1s linear infinite;
+}
+
+.flow-path.completed {
+  stroke: var(--success);
+  stroke-width: 2.2px;
+}
+
+.flow-path.warning {
+  stroke: var(--warning);
+  stroke-width: 2.5px;
+  stroke-dasharray: 6, 6;
+  animation: flowDash 1s linear infinite;
+}
+
+.flow-path.branch-loop {
+  stroke: var(--warning);
+  stroke-dasharray: 5, 5;
+}
+
+@keyframes flowDash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-path.active,
+  .flow-path.warning {
+    animation: none;
+  }
+}
+
+/* 4-Phase Swimlanes Grid */
+.swimlanes-grid {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+/* Phase Column Card */
+.phase-column {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  background: var(--glass-bg);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  transition: all 0.3s var(--ease);
+  position: relative;
+}
+
+.phase-column.phase-active {
+  background: rgba(255, 255, 255, .78);
+  box-shadow: 0 16px 36px -10px rgba(30, 41, 90, .18), var(--glass-shadow);
+}
+
+.phase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.phase-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phase-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .15);
+}
+
+.badge-a { background: var(--danger); }
+.badge-b { background: var(--warning); }
+.badge-c { background: var(--info); }
+.badge-d { background: var(--success); }
+
+.phase-titles {
+  display: flex;
+  flex-direction: column;
+}
+
+.phase-name {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.phase-vn {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Node Card */
+.node-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, .82);
+  border: 1px solid rgba(255, 255, 255, .9);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .04), inset 0 1px 0 rgba(255, 255, 255, .9);
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+  min-height: 94px;
+  user-select: none;
+}
+
+.node-card:hover {
+  transform: translateY(-2px);
+  background: #ffffff;
+  box-shadow: 0 8px 20px -4px rgba(30, 41, 90, .12), 0 2px 4px rgba(15, 23, 42, .03);
+  border-color: rgba(91, 91, 240, .3);
+}
+
+.node-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ring), 0 8px 24px -4px rgba(91, 91, 240, .2);
+  background: #ffffff;
+}
+
+.node-card.active {
+  border-color: var(--accent);
+  background: #ffffff;
+}
+
+.node-card.active::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: calc(var(--radius-md) + 3px);
+  border: 2px solid var(--accent);
+  opacity: 0.6;
+  animation: pulseRing 1.8s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(0.98); opacity: 0.8; }
+  50% { transform: scale(1.02); opacity: 0.2; }
+  100% { transform: scale(0.98); opacity: 0.8; }
+}
+
+.node-card.completed {
+  border-color: rgba(18, 161, 80, .35);
+  background: rgba(255, 255, 255, .9);
+}
+
+.node-card.warning-state {
+  border-color: var(--warning);
+  background: rgba(255, 250, 240, .95);
+}
+
+.node-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.node-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.node-icon-tile {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, .04);
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.node-name-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.node-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-sublabel {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-preview-box {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(15, 23, 42, .03);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--hair);
+}
+
+.node-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.tech-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, .05);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* Decision Gate Diamonds */
+.decision-gate-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 10px 0;
+  position: relative;
+}
+
+.diamond-shape {
+  width: 76px;
+  height: 76px;
+  transform: rotate(45deg);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(254, 243, 199, .9), rgba(253, 230, 138, .85));
+  border: 2px solid var(--warning);
+  box-shadow: 0 6px 16px -2px rgba(245, 165, 36, .25);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+}
+
+.diamond-shape:hover {
+  transform: rotate(45deg) scale(1.05);
+  box-shadow: 0 8px 24px -2px rgba(245, 165, 36, .35);
+}
+
+.diamond-content {
+  transform: rotate(-45deg);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.diamond-title {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  color: #92400e;
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.diamond-condition {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.gate-branches-label {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 10px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.branch-pass {
+  color: #0e8a43;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.branch-fail {
+  color: #b45309;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Progressive Disclosure Drawer (TopologyNodeDrawer) */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 18, 32, .25);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 99;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s var(--ease);
+}
+
+.drawer-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.node-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 440px;
+  max-width: 90vw;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(36px) saturate(200%);
+  -webkit-backdrop-filter: blur(36px) saturate(200%);
+  border-left: 1px solid var(--glass-border);
+  box-shadow: -12px 0 36px rgba(15, 23, 42, .15);
+  z-index: 100;
+  transform: translateX(100%);
+  transition: transform 0.3s var(--ease);
+  display: flex;
+  flex-direction: column;
+}
+
+.node-drawer.open {
+  transform: translateX(0);
+}
+
+.drawer-header {
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--hair);
+}
+
+.drawer-body {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+}
+
+.drawer-section-title {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  margin-bottom: 8px;
+}
+
+.drawer-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.meta-tile {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(15, 23, 42, .03);
+  border: 1px solid var(--hair);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.meta-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.meta-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.jtbd-box {
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: rgba(91, 91, 240, .05);
+  border: 1px solid rgba(91, 91, 240, .15);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.json-inspector {
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: #0b1220;
+  color: #e2e8f0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+  border: 1px solid rgba(255, 255, 255, .1);
+}
+
+.drawer-footer {
+  padding: 18px 24px;
+  border-top: 1px solid var(--hair);
+  display: flex;
+  gap: 12px;
+}
+
+/* Responsive collapse for tablet/mobile (< 1024px) */
+@media (max-width: 1024px) {
+  .swimlanes-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .canvas-viewport {
+    min-height: auto;
+  }
+
+  .svg-connection-layer {
+    display: none; /* Flow transforms into mobile vertical step stack */
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="app-backdrop"></div>
+
+<div class="page-container">
+  <!-- Top Navigation & Title Cluster -->
+  <header class="header-bar">
+    <div class="title-cluster">
+      <div class="title-row">
+        <h1 class="page-title">System Architecture & Execution Graph</h1>
+        <span class="chip chip-blue">12 Nodes · 4 Operational Phases</span>
+        <span id="liveStatusBadge" class="chip chip-green">
+          <span class="dot dot-green"></span>
+          Line Health Nominal
+        </span>
+      </div>
+      <p class="subtitle">
+        Product-First Operational Loop: Gemma 3 2B edge filter &rarr; Cloud Pub/Sub & ADK reasoning swarm &rarr; Decision Gate 1 (Confidence &ge; 0.70) &rarr; Gemini Live multimodal copilot &rarr; Invariant #3 verification streak &rarr; Shift leader governance.
+      </p>
+    </div>
+
+    <!-- Active Incident Action & Simulation Controls -->
+    <div class="control-cluster">
+      <select id="scenarioSelector" class="select-control" aria-label="Simulation Scenario Selector">
+        <option value="nominal">Scenario: Line Nominal (All Standby)</option>
+        <option value="detecting">State: Phase A Detecting (UCL Breach)</option>
+        <option value="tracing">State: Phase B Tracing & Process Analysis</option>
+        <option value="awaiting_evidence" selected>State: Gate 1 Branch &lt; 0.70 (Photo Evidence Loop)</option>
+        <option value="repairing">State: Phase C Repairing (Gemini Live Copilot)</option>
+        <option value="verifying">State: Phase D Gate 2 Streak (Streak 38/50)</option>
+        <option value="closed">State: Gate 2 Passed (Streak 50/50 Unlocked)</option>
+        <option value="approved">State: Shift Leader Approved & Closed</option>
+        <option value="escalated">State: Escalated (Max Diagnostic Rounds)</option>
+      </select>
+
+      <div class="glass-card" style="display: flex; padding: 2px; border-radius: var(--radius-md);">
+        <button id="zoomInBtn" class="btn btn-icon" title="Zoom In" aria-label="Zoom In">
+          <span class="material-symbols-outlined">add</span>
+        </button>
+        <button id="zoomOutBtn" class="btn btn-icon" title="Zoom Out" aria-label="Zoom Out">
+          <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button id="zoomResetBtn" class="btn btn-icon" title="Reset Zoom (1:1)" aria-label="Reset Zoom">
+          <span class="material-symbols-outlined">restart_alt</span>
+        </button>
+        <button id="fitViewBtn" class="btn btn-icon" title="Fit to Screen" aria-label="Fit View">
+          <span class="material-symbols-outlined">crop_free</span>
+        </button>
+      </div>
+
+      <button id="incidentJumpBtn" class="btn btn-primary" title="Jump to Active Incident Command">
+        <span class="material-symbols-outlined">warning</span>
+        <span>Active Incident #INC-2026-081</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Operational Tier Legend Bar -->
+  <div class="glass-card glass-card-strong legend-bar">
+    <div class="tier-group">
+      <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--faint);">Operational Tiers:</span>
+      <span class="tier-item"><b>Tier 1 & 2:</b> Glance (&lt;1s) · Gemma 3 Edge & Pneumatic Diverter</span>
+      <span class="tier-item"><b>Tier 3 & 4:</b> Focus (&lt;5s) · ADK Swarm (Trace, SPC, Process, RCA, Learning)</span>
+      <span class="tier-item"><b>Tier 5:</b> Deep Dive · Gemini Live Multimodal & Shift Leader Approval</span>
+    </div>
+    <div class="status-swatches">
+      <span class="swatch"><span class="dot dot-blue"></span> Active / Executing</span>
+      <span class="swatch"><span class="dot dot-amber"></span> Awaiting Evidence / Gate</span>
+      <span class="swatch"><span class="dot dot-green"></span> Completed / Verified</span>
+      <span class="swatch"><span class="dot dot-idle"></span> Standby</span>
+    </div>
+  </div>
+
+  <!-- Interactive Diagram Canvas Area -->
+  <div class="canvas-viewport" id="canvasViewport">
+    <div class="canvas-transform" id="canvasTransform">
+      
+      <!-- SVG Cubic Bézier Overlay Layer -->
+      <svg class="svg-connection-layer" id="svgConnectionLayer">
+        <defs>
+          <marker id="arrow-idle" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M 0 0 L 8 4 L 0 8 z" fill="rgba(15, 23, 42, .25)" />
+          </marker>
+          <marker id="arrow-active" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M 0 0 L 8 4 L 0 8 z" fill="#5b5bf0" />
+          </marker>
+          <marker id="arrow-done" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M 0 0 L 8 4 L 0 8 z" fill="#12a150" />
+          </marker>
+          <marker id="arrow-warn" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M 0 0 L 8 4 L 0 8 z" fill="#f5a524" />
+          </marker>
+        </defs>
+
+        <!-- Paths will be rendered dynamically by JavaScript connecting data-node-id elements -->
+      </svg>
+
+      <!-- 4-Phase Swimlanes Grid -->
+      <div class="swimlanes-grid">
+        
+        <!-- ==========================================
+             PHASE A: DETECTION & INGESTION
+             ========================================== -->
+        <section class="phase-column phase-active" id="phaseA">
+          <div class="phase-header">
+            <div class="phase-brand">
+              <div class="phase-badge badge-a">A</div>
+              <div class="phase-titles">
+                <span class="phase-name">Detection & Ingestion</span>
+                <span class="phase-vn">Phát hiện lỗi & Tiếp nhận sự cố</span>
+              </div>
+            </div>
+            <span class="chip chip-red">Active Phase</span>
+          </div>
+
+          <!-- Node 1: Gemma 3 Edge 2B -->
+          <div class="node-card completed" data-node-id="edge-gemma">
+            <div class="node-top-row">
+              <div class="node-identity">
+                <div class="node-icon-tile">
+                  <span class="material-symbols-outlined">memory</span>
+                </div>
+                <div class="node-name-block">
+                  <span class="node-title">1. Optical Inspection Camera</span>
+                  <span class="node-sublabel">Gemma 3 2B On-Prem Edge</span>
+                </div>
+              </div>
+              <span class="chip chip-green">Done</span>
+            </div>
+            <div class="node-preview-box">
+              <span>Scrap Diverter Actuated</span>
+              <span style="font-weight: 600;">42ms &middot; 95% Drop</span>
+            </div>
+            <div class="node-footer">
+              <span class="tech-tag">Tier 1 & 2 &middot; On-Prem</span>
+              <span class="tech-tag">MQTT / IPC</span>
+            </div>
+          </div>
+
+          <!-- Node 2: Cloud Pub/Sub & ADK Orchestrator -->
+          <div class="node-card completed" data-node-id="cloud-ingest">
+            <div class="node-top-row">
+              <div class="node-identity">
+                <div class="node-icon-tile">
+                  <span class="material-symbols-outlined">cloud_sync</span>
+                </div>
+                <div class="node-name-block">
+                  <span class="node-title">2. Pub/Sub & ADK Orchestrator</span>
+                  <span class="node-sublabel">Data Ingest & Single-Flight</span>
+                </div>
+              </div>
+              <span class="chip chip-green">Done</span>
+            </div>
+            <div class="node-preview-box">
+              <span>Incident Dispatched</span>
+              <span style="font-weight: 600;">#INC-2026-081</span>
+            </div>
+            <div class="node-footer">
+              <span class="tech-tag">Tier 3 & 4 &middot; Cloud</span>
+              <span class="tech-tag">Blackboard Bus</span>
+            </div>
+          </div>
+
+          <!-- Node 3: Quality Inspector Agent -->
+          <div class="node-card completed" data-node-id="agent-qa">
+            <div class="node-top-row">
+              <div class="node-identity">
+                <div class="node-icon-tile">
+                  <span class="material-symbols-outlined">photo_camera</span>
+                </div>
+                <div class="node-name-block">
+                  <span class="node-title">3. Quality Inspector Agent</span>
+                  <span class="node-sublabel">ADK Agent &middot; SPC UCL Alarm</span>
+                </div>
+              </div>
+              <span class="chip chip-red">UCL Alarm</span>
+            </div>
+            <div class="node-preview-box">
+              <span>Defect Rate: 4.8%</span>
+              <span style="font-weight: 600; color: var(--danger);">&gt; UCL 3.0%</span>
+            </div>
+            <div class="node-footer">
+              <span class="tech-tag">Tier 4 &middot; ADK</span>
+              <span class="tech-tag">Nelson Rule 1</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             PHASE B: TRACING & ROOT CAUSE ANALYSIS
+             ========================================== -->
+        <section class="phase-column phase-active" id="phaseB">
+          <div class="phase-header">
+            <div class="phase-brand">
+              <div class="phase-badge badge-b">B</div>
+              <div class="phase-titles">
+                <span class="phase-name">Tracing & Root Cause</span>
+                <span class="phase-vn">Truy xuất nguồn gốc & Phân tích</span>
+              </div>
+            </div>
+            <span class="chip chip-amber">Analyzing</span>
+          </div>
+
+          <!-- Node 4: Traceability Agent -->
+          <div class="node-card completed" data-node-id="agent-tra">
+            <div class="node-top-row">
+              <div class="node-identity">
+                <div class="node-icon-tile">
+                  <span class="material-symbols-outlined">account_tree</span>
+                </div>
+                <div class="node-name-block">
+                  <span class="node-title">4. Traceability Agent</span>
+                  <span class="node-sublabel">BigQuery Lot Genealogy</span>
+                </div>
+              </div>
+              <span class="chip chip-green">Done</span>
+            </div>
+            <div class="node-preview-box">
+              <span>Suspect Asset</span>
+              <span style="font-weight: 600;">CNC-02 / Tool T07</span>
+            </div>
+            <div class="node-footer">
+              <span class="tech-tag">Tier 4 &middot; ADK</span>
+              <span class="tech-tag">SQL &lt; 2.5s</span>
+            </div>
+          </div>
+
+          <!-- Node 5: Process Analyst Agent -->
+          <div class="node-card completed" data-node-id="agent-pa">
+            <div class="node-top-row">
+              <div class="node-identity">
+                <div class="node-icon-tile">
+                  <span class="material-symbols-outlined">ssid_chart</span>
+                </div>
+                <div class="node-name-block">
+                  <span class="node-title">5. Process Analyst Agent</span>
+                  <span class="node-sublabel">High-Freq Telemetry Drift</span>
+                </div>
+              </div>
+              <span class="chip chip-green">Done</span>
+            </div>
+            <div class="node-preview-box">
+              <span>Vibration / Spindle</span>
+              <span style="font-weight: 600; color: var(--danger);">+35.2% / +12.4%</span>
+            </div>
+            <div class="node-footer">
+              <span class="tech-tag">Tier 4 &middot; ADK</span>
+              <span class="tech-tag">100Hz FFT</span>
+            </div>
+          </div>
+
+          <!-- Node 6: Root Cause Agent -->
+          <div class="node-card warning-state" data-node-id="agent-rca">
+            <div class="node-top-row">
+              <div class="node-identity">
+                <div class="node-icon-tile">
+                  <span class="material-symbols-outlined">psychology</span>
+                </div>
+                <div class="node-name-block">
+                  <span class="node-title">6. Root Cause Agent</span>
+                  <span class="node-sublabel">5-Whys & Ishikawa RAG</span>
+                </div>
+              </div>
+              <span class="chip chip-amber">Low Conf</span>
+            </div>
+            <div class="node-preview-box">
+              <span>Candidate: Tool Wear</span>
+              <span style="font-weight: 600; color: #b45309;">Conf: 58% (&lt; 70%)</span>
+            </div>
+            <div class="node-footer">
+              <span class="tech-tag">Tier 4 &middot; ADK</span>
+              <span class="tech-tag">Vertex Search</span>
+            </div>
+          </div>
+
+          <!-- DECISION GATE 1 DIAMOND -->
+          <div class="decision-gate-container" id="gate1Container">
+            <div class="diamond-shape" title="Decision Gate 1: Confidence ≥ 0.70?">
+              <div class="diamond-content">
+                <span class="diamond-title">Gate 1</span>
+                <span class="diamond-condition">Conf &ge; 70%?</span>
+              </div>
+            </div>
+            <div class="gate-branches-label">
+              <span class="branch-fail">&larr; &lt; 0.70 (Photo Needed)</span>
+              <span class="branch-pass">&ge; 0.70 (Confident) &rarr;</span>
+            </div>
+          </div>
+
+          <!-- Node 7: Diagnostic Loop Agent (Branch Low) -->
+          <div class="node-card active" data-node-id="agent-diag">
+            <div class="node-top-row">
+              <div class="node-identity">
+                <div class="node-icon-tile" style="background: rgba(245, 165, 36, .15); color: #b45309;">
+                  <span class="material-symbols-outlined">add_a_photo</span>
+                </div>
+                <div class="node-name-block">
+                  <span class="node-title">7. Diagnostic Loop Agent</span>
+                  <span class="node-sublabel">Awaiting Field Evidence</span>
+                </div>
+              </div>
+              <span class="chip chip-amber">Awaiting Photo</span>
+            </div>
+            <div class="node-preview-box" style="background: rgba(254, 243, 199, .6);">
+              <span>Insert Photo</span>
+              <span style="font-weight: 600; color: #92400e;">Chipping Captured</span>
+            </div>
+            <div class="node-footer">
+              <span class="tech-tag">Tier 4 & 5 &middot; HITL</span>
+              <span class="tech-tag">Loops to Node 6</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             PHASE C: RESOLUTION & FIELD REPAIR
+             ========================================== -->
+        <section class="phase-column" id="phaseC">
+          <div class="phase-header">
+            <div class="phase-brand">
+              <div class="phase-badge badge-c">C</div>
+              <div class="phase-titles">
+                <span class="phase-name">Resolution & Field Repair</span>
+                <span class="phase-vn">Khắc phục & Sửa chữa bay</span>
+              </div>
+            </div>
+            <span class="chip chip-muted">Standby</span>
+          </div>
+
+          <!-- Node 8: Technician Copilot & Incident Scribe -->
+          <div class="node-card" data-node-id="copilot-live">
+            <div class="node-top-row">
+              <div class="node-identity">
+                <div class="node-icon-tile">
+                  <span class="material-symbols-outlined">engineering</span>
+                </div>
+                <div class="node-name-block">
+                  <span class="node-title">8. Technician Copilot & Scribe</span>
+                  <span class="node-sublabel">Gemini Live &middot; 8D Work Order</span>
+                </div>
+              </div>
+              <span class="chip chip-muted">Standby</span>
+            </div>
+            <div class="node-preview-box">
+              <span>SOP Guide &amp; 8D Draft</span>
+              <span>SOP-CNC-04</span>
+            </div>
+            <div class="node-footer">
+              <span class="tech-tag">Tier 4 & 5 &middot; Multimodal</span>
+              <span class="tech-tag">Voice & Video WS</span>
+            </div>
+          </div>
+
+          <!-- Node 9: Frontline Technician Execution -->
+          <div class="node-card" data-node-id="tech-exec">
+            <div class="node-top-row">
+              <div class="node-identity">
+                <div class="node-icon-tile">
+                  <span class="material-symbols-outlined">build</span>
+                </div>
+                <div class="node-name-block">
+                  <span class="node-title">9. Frontline Tech Execution</span>
+                  <span class="node-sublabel">Physical Bay LOTO / Repair</span>
+                </div>
+              </div>
+              <span class="chip chip-muted">Standby</span>
+            </div>
+            <div class="node-preview-box">
+              <span>Bay LOTO &amp; Index</span>
+              <span>Insert Index WNMG</span>
+            </div>
+            <div class="node-footer">
+              <span class="tech-tag">Tier 5 &middot; Human Field</span>
+              <span class="tech-tag">Safety Checklist</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             PHASE D: VERIFICATION & GOVERNANCE
+             ========================================== -->
+        <section class="phase-column" id="phaseD">
+          <div class="phase-header">
+            <div class="phase-brand">
+              <div class="phase-badge badge-d">D</div>
+              <div class="phase-titles">
+                <span class="phase-name">Verification & Governance</span>
+                <span class="phase-vn">Kiểm chứng chất lượng & Phê duyệt</span>
+              </div>
+            </div>
+            <span class="chip chip-muted">Standby</span>
+          </div>
+
+          <!-- Node 10: Verification Optical Station -->
+          <div class="node-card" data-node-id="gatekeeper-qa">
+            <div class="node-top-row">
+              <div class="node-identity">
+                <div class="node-icon-tile">
+                  <span class="material-symbols-outlined">verified</span>
+                </div>
+                <div class="node-name-block">
+                  <span class="node-title">10. Verification Optical Station</span>
+                  <span class="node-sublabel">Exit Conveyor Stream Camera</span>
+                </div>
+              </div>
+              <span class="chip chip-muted">Standby</span>
+            </div>
+            <div class="node-preview-box">
+              <span>Conveyor Stream</span>
+              <span>Real-time Inspection</span>
+            </div>
+            <div class="node-footer">
+              <span class="tech-tag">Tier 1 & 4 &middot; Optical</span>
+              <span class="tech-tag">Invariant #3</span>
+            </div>
+          </div>
+
+          <!-- DECISION GATE 2 DIAMOND -->
+          <div class="decision-gate-container" id="gate2Container">
+            <div class="diamond-shape" title="Decision Gate 2: Invariant #3 Streak ≥ 50 Clean Parts?">
+              <div class="diamond-content">
+                <span class="diamond-title">Gate 2</span>
+                <span class="diamond-condition">Streak &ge; 50?</span>
+              </div>
+            </div>
+            <div class="gate-branches-label">
+              <span class="branch-fail">&larr; Defect (Reset 0)</span>
+              <span class="branch-pass">50/50 Clean &rarr;</span>
+            </div>
+          </div>
+
+          <!-- Node 11: Continuous Learning Agent -->
+          <div class="node-card" data-node-id="agent-learn">
+            <div class="node-top-row">
+              <div class="node-identity">
+                <div class="node-icon-tile">
+                  <span class="material-symbols-outlined">school</span>
+                </div>
+                <div class="node-name-block">
+                  <span class="node-title">11. Continuous Learning Agent</span>
+                  <span class="node-sublabel">Impact ESG & RAG Ledger</span>
+                </div>
+              </div>
+              <span class="chip chip-muted">Standby</span>
+            </div>
+            <div class="node-preview-box">
+              <span>Scrap Avoided / CO2</span>
+              <span>+240kg CO2e &middot; $1,420</span>
+            </div>
+            <div class="node-footer">
+              <span class="tech-tag">Tier 4 &middot; ADK</span>
+              <span class="tech-tag">GHG Protocol</span>
+            </div>
+          </div>
+
+          <!-- Node 12: Shift Leader Governance Gate -->
+          <div class="node-card" data-node-id="human-approval">
+            <div class="node-top-row">
+              <div class="node-identity">
+                <div class="node-icon-tile">
+                  <span class="material-symbols-outlined">gavel</span>
+                </div>
+                <div class="node-name-block">
+                  <span class="node-title">12. Shift Leader Governance</span>
+                  <span class="node-sublabel">Human E-Signature Approval</span>
+                </div>
+              </div>
+              <span class="chip chip-muted">Locked</span>
+            </div>
+            <div class="node-preview-box">
+              <span>Digital E-Signature</span>
+              <span style="font-weight: 600;">Sign-off Gate</span>
+            </div>
+            <div class="node-footer">
+              <span class="tech-tag">Tier 5 &middot; Governance</span>
+              <span class="tech-tag">Formal 8D Sign</span>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =============================================================================
+     Progressive Disclosure Drawer (TopologyNodeDrawer)
+     ============================================================================= -->
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+
+<aside class="node-drawer" id="nodeDrawer" aria-label="Topology Node Inspection Drawer">
+  <div class="drawer-header">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div id="drawerIconTile" class="node-icon-tile" style="width: 40px; height: 40px; border-radius: var(--radius-md); background: rgba(91, 91, 240, .1); color: var(--accent);">
+        <span id="drawerIcon" class="material-symbols-outlined" style="font-size: 24px;">memory</span>
+      </div>
+      <div>
+        <h2 id="drawerNodeTitle" style="font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--ink);">Node Title</h2>
+        <span id="drawerSublabel" style="font-size: 12px; color: var(--muted);">Sublabel</span>
+      </div>
+    </div>
+    <button id="closeDrawerBtn" class="btn btn-icon" title="Close Drawer (ESC)" aria-label="Close Drawer">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  </div>
+
+  <div class="drawer-body">
+    <div>
+      <div class="drawer-section-title">Architectural Metadata</div>
+      <div class="drawer-meta-grid">
+        <div class="meta-tile">
+          <span class="meta-label">Operational Tier</span>
+          <span id="drawerTier" class="meta-value">Tier 4 · ADK Agent</span>
+        </div>
+        <div class="meta-tile">
+          <span class="meta-label">Latency SLA</span>
+          <span id="drawerSla" class="meta-value">&lt; 90s Reverse Trace</span>
+        </div>
+        <div class="meta-tile">
+          <span class="meta-label">Phase Boundary</span>
+          <span id="drawerPhase" class="meta-value">Phase B · Tracing</span>
+        </div>
+        <div class="meta-tile">
+          <span class="meta-label">Execution Status</span>
+          <span id="drawerStatus" class="meta-value">Active / Executing</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="drawer-section-title">Job To Be Done (JTBD)</div>
+      <div id="drawerJtbd" class="jtbd-box">
+        Node single responsibility and JTBD description.
+      </div>
+    </div>
+
+    <div>
+      <div class="drawer-section-title">Tech Stack & Tools</div>
+      <div id="drawerTechStack" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+    </div>
+
+    <div>
+      <div class="drawer-section-title">Live Blackboard Snapshot</div>
+      <pre id="drawerJson" class="json-inspector">{ "status": "idle" }</pre>
+    </div>
+  </div>
+
+  <div class="drawer-footer">
+    <button id="drawerJumpIncidentBtn" class="btn btn-primary" style="flex: 1;">
+      <span class="material-symbols-outlined">open_in_new</span>
+      <span>Jump to Incident Command</span>
+    </button>
+  </div>
+</aside>
+
+<script>
+// =============================================================================
+// Node Catalog & Metadata Dictionary (12 Nodes across 4 Operational Phases)
+// =============================================================================
+const NODE_CATALOG = {
+  'edge-gemma': {
+    id: 'edge-gemma',
+    order: 1,
+    title: '1. Optical Inspection Camera',
+    sublabel: 'Gemma 3 2B On-Prem Edge',
+    icon: 'memory',
+    phase: 'Phase A · Detection & Ingestion',
+    tier: 'Tier 1 & 2 · On-Prem Edge',
+    sla: '< 50ms Inference',
+    jtbd: 'Filter >95% normal camera frames locally on-premise; actuate physical scrap diverter within 50ms upon defect detection without cloud roundtrip.',
+    techStack: ['Gemma 3 2B (Ollama)', 'Raspberry Pi / Industrial PC', 'MQTT Bridge', 'Pneumatic Actuator'],
+    payload: {
+      station: 'STATION_EXIT_CONVEYOR',
+      defect_detected: true,
+      defect_class: 'surface_flank_wear',
+      confidence: 0.942,
+      latency_ms: 42.1,
+      actuation_signal_sent: true,
+      frame_reduction_ratio: 0.958
+    }
+  },
+  'cloud-ingest': {
+    id: 'cloud-ingest',
+    order: 2,
+    title: '2. Cloud Pub/Sub & ADK Orchestrator',
+    sublabel: 'Data Ingest & Single-Flight',
+    icon: 'cloud_sync',
+    phase: 'Phase A · Detection & Ingestion',
+    tier: 'Tier 3 & 4 · Cloud Bus',
+    sla: '< 250ms Dispatch',
+    jtbd: 'Ingest anomaly events from edge gateway and dispatch multi-agent workflow via reactive shared blackboard with strict single-flight idempotency.',
+    techStack: ['Google Cloud Pub/Sub', 'ADK Graph Workflow', 'Firestore Blackboard', 'FastAPI'],
+    payload: {
+      topic: 'telemetry.anomalies',
+      message_id: 'msg-994821',
+      incident_id: 'INC-2026-081',
+      single_flight_lock_acquired: true,
+      blackboard_version: 1
+    }
+  },
+  'agent-qa': {
+    id: 'agent-qa',
+    order: 3,
+    title: '3. Quality Inspector Agent',
+    sublabel: 'ADK Agent · SPC UCL Alarm',
+    icon: 'photo_camera',
+    phase: 'Phase A · Detection & Ingestion',
+    tier: 'Tier 4 · ADK Agent',
+    sla: '< 1.2s Analysis',
+    jtbd: 'Analyze defect rate against Upper Control Limit (UCL 3.0%) and evaluate Nelson rules to trigger formal incident.',
+    techStack: ['ADK Agent', 'Gemini 2.5 Flash', 'SPC Calculator', 'Nelson Rules Engine'],
+    payload: {
+      defect_rate: 0.048,
+      ucl_threshold: 0.030,
+      nelson_rule_triggered: 'Rule 1: Point > 3-sigma UCL',
+      sample_window_size: 50,
+      incident_severity: 'critical'
+    }
+  },
+  'agent-tra': {
+    id: 'agent-tra',
+    order: 4,
+    title: '4. Traceability Agent',
+    sublabel: 'BigQuery Lot Genealogy',
+    icon: 'account_tree',
+    phase: 'Phase B · Tracing & RCA',
+    tier: 'Tier 4 · ADK Agent',
+    sla: '< 2.5s Query',
+    jtbd: 'Traverse workpiece genealogy graph from barcode to identify suspect machine, cutting tool, and raw billet lot.',
+    techStack: ['ADK Agent', 'BigQuery SQL Graph', 'Barcode Serializer', 'Emulator Fallback'],
+    payload: {
+      workpiece_id: 'WP-88420-CNC',
+      suspect_machine: 'CNC-02',
+      cutting_tool_id: 'T07',
+      billet_heat_lot: 'LOT-B-884',
+      operator_shift: 'Morning A'
+    }
+  },
+  'agent-pa': {
+    id: 'agent-pa',
+    order: 5,
+    title: '5. Process Analyst Agent',
+    sublabel: 'High-Freq Telemetry Drift',
+    icon: 'ssid_chart',
+    phase: 'Phase B · Tracing & RCA',
+    tier: 'Tier 4 · ADK Agent',
+    sla: '< 3.0s Correlation',
+    jtbd: 'Correlate high-frequency machine sensor telemetry (spindle vibration, current load, bearing temp) with defect onset window.',
+    techStack: ['ADK Agent', 'BigQuery Telemetry', 'Vibration FFT', 'Spindle Load Analysis'],
+    payload: {
+      spindle_vibration_delta: '+35.2%',
+      drive_current_delta: '+12.4%',
+      bearing_temp_c: 68.4,
+      correlation_score: 0.912,
+      anomaly_onset_timestamp: '2026-10-16T10:14:22Z'
+    }
+  },
+  'agent-rca': {
+    id: 'agent-rca',
+    order: 6,
+    title: '6. Root Cause Agent',
+    sublabel: '5-Whys & Ishikawa RAG',
+    icon: 'psychology',
+    phase: 'Phase B · Tracing & RCA',
+    tier: 'Tier 4 · ADK Agent',
+    sla: '< 4.5s Reasoning',
+    jtbd: 'Formulate grounded 5-Whys causal tree and Ishikawa diagram citing OEM maintenance manuals and 8D archive.',
+    techStack: ['Gemini 2.5 Pro', 'Vertex AI Search', 'Ishikawa 6M Model', '5-Whys Synthesis'],
+    payload: {
+      preliminary_cause: 'Tool insert flank wear due to excessive feed resistance',
+      confidence: 0.58,
+      confidence_gate_passed: false,
+      recommended_action: 'Trigger Gate 1 Diagnostic Loop for field insert photo'
+    }
+  },
+  'agent-diag': {
+    id: 'agent-diag',
+    order: 7,
+    title: '7. Diagnostic Loop Agent',
+    sublabel: 'Awaiting Field Evidence',
+    icon: 'add_a_photo',
+    phase: 'Phase B · Tracing & RCA (Gate 1)',
+    tier: 'Tier 4 & 5 · Human-in-the-Loop',
+    sla: 'Interactive Loop',
+    jtbd: 'When Root Cause confidence is below 0.70, hold state at awaiting_evidence and prompt frontline technician for photo capture.',
+    techStack: ['Mobile Gemini Vision', 'GCS Evidence Bucket', 'Diagnostic Probe Loop', 'Root Cause Callback'],
+    payload: {
+      status: 'awaiting_evidence',
+      requested_asset: 'Bay CNC-02 cutting insert cutting face macro-photo',
+      photo_uploaded: true,
+      evidence_analysis: 'Insert flank chipping confirmed (91% visual confidence)',
+      resolved_root_cause_confidence: 0.92
+    }
+  },
+  'copilot-live': {
+    id: 'copilot-live',
+    order: 8,
+    title: '8. Technician Copilot & Scribe',
+    sublabel: 'Gemini Live · 8D Work Order',
+    icon: 'engineering',
+    phase: 'Phase C · Resolution & Field Repair',
+    tier: 'Tier 4 & 5 · Multimodal',
+    sla: 'Real-time Audio/Video',
+    jtbd: 'Provide interactive hands-free audio and visual repair guidance to bay technician; draft formal 8D report and work order.',
+    techStack: ['Gemini Live API', 'Bidirectional WebSocket', 'Scribe 8D Engine', 'SOP Versioning'],
+    payload: {
+      session_state: 'active',
+      audio_stream_active: true,
+      sop_reference: 'SOP-CNC-TOOL-CHANGE-V3',
+      work_order_id: 'WO-2026-104',
+      draft_8d_discipline: 'D5: Permanent Corrective Action'
+    }
+  },
+  'tech-exec': {
+    id: 'tech-exec',
+    order: 9,
+    title: '9. Frontline Technician Execution',
+    sublabel: 'Physical Bay LOTO / Repair',
+    icon: 'build',
+    phase: 'Phase C · Resolution & Field Repair',
+    tier: 'Tier 5 · Shop-Floor Human',
+    sla: 'Physical Intervention',
+    jtbd: 'Perform mechanical Lockout-Tagout (LOTO), index cutting insert to fresh edge, torque clamp screw, and confirm repair on mobile app.',
+    techStack: ['Frontline Technician', 'Safety LOTO Protocol', 'Mobile Confirmation', 'Torque Spec 4.2Nm'],
+    payload: {
+      bay: 'CNC-02',
+      technician_id: 'TECH-TUAN-84',
+      loto_applied: true,
+      tool_indexed: 'T07 Pocket 1',
+      repair_completed: true,
+      technician_confirmed: true
+    }
+  },
+  'gatekeeper-qa': {
+    id: 'gatekeeper-qa',
+    order: 10,
+    title: '10. Verification Optical Station',
+    sublabel: 'Exit Conveyor Stream Camera',
+    icon: 'verified',
+    phase: 'Phase D · Verification & Governance',
+    tier: 'Tier 1 & 4 · Optical',
+    sla: 'Continuous Inspection',
+    jtbd: 'Enforce Invariant #3: certify 50 consecutive clean workpieces on the conveyor before unlocking closure approval.',
+    techStack: ['Conveyor Vision Camera', 'Streak Gatekeeper', 'Invariant #3 Engine', 'Defect Counter'],
+    payload: {
+      conveyor_running: true,
+      current_clean_streak: 50,
+      streak_target: 50,
+      invariant_3_certified: true,
+      post_repair_scrap_count: 0
+    }
+  },
+  'agent-learn': {
+    id: 'agent-learn',
+    order: 11,
+    title: '11. Continuous Learning Agent',
+    sublabel: 'Impact ESG & RAG Ledger',
+    icon: 'school',
+    phase: 'Phase D · Verification & Governance',
+    tier: 'Tier 4 · ADK Agent',
+    sla: '< 2.0s Computation',
+    jtbd: 'Calculate scrap avoided, energy saved, and CO2e reduction; commit verified incident fix to permanent organizational RAG index.',
+    techStack: ['ADK Agent', 'Impact Calculator', 'Vertex AI Vector Store', 'GHG Protocol Scope 2'],
+    payload: {
+      scrap_parts_avoided: 142,
+      financial_savings_usd: 1420.00,
+      co2e_kg_avoided: 241.4,
+      kwh_energy_saved: 380.2,
+      rag_index_updated: true
+    }
+  },
+  'human-approval': {
+    id: 'human-approval',
+    order: 12,
+    title: '12. Shift Leader Governance Gate',
+    sublabel: 'Human E-Signature Approval',
+    icon: 'gavel',
+    phase: 'Phase D · Verification & Governance',
+    tier: 'Tier 5 · Governance',
+    sla: 'Shift Sign-off',
+    jtbd: 'Review validated 8D dossier, verify post-repair conveyor certification, and apply formal cryptographic shift-leader sign-off.',
+    techStack: ['Shift Leader', 'Cryptographic E-Signature', 'Audit Trail', 'Firestore Gate'],
+    payload: {
+      shift_leader_id: 'LEADER-OTTER-01',
+      closure_approved: true,
+      e_signature_hash: 'sha256-8a9d1e...c3b4',
+      final_incident_status: 'closed'
+    }
+  }
+};
+
+// =============================================================================
+// Edge Connections Definition (Workflow Graph Topology)
+// =============================================================================
+const TOPOLOGY_EDGES = [
+  { from: 'edge-gemma', to: 'cloud-ingest', label: 'MQTT Telemetry' },
+  { from: 'cloud-ingest', to: 'agent-qa', label: 'Event Stream' },
+  { from: 'agent-qa', to: 'agent-tra', label: 'SPC Trigger' },
+  { from: 'agent-qa', to: 'agent-pa', label: 'Timestamp Window' },
+  { from: 'agent-tra', to: 'agent-rca', label: 'Suspect Asset' },
+  { from: 'agent-pa', to: 'agent-rca', label: 'Sensor Drift' },
+  // Gate 1 Branches
+  { from: 'agent-rca', to: 'gate1Container', label: 'Evaluate Confidence' },
+  { from: 'gate1Container', to: 'agent-diag', label: 'Conf < 0.70', isBranch: true, status: 'warning' },
+  { from: 'agent-diag', to: 'agent-rca', label: 'Photo Evidence Loop', isLoop: true, status: 'branch-loop' },
+  { from: 'gate1Container', to: 'copilot-live', label: 'Conf >= 0.70', isBranch: true },
+  // Phase C Resolution
+  { from: 'copilot-live', to: 'tech-exec', label: 'Repair Checklist' },
+  { from: 'tech-exec', to: 'gatekeeper-qa', label: 'Repair Confirmed' },
+  // Gate 2 Branches
+  { from: 'gatekeeper-qa', to: 'gate2Container', label: 'Streak Check' },
+  { from: 'gate2Container', to: 'agent-learn', label: 'Streak >= 50' },
+  { from: 'agent-learn', to: 'human-approval', label: '8D Dossier' }
+];
+
+// =============================================================================
+// State Scenarios Definition (Simulates full incident lifecycle)
+// =============================================================================
+const SCENARIOS = {
+  nominal: {
+    statusText: 'Line Health Nominal · All 12 Nodes Standby',
+    statusTone: 'green',
+    incidentButtonVisible: false,
+    nodes: {
+      'edge-gemma': 'idle', 'cloud-ingest': 'idle', 'agent-qa': 'idle',
+      'agent-tra': 'idle', 'agent-pa': 'idle', 'agent-rca': 'idle',
+      'agent-diag': 'idle', 'copilot-live': 'idle', 'tech-exec': 'idle',
+      'gatekeeper-qa': 'idle', 'agent-learn': 'idle', 'human-approval': 'idle'
+    }
+  },
+  detecting: {
+    statusText: 'Anomaly Detecting · Upper Control Limit Breach',
+    statusTone: 'red',
+    incidentButtonVisible: true,
+    nodes: {
+      'edge-gemma': 'completed', 'cloud-ingest': 'completed', 'agent-qa': 'active',
+      'agent-tra': 'idle', 'agent-pa': 'idle', 'agent-rca': 'idle',
+      'agent-diag': 'idle', 'copilot-live': 'idle', 'tech-exec': 'idle',
+      'gatekeeper-qa': 'idle', 'agent-learn': 'idle', 'human-approval': 'idle'
+    }
+  },
+  tracing: {
+    statusText: 'Phase B Tracing · Lot Genealogy & Sensor Correlation',
+    statusTone: 'amber',
+    incidentButtonVisible: true,
+    nodes: {
+      'edge-gemma': 'completed', 'cloud-ingest': 'completed', 'agent-qa': 'completed',
+      'agent-tra': 'completed', 'agent-pa': 'completed', 'agent-rca': 'active',
+      'agent-diag': 'idle', 'copilot-live': 'idle', 'tech-exec': 'idle',
+      'gatekeeper-qa': 'idle', 'agent-learn': 'idle', 'human-approval': 'idle'
+    }
+  },
+  awaiting_evidence: {
+    statusText: 'Decision Gate 1: Conf < 0.70 · Awaiting Field Photo',
+    statusTone: 'amber',
+    incidentButtonVisible: true,
+    nodes: {
+      'edge-gemma': 'completed', 'cloud-ingest': 'completed', 'agent-qa': 'completed',
+      'agent-tra': 'completed', 'agent-pa': 'completed', 'agent-rca': 'warning-state',
+      'agent-diag': 'active', 'copilot-live': 'idle', 'tech-exec': 'idle',
+      'gatekeeper-qa': 'idle', 'agent-learn': 'idle', 'human-approval': 'idle'
+    }
+  },
+  repairing: {
+    statusText: 'Phase C Active · Gemini Live Copilot & Bay LOTO',
+    statusTone: 'blue',
+    incidentButtonVisible: true,
+    nodes: {
+      'edge-gemma': 'completed', 'cloud-ingest': 'completed', 'agent-qa': 'completed',
+      'agent-tra': 'completed', 'agent-pa': 'completed', 'agent-rca': 'completed',
+      'agent-diag': 'completed', 'copilot-live': 'active', 'tech-exec': 'active',
+      'gatekeeper-qa': 'idle', 'agent-learn': 'idle', 'human-approval': 'idle'
+    }
+  },
+  verifying: {
+    statusText: 'Phase D Verifying · Invariant #3 Streak (38/50 Parts)',
+    statusTone: 'green',
+    incidentButtonVisible: true,
+    nodes: {
+      'edge-gemma': 'completed', 'cloud-ingest': 'completed', 'agent-qa': 'completed',
+      'agent-tra': 'completed', 'agent-pa': 'completed', 'agent-rca': 'completed',
+      'agent-diag': 'completed', 'copilot-live': 'completed', 'tech-exec': 'completed',
+      'gatekeeper-qa': 'active', 'agent-learn': 'idle', 'human-approval': 'idle'
+    }
+  },
+  closed: {
+    statusText: 'Invariant #3 Verified (50/50 Clean) · Awaiting Shift Leader Sign-off',
+    statusTone: 'green',
+    incidentButtonVisible: true,
+    nodes: {
+      'edge-gemma': 'completed', 'cloud-ingest': 'completed', 'agent-qa': 'completed',
+      'agent-tra': 'completed', 'agent-pa': 'completed', 'agent-rca': 'completed',
+      'agent-diag': 'completed', 'copilot-live': 'completed', 'tech-exec': 'completed',
+      'gatekeeper-qa': 'completed', 'agent-learn': 'completed', 'human-approval': 'active'
+    }
+  },
+  approved: {
+    statusText: 'Incident #INC-2026-081 Closed & Shift Leader Approved',
+    statusTone: 'green',
+    incidentButtonVisible: false,
+    nodes: {
+      'edge-gemma': 'completed', 'cloud-ingest': 'completed', 'agent-qa': 'completed',
+      'agent-tra': 'completed', 'agent-pa': 'completed', 'agent-rca': 'completed',
+      'agent-diag': 'completed', 'copilot-live': 'completed', 'tech-exec': 'completed',
+      'gatekeeper-qa': 'completed', 'agent-learn': 'completed', 'human-approval': 'completed'
+    }
+  },
+  escalated: {
+    statusText: 'Incident Escalated · Max Diagnostic Rounds Exceeded',
+    statusTone: 'amber',
+    incidentButtonVisible: true,
+    nodes: {
+      'edge-gemma': 'completed', 'cloud-ingest': 'completed', 'agent-qa': 'completed',
+      'agent-tra': 'completed', 'agent-pa': 'completed', 'agent-rca': 'warning-state',
+      'agent-diag': 'warning-state', 'copilot-live': 'warning-state', 'tech-exec': 'idle',
+      'gatekeeper-qa': 'idle', 'agent-learn': 'idle', 'human-approval': 'warning-state'
+    }
+  }
+};
+
+// =============================================================================
+// DOM Elements & Canvas Interaction Controller
+// =============================================================================
+const canvasViewport = document.getElementById('canvasViewport');
+const canvasTransform = document.getElementById('canvasTransform');
+const svgLayer = document.getElementById('svgConnectionLayer');
+const scenarioSelector = document.getElementById('scenarioSelector');
+const liveStatusBadge = document.getElementById('liveStatusBadge');
+const incidentJumpBtn = document.getElementById('incidentJumpBtn');
+
+// Drawer Elements
+const drawerBackdrop = document.getElementById('drawerBackdrop');
+const nodeDrawer = document.getElementById('nodeDrawer');
+const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+const drawerIcon = document.getElementById('drawerIcon');
+const drawerNodeTitle = document.getElementById('drawerNodeTitle');
+const drawerSublabel = document.getElementById('drawerSublabel');
+const drawerTier = document.getElementById('drawerTier');
+const drawerSla = document.getElementById('drawerSla');
+const drawerPhase = document.getElementById('drawerPhase');
+const drawerStatus = document.getElementById('drawerStatus');
+const drawerJtbd = document.getElementById('drawerJtbd');
+const drawerTechStack = document.getElementById('drawerTechStack');
+const drawerJson = document.getElementById('drawerJson');
+
+let currentZoom = 1;
+let selectedNodeId = null;
+
+// =============================================================================
+// Canvas Rendering & Cubic Bézier Connectors
+// =============================================================================
+function renderSVGPaths() {
+  if (window.innerWidth <= 1024) return; // Mobile view uses vertical accordion stack
+
+  const containerRect = canvasTransform.getBoundingClientRect();
+  svgLayer.innerHTML = ''; // Clear existing paths
+
+  // Re-append defs
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML = `
+    <marker id="arrow-idle" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="rgba(15, 23, 42, .25)" />
+    </marker>
+    <marker id="arrow-active" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#5b5bf0" />
+    </marker>
+    <marker id="arrow-done" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#12a150" />
+    </marker>
+    <marker id="arrow-warn" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#f5a524" />
+    </marker>
+  `;
+  svgLayer.appendChild(defs);
+
+  TOPOLOGY_EDGES.forEach((edge) => {
+    const fromEl = document.querySelector(`[data-node-id="${edge.from}"]`) || document.getElementById(edge.from);
+    const toEl = document.querySelector(`[data-node-id="${edge.to}"]`) || document.getElementById(edge.to);
+    if (!fromEl || !toEl) return;
+
+    const fromRect = fromEl.getBoundingClientRect();
+    const toRect = toEl.getBoundingClientRect();
+
+    const isHorizontal = toRect.left >= fromRect.right - 40;
+    let d = '';
+
+    if (edge.isLoop) {
+      // Diagnostic feedback loop (curves back from Node 7 up to Node 6)
+      const x1 = fromRect.left - containerRect.left;
+      const y1 = fromRect.top + fromRect.height / 2 - containerRect.top;
+      const x2 = toRect.left - containerRect.left;
+      const y2 = toRect.top + toRect.height / 2 - containerRect.top;
+      d = `M ${x1} ${y1} C ${x1 - 50} ${y1}, ${x2 - 50} ${y2}, ${x2} ${y2}`;
+    } else if (isHorizontal) {
+      // Right-to-left Bézier spline
+      const x1 = fromRect.right - containerRect.left;
+      const y1 = fromRect.top + fromRect.height / 2 - containerRect.top;
+      const x2 = toRect.left - containerRect.left;
+      const y2 = toRect.top + toRect.height / 2 - containerRect.top;
+      const dx = Math.max(30, (x2 - x1) / 2);
+      d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+    } else {
+      // Top-to-bottom Bézier spline
+      const x1 = fromRect.left + fromRect.width / 2 - containerRect.left;
+      const y1 = fromRect.bottom - containerRect.top;
+      const x2 = toRect.left + toRect.width / 2 - containerRect.left;
+      const y2 = toRect.top - containerRect.top;
+      const dy = Math.max(20, (y2 - y1) / 2);
+      d = `M ${x1} ${y1} C ${x1} ${y1 + dy}, ${x2} ${y2 - dy}, ${x2} ${y2}`;
+    }
+
+    const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    pathEl.setAttribute('d', d);
+
+    // Determine path class & status
+    const currentScenario = SCENARIOS[scenarioSelector.value];
+    const fromStatus = currentScenario.nodes[edge.from];
+    const toStatus = currentScenario.nodes[edge.to];
+
+    let pathClass = 'flow-path';
+    let marker = 'url(#arrow-idle)';
+
+    if (edge.isLoop) {
+      pathClass += ' branch-loop';
+      marker = 'url(#arrow-warn)';
+    } else if (fromStatus === 'completed' && toStatus === 'completed') {
+      pathClass += ' completed';
+      marker = 'url(#arrow-done)';
+    } else if (fromStatus === 'active' || toStatus === 'active' || fromStatus === 'warning-state' || toStatus === 'warning-state') {
+      pathClass += edge.status === 'warning' ? ' warning' : ' active';
+      marker = edge.status === 'warning' ? 'url(#arrow-warn)' : 'url(#arrow-active)';
+    }
+
+    pathEl.setAttribute('class', pathClass);
+    pathEl.setAttribute('marker-end', marker);
+    svgLayer.appendChild(pathEl);
+  });
+}
+
+// =============================================================================
+// Scenario Controller & State Machine Application
+// =============================================================================
+function applyScenario(scenarioKey) {
+  const scenario = SCENARIOS[scenarioKey];
+  if (!scenario) return;
+
+  // Update Status Banner
+  liveStatusBadge.className = `chip chip-${scenario.statusTone}`;
+  liveStatusBadge.innerHTML = `<span class="dot dot-${scenario.statusTone}"></span> ${scenario.statusText}`;
+
+  if (scenario.incidentButtonVisible) {
+    incidentJumpBtn.style.display = 'inline-flex';
+  } else {
+    incidentJumpBtn.style.display = 'none';
+  }
+
+  // Update Node Cards
+  Object.keys(scenario.nodes).forEach((nodeId) => {
+    const nodeEl = document.querySelector(`[data-node-id="${nodeId}"]`);
+    if (!nodeEl) return;
+
+    const status = scenario.nodes[nodeId];
+    nodeEl.classList.remove('active', 'completed', 'warning-state');
+
+    const statusChip = nodeEl.querySelector('.node-top-row .chip');
+    if (status === 'completed') {
+      nodeEl.classList.add('completed');
+      if (statusChip) {
+        statusChip.className = 'chip chip-green';
+        statusChip.textContent = 'Done';
+      }
+    } else if (status === 'active') {
+      nodeEl.classList.add('active');
+      if (statusChip) {
+        statusChip.className = 'chip chip-blue';
+        statusChip.textContent = 'Active';
+      }
+    } else if (status === 'warning-state') {
+      nodeEl.classList.add('warning-state');
+      if (statusChip) {
+        statusChip.className = 'chip chip-amber';
+        statusChip.textContent = 'Evidence';
+      }
+    } else {
+      if (statusChip) {
+        statusChip.className = 'chip chip-muted';
+        statusChip.textContent = 'Standby';
+      }
+    }
+  });
+
+  // Re-draw SVG spline paths with new status colors
+  setTimeout(renderSVGPaths, 50);
+}
+
+// =============================================================================
+// Progressive Disclosure Drawer Interaction
+// =============================================================================
+function openDrawer(nodeId) {
+  const node = NODE_CATALOG[nodeId];
+  if (!node) return;
+
+  selectedNodeId = nodeId;
+
+  // Highlight selected node
+  document.querySelectorAll('.node-card').forEach((el) => el.classList.remove('selected'));
+  const targetCard = document.querySelector(`[data-node-id="${nodeId}"]`);
+  if (targetCard) targetCard.classList.add('selected');
+
+  // Populate Drawer Data
+  drawerIcon.textContent = node.icon;
+  drawerNodeTitle.textContent = node.title;
+  drawerSublabel.textContent = node.sublabel;
+  drawerTier.textContent = node.tier;
+  drawerSla.textContent = node.sla;
+  drawerPhase.textContent = node.phase;
+  
+  const currentScenario = SCENARIOS[scenarioSelector.value];
+  drawerStatus.textContent = currentScenario.nodes[nodeId]?.toUpperCase() || 'STANDBY';
+
+  drawerJtbd.textContent = node.jtbd;
+
+  drawerTechStack.innerHTML = '';
+  node.techStack.forEach((tech) => {
+    const span = document.createElement('span');
+    span.className = 'tech-tag';
+    span.style.padding = '4px 8px';
+    span.style.fontSize = '11px';
+    span.textContent = tech;
+    drawerTechStack.appendChild(span);
+  });
+
+  drawerJson.textContent = JSON.stringify(node.payload, null, 2);
+
+  // Show Drawer
+  drawerBackdrop.classList.add('open');
+  nodeDrawer.classList.add('open');
+}
+
+function closeDrawer() {
+  selectedNodeId = null;
+  document.querySelectorAll('.node-card').forEach((el) => el.classList.remove('selected'));
+  drawerBackdrop.classList.remove('open');
+  nodeDrawer.classList.remove('open');
+}
+
+// =============================================================================
+// Event Listeners & Initialization
+// =============================================================================
+document.addEventListener('DOMContentLoaded', () => {
+  // Scenario Dropdown Change
+  scenarioSelector.addEventListener('change', (e) => {
+    applyScenario(e.target.value);
+  });
+
+  // Node Click Handlers
+  document.querySelectorAll('.node-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const nodeId = card.getAttribute('data-node-id');
+      openDrawer(nodeId);
+    });
+  });
+
+  // Decision Gate Click Handlers
+  document.getElementById('gate1Container').addEventListener('click', () => {
+    openDrawer('agent-diag');
+  });
+
+  document.getElementById('gate2Container').addEventListener('click', () => {
+    openDrawer('gatekeeper-qa');
+  });
+
+  // Drawer Close Handlers
+  closeDrawerBtn.addEventListener('click', closeDrawer);
+  drawerBackdrop.addEventListener('click', closeDrawer);
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDrawer();
+  });
+
+  // Zoom Controls
+  document.getElementById('zoomInBtn').addEventListener('click', () => {
+    currentZoom = Math.min(1.4, currentZoom + 0.1);
+    canvasTransform.style.transform = `scale(${currentZoom})`;
+    setTimeout(renderSVGPaths, 200);
+  });
+
+  document.getElementById('zoomOutBtn').addEventListener('click', () => {
+    currentZoom = Math.max(0.7, currentZoom - 0.1);
+    canvasTransform.style.transform = `scale(${currentZoom})`;
+    setTimeout(renderSVGPaths, 200);
+  });
+
+  document.getElementById('zoomResetBtn').addEventListener('click', () => {
+    currentZoom = 1;
+    canvasTransform.style.transform = `scale(1)`;
+    setTimeout(renderSVGPaths, 200);
+  });
+
+  document.getElementById('fitViewBtn').addEventListener('click', () => {
+    const parentWidth = canvasViewport.clientWidth;
+    const contentWidth = canvasTransform.scrollWidth;
+    currentZoom = Math.min(1, parentWidth / contentWidth);
+    canvasTransform.style.transform = `scale(${currentZoom})`;
+    setTimeout(renderSVGPaths, 200);
+  });
+
+  // Window Resize
+  window.addEventListener('resize', () => {
+    renderSVGPaths();
+  });
+
+  // Initial Scenario Setup
+  applyScenario('awaiting_evidence');
+  setTimeout(renderSVGPaths, 150);
+});
+</script>
+</body>
+</html>

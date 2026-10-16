@@ -1481,6 +1481,17 @@ button.incident-chip:hover {
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow), var(--glass-highlight);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-crumb span,
+.header-crumb b {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .header-crumb b {
@@ -1495,6 +1506,152 @@ button.incident-chip:hover {
   border-radius: 12px;
   font-size: 0.8rem;
   font-weight: 600;
+}
+
+/* Layout classes for App shell and responsive navigation */
+.app-sidebar {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  bottom: 12px;
+  width: calc(var(--sidebar-w) - 12px);
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.2rem 0.85rem;
+  z-index: 50;
+  overflow-y: auto;
+  transition: transform 0.35s var(--ease), visibility 0s linear 0s;
+}
+
+.app-header {
+  position: fixed;
+  top: 12px;
+  left: calc(var(--sidebar-w) + 12px);
+  right: 16px;
+  height: calc(var(--header-h) - 8px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0.25rem;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.header-menu-btn {
+  display: none;
+}
+
+.mobile-sidebar-close {
+  display: none;
+}
+
+.header-search {
+  min-width: 240px;
+  height: 44px;
+  justify-content: space-between;
+}
+
+.app-main {
+  position: relative;
+  z-index: 1;
+  margin-left: calc(var(--sidebar-w) + 12px);
+  padding-top: calc(var(--header-h) + 28px);
+  padding-right: 16px;
+  padding-bottom: 40px;
+  padding-left: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: scrimIn 0.25s var(--ease) both;
+}
+
+@media (max-width: 1023.98px) {
+  .app-sidebar {
+    width: min(280px, 85vw);
+    z-index: 100;
+    transform: translateX(calc(-100% - 24px));
+    visibility: hidden;
+    transition: transform 0.35s var(--ease), visibility 0s linear 0.35s;
+    box-shadow: 0 20px 40px rgba(11, 18, 32, 0.25);
+  }
+
+  .app-sidebar[data-open="true"] {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.35s var(--ease), visibility 0s linear 0s;
+  }
+
+  .mobile-sidebar-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+
+  .app-header {
+    left: 12px;
+    right: 12px;
+    gap: 8px;
+  }
+
+  .header-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 12px;
+    pointer-events: auto;
+    flex-shrink: 0;
+  }
+
+  .app-main {
+    margin-left: 0;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+@media (max-width: 759.98px) {
+  .header-search-label,
+  .header-search-kbd,
+  .header-role-text {
+    display: none;
+  }
+
+  .header-search {
+    min-width: 44px;
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .fleet-search {
+    min-width: 100%;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-anomaly-text {
+    display: none;
+  }
 }
 
 @media (max-width: 1280px) {
@@ -1883,6 +2040,13 @@ button.incident-chip:hover {
 /* ---------- Incident page: summary + collapsible steps ---------- */
 .incident-page {
   gap: 1rem;
+  padding-right: 48px;
+}
+
+@media (max-width: 760px) {
+  .incident-page {
+    padding-right: 0;
+  }
 }
 
 .incident-step {

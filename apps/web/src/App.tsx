@@ -81,7 +81,25 @@ export default function App(): React.ReactElement {
   const [ledger, setLedger] = useState<EsgLedgerResponse | null>(null);
   const [openedAt, setOpenedAt] = useState<Record<string, number>>({});
   const [soundOn, setSoundOn] = useState<boolean>(() => readStorage<boolean>(SOUND_KEY, true));
+  const [navOpen, setNavOpen] = useState<boolean>(false);
   const alertedId = useRef<string | null>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNavOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onChange = (e: MediaQueryListEvent) => {
+      if (e.matches) setNavOpen(false);
+    };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   const notify = useCallback((text: string, tone: ToastTone = 'success') => {
     setToast({ text, tone });
@@ -244,6 +262,21 @@ export default function App(): React.ReactElement {
     setCurrentTab('incident-detail');
   }, []);
 
+  const handleSelectTabFromSidebar = useCallback((tab: DashboardTab) => {
+    setCurrentTab(tab);
+    setNavOpen(false);
+  }, []);
+
+  const handleOpenIncidentsFromSidebar = useCallback(() => {
+    openIncidents();
+    setNavOpen(false);
+  }, [openIncidents]);
+
+  const handleSelectIncidentFromSidebar = useCallback((id: string) => {
+    selectIncident(id);
+    setNavOpen(false);
+  }, [selectIncident]);
+
   const closeIncident = (id: string) => {
     const remaining = incidentTabs.filter((t) => t.id !== id);
     setIncidentTabs(remaining);
@@ -285,15 +318,25 @@ export default function App(): React.ReactElement {
 
       <Sidebar
         currentTab={currentTab}
-        onSelectTab={setCurrentTab}
+        onSelectTab={handleSelectTabFromSidebar}
         incidentTabs={incidentTabs}
         activeIncidentId={activeIncidentId}
         openIncidentCount={openCount}
         link={link}
-        onOpenIncidents={openIncidents}
-        onSelectIncident={selectIncident}
+        onOpenIncidents={handleOpenIncidentsFromSidebar}
+        onSelectIncident={handleSelectIncidentFromSidebar}
         onCloseIncident={closeIncident}
+        navOpen={navOpen}
+        onCloseNav={() => setNavOpen(false)}
       />
+
+      {navOpen && (
+        <div
+          className="nav-backdrop"
+          onClick={() => setNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
       <TopHeader
         crumb={CRUMB[currentTab]}
@@ -302,21 +345,11 @@ export default function App(): React.ReactElement {
         onToggleSound={toggleSound}
         onOpenIncidents={openIncidents}
         onJump={setCurrentTab}
+        navOpen={navOpen}
+        onToggleNav={() => setNavOpen((v) => !v)}
       />
 
-      <main
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          marginLeft: 'calc(var(--sidebar-w) + 12px)',
-          paddingTop: 'calc(var(--header-h) + 28px)',
-          paddingRight: 16,
-          paddingBottom: 40,
-          paddingLeft: 12,
-          flex: 1,
-          minWidth: 0,
-        }}
-      >
+      <main className="app-main">
         <Dashboard
           incident={incident}
           currentTab={currentTab}

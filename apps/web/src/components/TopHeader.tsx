@@ -11,6 +11,8 @@ interface TopHeaderProps {
   onToggleSound: () => void;
   onOpenIncidents: () => void;
   onJump: (tab: DashboardTab) => void;
+  navOpen?: boolean;
+  onToggleNav?: () => void;
 }
 
 const JUMP_TARGETS: { tab: DashboardTab; label: string; hint: string; icon: string }[] = [
@@ -27,6 +29,8 @@ export default function TopHeader({
   onToggleSound,
   onOpenIncidents,
   onJump,
+  navOpen = false,
+  onToggleNav,
 }: TopHeaderProps): React.ReactElement {
   const [paletteOpen, setPaletteOpen] = useState<boolean>(false);
   const [query, setQuery] = useState<string>('');
@@ -57,48 +61,47 @@ export default function TopHeader({
   );
 
   return (
-    <header
-      style={{
-        position: 'fixed',
-        top: 12,
-        left: 'calc(var(--sidebar-w) + 12px)',
-        right: 16,
-        height: 'calc(var(--header-h) - 8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 16,
-        padding: '0 0.25rem',
-        zIndex: 40,
-        pointerEvents: 'none',
-      }}
-    >
-      <div className="row header-crumb" style={{ pointerEvents: 'auto' }}>
-        <span>{LINE_NAME}</span>
-        <span style={{ color: 'var(--faint)' }}>/</span>
-        <b>{crumb}</b>
+    <header className="app-header">
+      <div className="row" style={{ gap: '0.6rem', minWidth: 0, pointerEvents: 'auto', flex: '1 1 auto' }}>
+        <button
+          id="header-menu"
+          type="button"
+          className="btn glass header-menu-btn"
+          aria-label="Open navigation"
+          aria-expanded={Boolean(navOpen)}
+          aria-controls="app-sidebar"
+          onClick={onToggleNav}
+        >
+          <span className="material-symbols-outlined">menu</span>
+        </button>
+        <div className="row header-crumb">
+          <span>{LINE_NAME}</span>
+          <span style={{ color: 'var(--faint)' }}>/</span>
+          <b>{crumb}</b>
+        </div>
       </div>
 
-      <div className="row" style={{ gap: '0.75rem', pointerEvents: 'auto' }}>
+      <div className="row" style={{ gap: '0.75rem', pointerEvents: 'auto', flexShrink: 0 }}>
         {openIncidentCount > 0 && (
           <button id="header-anomaly" type="button" className="chip chip-red" onClick={onOpenIncidents} style={{ height: 34, padding: '0 14px', fontSize: '0.78rem' }}>
             <span className="dot animate-pulse-glow" />
-            {openIncidentCount} Active Anomal{openIncidentCount > 1 ? 'ies' : 'y'}
+            <span className="header-anomaly-text">{openIncidentCount} Active Anomal{openIncidentCount > 1 ? 'ies' : 'y'}</span>
           </button>
         )}
         <div style={{ position: 'relative' }}>
           <button
             id="header-search"
             type="button"
-            className="btn glass"
+            className="btn glass header-search"
+            aria-label="Search telemetry or jump to view"
             onClick={() => setPaletteOpen((v) => !v)}
-            style={{ borderRadius: 999, color: 'var(--text)', fontWeight: 500, minWidth: 240, height: 44, justifyContent: 'space-between' }}
+            style={{ borderRadius: 999, color: 'var(--text)', fontWeight: 500 }}
           >
             <span className="row" style={{ gap: 6 }}>
               <span className="material-symbols-outlined">search</span>
-              Search telemetry or jump to…
+              <span className="header-search-label">Search telemetry or jump to…</span>
             </span>
-            <span className="kbd">⌘K</span>
+            <span className="kbd header-search-kbd">⌘K</span>
           </button>
           {paletteOpen && (
             <div
@@ -107,10 +110,11 @@ export default function TopHeader({
                 position: 'absolute',
                 right: 0,
                 top: 'calc(100% + 8px)',
-                width: 360,
+                width: 'min(360px, calc(100vw - 24px))',
                 padding: 8,
                 borderRadius: 18,
                 animation: 'toastIn 0.3s var(--ease) both',
+                zIndex: 60,
               }}
             >
               <input
@@ -189,7 +193,7 @@ export default function TopHeader({
 
         {user && (
           <div className="row" style={{ gap: '0.7rem', paddingLeft: '0.4rem' }}>
-            <div className="col" style={{ textAlign: 'right' }}>
+            <div className="col header-role-text" style={{ textAlign: 'right' }}>
               <span style={{ fontSize: '0.88rem', fontWeight: 650 }}>{ROLE_LABEL[user.role]}</span>
             </div>
             <div
@@ -201,6 +205,7 @@ export default function TopHeader({
                 color: '#fff',
                 display: 'grid',
                 placeItems: 'center',
+                flexShrink: 0,
               }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>

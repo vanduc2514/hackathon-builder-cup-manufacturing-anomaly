@@ -234,7 +234,7 @@ export default function IncidentCommandView({ incident, product, onNavigateHome,
 
   return (
     <>
-      <div className="page incident-page" style={{ paddingRight: 48 }}>
+      <div className="page incident-page">
         <header className="col" style={{ gap: 6 }}>
           <nav aria-label="Breadcrumb" className="row" style={{ gap: 8, fontSize: '0.84rem', color: 'var(--text)' }}>
             <button type="button" className="crumb" onClick={onNavigateHome}>

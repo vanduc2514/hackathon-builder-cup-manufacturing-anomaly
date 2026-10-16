@@ -340,3 +340,87 @@ def test_overview_components_css_coverage() -> None:
     assert "@media (max-width: 1365.98px)" in css_text
     assert "@media (max-width: 1023.98px)" in css_text
     assert "@media (max-width: 759.98px)" in css_text
+
+
+def test_frontend_topology_files_and_contracts() -> None:
+    """Verifies that the 4-Phase System Topology files exist and meet architectural requirements (Issue #205)."""
+    web_src = APPS_DIR / "web" / "src"
+
+    required_topology_files = [
+        web_src / "lib" / "topology.ts",
+        web_src / "components" / "topology" / "TopologyNode.tsx",
+        web_src / "components" / "topology" / "TopologyCanvas.tsx",
+        web_src / "components" / "topology" / "TopologyNodeDrawer.tsx",
+        web_src / "components" / "views" / "SystemTopologyView.tsx",
+    ]
+
+    for f in required_topology_files:
+        assert f.is_file(), f"Required topology file missing: {f.relative_to(APPS_DIR)}"
+
+    # Validate node catalog and phases in topology.ts
+    topology_lib_text = (web_src / "lib" / "topology.ts").read_text(encoding="utf-8")
+    expected_node_ids = [
+        "edge-gemma",
+        "cloud-ingest",
+        "agent-qa",
+        "agent-tra",
+        "agent-pa",
+        "agent-rca",
+        "copilot-live",
+        "agent-scribe",
+        "gatekeeper-qa",
+        "agent-learn",
+        "human-approval",
+    ]
+    for node_id in expected_node_ids:
+        assert f"id: '{node_id}'" in topology_lib_text, f"Missing node {node_id} in TOPOLOGY_NODES catalog"
+
+    expected_phases = ["phase-a", "phase-b", "phase-c", "phase-d"]
+    for phase_id in expected_phases:
+        assert f"id: '{phase_id}'" in topology_lib_text, f"Missing phase {phase_id} in TOPOLOGY_PHASES catalog"
+
+    assert "deriveNodeStates" in topology_lib_text
+    assert "derivePhaseStates" in topology_lib_text
+    assert "TOPOLOGY_EDGES" in topology_lib_text
+
+
+def test_frontend_topology_navigation_wiring() -> None:
+    """Verifies navigation, jump targets, and cross-view links for the topology feature (Issue #205)."""
+    web_src = APPS_DIR / "web" / "src"
+
+    sidebar_text = (web_src / "components" / "Sidebar.tsx").read_text(encoding="utf-8")
+    assert "'topology'" in sidebar_text, "Sidebar.tsx must include 'topology' in DashboardTab"
+    assert 'id="nav-topology"' in sidebar_text, "Sidebar.tsx must render nav-topology"
+    assert "account_tree" in sidebar_text, "Sidebar.tsx must use account_tree icon for topology"
+
+    app_text = (web_src / "App.tsx").read_text(encoding="utf-8")
+    assert "topology: 'System Topology'" in app_text, "App.tsx must register topology breadcrumb"
+
+    topheader_text = (web_src / "components" / "TopHeader.tsx").read_text(encoding="utf-8")
+    assert "tab: 'topology'" in topheader_text, "TopHeader.tsx must register topology in JUMP_TARGETS"
+
+    line_overview_text = (web_src / "components" / "views" / "LineOverviewView.tsx").read_text(encoding="utf-8")
+    assert "onOpenTopology" in line_overview_text, "LineOverviewView.tsx must support onOpenTopology"
+    assert 'id="overview-topology"' in line_overview_text or 'id="overview-jump-topology"' in line_overview_text
+
+    incident_view_text = (web_src / "components" / "views" / "IncidentCommandView.tsx").read_text(encoding="utf-8")
+    assert "onOpenTopology" in incident_view_text, "IncidentCommandView.tsx must support onOpenTopology"
+    assert 'id="incident-view-topology"' in incident_view_text
+
+
+def test_frontend_topology_css_and_a11y() -> None:
+    """Verifies index.css contains required layout and accessibility rules for topology (Issue #205)."""
+    css_text = (APPS_DIR / "web" / "src" / "index.css").read_text(encoding="utf-8")
+
+    assert ".topology-view" in css_text
+    assert ".topology-canvas-container" in css_text
+    assert ".topology-swimlanes-grid" in css_text
+    assert ".topology-swimlane-card" in css_text
+    assert ".topology-node-card" in css_text
+    assert ".topology-flow-edge" in css_text
+
+    # Accessibility & responsive assertions
+    assert "@media (prefers-reduced-motion: reduce)" in css_text
+    assert "animation: none !important" in css_text
+    assert "@media (max-width: 1024px)" in css_text
+

@@ -36,6 +36,7 @@ interface IncidentCommandViewProps {
   incident: IncidentState;
   product: string;
   onNavigateHome: () => void;
+  onOpenTopology?: () => void;
   onNotify: (text: string, tone?: ToastTone) => void;
 }
 
@@ -55,7 +56,13 @@ function detectedRate(finding?: AgentFinding): number | null {
   return m ? Number(m[1]) / 100 : null;
 }
 
-export default function IncidentCommandView({ incident, product, onNavigateHome, onNotify }: IncidentCommandViewProps): React.ReactElement {
+export default function IncidentCommandView({
+  incident,
+  product,
+  onNavigateHome,
+  onOpenTopology,
+  onNotify,
+}: IncidentCommandViewProps): React.ReactElement {
   const [releasing, setReleasing] = useState<boolean>(false);
   const [released, setReleased] = useState<boolean>(false);
 
@@ -236,13 +243,29 @@ export default function IncidentCommandView({ incident, product, onNavigateHome,
     <>
       <div className="page incident-page">
         <header className="col" style={{ gap: 6 }}>
-          <nav aria-label="Breadcrumb" className="row" style={{ gap: 8, fontSize: '0.84rem', color: 'var(--text)' }}>
-            <button type="button" className="crumb" onClick={onNavigateHome}>
-              Line Overview
-            </button>
-            <span style={{ color: 'var(--faint)' }}>/</span>
-            <span className="mono chip chip-accent">#{id}</span>
-          </nav>
+          <div className="row between wrap" style={{ gap: 8, alignItems: 'center' }}>
+            <nav aria-label="Breadcrumb" className="row" style={{ gap: 8, fontSize: '0.84rem', color: 'var(--text)' }}>
+              <button type="button" className="crumb" onClick={onNavigateHome}>
+                Line Overview
+              </button>
+              <span style={{ color: 'var(--faint)' }}>/</span>
+              <span className="mono chip chip-accent">#{id}</span>
+            </nav>
+            {onOpenTopology && (
+              <button
+                id="incident-view-topology"
+                type="button"
+                className="btn btn-sm"
+                onClick={onOpenTopology}
+                style={{ gap: 6, fontWeight: 600 }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  account_tree
+                </span>
+                <span>View Phase on Topology</span>
+              </button>
+            )}
+          </div>
           <h1 className="page-title" style={{ fontSize: '1.6rem' }}>
             {friendlyName}
             {machine ? ` on ${machine}` : ''}

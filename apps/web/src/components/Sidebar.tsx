@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { ROLE_ICON, ROLE_LABEL, useSession } from '../lib/auth';
 import { LINE_LABEL, shiftLabel } from '../lib/fleet';
 
-export type DashboardTab = 'overview' | 'incident-detail' | 'impact' | 'walkthroughs' | 'sops';
+export type DashboardTab = 'overview' | 'topology' | 'incident-detail' | 'impact' | 'walkthroughs' | 'sops';
 
 /** An incident opened from the overview; shown as a closable sub-tab under Incidents. */
 export interface IncidentTab {
@@ -167,6 +167,13 @@ export default function Sidebar({
               label="Line Overview"
               active={currentTab === 'overview'}
               onClick={() => onSelectTab('overview')}
+            />
+            <NavItem
+              id="nav-topology"
+              icon="account_tree"
+              label="System Topology"
+              active={currentTab === 'topology'}
+              onClick={() => onSelectTab('topology')}
             />
             <NavItem
               id="nav-incidents"

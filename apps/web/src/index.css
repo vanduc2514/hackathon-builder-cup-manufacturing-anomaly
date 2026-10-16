@@ -3131,3 +3131,79 @@ button.incident-chip:hover {
     display: none;
   }
 }
+
+/* =========================================================================
+   System Topology & 4-Phase Operational Execution Graph (Issue #205)
+   ========================================================================= */
+
+.topology-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.topology-canvas-container {
+  position: relative;
+  width: 100%;
+}
+
+.topology-swimlanes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: stretch;
+  width: 100%;
+}
+
+.topology-swimlane-card {
+  min-height: 520px;
+}
+
+.topology-node-card {
+  position: relative;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.topology-node-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.12), var(--glass-shadow);
+  border-color: rgba(91, 91, 240, 0.45);
+}
+
+.topology-node-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.topology-node-selected {
+  transform: translateY(-2px);
+}
+
+.topology-flow-edge {
+  animation: flowDash 1.2s linear infinite;
+}
+
+@media (max-width: 1024px) {
+  .topology-swimlanes-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .topology-swimlane-card {
+    min-height: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topology-flow-edge {
+    animation: none !important;
+  }
+
+  .topology-node-card {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+

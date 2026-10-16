@@ -24,6 +24,7 @@ interface LineOverviewViewProps {
   onOpenIncident: (incidentId: string) => void;
   onOpenEsgHub: () => void;
   onOpenSimulation: () => void;
+  onOpenTopology?: () => void;
   onNotify: (text: string, tone?: ToastTone) => void;
 }
 
@@ -35,6 +36,7 @@ export default function LineOverviewView({
   onOpenIncident,
   onOpenEsgHub,
   onOpenSimulation,
+  onOpenTopology,
   onNotify,
 }: LineOverviewViewProps): React.ReactElement {
   const telemetry = useApi<MultiMachineTelemetryResponse>('/api/telemetry/history', 15000);
@@ -187,6 +189,12 @@ export default function LineOverviewView({
             <span className="material-symbols-outlined">refresh</span>
             Refresh Line
           </button>
+          {onOpenTopology && (
+            <button id="overview-topology" type="button" className="btn btn-sm" onClick={onOpenTopology}>
+              <span className="material-symbols-outlined">account_tree</span>
+              System Topology
+            </button>
+          )}
           <button id="overview-export" type="button" className="btn btn-sm" onClick={exportReport}>
             <span className="material-symbols-outlined">download</span>
             Export Shift Report
@@ -197,6 +205,59 @@ export default function LineOverviewView({
           </button>
         </div>
       </header>
+
+      {onOpenTopology && (
+        <div
+          className="glass row between wrap"
+          style={{
+            padding: '0.75rem 1.1rem',
+            borderRadius: 'var(--r-md)',
+            background: 'linear-gradient(90deg, rgba(91,91,240,0.08) 0%, rgba(255,255,255,0.7) 100%)',
+            borderColor: 'rgba(91,91,240,0.25)',
+            gap: 12,
+            alignItems: 'center',
+          }}
+        >
+          <div className="row" style={{ gap: '0.75rem', alignItems: 'center' }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: 'var(--accent)',
+                color: '#fff',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                account_tree
+              </span>
+            </div>
+            <div className="col" style={{ gap: 2 }}>
+              <div style={{ fontSize: '0.86rem', fontWeight: 650, color: 'var(--ink)' }}>
+                4-Phase System Topology &amp; Multi-Agent Swarm
+              </div>
+              <div style={{ fontSize: '0.76rem', color: 'var(--muted)' }}>
+                Gemma 3 edge classifier &rarr; Pub/Sub &rarr; ADK agents &rarr; Gemini Live copilot &rarr; Invariant #3 streak gate
+              </div>
+            </div>
+          </div>
+          <button
+            id="overview-jump-topology"
+            type="button"
+            className="btn btn-sm"
+            onClick={onOpenTopology}
+            style={{ fontWeight: 600, color: 'var(--accent)', gap: 6 }}
+          >
+            <span>View Architecture</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+              arrow_forward
+            </span>
+          </button>
+        </div>
+      )}
 
       {showBanner && (
         <AnomalyBanner

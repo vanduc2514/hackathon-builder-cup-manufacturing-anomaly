@@ -414,3 +414,34 @@ export interface MachineStatus {
   temperature_c: number;
   last_maintenance: string;
 }
+
+export type PresetCategory =
+  | "surface_scratch"
+  | "crack"
+  | "fracture"
+  | "assembly_gap"
+  | "normal";
+
+export interface VisualEvidencePreset {
+  id: string;
+  title: string;
+  category: PresetCategory;
+  machine_id: string;
+  tool_id?: string | null;
+  description: string;
+  analysis: string;
+  thumbnail_url: string;
+  image_url: string;
+  expected_defect_detected: boolean;
+  expected_wear_mm?: number | null;
+  suggested_sop_code?: number | null;
+}
+
+export interface VisualEvidencePresetListResponse {
+  presets: VisualEvidencePreset[];
+}
+
+export interface PresetEvidenceRequest {
+  preset_id: string;
+  notes?: string | null;
+}

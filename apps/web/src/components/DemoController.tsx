@@ -103,10 +103,19 @@ export default function DemoController({
     if (!s) return;
     setBusy('inject');
     try {
+      const payload: Record<string, unknown> = {
+        scenario: s.id,
+        mode,
+        machine_id: s.machine,
+        tool_id: s.tool,
+      };
+      if (s.id === 'im_damp_material') {
+        payload.require_evidence = true;
+      }
       const res = await authFetch('/api/simulation/inject', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario: s.id, mode, machine_id: s.machine, tool_id: s.tool }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
       const data = (await res.json()) as InjectionResponse;

@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 // Vite configuration for the Plant Ops Dashboard: serves on :3000, proxies /api and /health to the FastAPI backend.
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -23,5 +24,8 @@ export default defineConfig({
   preview: {
     port: 3000,
     strictPort: true,
+  },
+  test: {
+    environment: 'jsdom',
   },
 });

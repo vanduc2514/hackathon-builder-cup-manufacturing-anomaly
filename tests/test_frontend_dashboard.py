@@ -424,3 +424,51 @@ def test_frontend_topology_css_and_a11y() -> None:
     assert "animation: none !important" in css_text
     assert "@media (max-width: 1024px)" in css_text
 
+
+def test_topology_workflow_redesign_deliverables() -> None:
+    """Verifies deliverables for Issue #211 (TKT-045: Redesign System Topology Workflow Diagram)."""
+    repo_root = Path(__file__).resolve().parent.parent
+
+    # 1. Wireframe deliverable
+    wireframe_path = repo_root / "docs" / "wireframe" / "system_topology_workflow_wireframe.md"
+    wireframes_mirrored = repo_root / "docs" / "wireframes" / "system_topology_workflow_wireframe.md"
+    assert wireframe_path.is_file(), f"Missing wireframe deliverable at {wireframe_path}"
+    assert wireframes_mirrored.is_file(), f"Missing mirrored wireframe deliverable at {wireframes_mirrored}"
+
+    wf_text = wireframe_path.read_text(encoding="utf-8")
+    assert "Phase A: Detection & Ingestion" in wf_text
+    assert "Phase B: Tracing & RCA" in wf_text or "Phase B: Tracing" in wf_text
+    assert "Phase C: Resolution & Field Repair" in wf_text or "Phase C: Resolution" in wf_text
+    assert "Phase D: Verification & Governance" in wf_text or "Phase D: Verification" in wf_text
+    assert "Decision Gate 1" in wf_text
+    assert "Confidence" in wf_text and "0.70" in wf_text
+    assert "Decision Gate 2" in wf_text
+    assert "Invariant #3" in wf_text
+    assert "Streak ≥ 50" in wf_text or "Streak >= 50" in wf_text
+    assert "Diagnostic Loop Agent" in wf_text
+
+    # 2. Stitch interactive HTML prototype deliverable
+    prototype_path = repo_root / ".stitch" / "designs" / "system_topology_workflow.html"
+    assert prototype_path.is_file(), f"Missing HTML prototype deliverable at {prototype_path}"
+
+    proto_text = prototype_path.read_text(encoding="utf-8")
+    assert "Lumina Slate" in proto_text or "--bg-app" in proto_text
+    assert "--glass-bg" in proto_text
+    assert "svg-connection-layer" in proto_text
+    assert "gate1Container" in proto_text
+    assert "gate2Container" in proto_text
+    assert "node-drawer" in proto_text or "TopologyNodeDrawer" in proto_text
+    assert "edge-gemma" in proto_text
+    assert "cloud-ingest" in proto_text
+    assert "agent-qa" in proto_text
+    assert "agent-tra" in proto_text
+    assert "agent-pa" in proto_text
+    assert "agent-rca" in proto_text
+    assert "agent-diag" in proto_text
+    assert "copilot-live" in proto_text
+    assert "tech-exec" in proto_text
+    assert "gatekeeper-qa" in proto_text
+    assert "agent-learn" in proto_text
+    assert "human-approval" in proto_text
+
+

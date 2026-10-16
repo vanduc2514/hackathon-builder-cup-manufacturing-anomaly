@@ -26,6 +26,7 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 | **Screen 2: Technician Mobile App** | Evidence capture, guided repair, verification hand-off | Work List segmented Active / Processing / Completed | WorkOrderCards → Collect evidence / Repair brief | Evidence capture camera, Gemini Live guided repair, Finish sheet, Work status | [`02_technician_copilot.md`](./02_technician_copilot.md) |
 | **Screen 3: Incident Command (`incident-detail`)** | Product-evidence verification & 8D sign-off | `#INC` chip + title + step circles + StepRail | Current StepSection + `Approve 8D & Release Line` (locked until 50/50) | CausalTreeTabs, sensor history, documents, EightDReportCard, AgentAttribution | [`03_incident_workspace.md`](./03_incident_workspace.md) |
 | **Screen 4: Knowledge Loop (`walkthroughs` / `impact` / `sops`)** | Institutional memory search & ESG savings quantification | Recertification strip · 3 KPI cards (Scrap, Downtime, CO₂) · Needs review strip | Station sections · KnowledgeSearch + Signed-off 8D fixes · SOP table | WalkthroughPlayer, EightDSheet, WhatIfCalculator, SopDetailDrawer | [`04_knowledge_sustainability_hub.md`](./04_knowledge_sustainability_hub.md) |
+| **Screen 5: System Topology (`topology`)** | Live multi-agent execution tracing & decision gates | Phase lamps & status chips · Active execution flowline pulse | Node summaries & Decision Diamonds (Confidence ≥ 0.70 & Invariant #3 Streak ≥ 50) | `TopologyNodeDrawer` (JTBD, tech stack, blackboard telemetry, logs) | [`system_topology_workflow_wireframe.md`](../wireframe/system_topology_workflow_wireframe.md) |
 
 ---
 
@@ -150,7 +151,29 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 
 ---
 
-## 7. End-to-End UI State & Transition Matrix
+## 7. Screen 5: System Topology Workflow
+
+> **Full Specification:** [`system_topology_workflow_wireframe.md`](../wireframe/system_topology_workflow_wireframe.md)  
+> **Target Personas:** Shift Leader, Plant Operations Manager, Systems & Automation Architect  
+> **Single JTBD:** Visualize real-time multi-agent execution paths, inspect AI confidence & Invariant #3 decision gates, and audit node health.
+
+```text
+ System Architecture & Execution Graph                          [ (Nominal) [■ Active CNC-02 ■] (Low Conf) (Streak) ]
+ Continuous reactive loop: Gemma 3 2B Edge -> Pub/Sub Swarm -> Gemini Live Copilot -> Invariant #3 Streak -> Shift Leader
+ ╭── Floating Canvas Controls ──────────────────────────────────────────╮
+ │ [ + Zoom In ] [ - Zoom Out ] [ 100% Reset ] [ [ ] Fit ] [ (M) Map ]  │
+ ╰──────────────────────────────────────────────────────────────────────╯
+ ╭─ Phase A: Detection ─╮  ╭─ Phase B: Tracing ────╮  ╭─ Phase C: Resolution ╮  ╭─ Phase D: Verification ╮
+ │ [1] Edge Gemma 3 2B  │  │ [4] Traceability Agent│  │ [7] Copilot Live WS  │  │ [9] Verify Optical Cam │
+ │ [2] Pub/Sub Ingestion│  │ [5] Process Analyst   │  │ [8] Incident Scribe  │  │ < Decision 2: 50 Pcs? >│
+ │ [3] Quality Inspector│  │ [6] Root Cause Agent  │  │ [!] Bay Tech Confirm │  │ [10] Continuous Learn  │
+ │                      │  │ < Decision 1: ≥0.70? >│  │                      │  │ [11] Shift Leader Appr │
+ ╰──────────────────────╯  ╰───────────────────────╯  ╰──────────────────────╯  ╰────────────────────────╯
+```
+
+---
+
+## 8. End-to-End UI State & Transition Matrix
 
 How UI components change across both surfaces through an incident lifecycle:
 

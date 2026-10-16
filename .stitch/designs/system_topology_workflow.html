@@ -1,0 +1,2320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaizen System Topology & Multi-Agent Execution Graph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
+<style>
+/* Lumina Slate tokens — compliant with docs/DESIGN.md */
+:root {
+  --bg-app: #eef1fb;
+
+  --ink: #0b1220;
+  --ink-2: #1e2638;
+  --text: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+
+  --hair: rgba(15, 23, 42, .07);
+  --hair-strong: rgba(15, 23, 42, .14);
+
+  --accent: #5b5bf0;
+  --accent-2: #7c6cff;
+  --accent-soft: rgba(91, 91, 240, .1);
+  --accent-ring: rgba(91, 91, 240, .28);
+
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, .12);
+  --warning: #f5a524;
+  --warning-soft: rgba(245, 165, 36, .14);
+  --success: #12a150;
+  --success-soft: rgba(18, 161, 80, .12);
+  --info: #3b82f6;
+  --info-soft: rgba(59, 130, 246, .12);
+
+  --glass-bg: rgba(255, 255, 255, .65);
+  --glass-bg-strong: rgba(255, 255, 255, .82);
+  --glass-border: rgba(255, 255, 255, .78);
+  --glass-shadow: 0 1px 2px rgba(15, 23, 42, .03), 0 8px 24px -6px rgba(30, 41, 90, .08),
+    0 24px 48px -24px rgba(30, 41, 90, .12);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 0 0 1px rgba(255, 255, 255, .35);
+
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Geist', 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-full: 999px;
+
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --ease-spring: cubic-bezier(.34, 1.4, .5, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  position: relative;
+  min-height: 100vh;
+  font-family: var(--font-main);
+  font-feature-settings: 'cv11', 'ss01';
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* §2.4 AppBackdrop */
+.app-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 18% at 12% 4%, rgba(139, 132, 255, .28) 0%, transparent 70%),
+    radial-gradient(35% 16% at 88% 8%, rgba(96, 165, 250, .22) 0%, transparent 70%),
+    radial-gradient(45% 20% at 70% 55%, rgba(244, 170, 210, .2) 0%, transparent 70%),
+    radial-gradient(40% 18% at 25% 88%, rgba(125, 211, 252, .18) 0%, transparent 70%),
+    linear-gradient(180deg, #f4f6fd 0%, #eceffa 100%);
+}
+.app-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(15, 23, 42, .07) 1px, transparent 1px);
+  background-size: 24px 24px;
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, .7), rgba(0, 0, 0, .2));
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, .7), rgba(0, 0, 0, .2));
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: 20px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* App Shell Layout */
+.app-layout {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Floating Sidebar (Desktop) */
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  margin: 12px 0 12px 12px;
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 20;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px;
+}
+.brand-tile {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #1e2638, #0b1220);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(11, 18, 32, .25);
+}
+.brand-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nav-heading {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  padding: 6px 10px 2px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all .2s var(--ease);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+.nav-item:hover {
+  background: rgba(255, 255, 255, .7);
+  color: var(--ink);
+}
+.nav-item.active {
+  background: #fff;
+  color: var(--accent);
+  box-shadow: 0 2px 8px rgba(91, 91, 240, .12);
+  font-weight: 600;
+}
+.nav-item .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  background: rgba(244, 246, 255, .7);
+  border: 1px solid rgba(255, 255, 255, .6);
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Main Content Area */
+.main-stage {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+}
+
+/* Floating Top Bar */
+.top-header {
+  height: 56px;
+  border-radius: var(--radius-xl);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.top-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.breadcrumb {
+  font-size: 13px;
+  color: var(--muted);
+}
+.breadcrumb b {
+  color: var(--ink);
+}
+
+.top-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Common Chips & Pills */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1;
+}
+.chip-sm {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+.chip-green {
+  background: var(--success-soft);
+  color: #0e8a43;
+  border: 1px solid rgba(18, 161, 80, .25);
+}
+.chip-red {
+  background: var(--danger-soft);
+  color: #c9343a;
+  border: 1px solid rgba(229, 72, 77, .25);
+}
+.chip-amber {
+  background: var(--warning-soft);
+  color: #b4710a;
+  border: 1px solid rgba(245, 165, 36, .25);
+}
+.chip-blue {
+  background: var(--info-soft);
+  color: #1d4ed8;
+  border: 1px solid rgba(59, 130, 246, .25);
+}
+.chip-accent {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent-ring);
+}
+.chip-neutral {
+  background: rgba(15, 23, 42, .06);
+  color: var(--text);
+  border: 1px solid var(--hair-strong);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+}
+.status-dot.green { background: var(--success); }
+.status-dot.red { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+.status-dot.amber { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+.status-dot.blue { background: var(--info); }
+.status-dot.pulse {
+  animation: pulseDot 1.5s infinite;
+}
+@keyframes pulseDot {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+/* Glass Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-main);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s var(--ease);
+  border: 1px solid var(--hair-strong);
+  background: rgba(255, 255, 255, .8);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+  user-select: none;
+}
+.btn:hover {
+  background: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .08);
+}
+.btn:active {
+  transform: scale(0.98);
+}
+.btn-primary {
+  background: linear-gradient(180deg, #1f2937, #0b1220);
+  color: #fff;
+  border: 1px solid #0b1220;
+  box-shadow: 0 4px 14px rgba(11, 18, 32, .25);
+}
+.btn-primary:hover {
+  background: linear-gradient(180deg, #374151, #111827);
+  color: #fff;
+}
+.btn-accent {
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 14px rgba(91, 91, 240, .3);
+}
+.btn-sm {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+}
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: var(--radius-md);
+}
+
+/* Topology Banner / Action Bar */
+.topology-toolbar {
+  padding: 14px 20px;
+  border-radius: var(--radius-xl);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.toolbar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.page-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.page-subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Scenario Selector Strip */
+.scenario-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+  border-top: 1px solid var(--hair);
+}
+.scenario-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  margin-right: 4px;
+}
+.scenario-btn {
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--hair-strong);
+  background: rgba(255, 255, 255, .7);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  transition: all .2s var(--ease);
+  min-height: 44px; /* Touch target ergonomics */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.scenario-btn:hover {
+  background: #fff;
+  color: var(--ink);
+}
+.scenario-btn.active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+  box-shadow: 0 2px 8px rgba(11, 18, 32, .18);
+  font-weight: 600;
+}
+
+/* Canvas Viewport & Floating Controls */
+.canvas-wrapper {
+  position: relative;
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, .45);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+  min-height: 720px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Floating Canvas Controls */
+.canvas-floating-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, .08);
+}
+.ctrl-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hair-strong);
+  background: #fff;
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all .15s var(--ease);
+}
+.ctrl-btn:hover {
+  background: var(--bg-app);
+  color: var(--accent);
+}
+.ctrl-zoom-level {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0 8px;
+}
+
+/* Canvas Body & Zoom Container */
+.canvas-viewport {
+  position: relative;
+  flex: 1;
+  overflow: auto;
+  cursor: grab;
+  padding: 32px 24px 64px;
+}
+.canvas-viewport:active {
+  cursor: grabbing;
+}
+.canvas-transform-layer {
+  position: relative;
+  transform-origin: 0 0;
+  transition: transform .25s var(--ease);
+  min-width: 1320px;
+}
+
+/* SVG Overlay */
+.topology-svg-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: visible;
+}
+
+@keyframes flowDash {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+@keyframes pulseLoop {
+  0%, 100% { stroke-opacity: 0.5; stroke-width: 2px; }
+  50% { stroke-opacity: 1; stroke-width: 3.5px; }
+}
+
+.edge-path {
+  fill: none;
+  stroke: var(--hair-strong);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  transition: stroke .3s, stroke-width .3s;
+}
+.edge-path.completed {
+  stroke: var(--success);
+  stroke-width: 2.2;
+  stroke-dasharray: none;
+}
+.edge-path.active {
+  stroke: url(#gradient-active);
+  stroke-width: 3;
+  stroke-dasharray: 8 6;
+  animation: flowDash 1.2s linear infinite;
+}
+.edge-path.decision-yes {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 4;
+  animation: flowDash 1.5s linear infinite;
+}
+.edge-path.decision-no {
+  stroke: var(--warning);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 4;
+  animation: flowDash 1.5s linear infinite;
+}
+.edge-path.reject-reset {
+  stroke: var(--danger);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 4;
+  animation: flowDash 1s linear infinite;
+}
+
+/* Swimlanes Grid */
+.swimlanes-grid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+/* Individual Swimlane */
+.swimlane {
+  background: var(--glass-bg);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all .3s var(--ease);
+}
+.swimlane.phase-active {
+  background: rgba(255, 255, 255, .78);
+  box-shadow: 0 12px 36px -8px rgba(91, 91, 240, .14), var(--glass-shadow);
+  border-color: rgba(255, 255, 255, .95);
+}
+
+.swimlane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--hair);
+  gap: 8px;
+}
+.phase-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.phase-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 12px;
+  font-family: var(--font-display);
+}
+.phase-badge.a { background: var(--danger); }
+.phase-badge.b { background: var(--warning); }
+.phase-badge.c { background: var(--info); }
+.phase-badge.d { background: var(--success); }
+
+.phase-title-col {
+  display: flex;
+  flex-direction: column;
+}
+.phase-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.phase-subtitle {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Node Container */
+.node-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Individual Node Card */
+.node-card {
+  position: relative;
+  background: rgba(255, 255, 255, .82);
+  border: 1px solid rgba(255, 255, 255, .9);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, .04);
+  cursor: pointer;
+  transition: all .2s var(--ease);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 104px;
+}
+.node-card:hover {
+  transform: translateY(-2px);
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(30, 41, 90, .12);
+  border-color: var(--accent);
+}
+.node-card.selected {
+  outline: 2px solid var(--accent);
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(91, 91, 240, .2);
+}
+.node-card.active-node {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring), 0 8px 20px rgba(91, 91, 240, .15);
+}
+.node-card.done-node {
+  border-left: 4px solid var(--success);
+}
+
+.node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.node-icon-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.node-icon-tile {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-app);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+}
+.node-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink);
+}
+.node-sublabel {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.node-jtbd {
+  font-size: 11px;
+  color: var(--text);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.node-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 6px;
+  border-top: 1px solid var(--hair);
+  font-size: 11px;
+}
+.node-metric {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.node-metric b {
+  color: var(--ink);
+}
+
+/* Decision Diamond Gateway */
+.decision-gateway {
+  position: relative;
+  margin: 6px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+.diamond-card {
+  position: relative;
+  background: #fff;
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  box-shadow: 0 4px 16px rgba(91, 91, 240, .14);
+  text-align: center;
+  transition: all .2s var(--ease);
+  width: 100%;
+}
+.diamond-card:hover {
+  transform: scale(1.02);
+  border-color: var(--accent-2);
+  box-shadow: 0 8px 24px rgba(91, 91, 240, .22);
+}
+.diamond-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+.diamond-question {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 2px;
+}
+.diamond-branches {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--hair-strong);
+  font-size: 11px;
+}
+.branch-pill {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 10px;
+}
+.branch-pill.yes { background: var(--success-soft); color: #0e8a43; }
+.branch-pill.no { background: var(--warning-soft); color: #b4710a; }
+.branch-pill.reject { background: var(--danger-soft); color: #c9343a; }
+
+/* Invariant #3 Streak Gauge inside Phase D */
+.streak-gauge-card {
+  background: rgba(244, 246, 255, .8);
+  border: 1px solid rgba(91, 91, 240, .2);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.streak-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+.streak-progress-bar {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--hair-strong);
+  overflow: hidden;
+  position: relative;
+}
+.streak-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--info), var(--success));
+  border-radius: var(--radius-full);
+  transition: width .4s var(--ease);
+}
+
+/* Floating Minimap */
+.minimap-widget {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  width: 200px;
+  height: 120px;
+  border-radius: var(--radius-lg);
+  background: rgba(17, 24, 39, .88);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, .2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, .25);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 10;
+  color: #fff;
+  transition: opacity .2s, transform .2s;
+}
+.minimap-widget.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+}
+.minimap-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, .6);
+  text-transform: uppercase;
+}
+.minimap-canvas {
+  flex: 1;
+  position: relative;
+  background: rgba(255, 255, 255, .05);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.minimap-viewport-box {
+  position: absolute;
+  border: 1.5px solid var(--accent);
+  background: rgba(91, 91, 240, .25);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* Side Drawer (Deep-Dive Tier 3) */
+.drawer-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 18, 32, .25);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 99;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s var(--ease);
+}
+.drawer-scrim.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.node-drawer {
+  position: fixed;
+  top: 12px;
+  bottom: 12px;
+  right: 12px;
+  width: 580px;
+  max-width: calc(100vw - 24px);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: -12px 0 40px rgba(15, 23, 42, .15);
+  border-radius: var(--radius-xl);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(110%);
+  transition: transform .3s var(--ease);
+}
+.node-drawer.open {
+  transform: translateX(0);
+}
+
+.drawer-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--hair);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.drawer-title-col {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.drawer-icon-tile {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--bg-app);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .06);
+}
+.drawer-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.drawer-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+.drawer-close {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hair-strong);
+  background: #fff;
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all .15s;
+}
+.drawer-close:hover {
+  background: var(--bg-app);
+  color: var(--danger);
+}
+
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.drawer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+}
+.spec-box {
+  background: rgba(255, 255, 255, .7);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.spec-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.spec-item {
+  background: rgba(255, 255, 255, .6);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.spec-item-key {
+  font-size: 11px;
+  color: var(--muted);
+}
+.spec-item-val {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.code-block {
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, .1);
+}
+
+.drawer-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--hair);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: rgba(255, 255, 255, .5);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .app-layout {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: auto;
+    margin: 12px 12px 0 12px;
+  }
+  .swimlanes-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .canvas-transform-layer {
+    min-width: 100%;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="app-backdrop"></div>
+
+<div class="app-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand-row">
+      <div class="brand-tile">K</div>
+      <div>
+        <div class="brand-name">KAIZEN AGENT</div>
+        <div style="font-size: 11px; color: var(--muted);">Autonomous Plant Ops</div>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-heading">Operational Loop</div>
+      <button class="nav-item">
+        <span class="material-symbols-outlined">dashboard</span>
+        Line Overview
+      </button>
+      <button class="nav-item">
+        <span class="material-symbols-outlined">warning</span>
+        Incidents
+      </button>
+      <button class="nav-item active">
+        <span class="material-symbols-outlined">account_tree</span>
+        System Topology
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-heading">Knowledge Loop</div>
+      <button class="nav-item">
+        <span class="material-symbols-outlined">play_circle</span>
+        Tech Walkthroughs
+      </button>
+      <button class="nav-item">
+        <span class="material-symbols-outlined">menu_book</span>
+        Knowledge Base
+      </button>
+      <button class="nav-item">
+        <span class="material-symbols-outlined">history_edu</span>
+        SOP Change Log
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="display: flex; align-items: center; gap: 6px;">
+          <span class="status-dot green"></span> Live SSE
+        </span>
+        <span style="font-family: var(--font-mono); font-size: 10px;">24ms</span>
+      </div>
+      <div>Shift A · Supervisor Tuấn (Bay 4)</div>
+    </div>
+  </aside>
+
+  <!-- Main Stage -->
+  <main class="main-stage">
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="top-header-left">
+        <div class="breadcrumb">Cell Line 1 / <b>System Topology & Execution Graph</b></div>
+        <span id="header-status-pill" class="chip chip-green">
+          <span class="status-dot green"></span> Line Health Nominal
+        </span>
+      </div>
+      <div class="top-header-right">
+        <button id="btn-open-incident" class="btn btn-sm btn-primary" style="display: none;">
+          <span class="material-symbols-outlined" style="font-size: 16px;">warning</span>
+          <span>Open Active INC-2026-B42</span>
+        </button>
+        <button class="btn btn-sm" onclick="resetToFit()">
+          <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
+          Reset View
+        </button>
+      </div>
+    </header>
+
+    <!-- Toolbar & Scenario Preset Bar -->
+    <section class="topology-toolbar">
+      <div class="toolbar-header">
+        <div class="page-title-row">
+          <h1 class="page-title">4-Phase Multi-Agent Execution Graph</h1>
+          <span class="chip chip-blue chip-sm">11 Nodes · 2 Decision Gates</span>
+          <span class="chip chip-neutral chip-sm">Invariant #3 Protected</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-sm" onclick="exportTopologyJson()">
+            <span class="material-symbols-outlined" style="font-size: 16px;">download</span>
+            Export Graph JSON
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Scenario Tester -->
+      <div class="scenario-strip">
+        <span class="scenario-label">Simulate Live Scenario:</span>
+        <button class="scenario-btn active" onclick="applyScenario('nominal', this)">
+          <span class="status-dot green"></span> 1. Nominal Standby
+        </button>
+        <button class="scenario-btn" onclick="applyScenario('detecting', this)">
+          <span class="status-dot red pulse"></span> 2. Active Anomaly (CNC-02)
+        </button>
+        <button class="scenario-btn" onclick="applyScenario('low_confidence', this)">
+          <span class="status-dot amber pulse"></span> 3. Low Conf (&lt;0.70) & Diagnostic Loop
+        </button>
+        <button class="scenario-btn" onclick="applyScenario('streak_verifying', this)">
+          <span class="status-dot blue"></span> 4. Verification Streak (42/50)
+        </button>
+        <button class="scenario-btn" onclick="applyScenario('streak_reset', this)">
+          <span class="status-dot red"></span> 5. Streak Defect Break (Reset)
+        </button>
+        <button class="scenario-btn" onclick="applyScenario('approved', this)">
+          <span class="status-dot green"></span> 6. Closed & E-Sign Approved
+        </button>
+      </div>
+    </section>
+
+    <!-- Canvas Wrapper with Pan/Zoom & SVG Connections -->
+    <div class="canvas-wrapper">
+      <!-- Floating Canvas Navigation Controls -->
+      <div class="canvas-floating-controls">
+        <button class="ctrl-btn" onclick="zoomIn()" title="Zoom In">
+          <span class="material-symbols-outlined">zoom_in</span>
+        </button>
+        <button class="ctrl-btn" onclick="zoomOut()" title="Zoom Out">
+          <span class="material-symbols-outlined">zoom_out</span>
+        </button>
+        <button class="ctrl-btn" onclick="zoomReset()" title="Reset Zoom">
+          <span class="ctrl-zoom-level" id="zoom-indicator">100%</span>
+        </button>
+        <button class="ctrl-btn" onclick="fitView()" title="Fit to View">
+          <span class="material-symbols-outlined">fit_screen</span>
+        </button>
+        <button class="ctrl-btn" onclick="toggleMinimap()" title="Toggle Minimap">
+          <span class="material-symbols-outlined">map</span>
+        </button>
+      </div>
+
+      <!-- Viewport & Drag Canvas -->
+      <div class="canvas-viewport" id="canvas-viewport">
+        <div class="canvas-transform-layer" id="canvas-transform-layer">
+          
+          <!-- SVG Bezier Layer -->
+          <svg class="topology-svg-layer" id="topology-svg" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="gradient-active" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#5b5bf0" />
+                <stop offset="100%" stop-color="#7c6cff" />
+              </linearGradient>
+              <linearGradient id="gradient-danger" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#e5484d" />
+                <stop offset="100%" stop-color="#f5a524" />
+              </linearGradient>
+            </defs>
+
+            <!-- Dynamic Paths rendered by JavaScript -->
+            <g id="svg-paths-group"></g>
+          </svg>
+
+          <!-- 4-Phase Swimlanes -->
+          <div class="swimlanes-grid" id="swimlanes-grid">
+            
+            <!-- PHASE A -->
+            <section class="swimlane" id="swimlane-a">
+              <div class="swimlane-header">
+                <div class="phase-tag-row">
+                  <div class="phase-badge a">A</div>
+                  <div class="phase-title-col">
+                    <span class="phase-title">Detection & Ingestion</span>
+                    <span class="phase-subtitle">Phát hiện & Thu nhận</span>
+                  </div>
+                </div>
+                <span class="chip chip-sm chip-neutral" id="phase-a-chip">Standby</span>
+              </div>
+
+              <div class="node-list">
+                <!-- Node 1 -->
+                <div class="node-card" id="node-edge-gemma" data-node="edge-gemma" onclick="openNodeDrawer('edge-gemma')">
+                  <div class="node-header">
+                    <div class="node-icon-title">
+                      <div class="node-icon-tile"><span class="material-symbols-outlined">memory</span></div>
+                      <div>
+                        <div class="node-name">Edge Gateway</div>
+                        <div class="node-sublabel">Gemma 3 2B On-Prem</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-sm chip-neutral status-badge">Idle</span>
+                  </div>
+                  <p class="node-jtbd">Filters >95% normal frames locally; triggers 50ms pneumatic rejector on defect.</p>
+                  <div class="node-footer">
+                    <span class="node-metric">Latency: <b>42 ms</b></span>
+                    <span class="node-metric">Drop: <b>96.2%</b></span>
+                  </div>
+                </div>
+
+                <!-- Node 2 -->
+                <div class="node-card" id="node-cloud-ingest" data-node="cloud-ingest" onclick="openNodeDrawer('cloud-ingest')">
+                  <div class="node-header">
+                    <div class="node-icon-title">
+                      <div class="node-icon-tile"><span class="material-symbols-outlined">cloud_sync</span></div>
+                      <div>
+                        <div class="node-name">Pub/Sub Ingestion</div>
+                        <div class="node-sublabel">ADK Orchestrator</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-sm chip-neutral status-badge">Idle</span>
+                  </div>
+                  <p class="node-jtbd">Streams defect events into Firestore Blackboard and coordinates multi-agent swarm.</p>
+                  <div class="node-footer">
+                    <span class="node-metric">Buffer: <b>0 msg</b></span>
+                    <span class="node-metric">State: <b>Blackboard</b></span>
+                  </div>
+                </div>
+
+                <!-- Node 3 -->
+                <div class="node-card" id="node-agent-qa" data-node="agent-qa" onclick="openNodeDrawer('agent-qa')">
+                  <div class="node-header">
+                    <div class="node-icon-title">
+                      <div class="node-icon-tile"><span class="material-symbols-outlined">photo_camera</span></div>
+                      <div>
+                        <div class="node-name">Quality Inspector</div>
+                        <div class="node-sublabel">ADK Vision & SPC Gate</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-sm chip-neutral status-badge">Idle</span>
+                  </div>
+                  <p class="node-jtbd">Evaluates defect rate against SPC Upper Control Limit (UCL 3.0%) and triggers incident.</p>
+                  <div class="node-footer">
+                    <span class="node-metric">UCL Limit: <b>3.0%</b></span>
+                    <span class="node-metric">Rate: <b>0.2%</b></span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- PHASE B -->
+            <section class="swimlane" id="swimlane-b">
+              <div class="swimlane-header">
+                <div class="phase-tag-row">
+                  <div class="phase-badge b">B</div>
+                  <div class="phase-title-col">
+                    <span class="phase-title">Tracing & RCA</span>
+                    <span class="phase-subtitle">Truy vết & Căn nguyên</span>
+                  </div>
+                </div>
+                <span class="chip chip-sm chip-neutral" id="phase-b-chip">Standby</span>
+              </div>
+
+              <div class="node-list">
+                <!-- Node 4 -->
+                <div class="node-card" id="node-agent-tra" data-node="agent-tra" onclick="openNodeDrawer('agent-tra')">
+                  <div class="node-header">
+                    <div class="node-icon-title">
+                      <div class="node-icon-tile"><span class="material-symbols-outlined">account_tree</span></div>
+                      <div>
+                        <div class="node-name">Traceability Agent</div>
+                        <div class="node-sublabel">BigQuery Lot Genealogy</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-sm chip-neutral status-badge">Idle</span>
+                  </div>
+                  <p class="node-jtbd">Traverses workpiece genealogy graph: suspect machine, cutting insert, and raw billet heat.</p>
+                  <div class="node-footer">
+                    <span class="node-metric">Asset: <b>CNC-02</b></span>
+                    <span class="node-metric">Tool: <b>T07</b></span>
+                  </div>
+                </div>
+
+                <!-- Node 5 -->
+                <div class="node-card" id="node-agent-pa" data-node="agent-pa" onclick="openNodeDrawer('agent-pa')">
+                  <div class="node-header">
+                    <div class="node-icon-title">
+                      <div class="node-icon-tile"><span class="material-symbols-outlined">ssid_chart</span></div>
+                      <div>
+                        <div class="node-name">Process Analyst</div>
+                        <div class="node-sublabel">Telemetry Drift Analysis</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-sm chip-neutral status-badge">Idle</span>
+                  </div>
+                  <p class="node-jtbd">Correlates high-frequency vibration RMS, spindle load, and temperature anomalies.</p>
+                  <div class="node-footer">
+                    <span class="node-metric">Vibration: <b>1.5 mm/s</b></span>
+                    <span class="node-metric">Baseline: <b>Nominal</b></span>
+                  </div>
+                </div>
+
+                <!-- Node 6 -->
+                <div class="node-card" id="node-agent-rca" data-node="agent-rca" onclick="openNodeDrawer('agent-rca')">
+                  <div class="node-header">
+                    <div class="node-icon-title">
+                      <div class="node-icon-tile"><span class="material-symbols-outlined">psychology</span></div>
+                      <div>
+                        <div class="node-name">Root Cause Agent</div>
+                        <div class="node-sublabel">5-Whys & RAG Search</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-sm chip-neutral status-badge">Idle</span>
+                  </div>
+                  <p class="node-jtbd">Builds grounded 5-Whys causal tree citing OEM maintenance manuals & 8D repository.</p>
+                  <div class="node-footer">
+                    <span class="node-metric">Confidence: <b>—</b></span>
+                    <span class="node-metric">Sources: <b>RAG + BQ</b></span>
+                  </div>
+                </div>
+
+                <!-- DECISION DIAMOND 1 -->
+                <div class="decision-gateway" id="decision-gate-1" onclick="openDecisionDrawer(1)">
+                  <div class="diamond-card">
+                    <div class="diamond-header">
+                      <span class="material-symbols-outlined" style="font-size: 16px;">alt_route</span>
+                      Decision Diamond 1
+                    </div>
+                    <div class="diamond-question">Confidence ≥ 0.70?</div>
+                    <div class="diamond-branches">
+                      <span class="branch-pill yes">YES ≥ 0.70 → Phase C</span>
+                      <span class="branch-pill no">NO &lt; 0.70 → Loop</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Diagnostic Loop Node (Branch from Diamond 1) -->
+                <div class="node-card" id="node-diagnostic-loop" data-node="diagnostic-loop" style="background: rgba(254, 243, 199, .6); border-color: rgba(245, 165, 36, .4);" onclick="openNodeDrawer('diagnostic-loop')">
+                  <div class="node-header">
+                    <div class="node-icon-title">
+                      <div class="node-icon-tile" style="color: var(--warning);"><span class="material-symbols-outlined">photo_camera</span></div>
+                      <div>
+                        <div class="node-name">Diagnostic Loop</div>
+                        <div class="node-sublabel">Technician Gemini Vision</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-sm chip-amber">awaiting_evidence</span>
+                  </div>
+                  <p class="node-jtbd">Technician takes physical photo at bay; image is fed back into RCA to re-verify root cause.</p>
+                  <div class="node-footer">
+                    <span class="node-metric">Action: <b>Mobile Camera</b></span>
+                    <span class="node-metric">Loop: <b>RCA Feedback</b></span>
+                  </div>
+                </div>
+
+              </div>
+            </section>
+
+            <!-- PHASE C -->
+            <section class="swimlane" id="swimlane-c">
+              <div class="swimlane-header">
+                <div class="phase-tag-row">
+                  <div class="phase-badge c">C</div>
+                  <div class="phase-title-col">
+                    <span class="phase-title">Resolution & Fix</span>
+                    <span class="phase-subtitle">Khắc phục & Sửa chữa</span>
+                  </div>
+                </div>
+                <span class="chip chip-sm chip-neutral" id="phase-c-chip">Standby</span>
+              </div>
+
+              <div class="node-list">
+                <!-- Node 7 -->
+                <div class="node-card" id="node-copilot-live" data-node="copilot-live" onclick="openNodeDrawer('copilot-live')">
+                  <div class="node-header">
+                    <div class="node-icon-title">
+                      <div class="node-icon-tile"><span class="material-symbols-outlined">engineering</span></div>
+                      <div>
+                        <div class="node-name">Technician Copilot</div>
+                        <div class="node-sublabel">Gemini Live WebSocket</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-sm chip-neutral status-badge">Idle</span>
+                  </div>
+                  <p class="node-jtbd">Hands-free voice & visual guided physical repair at the machine bay with checkpoint verification.</p>
+                  <div class="node-footer">
+                    <span class="node-metric">Mode: <b>Audio/Video Live</b></span>
+                    <span class="node-metric">Lang: <b>vi-VN</b></span>
+                  </div>
+                </div>
+
+                <!-- Node 8 -->
+                <div class="node-card" id="node-agent-scribe" data-node="agent-scribe" onclick="openNodeDrawer('agent-scribe')">
+                  <div class="node-header">
+                    <div class="node-icon-title">
+                      <div class="node-icon-tile"><span class="material-symbols-outlined">edit_document</span></div>
+                      <div>
+                        <div class="node-name">Incident Scribe</div>
+                        <div class="node-sublabel">8D Report & SOP Draft</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-sm chip-neutral status-badge">Idle</span>
+                  </div>
+                  <p class="node-jtbd">Compiles 8D incident report, work orders, and updates standard operating procedure (SOP).</p>
+                  <div class="node-footer">
+                    <span class="node-metric">8D Stages: <b>D1–D8</b></span>
+                    <span class="node-metric">Version: <b>Auto-diff</b></span>
+                  </div>
+                </div>
+
+                <!-- Field Confirm Action -->
+                <div class="node-card" id="node-field-action" data-node="field-action" onclick="openNodeDrawer('field-action')">
+                  <div class="node-header">
+                    <div class="node-icon-title">
+                      <div class="node-icon-tile"><span class="material-symbols-outlined">touch_app</span></div>
+                      <div>
+                        <div class="node-name">Bay Technician Confirm</div>
+                        <div class="node-sublabel">Mobile 48px Primary CTA</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-sm chip-neutral status-badge">Idle</span>
+                  </div>
+                  <p class="node-jtbd">Technician taps "Confirm Repair Done" on mobile terminal after physical insert swap and calibration.</p>
+                  <div class="node-footer">
+                    <span class="node-metric">Target: <b>45 Nm Torque</b></span>
+                    <span class="node-metric">Hand-off: <b>To Verification</b></span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- PHASE D -->
+            <section class="swimlane" id="swimlane-d">
+              <div class="swimlane-header">
+                <div class="phase-tag-row">
+                  <div class="phase-badge d">D</div>
+                  <div class="phase-title-col">
+                    <span class="phase-title">Verification & Learning</span>
+                    <span class="phase-subtitle">Kiểm chứng & Quản trị</span>
+                  </div>
+                </div>
+                <span class="chip chip-sm chip-neutral" id="phase-d-chip">Standby</span>
+              </div>
+
+              <div class="node-list">
+                <!-- Node 9 -->
+                <div class="node-card" id="node-verify-camera" data-node="verify-camera" onclick="openNodeDrawer('verify-camera')">
+                  <div class="node-header">
+                    <div class="node-icon-title">
+                      <div class="node-icon-tile"><span class="material-symbols-outlined">verified</span></div>
+                      <div>
+                        <div class="node-name">Verify Repair</div>
+                        <div class="node-sublabel">Exit Conveyor Vision</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-sm chip-neutral status-badge">Idle</span>
+                  </div>
+                  <p class="node-jtbd">Resumes conveyor inspection to validate machined parts against surface roughness threshold.</p>
+                  <div class="node-footer">
+                    <span class="node-metric">Conveyor: <b>Optical CAM-EOL</b></span>
+                    <span class="node-metric">Rule: <b>Invariant #3</b></span>
+                  </div>
+                </div>
+
+                <!-- DECISION DIAMOND 2 -->
+                <div class="decision-gateway" id="decision-gate-2" onclick="openDecisionDrawer(2)">
+                  <div class="diamond-card" style="border-color: var(--success);">
+                    <div class="diamond-header" style="color: var(--success);">
+                      <span class="material-symbols-outlined" style="font-size: 16px;">gavel</span>
+                      Decision Diamond 2 (Invariant #3)
+                    </div>
+                    <div class="diamond-question">Streak ≥ 50 Clean Parts?</div>
+                    
+                    <!-- Invariant #3 Streak Gauge -->
+                    <div class="streak-gauge-card" style="margin-top: 8px;">
+                      <div class="streak-head">
+                        <span>Conveyor Verification Streak</span>
+                        <b id="streak-counter-label" style="font-family: var(--font-mono);">0 / 50</b>
+                      </div>
+                      <div class="streak-progress-bar">
+                        <div class="streak-progress-fill" id="streak-progress-fill" style="width: 0%;"></div>
+                      </div>
+                    </div>
+
+                    <div class="diamond-branches">
+                      <span class="branch-pill yes">YES (50/50) → Close & Sign</span>
+                      <span class="branch-pill reject">NO (Defect) → Reset 0/50</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Node 10 -->
+                <div class="node-card" id="node-agent-learn" data-node="agent-learn" onclick="openNodeDrawer('agent-learn')">
+                  <div class="node-header">
+                    <div class="node-icon-title">
+                      <div class="node-icon-tile"><span class="material-symbols-outlined">school</span></div>
+                      <div>
+                        <div class="node-name">Continuous Learning</div>
+                        <div class="node-sublabel">RAG & ESG Impact Engine</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-sm chip-neutral status-badge">Idle</span>
+                  </div>
+                  <p class="node-jtbd">Calculates scrap avoided, kWh saved, CO2e reduction, and commits verified solution to RAG.</p>
+                  <div class="node-footer">
+                    <span class="node-metric">CO2 Avoided: <b>—</b></span>
+                    <span class="node-metric">Index: <b>Vertex RAG</b></span>
+                  </div>
+                </div>
+
+                <!-- Node 11 -->
+                <div class="node-card" id="node-human-approval" data-node="human-approval" onclick="openNodeDrawer('human-approval')">
+                  <div class="node-header">
+                    <div class="node-icon-title">
+                      <div class="node-icon-tile"><span class="material-symbols-outlined">draw</span></div>
+                      <div>
+                        <div class="node-name">Shift Leader Approval</div>
+                        <div class="node-sublabel">Digital E-Signature Gate</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-sm chip-neutral status-badge" id="approval-lock-badge">
+                      <span class="material-symbols-outlined" style="font-size: 14px;">lock</span> Locked
+                    </span>
+                  </div>
+                  <p class="node-jtbd">Hard-disabled until Invariant #3 certifies 50 consecutive clean workpieces on the conveyor.</p>
+                  <div class="node-footer">
+                    <span class="node-metric">Sign-off: <b>Shift Lead</b></span>
+                    <span class="node-metric">Audit: <b>Immutable</b></span>
+                  </div>
+                </div>
+
+              </div>
+            </section>
+
+          </div><!-- /swimlanes-grid -->
+        </div><!-- /canvas-transform-layer -->
+      </div><!-- /canvas-viewport -->
+
+      <!-- Minimap Preview -->
+      <div class="minimap-widget" id="minimap-widget">
+        <div class="minimap-title">Minimap (4 Phases)</div>
+        <div class="minimap-canvas" id="minimap-canvas">
+          <div class="minimap-viewport-box" id="minimap-viewport-box" style="left: 0; top: 0; width: 45%; height: 85%;"></div>
+        </div>
+      </div>
+    </div><!-- /canvas-wrapper -->
+
+  </main>
+</div>
+
+<!-- Side Drawer (Deep-Dive Tier 3) -->
+<div class="drawer-scrim" id="drawer-scrim" onclick="closeDrawer()"></div>
+<aside class="node-drawer" id="node-drawer">
+  <div class="drawer-header">
+    <div class="drawer-title-col">
+      <div class="drawer-icon-tile" id="drawer-icon"><span class="material-symbols-outlined">account_tree</span></div>
+      <div>
+        <div class="drawer-title" id="drawer-title">Node Title</div>
+        <div class="drawer-sub" id="drawer-subtitle">System Component Subtitle</div>
+      </div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()" title="Close Drawer">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  </div>
+
+  <div class="drawer-body">
+    <!-- Status & Tier Row -->
+    <div class="drawer-section">
+      <div class="section-label">Live Status & Cognitive Tier</div>
+      <div style="display: flex; gap: 8px; align-items: center;" id="drawer-status-chips">
+        <span class="chip chip-neutral" id="drawer-status-chip">Idle</span>
+        <span class="chip chip-neutral" id="drawer-tier-chip">Tier 4 · Diagnostic Reasoning</span>
+      </div>
+    </div>
+
+    <!-- JTBD -->
+    <div class="drawer-section">
+      <div class="section-label">Single Job-to-be-Done (JTBD)</div>
+      <div class="spec-box" id="drawer-jtbd">
+        Performs specific bounded industrial task within the autonomous Kaizen loop.
+      </div>
+    </div>
+
+    <!-- Technical Specs -->
+    <div class="drawer-section">
+      <div class="section-label">System Architecture & Service Contract</div>
+      <div class="spec-grid">
+        <div class="spec-item">
+          <span class="spec-item-key">Execution Stack</span>
+          <span class="spec-item-val" id="drawer-stack">ADK / Python 3.11</span>
+        </div>
+        <div class="spec-item">
+          <span class="spec-item-key">Latency SLA</span>
+          <span class="spec-item-val" id="drawer-sla">&lt; 3.0s</span>
+        </div>
+        <div class="spec-item">
+          <span class="spec-item-key">State Channel</span>
+          <span class="spec-item-val" id="drawer-channel">blackboard.findings</span>
+        </div>
+        <div class="spec-item">
+          <span class="spec-item-key">Fallback Mechanism</span>
+          <span class="spec-item-val" id="drawer-fallback">Local Ollama / IPC</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Telemetry / Blackboard Payload -->
+    <div class="drawer-section">
+      <div class="section-label">Live Blackboard Payload</div>
+      <pre class="code-block" id="drawer-payload">{}</pre>
+    </div>
+  </div>
+
+  <div class="drawer-footer">
+    <button class="btn btn-sm" onclick="closeDrawer()">Dismiss</button>
+    <button class="btn btn-sm btn-primary" id="drawer-action-btn">
+      <span>Inspect in Incident Command</span>
+      <span class="material-symbols-outlined" style="font-size: 16px;">arrow_forward</span>
+    </button>
+  </div>
+</aside>
+
+<script>
+/* Topology Node Database & Knowledge Specs */
+const NODE_DATA = {
+  'edge-gemma': {
+    title: 'Edge Gateway (Gemma 3 2B)',
+    subtitle: 'On-Premise Industrial PC · Exit Conveyor',
+    tier: 'Tier 1 & 2 · Glance (<1s) & Physical Actuation',
+    stack: 'Gemma 3 2B · ONNX · Raspberry Pi / Advantech IPC',
+    sla: '< 50ms inference cycle',
+    channel: 'mqtt://edge/conveyor/optical_frames',
+    fallback: 'Circular local ring buffer (500 frames)',
+    jtbd: 'Filter >95% normal camera frames locally on-premise without saturating WAN bandwidth; actuate physical scrap diverter within 50ms upon defect detection.',
+    icon: 'memory',
+    payload: {
+      "device_id": "IPC-BAY4-01",
+      "model": "gemma-3-2b-it-int4",
+      "frame_filter_ratio": "96.2%",
+      "pneumatic_diverter_ms": 38,
+      "inference_latency_ms": 42
+    }
+  },
+  'cloud-ingest': {
+    title: 'Pub/Sub Ingestion & ADK Orchestrator',
+    subtitle: 'Data Plane Ingestion & State Coordination',
+    tier: 'Tier 3 · Event Ingestion & Workflow Dispatch',
+    stack: 'Google Cloud Pub/Sub · Cloud Run · Firestore',
+    sla: '< 150ms event delivery',
+    channel: 'projects/kaizen/topics/anomaly-events',
+    fallback: 'Exponential backoff dead-letter queue',
+    jtbd: 'Ingest anomaly defect frames from Edge Gateway and dispatch reactive ADK multi-agent workflow via Firestore blackboard state.',
+    icon: 'cloud_sync',
+    payload: {
+      "subscription": "sub-anomaly-orchestrator",
+      "ack_deadline_s": 30,
+      "blackboard_session": "sess_inc_2026_b42",
+      "orchestrator_version": "google-adk-2.4"
+    }
+  },
+  'agent-qa': {
+    title: 'Quality Inspector Agent',
+    subtitle: 'ADK Agent · Vision Classification & SPC',
+    tier: 'Tier 4 · Statistical Process Control Gate',
+    stack: 'ADK Agent · Gemini 2.5 Flash · Nelson Rules',
+    sla: '< 1.8s execution',
+    channel: 'blackboard.findings.quality_inspector',
+    fallback: 'Local SPC limit calculation',
+    jtbd: 'Analyze defect rate against Upper Control Limit (UCL 3.0%) across sliding 100-part window. Trigger anomaly ticket upon Nelson Rule 1 or 2 breach.',
+    icon: 'photo_camera',
+    payload: {
+      "defect_type": "surface_roughness_scratch",
+      "measured_defect_rate": 0.0142,
+      "ucl_threshold": 0.0025,
+      "nelson_rule_triggered": "Rule 1 (1 point > 3 sigma)"
+    }
+  },
+  'agent-tra': {
+    title: 'Traceability Agent',
+    subtitle: 'ADK Agent · Lot Genealogy Graph',
+    tier: 'Tier 4 · Lot & Machine Correlation',
+    stack: 'ADK Agent · BigQuery SQL Tool · Graph Traversal',
+    sla: '< 2.5s BigQuery query',
+    channel: 'blackboard.findings.traceability',
+    fallback: 'Cached local SQLite lot cache',
+    jtbd: 'Traverse workpiece genealogy from 2D data-matrix barcode to isolate suspect CNC machine, cutting insert serial, and raw billet heat.',
+    icon: 'account_tree',
+    payload: {
+      "workpiece_id": "Housing-B42-0941",
+      "suspect_machine": "CNC-02",
+      "cutting_tool": "T07 (Rough Turn Insert)",
+      "billet_lot": "HEAT-8849-FC250"
+    }
+  },
+  'agent-pa': {
+    title: 'Process Analyst Agent',
+    subtitle: 'ADK Agent · High-Frequency Telemetry FFT',
+    tier: 'Tier 4 · Sensor Signal Correlation',
+    stack: 'ADK Agent · BigQuery Telemetry · FFT Frequency',
+    sla: '< 2.8s computation',
+    channel: 'blackboard.findings.process_analyst',
+    fallback: 'Sliding window RMS moving average',
+    jtbd: 'Correlate high-frequency vibration, spindle motor load, and coolant pressure telemetry to detect mechanical degradation before defect onset.',
+    icon: 'ssid_chart',
+    payload: {
+      "spindle_vibration_rms": "2.84 mm/s (Baseline: 1.50 mm/s)",
+      "spindle_motor_load": "78.6% (Warning: 70%)",
+      "bearing_temp_c": 54.2
+    }
+  },
+  'agent-rca': {
+    title: 'Root Cause Agent',
+    subtitle: 'ADK Agent · 5-Whys & Vertex AI Search',
+    tier: 'Tier 4 · Diagnostic & Causal Reasoning',
+    stack: 'ADK Agent · Gemini 2.5 Pro · Vertex Search RAG',
+    sla: '< 3.5s inference',
+    channel: 'blackboard.findings.root_cause',
+    fallback: 'Curated 8D decision tree',
+    jtbd: 'Synthesize lot genealogy and telemetry drift; synthesize 5-Whys causal tree with citations to OEM machine maintenance manual.',
+    icon: 'psychology',
+    payload: {
+      "confidence": 0.89,
+      "primary_root_cause": "Cutting tool T07 flank wear exceeding 0.3mm due to high-hardness FC250 casting lot",
+      "5_whys": [
+        "1. Why scratch? Cutting insert T07 chipped on flank edge.",
+        "2. Why chipped? Cutting cycles exceeded rated life by 140 parts.",
+        "3. Why exceeded? Billet lot HEAT-8849 has 15% higher Brinell hardness."
+      ]
+    }
+  },
+  'diagnostic-loop': {
+    title: 'Diagnostic Loop Node',
+    subtitle: 'Human-in-the-Loop Field Verification',
+    tier: 'Tier 4 · Field Evidence Acquisition',
+    stack: 'Mobile Camera · Gemini Vision · Live Feedback Loop',
+    sla: 'On-demand technician capture',
+    channel: 'blackboard.evidence_requests',
+    fallback: 'Secondary sensor recalculation',
+    jtbd: 'When Root Cause Agent confidence drops below 0.70, requests technician photo of physical cutter edge at the machine bay to verify tool condition before wrenching.',
+    icon: 'photo_camera',
+    payload: {
+      "reason": "RCA confidence 0.58 < 0.70 threshold",
+      "requested_evidence": "Macro photo of CNC-02 Turret Tool T07 carbide insert tip",
+      "technician_assigned": "Tuấn Lê (Bay 4)"
+    }
+  },
+  'copilot-live': {
+    title: 'Technician Copilot Live',
+    subtitle: 'Gemini Live WebSocket Client · Bay-Side Guidance',
+    tier: 'Tier 4 & 5 · Real-Time Hands-Free Execution',
+    stack: 'Gemini Live Enterprise API · WebRTC Audio · ADK Checkpoints',
+    sla: '< 300ms bidirectional voice response',
+    channel: 'wss://kaizen-copilot.internal/live',
+    fallback: 'Step-by-step offline card checklist',
+    jtbd: 'Provide interactive, hands-free voice and visual repair guidance to bay technician; verify torque wrench checkpoints and insert seating.',
+    icon: 'engineering',
+    payload: {
+      "websocket_status": "connected",
+      "voice_language": "vi-VN (Vietnamese)",
+      "active_step": "Step 2/3: Torque insert screw to 45 Nm",
+      "current_checkpoint": "Torque audible click confirmed"
+    }
+  },
+  'agent-scribe': {
+    title: 'Incident Scribe Agent',
+    subtitle: 'ADK Agent · 8D Documentation & SOP Revision',
+    tier: 'Tier 4 · Automated Technical Reporting',
+    stack: 'ADK Agent · Gemini 2.5 Flash · Markdown / JSON',
+    sla: '< 2.0s drafting cycle',
+    channel: 'blackboard.findings.incident_scribe',
+    fallback: 'Standard 8D template fallback',
+    jtbd: 'Draft formal 8D report (D1–D8), auto-generate maintenance work order, and formulate corrective SOP updates for knowledge base commit.',
+    icon: 'edit_document',
+    payload: {
+      "8d_status": "D4 Root Cause & D5 Corrective Action Drafted",
+      "sop_revision": "SOP-CNC-M04 v2.1 Proposed",
+      "work_order_id": "WO-2026-8812"
+    }
+  },
+  'field-action': {
+    title: 'Bay Technician Physical Confirmation',
+    subtitle: 'Shop-Floor Ergonomics · Mobile Touch Point',
+    tier: 'Tier 5 · Physical Hand-Off Gate',
+    stack: 'Mobile Terminal · 48px Full-Width Button · Gloves-Ready',
+    sla: 'Immediate user dispatch',
+    channel: 'blackboard.repairs.confirmed',
+    fallback: 'Physical Andon button at machine bay',
+    jtbd: 'Technician confirms tool swap, chuck alignment, and test run completion. Triggers state transition from repairing to verifying.',
+    icon: 'touch_app',
+    payload: {
+      "technician": "Tuấn Lê (ID: TECH-04)",
+      "action": "CONFIRM_REPAIR_COMPLETED",
+      "timestamp": "2026-10-16T10:14:22Z",
+      "safety_interlock_cleared": true
+    }
+  },
+  'verify-camera': {
+    title: 'Conveyor Optical Camera Inspection',
+    subtitle: 'Conveyor Vision Verification · Exit Stage',
+    tier: 'Tier 1 & 2 · Automated Quality Gate',
+    stack: 'High-Res Line-Scan Camera · Gemma 3 Edge · Invariant #3',
+    sla: '< 50ms per workpiece',
+    channel: 'blackboard.verification.streak',
+    fallback: 'Offline manual dial gauge inspection',
+    jtbd: 'Inspect newly machined workpieces exiting CNC-02. Feeds Invariant #3 streak counter to certify repair effectiveness before release.',
+    icon: 'verified',
+    payload: {
+      "station": "CAM-EOL-CONVEYOR",
+      "inspection_metric": "Surface roughness Ra < 3.2 um",
+      "verified_streak": 42,
+      "required_target": 50
+    }
+  },
+  'agent-learn': {
+    title: 'Continuous Learning & Impact Engine',
+    subtitle: 'ADK Agent · ESG Ledger & Vector RAG Commit',
+    tier: 'Tier 4 · Knowledge Institutionalization',
+    stack: 'ADK Agent · Vertex AI Search · GHG Protocol Ledger',
+    sla: '< 3.0s processing',
+    channel: 'blackboard.findings.continuous_learning',
+    fallback: 'Deterministic ESG standard rate table',
+    jtbd: 'Quantify scrap parts avoided, electricity kWh saved, and CO2 emissions mitigated. Commit certified solution to institutional RAG vector index.',
+    icon: 'school',
+    payload: {
+      "scrap_avoided_kg": 48.5,
+      "kwh_electricity_saved": 112.4,
+      "co2e_reduction_kg": 38.6,
+      "rag_vector_commit": "doc_id_8d_2026_b42_approved"
+    }
+  },
+  'human-approval': {
+    title: 'Shift Leader Approval Gate',
+    subtitle: 'Human Governance · Digital E-Signature',
+    tier: 'Tier 5 · Final Governance Gate',
+    stack: 'Digital Signature Token · Blackboard Enforcement Gate',
+    sla: 'Human sign-off',
+    channel: 'blackboard.approvals.shift_leader',
+    fallback: 'Physical paper traveler sign-off',
+    jtbd: 'Review validated 8D dossier, verify post-repair conveyor certification (Invariant #3 >= 50 clean parts), and execute digital sign-off to return line to nominal.',
+    icon: 'draw',
+    payload: {
+      "governance_status": "LOCKED_BY_INVARIANT_3",
+      "minimum_streak_required": 50,
+      "current_streak": 42,
+      "signed_by": null
+    }
+  }
+};
+
+/* SVG Graph Edges */
+const EDGES = [
+  // Phase A internal
+  { from: 'node-edge-gemma', to: 'node-cloud-ingest', type: 'vertical', label: 'MQTT Telemetry' },
+  { from: 'node-cloud-ingest', to: 'node-agent-qa', type: 'vertical', label: 'Event Stream' },
+
+  // Phase A to Phase B
+  { from: 'node-agent-qa', to: 'node-agent-tra', type: 'cross', label: 'SPC Trigger' },
+  { from: 'node-agent-qa', to: 'node-agent-pa', type: 'cross', label: 'Time Window' },
+
+  // Phase B internal to RCA
+  { from: 'node-agent-tra', to: 'node-agent-rca', type: 'vertical', label: 'Genealogy' },
+  { from: 'node-agent-pa', to: 'node-agent-rca', type: 'vertical', label: 'Sensor Drift' },
+  { from: 'node-agent-rca', to: 'decision-gate-1', type: 'vertical', label: 'Evaluate Confidence' },
+
+  // Decision 1 branches
+  { from: 'decision-gate-1', to: 'node-diagnostic-loop', type: 'no-branch', label: 'NO (< 0.70)' },
+  { from: 'decision-gate-1', to: 'node-copilot-live', type: 'yes-branch', label: 'YES (>= 0.70)' },
+  { from: 'decision-gate-1', to: 'node-agent-scribe', type: 'yes-branch', label: 'YES' },
+
+  // Phase C internal
+  { from: 'node-copilot-live', to: 'node-field-action', type: 'vertical', label: 'Guided Fix' },
+  { from: 'node-agent-scribe', to: 'node-field-action', type: 'vertical', label: 'Work Order' },
+
+  // Phase C to Phase D
+  { from: 'node-field-action', to: 'node-verify-camera', type: 'cross', label: 'Repair Confirmed' },
+
+  // Phase D internal & Decision 2
+  { from: 'node-verify-camera', to: 'decision-gate-2', type: 'vertical', label: 'Optical Proof' },
+  { from: 'decision-gate-2', to: 'node-agent-learn', type: 'yes-branch', label: 'YES (Streak >= 50)' },
+  { from: 'node-agent-learn', to: 'node-human-approval', type: 'vertical', label: '8D Dossier' }
+];
+
+/* Canvas Viewport Zoom & Pan State */
+let zoomScale = 1.0;
+let panX = 0;
+let panY = 0;
+let isPanning = false;
+let startX = 0;
+let startY = 0;
+let currentScenario = 'nominal';
+
+function applyZoom(delta) {
+  zoomScale = Math.min(Math.max(0.65, zoomScale + delta), 1.6);
+  updateTransform();
+}
+function zoomIn() { applyZoom(0.15); }
+function zoomOut() { applyZoom(-0.15); }
+function zoomReset() {
+  zoomScale = 1.0;
+  panX = 0;
+  panY = 0;
+  updateTransform();
+}
+function fitView() {
+  zoomScale = 0.92;
+  panX = 0;
+  panY = 0;
+  updateTransform();
+}
+function resetToFit() {
+  applyScenario('nominal', document.querySelector('.scenario-btn'));
+  zoomReset();
+}
+
+function updateTransform() {
+  const layer = document.getElementById('canvas-transform-layer');
+  layer.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
+  document.getElementById('zoom-indicator').innerText = `${Math.round(zoomScale * 100)}%`;
+  updateMinimapViewport();
+  renderSvgEdges();
+}
+
+function toggleMinimap() {
+  const map = document.getElementById('minimap-widget');
+  map.classList.toggle('hidden');
+}
+
+function updateMinimapViewport() {
+  const box = document.getElementById('minimap-viewport-box');
+  const w = Math.max(30, Math.min(90, (1 / zoomScale) * 55));
+  const h = Math.max(30, Math.min(90, (1 / zoomScale) * 75));
+  box.style.width = `${w}%`;
+  box.style.height = `${h}%`;
+}
+
+/* Mouse Panning */
+const viewport = document.getElementById('canvas-viewport');
+viewport.addEventListener('mousedown', (e) => {
+  if (e.target.closest('.node-card') || e.target.closest('.diamond-card') || e.target.closest('button')) return;
+  isPanning = true;
+  startX = e.clientX - panX;
+  startY = e.clientY - panY;
+});
+window.addEventListener('mousemove', (e) => {
+  if (!isPanning) return;
+  panX = e.clientX - startX;
+  panY = e.clientY - startY;
+  updateTransform();
+});
+window.addEventListener('mouseup', () => {
+  isPanning = false;
+});
+
+/* Render SVG Bezier Edges */
+function renderSvgEdges() {
+  const group = document.getElementById('svg-paths-group');
+  const container = document.getElementById('canvas-transform-layer');
+  const containerRect = container.getBoundingClientRect();
+
+  let html = '';
+
+  for (const edge of EDGES) {
+    const fromEl = document.getElementById(edge.from);
+    const toEl = document.getElementById(edge.to);
+    if (!fromEl || !toEl) continue;
+
+    const fromRect = fromEl.getBoundingClientRect();
+    const toRect = toEl.getBoundingClientRect();
+
+    // Calculate coords relative to unscaled container
+    const x1 = (fromRect.left + fromRect.width / 2 - containerRect.left) / zoomScale;
+    const y1 = (fromRect.bottom - containerRect.top) / zoomScale;
+    
+    let x2 = (toRect.left + toRect.width / 2 - containerRect.left) / zoomScale;
+    let y2 = (toRect.top - containerRect.top) / zoomScale;
+
+    // Cross swimlane routing
+    const isCross = Math.abs(x2 - x1) > 160;
+
+    let pathD = '';
+    if (isCross) {
+      const startX = (fromRect.right - containerRect.left) / zoomScale;
+      const startY = (fromRect.top + fromRect.height / 2 - containerRect.top) / zoomScale;
+      const endX = (toRect.left - containerRect.left) / zoomScale;
+      const endY = (toRect.top + toRect.height / 2 - containerRect.top) / zoomScale;
+      const dx = Math.max(50, (endX - startX) / 2);
+      pathD = `M ${startX} ${startY} C ${startX + dx} ${startY}, ${endX - dx} ${endY}, ${endX} ${endY}`;
+    } else {
+      const dy = Math.max(30, (y2 - y1) / 2);
+      pathD = `M ${x1} ${y1} C ${x1} ${y1 + dy}, ${x2} ${y2 - dy}, ${x2} ${y2}`;
+    }
+
+    // Determine path state according to scenario
+    let edgeClass = 'edge-path';
+    if (currentScenario === 'nominal') {
+      edgeClass += '';
+    } else if (currentScenario === 'detecting') {
+      if (['node-edge-gemma', 'node-cloud-ingest', 'node-agent-qa'].includes(edge.from)) {
+        edgeClass += ' active';
+      }
+    } else if (currentScenario === 'low_confidence') {
+      if (['node-edge-gemma', 'node-cloud-ingest', 'node-agent-qa', 'node-agent-tra', 'node-agent-pa'].includes(edge.from)) {
+        edgeClass += ' completed';
+      } else if (edge.from === 'node-agent-rca') {
+        edgeClass += ' active';
+      } else if (edge.from === 'decision-gate-1' && edge.to === 'node-diagnostic-loop') {
+        edgeClass += ' decision-no';
+      }
+    } else if (currentScenario === 'streak_verifying') {
+      if (['node-edge-gemma', 'node-cloud-ingest', 'node-agent-qa', 'node-agent-tra', 'node-agent-pa', 'node-agent-rca', 'node-copilot-live', 'node-agent-scribe', 'node-field-action'].includes(edge.from)) {
+        edgeClass += ' completed';
+      } else if (edge.from === 'node-verify-camera' || edge.from === 'decision-gate-2') {
+        edgeClass += ' active';
+      }
+    } else if (currentScenario === 'streak_reset') {
+      if (edge.from === 'decision-gate-2' || edge.to === 'decision-gate-2') {
+        edgeClass += ' reject-reset';
+      } else {
+        edgeClass += ' completed';
+      }
+    } else if (currentScenario === 'approved') {
+      edgeClass += ' completed';
+    }
+
+    html += `<path d="${pathD}" class="${edgeClass}" />`;
+  }
+
+  group.innerHTML = html;
+}
+
+/* Scenarios Application */
+function applyScenario(scenario, btn) {
+  currentScenario = scenario;
+
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const headerPill = document.getElementById('header-status-pill');
+  const openIncBtn = document.getElementById('btn-open-incident');
+  const streakLabel = document.getElementById('streak-counter-label');
+  const streakFill = document.getElementById('streak-progress-fill');
+  const lockBadge = document.getElementById('approval-lock-badge');
+
+  // Reset classes
+  document.querySelectorAll('.node-card').forEach(n => {
+    n.classList.remove('active-node', 'done-node');
+    const badge = n.querySelector('.status-badge');
+    if (badge) {
+      badge.className = 'chip chip-sm chip-neutral status-badge';
+      badge.innerText = 'Idle';
+    }
+  });
+  document.querySelectorAll('.swimlane').forEach(s => s.classList.remove('phase-active'));
+
+  if (scenario === 'nominal') {
+    headerPill.className = 'chip chip-green';
+    headerPill.innerHTML = '<span class="status-dot green"></span> Line Health Nominal';
+    openIncBtn.style.display = 'none';
+    streakLabel.innerText = '0 / 50';
+    streakFill.style.width = '0%';
+    lockBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">lock</span> Locked';
+  }
+  else if (scenario === 'detecting') {
+    headerPill.className = 'chip chip-red';
+    headerPill.innerHTML = '<span class="status-dot red pulse"></span> Anomaly SPC UCL Breach · CNC-02';
+    openIncBtn.style.display = 'inline-flex';
+    document.getElementById('swimlane-a').classList.add('phase-active');
+    
+    setNodeStatus('node-edge-gemma', 'done', 'Verified 50ms Divert');
+    setNodeStatus('node-cloud-ingest', 'active', 'Streaming Pub/Sub');
+    setNodeStatus('node-agent-qa', 'active', 'UCL 3.0% Breach (1.42%)');
+  }
+  else if (scenario === 'low_confidence') {
+    headerPill.className = 'chip chip-amber';
+    headerPill.innerHTML = '<span class="status-dot amber pulse"></span> Diagnostic Loop · Awaiting Field Evidence';
+    openIncBtn.style.display = 'inline-flex';
+    document.getElementById('swimlane-b').classList.add('phase-active');
+
+    setNodeStatus('node-edge-gemma', 'done', 'Done');
+    setNodeStatus('node-cloud-ingest', 'done', 'Done');
+    setNodeStatus('node-agent-qa', 'done', 'Done');
+    setNodeStatus('node-agent-tra', 'done', 'Lot Matched');
+    setNodeStatus('node-agent-pa', 'done', 'Vibration High');
+    setNodeStatus('node-agent-rca', 'active', 'Confidence 0.58 < 0.70');
+    setNodeStatus('node-diagnostic-loop', 'active', 'Mobile Photo Requested');
+  }
+  else if (scenario === 'streak_verifying') {
+    headerPill.className = 'chip chip-blue';
+    headerPill.innerHTML = '<span class="status-dot blue pulse"></span> Invariant #3 Verification Streak: 42/50';
+    openIncBtn.style.display = 'inline-flex';
+    document.getElementById('swimlane-d').classList.add('phase-active');
+
+    ['node-edge-gemma', 'node-cloud-ingest', 'node-agent-qa', 'node-agent-tra', 'node-agent-pa', 'node-agent-rca', 'node-copilot-live', 'node-agent-scribe', 'node-field-action'].forEach(id => {
+      setNodeStatus(id, 'done', 'Completed');
+    });
+    setNodeStatus('node-verify-camera', 'active', 'Inspecting 42/50');
+    streakLabel.innerText = '42 / 50';
+    streakFill.style.width = '84%';
+    lockBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">lock</span> Gated (8 left)';
+  }
+  else if (scenario === 'streak_reset') {
+    headerPill.className = 'chip chip-red';
+    headerPill.innerHTML = '<span class="status-dot red pulse"></span> Invariant #3 Streak RESET: Defect Found on #43';
+    openIncBtn.style.display = 'inline-flex';
+    streakLabel.innerText = '0 / 50 (RESET)';
+    streakFill.style.width = '0%';
+    setNodeStatus('node-verify-camera', 'active', 'Defect Detected!');
+    lockBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">error</span> Escalated';
+  }
+  else if (scenario === 'approved') {
+    headerPill.className = 'chip chip-green';
+    headerPill.innerHTML = '<span class="status-dot green"></span> Incident #INC-2026-B42 Closed & Signed Off';
+    openIncBtn.style.display = 'none';
+    document.querySelectorAll('.node-card').forEach(n => n.classList.add('done-node'));
+    streakLabel.innerText = '50 / 50 (CERTIFIED)';
+    streakFill.style.width = '100%';
+    setNodeStatus('node-human-approval', 'done', 'Signed by Tuấn Lê');
+    lockBadge.className = 'chip chip-sm chip-green status-badge';
+    lockBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span> Approved';
+  }
+
+  renderSvgEdges();
+}
+
+function setNodeStatus(id, type, label) {
+  const card = document.getElementById(id);
+  if (!card) return;
+  card.classList.remove('active-node', 'done-node');
+  const badge = card.querySelector('.status-badge');
+  if (type === 'active') {
+    card.classList.add('active-node');
+    if (badge) {
+      badge.className = 'chip chip-sm chip-blue status-badge';
+      badge.innerText = label;
+    }
+  } else if (type === 'done') {
+    card.classList.add('done-node');
+    if (badge) {
+      badge.className = 'chip chip-sm chip-green status-badge';
+      badge.innerText = label;
+    }
+  }
+}
+
+/* Side Drawer Controls */
+function openNodeDrawer(nodeId) {
+  const data = NODE_DATA[nodeId];
+  if (!data) return;
+
+  document.getElementById('drawer-title').innerText = data.title;
+  document.getElementById('drawer-subtitle').innerText = data.subtitle;
+  document.getElementById('drawer-tier-chip').innerText = data.tier;
+  document.getElementById('drawer-jtbd').innerText = data.jtbd;
+  document.getElementById('drawer-stack').innerText = data.stack;
+  document.getElementById('drawer-sla').innerText = data.sla;
+  document.getElementById('drawer-channel').innerText = data.channel;
+  document.getElementById('drawer-fallback').innerText = data.fallback;
+  document.getElementById('drawer-payload').innerText = JSON.stringify(data.payload, null, 2);
+  document.getElementById('drawer-icon').innerHTML = `<span class="material-symbols-outlined">${data.icon}</span>`;
+
+  document.querySelectorAll('.node-card').forEach(c => c.classList.remove('selected'));
+  const card = document.querySelector(`[data-node="${nodeId}"]`);
+  if (card) card.classList.add('selected');
+
+  document.getElementById('drawer-scrim').classList.add('open');
+  document.getElementById('node-drawer').classList.add('open');
+}
+
+function openDecisionDrawer(num) {
+  if (num === 1) {
+    document.getElementById('drawer-title').innerText = 'Decision Diamond 1: Root Cause Confidence';
+    document.getElementById('drawer-subtitle').innerText = 'Threshold: Confidence >= 0.70 Gate';
+    document.getElementById('drawer-tier-chip').innerText = 'Tier 4 · Swarm Convergence Gate';
+    document.getElementById('drawer-jtbd').innerText = 'Evaluates statistical and causal certainty of the Root Cause Agent before initiating physical field repair at the machine.';
+    document.getElementById('drawer-stack').innerText = 'Deterministic Logic Gate · ADK Route';
+    document.getElementById('drawer-sla').innerText = '< 20ms evaluation';
+    document.getElementById('drawer-channel').innerText = 'blackboard.decisions.confidence_gate';
+    document.getElementById('drawer-fallback').innerText = 'Route to Diagnostic Loop on error';
+    document.getElementById('drawer-payload').innerText = JSON.stringify({
+      "threshold": 0.70,
+      "evaluated_confidence": 0.89,
+      "result": "FORWARD_PHASE_C_RESOLUTION",
+      "alternative_route": "DIAGNOSTIC_LOOP_AWAITING_EVIDENCE"
+    }, null, 2);
+    document.getElementById('drawer-icon').innerHTML = '<span class="material-symbols-outlined">alt_route</span>';
+  } else {
+    document.getElementById('drawer-title').innerText = 'Decision Diamond 2: Invariant #3 Strict Streak Gate';
+    document.getElementById('drawer-subtitle').innerText = 'Shop-Floor Product Evidence Law';
+    document.getElementById('drawer-tier-chip').innerText = 'Tier 5 · Physical Proof Gate';
+    document.getElementById('drawer-jtbd').innerText = 'Invariant #3 strictly forbids closure sign-off until the conveyor optical camera records 50 consecutive clean workpieces without defect.';
+    document.getElementById('drawer-stack').innerText = 'Conveyor Vision · Hardware Counter';
+    document.getElementById('drawer-sla').innerText = '50 consecutive cycles';
+    document.getElementById('drawer-channel').innerText = 'blackboard.verification.streak_counter';
+    document.getElementById('drawer-fallback').innerText = 'Reset to 0/50 upon any defect';
+    document.getElementById('drawer-payload').innerText = JSON.stringify({
+      "invariant": "Invariant #3 (Product Evidence)",
+      "target_streak": 50,
+      "current_streak": 42,
+      "shift_leader_approval_unlocked": false,
+      "reset_penalty_on_defect": "Drop to 0 and escalate"
+    }, null, 2);
+    document.getElementById('drawer-icon').innerHTML = '<span class="material-symbols-outlined">gavel</span>';
+  }
+
+  document.getElementById('drawer-scrim').classList.add('open');
+  document.getElementById('node-drawer').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drawer-scrim').classList.remove('open');
+  document.getElementById('node-drawer').classList.remove('open');
+  document.querySelectorAll('.node-card').forEach(c => c.classList.remove('selected'));
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeDrawer();
+});
+
+function exportTopologyJson() {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(NODE_DATA, null, 2));
+  const dlAnchor = document.createElement('a');
+  dlAnchor.setAttribute("href", dataStr);
+  dlAnchor.setAttribute("download", "system_topology_execution_graph.json");
+  dlAnchor.click();
+}
+
+// Initial layout rendering
+window.addEventListener('load', () => {
+  renderSvgEdges();
+  updateMinimapViewport();
+});
+window.addEventListener('resize', () => {
+  renderSvgEdges();
+});
+</script>
+</body>
+</html>

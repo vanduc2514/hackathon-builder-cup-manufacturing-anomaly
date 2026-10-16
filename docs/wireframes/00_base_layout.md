@@ -24,8 +24,9 @@ flowchart TD
     subgraph Desktop ["Desktop Plant Ops dashboard"]
         B -->|"Shift Leader / Plant Ops"| C["Floating glass Sidebar + floating TopHeader pills + main"]
         C --> D{"Sidebar groups (DashboardTab state)"}
-        D -->|"Operational Loop"| D1["Line Overview (overview) • Incidents (incident-detail + per-incident sub-tabs)"]
-        D -->|"Knowledge Loop"| D2["Tech Walkthroughs (walkthroughs) • Knowledge Base (impact) • SOP Change Log (sops)"]
+        D -->|"System Architecture"| D1["System Topology (topology)"]
+        D -->|"Operational Loop"| D2["Line Overview (overview) • Incidents (incident-detail + per-incident sub-tabs)"]
+        D -->|"Knowledge Loop"| D3["Tech Walkthroughs (walkthroughs) • Knowledge Base (impact) • SOP Change Log (sops)"]
         C --> E["TopHeader: crumb pill • N Active Anomaly chip • ⌘K jump palette • sound toggle • avatar"]
         C --> F["Sidebar footer: latency dot • shift chip • role card (icon + Shift Leader)"]
         C --> G["New Run → DemoController slide-over (Inject / Reset)"]
@@ -52,6 +53,8 @@ Root App
 ├── Sidebar (GlassCard variant strong; fixed left/top/bottom 12px; width 240px; radius 24; --sidebar-w 252 incl. gap)
 │   ├── Brand: "K" logo tile (dark gradient, 32px, radius 8) + "KAIZEN AGENT" (Geist 700)
 │   ├── line-select inset: "Cell Line 1: Turning & Milling"
+│   ├── Eyebrow "System Architecture"
+│   │   └── NavItem: System Topology
 │   ├── Eyebrow "Operational Loop"
 │   │   ├── NavItem: Line Overview
 │   │   └── NavItem: Incidents
@@ -96,15 +99,18 @@ Root App
   │ │Turning & Milling │ │   PageTitle (Geist 30px)                                        [ Contextual Button ] [ Button primary ]
   │ ╰──────────────────╯ │   muted subtitle (14px)
   │                      │
-  │ OPERATIONAL LOOP     │   ╭── GlassCard (radius 24) ────────────────────────────────────────────────────────────────────────────────────╮
-  │ ▣ Line Overview  *   │   │                                                                                                             │
-  │ ⚠ Incidents          │   │   {Each tab mounts its focused content into Page}                                                           │
-  │   │ #INC-… ×         │   │                                                                                                             │
-  │                      │   │   - overview:        AnomalyBanner + 4 KPI cards + MachineFleetTable                                        │
-  │ KNOWLEDGE LOOP       │   │   - incident-detail: 5 StepSections + StepRail + 8D sign-off                                                │
-  │ ▶ Tech Walkthroughs  │   │   - walkthroughs / impact / sops: Knowledge Loop pages                                                      │
-  │ ▤ Knowledge Base     │   │                                                                                                             │
-  │ ☰ SOP Change Log     │   ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  │ SYSTEM ARCHITECTURE  │   ╭── GlassCard (radius 24) ────────────────────────────────────────────────────────────────────────────────────╮
+  │ ⑂ System Topology    │   │                                                                                                             │
+  │                      │   │   {Each tab mounts its focused content into Page}                                                           │
+  │ OPERATIONAL LOOP     │   │                                                                                                             │
+  │ ▣ Line Overview  *   │   │   - topology:        Top-to-Bottom 4-Phase Reactive Workflow Pipeline                                       │
+  │ ⚠ Incidents          │   │   - overview:        AnomalyBanner + 4 KPI cards + MachineFleetTable                                        │
+  │   │ #INC-… ×         │   │   - incident-detail: 5 StepSections + StepRail + 8D sign-off                                                │
+  │                      │   │   - walkthroughs / impact / sops: Knowledge Loop pages                                                      │
+  │ KNOWLEDGE LOOP       │   │                                                                                                             │
+  │ ▶ Tech Walkthroughs  │   ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  │ ▤ Knowledge Base     │
+  │ ☰ SOP Change Log     │
   │                      │
   │ (●) 24 ms  [Shift A] │                                                                                       ╭─ Toast (DarkGlass) ──────╮
   │ (◉) Shift Leader     │                                                                                       │ ✓ Message (auto 5s)      │

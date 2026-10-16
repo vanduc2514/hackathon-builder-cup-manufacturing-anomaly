@@ -26,6 +26,7 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 | **Screen 2: Technician Mobile App** | Evidence capture, guided repair, verification hand-off | Work List segmented Active / Processing / Completed | WorkOrderCards → Collect evidence / Repair brief | Evidence capture camera, Gemini Live guided repair, Finish sheet, Work status | [`02_technician_copilot.md`](./02_technician_copilot.md) |
 | **Screen 3: Incident Command (`incident-detail`)** | Product-evidence verification & 8D sign-off | `#INC` chip + title + step circles + StepRail | Current StepSection + `Approve 8D & Release Line` (locked until 50/50) | CausalTreeTabs, sensor history, documents, EightDReportCard, AgentAttribution | [`03_incident_workspace.md`](./03_incident_workspace.md) |
 | **Screen 4: Knowledge Loop (`walkthroughs` / `impact` / `sops`)** | Institutional memory search & ESG savings quantification | Recertification strip · 3 KPI cards (Scrap, Downtime, CO₂) · Needs review strip | Station sections · KnowledgeSearch + Signed-off 8D fixes · SOP table | WalkthroughPlayer, EightDSheet, WhatIfCalculator, SopDetailDrawer | [`04_knowledge_sustainability_hub.md`](./04_knowledge_sustainability_hub.md) |
+| **Screen 5: System Topology (`topology`)** | Live multi-agent execution tracing & decision gates | Phase lamps & status chips · Active execution flowline pulse | Node summaries & Decision Diamonds (Confidence ≥ 0.70 & Invariant #3 Streak ≥ 50) | `TopologyNodeDrawer` (JTBD, tech stack, blackboard telemetry, logs) | [`system_topology_workflow_wireframe.md`](../wireframe/system_topology_workflow_wireframe.md) |
 
 ---
 
@@ -39,10 +40,12 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
  ╭──────────────────────╮  ╭─────────────────────────────╮        (●) 1 Active Anomaly  ╭ ⌘K Search… ╮ (♪) Shift Leader (◉)
  │ [K] KAIZEN AGENT     │  │ Cell Line 1 / Line Overview │                              ╰────────────╯
  │ ╭ Cell Line 1 …    ╮ │  ╰─────────────────────────────╯
- │ OPERATIONAL LOOP     │  PageTitle                                         [ Button ] [■ Button primary ■]
- │ ▣ Line Overview  *   │  ╭── GlassCard (24) ────────────────────────────────────────────────────────────╮
- │ ⚠ Incidents          │  │  {tab content: overview · incident-detail · walkthroughs · impact · sops}    │
- │ KNOWLEDGE LOOP       │  ╰──────────────────────────────────────────────────────────────────────────────╯
+ │ SYSTEM ARCHITECTURE  │  PageTitle                                         [ Button ] [■ Button primary ■]
+ │ ⑂ System Topology    │  ╭── GlassCard (24) ────────────────────────────────────────────────────────────╮
+ │ OPERATIONAL LOOP     │  │  {tab content: topology · overview · incident-detail · walkthroughs · …}     │
+ │ ▣ Line Overview  *   │  ╰──────────────────────────────────────────────────────────────────────────────╯
+ │ ⚠ Incidents          │
+ │ KNOWLEDGE LOOP       │
  │ ▶ Tech Walkthroughs  │
  │ ▤ Knowledge Base     │                                                          ╭─ Toast (DarkGlass) ╮
  │ ☰ SOP Change Log     │                                                          ╰────────────────────╯
@@ -150,7 +153,71 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 
 ---
 
-## 7. End-to-End UI State & Transition Matrix
+## 7. Screen 5: System Topology Workflow
+
+> **Full Specification:** [`system_topology_workflow_wireframe.md`](../wireframe/system_topology_workflow_wireframe.md)  
+> **Target Personas:** Shift Leader, Plant Operations Manager, Systems & Automation Architect  
+> **Single JTBD:** Visualize real-time multi-agent execution paths, inspect AI confidence & Invariant #3 decision gates, and audit node health.
+
+```text
+ System Architecture & Execution Graph (Vertical Execution Pipeline)             [ (Nominal) [■ Active CNC-02 ■] (Streak) ]
+ Continuous top-to-bottom reactive swarm: Edge Detection -> Swarm RCA -> Decision Gates -> Guided Fix -> Verification
+ ╭── Floating Canvas Controls ────────────────────────────────────────────────────────────────────────╮
+ │ [ + Zoom In ] [ - Zoom Out ] [ 100% Reset ] [ [ ] Fit to View ] [ (M) Minimap ]                    │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ ╭─ PHASE A: DETECTION & INGESTION (Top) ─────────────────────────────────────────────────────────────╮
+ │ [1] Camera / Optical Station (Gemma 3 Edge) ───> [2] Pub/Sub & Orchestrator (SPC UCL Breach Event) │
+ │                                                  │                                                 │
+ │                                                  ▼ (Open Incident)                                 │
+ │                                                  [3] Quality Inspector Agent (ADK Vision & SPC)    │
+ ╰──────────────────────────────────────────────────╪─────────────────────────────────────────────────╯
+                                                    │
+                                                    ▼ (Trigger RCA)
+ ╭─ PHASE B: TRACING & ROOT CAUSE ANALYSIS (RCA) ───╧─────────────────────────────────────────────────╮
+ │ [4] Traceability Agent (BigQuery Lot)     [5] Process Analyst (Vibration Telemetry)                │
+ │         │                                         │                                                │
+ │         └────────────────────────┬────────────────┘                                                │
+ │                                  ▼                                                                 │
+ │                                  [6] Root Cause Agent (5-Whys + Vertex RAG Search)                 │
+ │                                  │                                                                 │
+ │                                  ▼                                                                 │
+ │                         < Decision Gate 1: Conf >= 0.70? >                                         │
+ │                         ├── NO (< 0.70)  ──> [6b] Diagnostic Agent (status: awaiting_evidence)     │
+ │                         │                    └──> [6c] Technician Photo (Gemini Vision)            │
+ │                         │                         └──> Nối vào Phase C: Copilot / Resolution       │
+ │                         └── YES (>= 0.70) ──> Dẫn thẳng vào Phase C                                │
+ ╰──────────────────────────────────────────────────╪─────────────────────────────────────────────────╯
+                                                    │
+                                                    ▼ (Verified Root Cause Dossier ➔ Resolution)
+ ╭─ PHASE C: RESOLUTION & FIELD INTERVENTION ───────╧─────────────────────────────────────────────────╮
+ │ [7] Copilot Agent (Gemini Live)                   [8] Incident Scribe Agent (WorkOrder, 8D, SOP)   │
+ │         │                                                 │                                        │
+ │         └────────────────────────┬────────────────────────┘                                        │
+ │                                  ▼                                                                 │
+ │                                  [9] [Repair Done] · Bay Tech Confirmation (48px Primary CTA)      │
+ ╰──────────────────────────────────╪─────────────────────────────────────────────────────────────────╯
+                                    │
+                                    ▼ (Confirm Repair Completed)
+ ╭─ PHASE D: VERIFICATION & LEARNING (Bottom) ──────╧─────────────────────────────────────────────────╮
+ │ [10] Verify Repair (Conveyor Optical Inspection CAM-EOL)                                           │
+ │                                  │                                                                 │
+ │                                  ▼                                                                 │
+ │                         < Decision Gate 2: Invariant #3 Streak >= 50 Clean Parts? >                │
+ │                         [████████████████░░░░]  42 / 50 Clean Consecutive Parts                    │
+ │                         ├── NO (Defect Detected) ──> Reset to 0/50 & Escalate Alarm (Re-inspect)   │
+ │                         └── YES (Streak 50/50 OK)──> [Close Incident] Continuous Learning Agent    │
+ │                                                              │                                     │
+ │                                                              ▼                                     │
+ │                                                      [12] Shift Leader Approval Gate (E-Signature) │
+ │                                                              │ [HARD-LOCKED until Streak >= 50]    │
+ │                                                              ▼                                     │
+ │                                                      STATUS: CLOSED & NOMINAL RELEASE              │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
+---
+
+## 8. End-to-End UI State & Transition Matrix
 
 How UI components change across both surfaces through an incident lifecycle:
 

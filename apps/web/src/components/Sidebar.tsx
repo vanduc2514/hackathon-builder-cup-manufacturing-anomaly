@@ -159,6 +159,19 @@ export default function Sidebar({
         <div className="col" style={{ gap: '1.3rem' }}>
           <div className="col" style={{ gap: 2 }}>
             <div className="eyebrow" style={{ padding: '0 0.75rem 0.35rem' }}>
+              Architecture
+            </div>
+            <NavItem
+              id="nav-topology"
+              icon="account_tree"
+              label="System Topology"
+              active={currentTab === 'topology'}
+              onClick={() => onSelectTab('topology')}
+            />
+          </div>
+
+          <div className="col" style={{ gap: 2 }}>
+            <div className="eyebrow" style={{ padding: '0 0.75rem 0.35rem' }}>
               Operational Loop
             </div>
             <NavItem
@@ -167,13 +180,6 @@ export default function Sidebar({
               label="Line Overview"
               active={currentTab === 'overview'}
               onClick={() => onSelectTab('overview')}
-            />
-            <NavItem
-              id="nav-topology"
-              icon="account_tree"
-              label="System Topology"
-              active={currentTab === 'topology'}
-              onClick={() => onSelectTab('topology')}
             />
             <NavItem
               id="nav-incidents"

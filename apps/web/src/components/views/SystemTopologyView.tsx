@@ -136,15 +136,16 @@ export default function SystemTopologyView({
             </select>
           </div>
 
-          {/* Quick Jump to Active Incident */}
+          {/* Quick Jump to Active Incident (TKT-057 calm animation) */}
           {isIncidentOpen && onOpenIncident && (
             <button
               id="topology-jump-incident"
               type="button"
-              className="btn btn-dark btn-sm animate-pulse-glow"
+              className="btn btn-dark btn-sm topology-jump-btn"
               onClick={() => onOpenIncident(incident.incident_id)}
               style={{ gap: 6 }}
             >
+              <span className="status-dot red animate-gentle-pulse" style={{ width: 8, height: 8 }} />
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                 warning
               </span>

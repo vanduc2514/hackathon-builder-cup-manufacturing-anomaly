@@ -15,7 +15,8 @@ import {
   getWindow2Nodes,
 } from '../../../lib/topology';
 import PhaseStepperBar from '../PhaseStepperBar';
-import type { IncidentState } from '../../../types';
+import TopologyNodeDrawer from '../TopologyNodeDrawer';
+import type { IncidentState, TopologyNodeState } from '../../../types';
 
 const mockIncident: IncidentState = {
   incident_id: 'inc-topo-01',
@@ -530,5 +531,112 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     const overriddenLink = screen.getByRole('link', { name: /factory floor console/i });
     expect(overriddenLink.getAttribute('href')).toBe('http://localhost:3002');
     vi.unstubAllEnvs();
+  });
+});
+
+
+describe('System Topology Production Polish Regression (Epic #238 / TKT-062)', () => {
+  it('TKT-055: validates Quick-Launch production link and aria-label', () => {
+    render(<SystemTopologyView incident={mockIncident} />);
+    const link = screen.getByRole('link', { name: /open standalone factory floor console in new tab/i });
+    expect(link.getAttribute('href')).toBe('https://kaizen-lab-factory.web.app');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
+  it('TKT-057: validates active incident jump button uses calm gentle pulse', () => {
+    const onOpen = vi.fn();
+    const { container } = render(<SystemTopologyView incident={mockIncident} onOpenIncident={onOpen} />);
+    const jumpBtn = container.querySelector('#topology-jump-incident');
+    expect(jumpBtn).not.toBeNull();
+    expect(jumpBtn?.className).toContain('topology-jump-btn');
+    expect(jumpBtn?.className).not.toContain('animate-pulse-glow');
+    const pulseDot = jumpBtn?.querySelector('.status-dot');
+    expect(pulseDot?.className).toContain('animate-gentle-pulse');
+
+    fireEvent.click(jumpBtn!);
+    expect(onOpen).toHaveBeenCalledWith('inc-topo-01');
+  });
+
+  it('TKT-060: validates all 28 topology nodes have human-readable component titles with no raw JSX tags', () => {
+    for (const node of TOPOLOGY_NODES) {
+      if (node.uiRef) {
+        expect(node.uiRef.component).not.toMatch(/<.*?>/);
+        expect(node.uiRef.component.length).toBeGreaterThan(4);
+      }
+    }
+  });
+
+  it('TKT-059 & TKT-061: validates drawer header actions and embedded live preview components', () => {
+    const nodeSensors = TOPOLOGY_NODES.find((n) => n.id === 'floor-sensors')!;
+    const state: TopologyNodeState = { id: 'floor-sensors', summary: 'Spindle Telemetry', status: 'active', isInferred: false, details: {} };
+    const { rerender } = render(
+      <TopologyNodeDrawer
+        node={nodeSensors}
+        state={state}
+        incident={mockIncident}
+        onClose={vi.fn()}
+      />,
+    );
+
+    // Fullscreen toggle button in headerActions
+    const fullscreenBtn = screen.getByRole('button', { name: /open fullscreen/i });
+    expect(fullscreenBtn).toBeDefined();
+    expect(fullscreenBtn.className).toContain('drawer-fullscreen-btn');
+
+    // Embedded Telemetry Preview
+    expect(screen.getByLabelText('Embedded Live Sensor Telemetry')).toBeDefined();
+    expect(screen.getAllByText(/Spindle Telemetry Stream/i).length).toBeGreaterThanOrEqual(1);
+
+    // Human-readable title in Production UI Surface Reference
+    expect(screen.getByText('High-Frequency Sensor Telemetry')).toBeDefined();
+
+    // Test Acoustic Waveform Preview for floor-mics
+    const nodeMics = TOPOLOGY_NODES.find((n) => n.id === 'floor-mics')!;
+    rerender(
+      <TopologyNodeDrawer
+        node={nodeMics}
+        state={{ id: 'floor-mics', summary: 'Acoustic MEMS', status: 'active', isInferred: false, details: {} }}
+        incident={mockIncident}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Embedded Acoustic Spectrogram')).toBeDefined();
+
+    // Test Edge Gateway Preview for edge-gemma
+    const nodeEdge = TOPOLOGY_NODES.find((n) => n.id === 'edge-gemma')!;
+    rerender(
+      <TopologyNodeDrawer
+        node={nodeEdge}
+        state={{ id: 'edge-gemma', summary: 'Gemma 3 Edge', status: 'done', isInferred: false, details: {} }}
+        incident={mockIncident}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Embedded Edge Gateway Telemetry')).toBeDefined();
+
+    // Test RCA Ishikawa Preview for agent-rca
+    const nodeRca = TOPOLOGY_NODES.find((n) => n.id === 'agent-rca')!;
+    rerender(
+      <TopologyNodeDrawer
+        node={nodeRca}
+        state={{ id: 'agent-rca', summary: 'Root Cause Agent', status: 'done', isInferred: false, details: {} }}
+        incident={mockIncident}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Embedded Root Cause 5-Whys Analysis')).toBeDefined();
+
+    // Test Streak Invariant Preview for decision-gate-2
+    const nodeStreak = TOPOLOGY_NODES.find((n) => n.id === 'decision-gate-2')!;
+    rerender(
+      <TopologyNodeDrawer
+        node={nodeStreak}
+        state={{ id: 'decision-gate-2', summary: 'Streak Verification Gate', status: 'active', isInferred: false, details: {} }}
+        incident={mockIncident}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Embedded Invariant 3 Verification Streak')).toBeDefined();
   });
 });

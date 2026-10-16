@@ -141,9 +141,7 @@ class TraceabilityEventPayload(BaseModel):
 class QualityEventPayload(BaseModel):
     """Quality / SPC anomaly event forwarded from edge gateway to Cloud via Pub/Sub."""
 
-    event_id: str = Field(
-        default_factory=lambda: str(uuid.uuid4())
-    )
+    event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     event_type: str = "defect_spc_breach"
     scenario: str = "cnc_tool_wear"
@@ -155,6 +153,18 @@ class QualityEventPayload(BaseModel):
     severity: str = "medium"
     filtered_frame: Optional[FilteredFramePacket] = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class PubSubDeliveryReport(BaseModel):
+    """Delivery status report for outbound Pub/Sub messages."""
+
+    topic: str
+    message_id: str
+    latency_ms: float
+    status: str = "delivered"
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    payload_type: Optional[str] = None
+    error: Optional[str] = None
 
 
 class ActiveAnomalyStatus(BaseModel):
@@ -178,6 +188,7 @@ class FactoryTickPacket(BaseModel):
     recent_parts: list[ConveyorPart] = Field(default_factory=list)
     edge_stats: EdgeFilterStatistics = Field(default_factory=EdgeFilterStatistics)
     active_anomaly: Optional[ActiveAnomalyStatus] = None
+    pubsub_delivery: Optional[list[PubSubDeliveryReport]] = None
 
 
 class InjectAnomalyRequest(BaseModel):

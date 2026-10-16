@@ -570,9 +570,9 @@ class VisualEvidencePreset(BaseModel):
 
     id: str = Field(description="Unique alphanumeric preset identifier")
     title: str = Field(description="Human-readable title of the sample")
-    category: Literal[
-        "surface_scratch", "crack", "fracture", "assembly_gap", "normal"
-    ] = Field(description="Defect archetype category")
+    category: Literal["surface_scratch", "crack", "fracture", "assembly_gap", "normal"] = Field(
+        description="Defect archetype category"
+    )
     machine_id: str = Field(default="IM-05", description="Applicable equipment bay")
     tool_id: Optional[str] = Field(default="MOLD-03", description="Suspect tool slot")
     description: str = Field(description="Detailed visual & metrology description")
@@ -758,9 +758,7 @@ class EsgLedgerEntryResponse(BaseModel):
     closed_at: Optional[str] = Field(
         default=None, description="ISO timestamp when incident was closed"
     )
-    approved: bool = Field(
-        default=True, description="Whether incident has shift-leader sign-off"
-    )
+    approved: bool = Field(default=True, description="Whether incident has shift-leader sign-off")
     impact: ImpactMetrics = Field(description="Impact metrics computed upon incident resolution")
     incident: IncidentState = Field(
         description="Full incident snapshot for client-side 8D / verified solution derivation"
@@ -1407,6 +1405,30 @@ class QualityEventPayload(BaseModel):
             machine_id=self.machine_id,
             tool_id=self.tool_id or ("MOLD-03" if self.scenario == "im_damp_material" else "T07"),
         )
+
+
+class PubSubDeliveryReport(BaseModel):
+    """Delivery status report for outbound Pub/Sub messages."""
+
+    topic: str = Field(description="Target Google Cloud Pub/Sub topic name")
+    message_id: str = Field(description="Pub/Sub message ACK ID or synthetic fallback buffer ID")
+    latency_ms: float = Field(ge=0.0, description="Round-trip dispatch latency in milliseconds")
+    status: str = Field(
+        default="delivered",
+        description="Delivery verdict: 'delivered', 'buffered', or 'failed'",
+    )
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        description="Dispatch timestamp in ISO-8601 UTC format",
+    )
+    payload_type: Optional[str] = Field(
+        default=None,
+        description="Payload category: 'quality_event', 'telemetry', or 'traceability'",
+    )
+    error: Optional[str] = Field(
+        default=None,
+        description="Error details if delivery failed",
+    )
 
 
 class AuthRole(str, Enum):

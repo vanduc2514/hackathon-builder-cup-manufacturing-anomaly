@@ -14,6 +14,7 @@ export default function App(): React.ReactElement {
     apiKey,
     setApiKey,
     authError,
+    deliveryReports,
   } = useFactoryStream();
   const machines = packet?.machines || packet?.telemetry || [];
   const parts = packet?.recent_parts || packet?.parts || [];
@@ -44,6 +45,7 @@ export default function App(): React.ReactElement {
           apiKey={apiKey}
           onApiKeyChange={setApiKey}
           authError={authError}
+          deliveryReports={deliveryReports}
         />
         <MachineBay machines={machines} />
         <div className="split-grid">

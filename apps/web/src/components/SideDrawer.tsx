@@ -6,12 +6,23 @@ interface SideDrawerProps {
   title: React.ReactNode;
   eyebrow?: React.ReactNode;
   width?: number;
+  isFullscreen?: boolean;
+  headerActions?: React.ReactNode;
   onClose: () => void;
   footer?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export default function SideDrawer({ title, eyebrow, width = 560, onClose, footer, children }: SideDrawerProps): React.ReactElement {
+export default function SideDrawer({
+  title,
+  eyebrow,
+  width = 560,
+  isFullscreen = false,
+  headerActions,
+  onClose,
+  footer,
+  children,
+}: SideDrawerProps): React.ReactElement {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -26,22 +37,29 @@ export default function SideDrawer({ title, eyebrow, width = 560, onClose, foote
   }, [onClose]);
 
   return createPortal(
-    <div className="drawer-scrim" role="presentation" onClick={onClose}>
+    <div
+      className={`drawer-scrim ${isFullscreen ? 'drawer-scrim-fullscreen' : ''}`}
+      role="presentation"
+      onClick={onClose}
+    >
       <aside
-        className="glass glass-strong drawer-panel"
+        className={`glass glass-strong drawer-panel ${isFullscreen ? 'drawer-panel-fullscreen' : ''}`}
         role="dialog"
         aria-modal="true"
-        style={{ width: `min(${width}px, 100vw)` }}
+        style={isFullscreen ? undefined : { width: `min(${width}px, 100vw)` }}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="row between drawer-head">
-          <div className="col" style={{ gap: 4, minWidth: 0 }}>
+          <div className="col" style={{ gap: 4, minWidth: 0, flex: 1 }}>
             {eyebrow && <div className="row wrap" style={{ gap: 8 }}>{eyebrow}</div>}
             <h2 className="drawer-title">{title}</h2>
           </div>
-          <button type="button" className="btn btn-sm drawer-close" aria-label="Close details" onClick={onClose}>
-            <span className="material-symbols-outlined">close</span>
-          </button>
+          <div className="drawer-header-actions">
+            {headerActions}
+            <button type="button" className="btn btn-sm drawer-close" aria-label="Close details" onClick={onClose}>
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
         </header>
         <div className="drawer-body">{children}</div>
         {footer && <footer className="row wrap drawer-foot">{footer}</footer>}

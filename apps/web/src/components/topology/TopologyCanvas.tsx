@@ -99,14 +99,29 @@ export default function TopologyCanvas({
       let d = '';
       const cWidth = containerRect.width / effectiveScale;
 
+      let labelX = (x1 + x2) / 2;
+      let labelY = (y1 + y2) / 2;
+
       if (edge.type === 'gutter-right') {
-        const gutterX = Math.max(x1 + 60, cWidth - 20);
-        d = `M ${x1} ${y1} H ${gutterX} V ${y2} H ${x2}`;
+        const fromRightX = (fromRect.right - containerRect.left) / effectiveScale;
+        const fromMidY = (fromRect.top + fromRect.height / 2 - containerRect.top) / effectiveScale;
+        const toRightX = (toRect.right - containerRect.left) / effectiveScale;
+        const toMidY = (toRect.top + toRect.height / 2 - containerRect.top) / effectiveScale;
+        const rightmostBoundary = Math.max(fromRightX, toRightX);
+        const gutterX = Math.max(rightmostBoundary + 40, cWidth - 24);
+        d = `M ${fromRightX} ${fromMidY} H ${gutterX} V ${toMidY} H ${toRightX}`;
+        labelX = gutterX - 16;
+        labelY = (fromMidY + toMidY) / 2;
       } else if (edge.type === 'loop-left' || edge.type === 'loopback' || edge.type === 'loopback-long') {
-        const loopX = 20;
         const fromLeftX = (fromRect.left - containerRect.left) / effectiveScale;
         const fromMidY = (fromRect.top + fromRect.height / 2 - containerRect.top) / effectiveScale;
-        d = `M ${fromLeftX} ${fromMidY} H ${loopX} V ${y2} H ${x2}`;
+        const toLeftX = (toRect.left - containerRect.left) / effectiveScale;
+        const toMidY = (toRect.top + toRect.height / 2 - containerRect.top) / effectiveScale;
+        const leftmostCard = Math.min(fromLeftX, toLeftX);
+        const loopX = Math.min(20, Math.max(8, leftmostCard - 40));
+        d = `M ${fromLeftX} ${fromMidY} H ${loopX} V ${toMidY} H ${toLeftX}`;
+        labelX = loopX + 16;
+        labelY = (fromMidY + toMidY) / 2;
       } else if (edge.type === 'branch-left' || edge.type === 'branch-right') {
         const midY = (y1 + y2) / 2;
         d = `M ${x1} ${y1} V ${midY} H ${x2} V ${y2}`;
@@ -128,8 +143,8 @@ export default function TopologyCanvas({
         d,
         status: edgeStatus,
         label: edge.label,
-        labelX: (x1 + x2) / 2,
-        labelY: (y1 + y2) / 2,
+        labelX,
+        labelY,
         isHighlighted,
       });
     }

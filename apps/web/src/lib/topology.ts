@@ -251,7 +251,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Line Overview · CNC Fleet Grid',
       route: 'Screen 1: /overview#machines',
-      component: '<MachineFleetTable />',
+      component: 'Machine Fleet & Spindle Telemetry',
       ctaLabel: 'Inspect Line 1 Fleet Table',
       targetTab: 'overview',
     },
@@ -283,7 +283,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Shop-Floor Terminal · Station Camera Feed',
       route: 'Screen 1: /overview#camera-bay',
-      component: '<OpticalEdgeTerminal />',
+      component: 'Optical Edge Inspection Terminal',
       ctaLabel: 'View Conveyor Camera Feed',
       targetTab: 'overview',
     },
@@ -314,7 +314,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Engineering Console · Spindle Telemetry Stream',
       route: 'Screen 2: /spc#telemetry-raw',
-      component: '<SpindleTelemetryStream />',
+      component: 'High-Frequency Sensor Telemetry',
       ctaLabel: 'View Spindle Vibration FFT',
       targetTab: 'incident-detail',
     },
@@ -345,7 +345,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Acoustic Diagnostic Inspector',
       route: 'Screen 2: /spc#acoustic',
-      component: '<AcousticSpectrogramCard />',
+      component: 'Acoustic Spectrogram & Audio Analysis',
       ctaLabel: 'Inspect Chamber Acoustic Feed',
       targetTab: 'incident-detail',
     },
@@ -375,7 +375,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Quality Lab · Workpiece Genealogy Scanner',
       route: 'Screen 2: /spc#lot-tracker',
-      component: '<TraceabilityScanner />',
+      component: '2D DataMatrix Traceability Scanner',
       ctaLabel: 'Inspect Traceability Scanner',
       targetTab: 'incident-detail',
     },
@@ -411,7 +411,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Edge Gateway Telemetry & Diverter Status',
       route: 'Screen 1: /factory/edge#classifier',
-      component: '<GemmaEdgeInspector />',
+      component: 'Gemma 3 On-Prem Edge Classifier',
       ctaLabel: 'Inspect Gemma Edge Runtime',
       targetTab: 'overview',
     },
@@ -442,7 +442,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Edge Infrastructure · MQTT Bridge Monitor',
       route: 'Screen 1: /factory/bridge#telemetry',
-      component: '<MqttBridgeStatusCard />',
+      component: 'Industrial MQTT Telemetry Bridge',
       ctaLabel: 'Inspect MQTT Protocol Bridge',
       targetTab: 'overview',
     },
@@ -477,7 +477,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Cloud Operations · Pub/Sub Telemetry Stream',
       route: 'Screen 1: /overview#stream',
-      component: '<PubSubStreamMonitor />',
+      component: 'Google Cloud Pub/Sub Event Stream',
       ctaLabel: 'View Ingestion Stream Bus',
       targetTab: 'overview',
     },
@@ -508,7 +508,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Data Analytics · BigQuery Telemetry Console',
       route: 'Screen 2: /spc#bigquery-raw',
-      component: '<BigQueryTelemetryConsole />',
+      component: 'BigQuery Discrete Manufacturing Lakehouse',
       ctaLabel: 'Open BigQuery Console',
       targetTab: 'incident-detail',
     },
@@ -540,7 +540,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Shared Reactive Blackboard Inspector',
       route: 'Screen 3: /incident/INC-2026-B42#blackboard',
-      component: '<LiveIncidentBlackboard />',
+      component: 'Live Firestore Incident Blackboard',
       ctaLabel: 'Inspect Firestore Blackboard',
       targetTab: 'incident-detail',
     },
@@ -572,7 +572,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Knowledge Base · Semantic RAG Terminal',
       route: 'Screen 4: /impact#knowledge-rag',
-      component: '<VertexRagSearchTerminal />',
+      component: 'Vertex AI Search Domain Knowledge RAG',
       ctaLabel: 'Explore Knowledge RAG Store',
       targetTab: 'impact',
     },
@@ -603,7 +603,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Multimodal AI Diagnostics Console',
       route: 'Screen 3: /incident/INC-2026-B42#multimodal',
-      component: '<MultimodalInferenceConsole />',
+      component: 'Gemini Multimodal Diagnostics Console',
       ctaLabel: 'View Gemini Multi-Modal Model',
       targetTab: 'incident-detail',
     },
@@ -638,7 +638,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'ADK Multi-Agent Execution Graph',
       route: 'Screen 3: /incident/INC-2026-B42#orchestrator',
-      component: '<ADKExecutionGraphViewer />',
+      component: 'ADK Multi-Agent Orchestration Engine',
       ctaLabel: 'Inspect ADK Graph Engine',
       targetTab: 'incident-detail',
     },
@@ -670,7 +670,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Quality Inspector Findings & SPC Banner',
       route: 'Screen 3: /incident/INC-2026-B42#agent-qa',
-      component: '<QualityInspectorCard />',
+      component: 'Quality Inspector Defect Classifier',
       ctaLabel: 'Inspect QA Finding & SPC Rule',
       targetTab: 'incident-detail',
     },
@@ -702,7 +702,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Lot Genealogy Traversal Graph',
       route: 'Screen 3: /incident/INC-2026-B42#genealogy',
-      component: '<LotGenealogyTree />',
+      component: 'Discrete Lot Genealogy & Suspect Isolation',
       ctaLabel: 'Inspect Lot Genealogy Graph',
       targetTab: 'incident-detail',
     },
@@ -734,7 +734,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Process Analyst FFT & Telemetry Drift View',
       route: 'Screen 3: /incident/INC-2026-B42#process-analyst',
-      component: '<SpindleTelemetryFFT />',
+      component: 'FFT Vibration & Telemetry Analyzer',
       ctaLabel: 'Inspect FFT Vibration Analysis',
       targetTab: 'incident-detail',
     },
@@ -766,7 +766,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: '5-Whys & Ishikawa Root Cause Synthesis',
       route: 'Screen 3: /incident/INC-2026-B42#rca-5whys',
-      component: '<FiveWhysIshikawaDiagram />',
+      component: 'Interactive 5-Whys & Ishikawa Diagram',
       ctaLabel: 'Inspect 5-Whys Causal Tree',
       targetTab: 'incident-detail',
     },
@@ -802,7 +802,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Desktop Dashboard · Incident Triage Gate',
       route: 'Screen 3: /incident/INC-2026-B42#decision-gate-1',
-      component: '<ConfidenceGateBanner />',
+      component: 'Bayesian Confidence Gate (>70%)',
       ctaLabel: 'Inspect Gate 1 Logic',
       targetTab: 'incident-detail',
     },
@@ -832,7 +832,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Field Evidence Request Banner',
       route: 'Screen 3: /incident/INC-2026-B42#diagnostic',
-      component: '<DiagnosticEvidenceRequest />',
+      component: 'Diagnostic Field Probe & Evidence Loop',
       ctaLabel: 'View Diagnostic Evidence Loop',
       targetTab: 'incident-detail',
     },
@@ -863,7 +863,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Technician Visual Evidence Preset & Tool Wear Modal',
       route: 'Screen 3: /incident/INC-2026-B42#gemini-vision',
-      component: '<GeminiVisionEvidenceModal />',
+      component: 'Gemini Vision Multimodal Verification',
       ctaLabel: 'View Gemini Vision Inspector',
       targetTab: 'incident-detail',
     },
@@ -895,7 +895,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Mobile PWA · Live Technician Copilot Stream',
       route: 'Mobile: /mobile/repair#live-stream',
-      component: '<TechnicianLiveStreamView />',
+      component: 'Technician Copilot Live Stream',
       ctaLabel: 'Open Technician Copilot Live',
       targetTab: 'walkthroughs',
     },
@@ -925,7 +925,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: '8D Dossier & Work Order Editor',
       route: 'Screen 3: /incident/INC-2026-B42#dossier',
-      component: '<EightDDossierEditor />',
+      component: 'Automated 8D Dossier & Root Cause Report',
       ctaLabel: 'Review 8D Report Draft',
       targetTab: 'incident-detail',
     },
@@ -957,7 +957,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Sustainability Ledger & ESG Impact Hub',
       route: 'Screen 4: /impact#esg-ledger',
-      component: '<SustainabilityImpactCard />',
+      component: 'ESG Sustainability & Scrap Avoidance Ledger',
       ctaLabel: 'View ESG Impact Ledger',
       targetTab: 'impact',
     },
@@ -992,7 +992,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Mobile Technician Guided Wrenching Workflow',
       route: 'Mobile: /mobile/repair#step-3',
-      component: '<TechnicianMobileWrenchingView />',
+      component: 'Hands-Free Mobile Technician Copilot',
       ctaLabel: 'Inspect Technician Mobile Flow',
       targetTab: 'walkthroughs',
     },
@@ -1023,7 +1023,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Shop-Floor Terminal · Exit Conveyor',
       route: 'Screen 1: /factory/exit-conveyor#streak-meter',
-      component: '<ConveyorStreakMonitor />',
+      component: 'Post-Repair Defect-Free Streak Monitor',
       ctaLabel: 'Inspect Conveyor Streak Camera',
       targetTab: 'overview',
     },
@@ -1056,7 +1056,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Desktop Dashboard & Line Conveyor',
       route: 'Screen 1: /overview#invariant-3-gate',
-      component: '<ConveyorStreakMonitor /> & <ReleaseGate />',
+      component: 'Conveyor Streak Monitor & Release Gate',
       ctaLabel: 'Inspect Gate 2 Invariant',
       targetTab: 'overview',
     },
@@ -1088,7 +1088,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Desktop Dashboard & Alarm Annunciator',
       route: 'Screen 3: /incident/INC-2026-B42#escalation',
-      component: '<StreakResetAlarmBanner />',
+      component: 'Invariant #3 Streak Reset Alarm',
       ctaLabel: 'Inspect Escalation Protocol',
       targetTab: 'incident-detail',
     },
@@ -1119,7 +1119,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Desktop Dashboard · Incident Command Workspace',
       route: 'Screen 3: /incident/INC-2026-B42',
-      component: '<IncidentWorkspace />',
+      component: 'Plant Operations Incident Workspace',
       ctaLabel: 'Open Incident Command Board',
       targetTab: 'incident-detail',
     },
@@ -1149,7 +1149,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Desktop Dashboard · Authorization Modal',
       route: 'Screen 3: /incident/INC-2026-B42#release-modal',
-      component: '<ReleaseApprovalModal />',
+      component: 'Shift Leader Release Sign-Off Gate',
       ctaLabel: 'Open Shift Leader Release Modal',
       targetTab: 'incident-detail',
     },
@@ -1180,7 +1180,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     uiRef: {
       surface: 'Desktop Dashboard · Knowledge Base & Compliance',
       route: 'Screen 4: /impact#signed-dossiers',
-      component: '<EightDSheet /> & <SOPChangeLogCard />',
+      component: '8D Report Dossier & SOP Revisions',
       ctaLabel: 'Download Certified 8D Dossier',
       targetTab: 'impact',
     },

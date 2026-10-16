@@ -15,6 +15,10 @@ import DecisionGateNode from '../topology/DecisionGateNode';
 import TopologyNodeDrawer from '../topology/TopologyNodeDrawer';
 import { STATUS_LABEL, friendlyDefectName } from '../../lib/incident';
 
+const FACTORY_FLOOR_URL =
+  (import.meta.env.VITE_FACTORY_FLOOR_URL as string | undefined) ||
+  'https://kaizen-lab-factory.web.app';
+
 interface SystemTopologyViewProps {
   incident: IncidentState | null;
   onOpenIncident?: (incidentId: string) => void;
@@ -132,15 +136,16 @@ export default function SystemTopologyView({
             </select>
           </div>
 
-          {/* Quick Jump to Active Incident */}
+          {/* Quick Jump to Active Incident (TKT-057 calm animation) */}
           {isIncidentOpen && onOpenIncident && (
             <button
               id="topology-jump-incident"
               type="button"
-              className="btn btn-dark btn-sm animate-pulse-glow"
+              className="btn btn-dark btn-sm topology-jump-btn"
               onClick={() => onOpenIncident(incident.incident_id)}
               style={{ gap: 6 }}
             >
+              <span className="status-dot red animate-gentle-pulse" style={{ width: 8, height: 8 }} />
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                 warning
               </span>
@@ -258,12 +263,12 @@ export default function SystemTopologyView({
               </div>
               <div className="window-actions">
                 <a
-                  href="http://localhost:3002"
+                  href={FACTORY_FLOOR_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-quick-launch"
-                  title="Open Standalone Factory Floor Console (Window 1 :3002)"
-                  aria-label="Factory Floor Console ↗"
+                  title="Open Standalone Factory Floor Console (Window 1)"
+                  aria-label="Open Standalone Factory Floor Console in new tab"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }} aria-hidden="true">
                     precision_manufacturing

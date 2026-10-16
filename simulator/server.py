@@ -191,6 +191,7 @@ class FactoryServerService:
         machine_id: str = "CNC-02",
         severity: float = 1.0,
         mode: str = "demo",
+        dispatch_quality_event: bool = True,
     ) -> dict[str, bool]:
         """Dispatches quality event, anomalous telemetry, and traceability record to Pub/Sub."""
         tool = "MOLD-03" if scenario == "im_damp_material" else "T07"
@@ -199,16 +200,19 @@ class FactoryServerService:
         now_iso = datetime.now(timezone.utc).isoformat()
 
         # 1. Quality Event
-        quality_evt = QualityEventPayload(
-            machine_id=machine_id,
-            tool_id=tool,
-            defect_type=defect_type,
-            scenario=scenario,
-            mode=mode,
-            severity="high" if severity >= 1.0 else "medium",
-            defect_rate=0.08 if scenario == "cnc_tool_wear" else 0.05,
-        )
-        q_ok = await self.pubsub_dispatcher.publish_quality_event(quality_evt)
+        if dispatch_quality_event:
+            quality_evt = QualityEventPayload(
+                machine_id=machine_id,
+                tool_id=tool,
+                defect_type=defect_type,
+                scenario=scenario,
+                mode=mode,
+                severity="high" if severity >= 1.0 else "medium",
+                defect_rate=0.08 if scenario == "cnc_tool_wear" else 0.05,
+            )
+            q_ok = await self.pubsub_dispatcher.publish_quality_event(quality_evt)
+        else:
+            q_ok = False
 
         # 2. Machine Telemetry
         telemetry_payload = MachineTelemetryPayload(
@@ -256,6 +260,7 @@ class FactoryServerService:
         machine_id: Optional[str] = None,
         severity: float = 1.0,
         mode: str = "demo",
+        dispatch_quality_event: bool = True,
     ) -> dict[str, Any]:
         """Triggers a simulated defect scenario, accelerates timing, and dispatches to Pub/Sub."""
         if scenario == "im_damp_material" or machine_id == "IM-05":
@@ -282,6 +287,7 @@ class FactoryServerService:
                 machine_id=target,
                 severity=severity,
                 mode=mode,
+                dispatch_quality_event=dispatch_quality_event,
             )
         except Exception as exc:
             logger.warning("Failed to dispatch injection events to Pub/Sub: %s", exc)
@@ -439,6 +445,7 @@ async def inject_anomaly(req: InjectAnomalyRequest = InjectAnomalyRequest()) -> 
         machine_id=req.machine_id,
         severity=req.severity,
         mode=req.mode,
+        dispatch_quality_event=req.dispatch_quality_event,
     )
 
 

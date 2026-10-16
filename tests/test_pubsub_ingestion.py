@@ -288,11 +288,11 @@ def test_mqtt_bridge_conveyor_and_telemetry_forwarding():
 
 
 def test_simulation_inject_pubsub_integration():
-    """Verifies POST /api/simulation/inject publishes QualityEventPayload in end-to-end flow."""
+    """Verifies POST /api/simulation/inject starts incident directly without backend Pub/Sub duplicate."""
     client = TestClient(app)
 
     with patch.object(pubsub_manager, "publish_quality_event", return_value=True) as mock_pub:
-        with patch.object(orchestrator_module.orchestrator, "start_incident"):
+        with patch.object(orchestrator_module.orchestrator, "start_incident") as mock_start:
             resp = client.post(
                 "/api/simulation/inject",
                 json={"scenario": "cnc_tool_wear", "mode": "fast"},
@@ -301,7 +301,9 @@ def test_simulation_inject_pubsub_integration():
             data = resp.json()
             assert data["status"] == "triggered"
             assert data["scenario"] == "cnc_tool_wear"
-            mock_pub.assert_called_once()
+            assert "factory_sync" in data
+            mock_pub.assert_not_called()
+            mock_start.assert_called_once()
 
 
 @pytest.mark.asyncio

@@ -5,6 +5,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import threading
+import time
+from collections import OrderedDict
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from google.api_core.exceptions import AlreadyExists
@@ -31,6 +35,8 @@ class PubSubManager:
         self._subscribers_started: bool = False
         self._cached_available: Optional[bool] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._seen_events: OrderedDict[str, float] = OrderedDict()
+        self._dedup_lock: threading.Lock = threading.Lock()
 
     @property
     def emulator_host(self) -> Optional[str]:
@@ -66,6 +72,8 @@ class PubSubManager:
         self._cached_available = None
         self._publisher = None
         self._subscriber = None
+        with self._dedup_lock:
+            self._seen_events.clear()
 
     def get_publisher_client(self) -> pubsub_v1.PublisherClient:
         """Returns a cached PublisherClient configured for emulator or production ADC."""
@@ -242,9 +250,58 @@ class PubSubManager:
         try:
             data_str = message.data.decode("utf-8")
             event = QualityEventPayload.model_validate_json(data_str)
+
+            # 1. Stale event check: ack + drop if timestamp older than max_age
+            try:
+                evt_dt = datetime.fromisoformat(event.timestamp)
+                if evt_dt.tzinfo is None:
+                    evt_dt = evt_dt.replace(tzinfo=timezone.utc)
+                now_utc = datetime.now(timezone.utc)
+                age_seconds = (now_utc - evt_dt).total_seconds()
+                if age_seconds > settings.quality_event_max_age_seconds:
+                    logger.info(
+                        "Dropped stale quality event %s (age=%.1fs > max_age=%ds)",
+                        event.event_id,
+                        age_seconds,
+                        settings.quality_event_max_age_seconds,
+                    )
+                    message.ack()
+                    return
+            except Exception as exc:
+                logger.warning(
+                    "Unparsable timestamp %s in quality event %s; processing anyway: %s",
+                    event.timestamp,
+                    event.event_id,
+                    exc,
+                )
+
+            # 2. Duplicate event_id check: ack + drop duplicate event_id seen within TTL
+            with self._dedup_lock:
+                now_mono = time.monotonic()
+                while self._seen_events:
+                    oldest_id, oldest_time = next(iter(self._seen_events.items()))
+                    if (
+                        now_mono - oldest_time > settings.quality_event_dedup_ttl_seconds
+                        or len(self._seen_events) > 1000
+                    ):
+                        self._seen_events.popitem(last=False)
+                    else:
+                        break
+
+                if event.event_id in self._seen_events:
+                    logger.info(
+                        "Dropped duplicate quality event %s seen within TTL (%ds)",
+                        event.event_id,
+                        settings.quality_event_dedup_ttl_seconds,
+                    )
+                    message.ack()
+                    return
+
+                self._seen_events[event.event_id] = now_mono
+
+            # 3. Single-flight guard: ignore & ack duplicate events when incident is active
             from backend.agents.orchestrator import orchestrator
 
-            # Single-flight guard: ignore & ack duplicate events when incident is active
             if orchestrator.is_running:
                 logger.info(
                     "Ignored duplicate quality event %s while incident is active", event.event_id

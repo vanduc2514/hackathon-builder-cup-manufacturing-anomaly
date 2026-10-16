@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException
 from backend.agents.orchestrator import orchestrator
 from backend.core.models import DefectInjectionRequest, SimulationStatusResponse
 from backend.tools.bigquery_tool import reset_buffers
+from backend.tools.factory_client import factory_client
 
 router = APIRouter(prefix="/api/simulation", tags=["simulation"])
 
@@ -32,6 +33,7 @@ def _resolve_trigger(req: DefectInjectionRequest) -> DefectInjectionRequest:
 @router.post("/inject")
 async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) -> Dict[str, Any]:
     """Injects the scenario's defect burst into the simulator and starts the incident workflow."""
+    # 1. Reject if incident already running before making any external calls
     if orchestrator.is_running:
         raise HTTPException(status_code=409, detail="An incident workflow is already running")
 
@@ -73,24 +75,17 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) 
         else (8.0 if trigger.mode == "fast" else 90.0)
     )
 
-    # Publish to Pub/Sub quality-events topic (triggers orchestrator subscriber in end-to-end flow)
-    from backend.core.models import QualityEventPayload
-    from backend.core.pubsub_manager import pubsub_manager
-
-    quality_event = QualityEventPayload(
+    # 2. Call factory simulator to inject anomaly (skip quality event dispatch)
+    factory_sync = await factory_client.inject_anomaly(
         scenario=trigger.scenario,
-        mode=trigger.mode,
         machine_id=trigger.machine_id,
-        tool_id=trigger.tool_id,
-        defect_type=trigger.defect_type,
-        defect_rate=trigger.defect_rate,
         severity=trigger.severity,
+        mode=trigger.mode,
+        dispatch_quality_event=False,
     )
-    published = pubsub_manager.publish_quality_event(quality_event)
 
-    # If Pub/Sub not available or message not published, trigger orchestrator directly
-    if not published and not orchestrator.is_running:
-        orchestrator.start_incident(trigger)
+    # 3. Directly start incident on orchestrator
+    orchestrator.start_incident(trigger)
 
     return {
         "status": "triggered",
@@ -102,6 +97,7 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) 
         "target_tool": trigger.tool_id,
         "burst_telemetry": burst,
         "message": message,
+        "factory_sync": factory_sync.model_dump(),
     }
 
 
@@ -110,11 +106,13 @@ async def reset_simulation() -> Dict[str, Any]:
     """Cancels the running workflow, then restores the Blackboard, simulator and BigQuery buffers."""
     state = await orchestrator.reset()
     bq_reset = reset_buffers()
+    factory_sync = await factory_client.reset_factory()
     return {
         "status": "reset",
         "message": "Simulation reset to pristine baseline (Blackboard and BigQuery buffers restored)",
         "state": state,
         "bigquery": bq_reset,
+        "factory_sync": factory_sync.model_dump(),
     }
 
 

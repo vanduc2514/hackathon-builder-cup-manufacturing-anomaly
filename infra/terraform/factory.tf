@@ -10,6 +10,7 @@ locals {
     PUBSUB_TELEMETRY_TOPIC      = "kaizen-telemetry"
     PUBSUB_TRACEABILITY_TOPIC   = "kaizen-traceability"
     PUBSUB_QUALITY_EVENTS_TOPIC = "kaizen-quality-events"
+    SIMULATOR_PUBSUB_ENABLED    = "true"
   }
 }
 

@@ -388,3 +388,41 @@ def test_cli_argument_parsing():
             assert kwargs["port"] == 8015
             assert service.speed == 2.0
             assert service.interval_sec == 0.5
+
+@pytest.mark.asyncio
+async def test_inject_with_dispatch_quality_event_false():
+    """Verify dispatch_quality_event=False skips quality event but publishes telemetry & traceability."""
+    with TestClient(app) as client:
+        res = client.post(
+            "/api/factory/inject",
+            json={
+                "scenario": "cnc_tool_wear",
+                "machine_id": "CNC-02",
+                "severity": 1.0,
+                "mode": "demo",
+                "dispatch_quality_event": False,
+            },
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "ok"
+        assert data["pubsub_dispatch"]["quality_event"] is False
+        assert data["pubsub_dispatch"]["telemetry"] is True
+        assert data["pubsub_dispatch"]["traceability"] is True
+
+        published = service.pubsub_dispatcher.get_published_events()
+        topics = [e["topic"] for e in published]
+        assert "kaizen-quality-events" not in topics
+        assert "kaizen-telemetry" in topics
+        assert "kaizen-traceability" in topics
+
+
+def test_quality_event_payload_uuid_event_id():
+    """Verify QualityEventPayload generates collision-resistant uuid4 event_id."""
+    import uuid
+    payload1 = QualityEventPayload()
+    payload2 = QualityEventPayload()
+    assert payload1.event_id != payload2.event_id
+    # Valid UUID format
+    parsed_uuid = uuid.UUID(payload1.event_id)
+    assert str(parsed_uuid) == payload1.event_id

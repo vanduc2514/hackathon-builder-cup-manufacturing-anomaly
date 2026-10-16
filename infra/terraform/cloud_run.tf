@@ -120,6 +120,11 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "AUTH_SECRET"
         value = random_password.auth_secret.result
       }
+
+      env {
+        name  = "FACTORY_SERVICE_URL"
+        value = google_cloud_run_v2_service.factory.uri
+      }
     }
   }
 

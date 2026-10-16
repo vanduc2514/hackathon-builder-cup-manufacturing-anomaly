@@ -60,7 +60,6 @@
 html,
 body {
   min-height: 100%;
-  overflow-x: clip;
 }
 
 body {
@@ -1548,6 +1547,12 @@ button.incident-chip:hover {
   display: none;
 }
 
+.header-search {
+  min-width: 240px;
+  height: 44px;
+  justify-content: space-between;
+}
+
 .app-main {
   position: relative;
   z-index: 1;
@@ -1590,8 +1595,8 @@ button.incident-chip:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     padding: 0;
   }
 
@@ -1624,14 +1629,14 @@ button.incident-chip:hover {
   .header-search-label,
   .header-search-kbd,
   .header-role-text {
-    display: none !important;
+    display: none;
   }
 
-  #header-search {
-    min-width: 44px !important;
-    width: 44px !important;
-    padding: 0 !important;
-    justify-content: center !important;
+  .header-search {
+    min-width: 44px;
+    width: 44px;
+    padding: 0;
+    justify-content: center;
   }
 }
 

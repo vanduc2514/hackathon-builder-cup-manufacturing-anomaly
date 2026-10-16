@@ -160,14 +160,13 @@ export default function DemoController({
       />
       <aside
         aria-label="Simulation and defect injection controller"
-        aria-hidden={!open}
         className="glass glass-strong"
         style={{
           position: 'fixed',
           top: 12,
           right: 12,
           bottom: 12,
-          width: 'min(420px, calc(100vw - 24px))',
+          width: 420,
           zIndex: 90,
           borderRadius: 26,
           padding: '1.3rem',
@@ -176,8 +175,7 @@ export default function DemoController({
           gap: '1.1rem',
           overflowY: 'auto',
           transform: open ? 'translateX(0)' : 'translateX(calc(100% + 24px))',
-          visibility: open ? 'visible' : 'hidden',
-          transition: `transform 0.5s var(--ease), visibility 0s linear ${open ? '0s' : '0.5s'}`,
+          transition: 'transform 0.5s var(--ease)',
         }}
       >
         <div className="row between">

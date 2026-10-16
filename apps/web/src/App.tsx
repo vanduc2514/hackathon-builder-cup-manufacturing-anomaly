@@ -334,7 +334,7 @@ export default function App(): React.ReactElement {
         <div
           className="nav-backdrop"
           onClick={() => setNavOpen(false)}
-          aria-label="Close navigation backdrop"
+          aria-hidden="true"
         />
       )}
 

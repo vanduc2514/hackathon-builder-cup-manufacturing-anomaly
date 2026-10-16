@@ -92,10 +92,10 @@ export default function TopHeader({
           <button
             id="header-search"
             type="button"
-            className="btn glass"
+            className="btn glass header-search"
             aria-label="Search telemetry or jump to view"
             onClick={() => setPaletteOpen((v) => !v)}
-            style={{ borderRadius: 999, color: 'var(--text)', fontWeight: 500, minWidth: 240, height: 44, justifyContent: 'space-between' }}
+            style={{ borderRadius: 999, color: 'var(--text)', fontWeight: 500 }}
           >
             <span className="row" style={{ gap: 6 }}>
               <span className="material-symbols-outlined">search</span>

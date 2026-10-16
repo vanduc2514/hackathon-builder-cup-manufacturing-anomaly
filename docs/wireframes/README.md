@@ -158,17 +158,59 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 > **Single JTBD:** Visualize real-time multi-agent execution paths, inspect AI confidence & Invariant #3 decision gates, and audit node health.
 
 ```text
- System Architecture & Execution Graph                          [ (Nominal) [■ Active CNC-02 ■] (Low Conf) (Streak) ]
- Continuous reactive loop: Gemma 3 2B Edge -> Pub/Sub Swarm -> Gemini Live Copilot -> Invariant #3 Streak -> Shift Leader
- ╭── Floating Canvas Controls ──────────────────────────────────────────╮
- │ [ + Zoom In ] [ - Zoom Out ] [ 100% Reset ] [ [ ] Fit ] [ (M) Map ]  │
- ╰──────────────────────────────────────────────────────────────────────╯
- ╭─ Phase A: Detection ─╮  ╭─ Phase B: Tracing ────╮  ╭─ Phase C: Resolution ╮  ╭─ Phase D: Verification ╮
- │ [1] Edge Gemma 3 2B  │  │ [4] Traceability Agent│  │ [7] Copilot Live WS  │  │ [9] Verify Optical Cam │
- │ [2] Pub/Sub Ingestion│  │ [5] Process Analyst   │  │ [8] Incident Scribe  │  │ < Decision 2: 50 Pcs? >│
- │ [3] Quality Inspector│  │ [6] Root Cause Agent  │  │ [!] Bay Tech Confirm │  │ [10] Continuous Learn  │
- │                      │  │ < Decision 1: ≥0.70? >│  │                      │  │ [11] Shift Leader Appr │
- ╰──────────────────────╯  ╰───────────────────────╯  ╰──────────────────────╯  ╰────────────────────────╯
+ System Architecture & Execution Graph (Vertical Execution Pipeline)             [ (Nominal) [■ Active CNC-02 ■] (Streak) ]
+ Continuous top-to-bottom reactive swarm: Edge Detection -> Swarm RCA -> Decision Gates -> Guided Fix -> Verification
+ ╭── Floating Canvas Controls ────────────────────────────────────────────────────────────────────────╮
+ │ [ + Zoom In ] [ - Zoom Out ] [ 100% Reset ] [ [ ] Fit to View ] [ (M) Minimap ]                    │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ ╭─ PHASE A: DETECTION & INGESTION (Top) ─────────────────────────────────────────────────────────────╮
+ │ [1] Camera / Optical Station (Gemma 3 Edge) ───> [2] Pub/Sub & Orchestrator (SPC UCL Breach Event) │
+ │                                                  │                                                 │
+ │                                                  ▼ (Open Incident)                                 │
+ │                                                  [3] Quality Inspector Agent (ADK Vision & SPC)    │
+ ╰──────────────────────────────────────────────────╪─────────────────────────────────────────────────╯
+                                                    │
+                                                    ▼ (Trigger RCA)
+ ╭─ PHASE B: TRACING & ROOT CAUSE ANALYSIS (RCA) ───╧─────────────────────────────────────────────────╮
+ │ [4] Traceability Agent (BigQuery Lot)     [5] Process Analyst (Vibration Telemetry)                │
+ │         │                                         │                                                │
+ │         └────────────────────────┬────────────────┘                                                │
+ │                                  ▼                                                                 │
+ │                                  [6] Root Cause Agent (5-Whys + Vertex RAG Search)                 │
+ │                                  │                                                                 │
+ │                                  ▼                                                                 │
+ │                         < Decision Gate 1: Conf >= 0.70? >                                         │
+ │                         ├── NO (< 0.70)  ──> [6b] Diagnostic Agent (status: awaiting_evidence)     │
+ │                         │                    └──> [6c] Technician Photo (Gemini Vision)            │
+ │                         │                         └──> Nối vào Phase C: Copilot / Resolution       │
+ │                         └── YES (>= 0.70) ──> Dẫn thẳng vào Phase C                                │
+ ╰──────────────────────────────────────────────────╪─────────────────────────────────────────────────╯
+                                                    │
+                                                    ▼ (Verified Root Cause Dossier ➔ Resolution)
+ ╭─ PHASE C: RESOLUTION & FIELD INTERVENTION ───────╧─────────────────────────────────────────────────╮
+ │ [7] Copilot Agent (Gemini Live)                   [8] Incident Scribe Agent (WorkOrder, 8D, SOP)   │
+ │         │                                                 │                                        │
+ │         └────────────────────────┬────────────────────────┘                                        │
+ │                                  ▼                                                                 │
+ │                                  [9] [Repair Done] · Bay Tech Confirmation (48px Primary CTA)      │
+ ╰──────────────────────────────────╪─────────────────────────────────────────────────────────────────╯
+                                    │
+                                    ▼ (Confirm Repair Completed)
+ ╭─ PHASE D: VERIFICATION & LEARNING (Bottom) ──────╧─────────────────────────────────────────────────╮
+ │ [10] Verify Repair (Conveyor Optical Inspection CAM-EOL)                                           │
+ │                                  │                                                                 │
+ │                                  ▼                                                                 │
+ │                         < Decision Gate 2: Invariant #3 Streak >= 50 Clean Parts? >                │
+ │                         [████████████████░░░░]  42 / 50 Clean Consecutive Parts                    │
+ │                         ├── NO (Defect Detected) ──> Reset to 0/50 & Escalate Alarm (Re-inspect)   │
+ │                         └── YES (Streak 50/50 OK)──> [Close Incident] Continuous Learning Agent    │
+ │                                                              │                                     │
+ │                                                              ▼                                     │
+ │                                                      [12] Shift Leader Approval Gate (E-Signature) │
+ │                                                              │ [HARD-LOCKED until Streak >= 50]    │
+ │                                                              ▼                                     │
+ │                                                      STATUS: CLOSED & NOMINAL RELEASE              │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 ---

@@ -1,8 +1,8 @@
-// Side drawer presenting deep-dive JTBD, tech specifications, and realtime blackboard payloads (Issue #205).
-import React from 'react';
-import type { IncidentState, TopologyNodeDefinition, TopologyNodeState } from '../../types';
+// Side drawer presenting deep-dive JTBD, tech specifications, production UI deep links, and realtime payloads.
+import React, { useState } from 'react';
+import type { DashboardTab, IncidentState, TopologyNodeDefinition, TopologyNodeState } from '../../types';
 import SideDrawer from '../SideDrawer';
-import { TOPOLOGY_PHASES } from '../../lib/topology';
+import { NODE_PAYLOADS, TOPOLOGY_LAYERS, TOPOLOGY_PHASES } from '../../lib/topology';
 import { matchesAgentRole } from '../../lib/incident';
 
 interface TopologyNodeDrawerProps {
@@ -11,6 +11,7 @@ interface TopologyNodeDrawerProps {
   incident: IncidentState | null;
   onClose: () => void;
   onNavigateToIncident?: () => void;
+  onSelectTab?: (tab: DashboardTab) => void;
 }
 
 export default function TopologyNodeDrawer({
@@ -19,10 +20,17 @@ export default function TopologyNodeDrawer({
   incident,
   onClose,
   onNavigateToIncident,
+  onSelectTab,
 }: TopologyNodeDrawerProps): React.ReactElement | null {
+  const [copiedPayload, setCopiedPayload] = useState(false);
+  const [showJsonRaw, setShowJsonRaw] = useState(false);
+
   if (!node || !state) return null;
 
+  const layer = TOPOLOGY_LAYERS.find((l) => l.id === node.layer);
   const phase = TOPOLOGY_PHASES.find((p) => p.id === node.phase);
+  const payload = NODE_PAYLOADS[node.id];
+
   const findings = incident?.findings?.filter((f) => {
     if (node.id === 'agent-qa') return matchesAgentRole(f, 'quality_inspector');
     if (node.id === 'agent-tra') return matchesAgentRole(f, 'traceability');
@@ -34,15 +42,43 @@ export default function TopologyNodeDrawer({
     return false;
   }) ?? [];
 
+  const handleCopyPayload = () => {
+    if (!payload) return;
+    navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+    setCopiedPayload(true);
+    setTimeout(() => setCopiedPayload(false), 2000);
+  };
+
+  const handleDeepLinkClick = () => {
+    if (!node.uiRef) return;
+    if (node.uiRef.targetTab) {
+      onSelectTab?.(node.uiRef.targetTab);
+    }
+    if (node.uiRef.incidentTarget || node.uiRef.targetTab === 'incident-detail') {
+      onNavigateToIncident?.();
+    }
+    onClose();
+  };
+
   const eyebrow = (
-    <>
-      <span className="chip chip-blue" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>
-        Phase {phase?.letter} · {phase?.name}
+    <div className="row wrap" style={{ gap: '0.4rem', alignItems: 'center' }}>
+      <span className="chip" style={{ fontSize: '0.72rem', padding: '2px 8px', background: layer?.badgeColor ? `${layer.badgeColor}22` : undefined, color: layer?.badgeColor || 'var(--accent)' }}>
+        {layer?.name.split(' · ')[0] ?? node.layer}
       </span>
+      {phase && (
+        <span className="chip chip-blue" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>
+          Phase {phase.letter} · {phase.name}
+        </span>
+      )}
       <span className="chip" style={{ fontSize: '0.72rem', padding: '2px 8px', background: 'rgba(15,23,42,0.06)' }}>
         {node.tier}
       </span>
-    </>
+      {node.isGate && (
+        <span className="chip chip-amber" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>
+          Decision Gateway
+        </span>
+      )}
+    </div>
   );
 
   const title = (
@@ -50,7 +86,10 @@ export default function TopologyNodeDrawer({
       <span className="material-symbols-outlined" style={{ fontSize: 26, color: 'var(--accent)' }}>
         {node.icon}
       </span>
-      <span>{node.label}</span>
+      <div>
+        <div style={{ fontSize: '1.05rem', fontWeight: 650, color: 'var(--ink)' }}>{node.label}</div>
+        <div style={{ fontSize: '0.78rem', color: 'var(--muted)', fontWeight: 400 }}>{node.sublabel}</div>
+      </div>
     </div>
   );
 
@@ -58,11 +97,24 @@ export default function TopologyNodeDrawer({
     <SideDrawer
       title={title}
       eyebrow={eyebrow}
-      width={580}
+      width={600}
       onClose={onClose}
       footer={
         <div className="row between" style={{ width: '100%', gap: 12 }}>
-          {onNavigateToIncident && incident && (
+          {node.uiRef && (
+            <button
+              type="button"
+              className="btn btn-dark btn-sm"
+              onClick={handleDeepLinkClick}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                open_in_new
+              </span>
+              {node.uiRef.ctaLabel}
+            </button>
+          )}
+          {onNavigateToIncident && incident && !node.uiRef && (
             <button
               type="button"
               className="btn btn-dark btn-sm"
@@ -124,6 +176,27 @@ export default function TopologyNodeDrawer({
           <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--ink)' }}>
             {state.summary}
           </div>
+
+          {/* Node Metrics Chips if available */}
+          {node.metrics && node.metrics.length > 0 && (
+            <div className="row wrap" style={{ gap: 8, marginTop: 10 }}>
+              {node.metrics.map((m) => (
+                <div
+                  key={m.label}
+                  className="glass"
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 'var(--r-sm)',
+                    fontSize: '0.75rem',
+                    background: 'rgba(255,255,255,0.7)',
+                  }}
+                >
+                  <span style={{ color: 'var(--muted)', marginRight: 5 }}>{m.label}:</span>
+                  <span style={{ fontWeight: 650, color: 'var(--ink)' }}>{m.value}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Inferred Notice for Data-Plane Components */}
@@ -152,28 +225,103 @@ export default function TopologyNodeDrawer({
           </div>
         )}
 
-        {/* Job To Be Done Section */}
-        <div className="col" style={{ gap: '0.5rem' }}>
-          <div className="eyebrow">Job To Be Done (JTBD)</div>
-          <div
-            className="glass"
-            style={{
-              padding: '0.9rem 1rem',
-              borderRadius: 'var(--r-md)',
-              fontSize: '0.86rem',
-              lineHeight: 1.5,
-              color: 'var(--ink)',
-            }}
-          >
-            {node.jtbd}
+        {/* Actual UI Reference (Production Deep Link Card) */}
+        {node.uiRef && (
+          <div className="col" style={{ gap: '0.5rem' }}>
+            <div className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--accent)' }}>
+                visibility
+              </span>
+              Actual UI Reference (Production Deep Link)
+            </div>
+            <div
+              className="glass"
+              style={{
+                padding: '1rem',
+                borderRadius: 'var(--r-md)',
+                border: '1px solid rgba(91,91,240,0.25)',
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(240,244,255,0.5) 100%)',
+              }}
+            >
+              <div className="row between wrap" style={{ gap: 8, marginBottom: 8 }}>
+                <span
+                  className="chip chip-blue"
+                  style={{ fontSize: '0.74rem', fontWeight: 600, padding: '3px 8px' }}
+                >
+                  {node.uiRef.surface}
+                </span>
+                <span
+                  className="mono"
+                  style={{ fontSize: '0.72rem', color: 'var(--muted)', background: 'rgba(15,23,42,0.05)', padding: '2px 8px', borderRadius: 4 }}
+                >
+                  {node.uiRef.route}
+                </span>
+              </div>
+              <div
+                className="mono"
+                style={{
+                  fontSize: '0.88rem',
+                  fontWeight: 650,
+                  color: 'var(--ink)',
+                  marginBottom: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--accent)' }}>
+                  code
+                </span>
+                {node.uiRef.component}
+              </div>
+              <p
+                style={{
+                  fontSize: '0.82rem',
+                  color: 'var(--text)',
+                  lineHeight: 1.45,
+                  margin: '0 0 12px 0',
+                }}
+              >
+                {node.uiRef.previewDescription}
+              </p>
+              <button
+                type="button"
+                className="btn btn-dark btn-sm"
+                onClick={handleDeepLinkClick}
+                style={{ width: '100%', justifyContent: 'center', gap: 8 }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                  open_in_new
+                </span>
+                {node.uiRef.ctaLabel}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Technical Stack & Architecture */}
+        {/* Technical Architecture & Specifications */}
         <div className="col" style={{ gap: '0.5rem' }}>
-          <div className="eyebrow">Technology & Architecture</div>
+          <div className="eyebrow">Technical Architecture & SLAs</div>
           <div className="glass" style={{ padding: '0.9rem 1rem', borderRadius: 'var(--r-md)' }}>
             <div className="col" style={{ gap: '0.75rem' }}>
+              {node.sla && (
+                <div className="row between" style={{ fontSize: '0.8rem', paddingBottom: 6, borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
+                  <span style={{ color: 'var(--muted)' }}>Latency SLA:</span>
+                  <span className="mono" style={{ fontWeight: 650, color: 'var(--accent)' }}>{node.sla}</span>
+                </div>
+              )}
+              {node.channel && (
+                <div className="row between" style={{ fontSize: '0.8rem', paddingBottom: 6, borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
+                  <span style={{ color: 'var(--muted)' }}>Pub/Sub & Event Channel:</span>
+                  <span className="mono" style={{ fontWeight: 550, color: 'var(--ink)', fontSize: '0.74rem' }}>{node.channel}</span>
+                </div>
+              )}
+              {node.fallback && (
+                <div className="row between" style={{ fontSize: '0.8rem', paddingBottom: 6, borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
+                  <span style={{ color: 'var(--muted)' }}>Fallback Strategy:</span>
+                  <span style={{ fontWeight: 550, color: 'var(--ink)' }}>{node.fallback}</span>
+                </div>
+              )}
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>
                   Tier Responsibility
@@ -208,39 +356,118 @@ export default function TopologyNodeDrawer({
           </div>
         </div>
 
-        {/* Extracted Blackboard Payloads */}
+        {/* Job To Be Done Section */}
         <div className="col" style={{ gap: '0.5rem' }}>
-          <div className="eyebrow">Blackboard State & Telemetry</div>
+          <div className="eyebrow">Job To Be Done (JTBD)</div>
           <div
             className="glass"
             style={{
-              padding: '0.75rem',
+              padding: '0.9rem 1rem',
               borderRadius: 'var(--r-md)',
-              overflow: 'hidden',
+              fontSize: '0.86rem',
+              lineHeight: 1.5,
+              color: 'var(--ink)',
             }}
           >
-            <div className="col" style={{ gap: 2 }}>
-              {Object.entries(state.details).map(([key, val]) => (
-                <div
-                  key={key}
-                  className="row between"
+            {node.jtbd}
+          </div>
+        </div>
+
+        {/* Extracted Blackboard Payloads */}
+        <div className="col" style={{ gap: '0.5rem' }}>
+          <div className="row between" style={{ alignItems: 'center' }}>
+            <span className="eyebrow">Blackboard State & Telemetry</span>
+            {payload && (
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setShowJsonRaw(!showJsonRaw)}
+                style={{ fontSize: '0.72rem', padding: '2px 8px' }}
+              >
+                {showJsonRaw ? 'Show Key-Value' : 'Show Raw JSON'}
+              </button>
+            )}
+          </div>
+
+          {!showJsonRaw ? (
+            <div
+              className="glass"
+              style={{
+                padding: '0.75rem',
+                borderRadius: 'var(--r-md)',
+                overflow: 'hidden',
+              }}
+            >
+              <div className="col" style={{ gap: 2 }}>
+                {Object.entries(state.details).map(([key, val]) => (
+                  <div
+                    key={key}
+                    className="row between"
+                    style={{
+                      padding: '0.45rem 0.6rem',
+                      borderRadius: 6,
+                      fontSize: '0.8rem',
+                      background: 'rgba(255,255,255,0.4)',
+                    }}
+                  >
+                    <span className="mono" style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>
+                      {key}
+                    </span>
+                    <span className="mono" style={{ fontWeight: 600, color: 'var(--ink)', textAlign: 'right' }}>
+                      {val === null || val === undefined
+                        ? '—'
+                        : Array.isArray(val)
+                          ? val.join(', ')
+                          : String(val)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div
+              className="glass"
+              style={{
+                padding: '0.75rem',
+                borderRadius: 'var(--r-md)',
+                background: 'rgba(15,23,42,0.92)',
+                color: '#f8fafc',
+                position: 'relative',
+              }}
+            >
+              <div className="row between" style={{ marginBottom: 6 }}>
+                <span className="mono" style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                  Live Payload (JSON)
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={handleCopyPayload}
                   style={{
-                    padding: '0.45rem 0.6rem',
-                    borderRadius: 6,
-                    fontSize: '0.8rem',
-                    background: 'rgba(255,255,255,0.4)',
+                    fontSize: '0.7rem',
+                    padding: '2px 8px',
+                    background: 'rgba(255,255,255,0.1)',
+                    color: '#fff',
                   }}
                 >
-                  <span className="mono" style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>
-                    {key}
-                  </span>
-                  <span className="mono" style={{ fontWeight: 600, color: 'var(--ink)', textAlign: 'right' }}>
-                    {val === null || val === undefined ? '—' : String(val)}
-                  </span>
-                </div>
-              ))}
+                  {copiedPayload ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+              <pre
+                className="mono"
+                style={{
+                  margin: 0,
+                  fontSize: '0.76rem',
+                  lineHeight: 1.45,
+                  overflowX: 'auto',
+                  maxHeight: 280,
+                  color: '#38bdf8',
+                }}
+              >
+                {JSON.stringify(payload ?? state.details, null, 2)}
+              </pre>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Realtime Findings from this Agent */}

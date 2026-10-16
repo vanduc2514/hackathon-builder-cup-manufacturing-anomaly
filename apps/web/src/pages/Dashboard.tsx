@@ -79,6 +79,7 @@ export default function Dashboard({
         <SystemTopologyView
           incident={incident}
           onOpenIncident={onOpenIncident}
+          onSelectTab={onSelectTab}
           onNotify={onNotify}
         />
       )}

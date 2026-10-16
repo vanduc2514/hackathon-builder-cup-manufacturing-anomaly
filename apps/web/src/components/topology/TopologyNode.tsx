@@ -65,6 +65,7 @@ export default function TopologyNode({
     <div
       id={`topology-node-${node.id}`}
       data-node-id={node.id}
+      data-node={node.id}
       data-status={state.status}
       data-selected={selected ? 'true' : 'false'}
       role="button"
@@ -191,6 +192,28 @@ export default function TopologyNode({
       >
         {state.summary}
       </div>
+
+      {/* Metrics chips */}
+      {node.metrics && node.metrics.length > 0 && (
+        <div className="row wrap" style={{ gap: 4, margin: '2px 0' }}>
+          {node.metrics.map((m) => (
+            <span
+              key={m.label}
+              className="chip"
+              style={{
+                fontSize: '0.68rem',
+                padding: '2px 6px',
+                background: 'rgba(91,91,240,0.06)',
+                color: 'var(--ink)',
+                borderRadius: 4,
+              }}
+            >
+              <span style={{ color: 'var(--muted)', marginRight: 3 }}>{m.label}:</span>
+              <b>{m.value}</b>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Footer tags */}
       <div className="row wrap" style={{ gap: 4, marginTop: 'auto', paddingTop: '0.2rem' }}>

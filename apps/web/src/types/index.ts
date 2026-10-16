@@ -475,22 +475,51 @@ export interface EsgLedgerResponse {
   factory_type: string;
 }
 
-// System Topology & Realtime Execution Graph Types (Issue #205)
+// System Topology & Realtime Execution Graph Types (Issue #205 & #211)
 
 export type TopologyNodeId =
+  // Layer 1: Factory Floor · Edge Data Sources
+  | 'floor-machines'
+  | 'floor-cameras'
+  | 'floor-sensors'
+  | 'floor-mics'
+  | 'floor-tags'
+  // Layer 2: On-Premises Gateway · Gemma Edge & Bridge
   | 'edge-gemma'
+  | 'edge-bridge'
+  // Layer 3: Google Cloud · Data & AI Platform
   | 'cloud-ingest'
+  | 'gcp-pubsub'
+  | 'gcp-bigquery'
+  | 'gcp-firestore'
+  | 'gcp-rag'
+  | 'gcp-gemini'
+  // Layer 4: Agent Team · Google ADK Multi-Agent System
+  | 'adk-orch'
   | 'agent-qa'
   | 'agent-tra'
   | 'agent-pa'
   | 'agent-rca'
+  | 'decision-gate-1'
+  | 'diagnostic-agent'
+  | 'technician-photo'
   | 'copilot-live'
   | 'agent-scribe'
-  | 'gatekeeper-qa'
   | 'agent-learn'
-  | 'human-approval';
+  // Layer 5: Human-in-the-Loop & Operational Outputs
+  | 'human-tech'
+  | 'verify-camera'
+  | 'decision-gate-2'
+  | 'gatekeeper-qa'
+  | 'streak-reset'
+  | 'human-dash'
+  | 'human-lead'
+  | 'human-approval'
+  | 'output-docs';
 
-export type TopologyPhaseId = 'phase-a' | 'phase-b' | 'phase-c' | 'phase-d';
+export type TopologyLayerId = 'layer-1' | 'layer-2' | 'layer-3' | 'layer-4' | 'layer-5';
+
+export type TopologyPhaseId = 'phase-a' | 'phase-b' | 'phase-c' | 'phase-d' | TopologyLayerId;
 
 export type TopologyTier =
   | 'Tier 1 & 2'
@@ -507,8 +536,21 @@ export type TopologyNodeStatus =
   | 'pending_approval'
   | 'waiting';
 
+export type DashboardTab = 'overview' | 'topology' | 'incident-detail' | 'impact' | 'walkthroughs' | 'sops';
+
+export interface TopologyUiRef {
+  surface: string;
+  route: string;
+  component: string;
+  ctaLabel: string;
+  previewDescription: string;
+  targetTab?: DashboardTab;
+  incidentTarget?: boolean;
+}
+
 export interface TopologyNodeDefinition {
   id: TopologyNodeId;
+  layer: TopologyLayerId;
   phase: TopologyPhaseId;
   label: string;
   sublabel: string;
@@ -518,6 +560,12 @@ export interface TopologyNodeDefinition {
   techStack: string[];
   jtbd: string;
   order: number;
+  sla?: string;
+  channel?: string;
+  fallback?: string;
+  isGate?: boolean;
+  metrics?: { label: string; value: string }[];
+  uiRef?: TopologyUiRef;
 }
 
 export interface TopologyEdgeDefinition {
@@ -532,12 +580,23 @@ export interface TopologyNodeState {
   badgeText?: string;
   summary: string;
   isInferred: boolean;
-  details: Record<string, string | number | boolean | null | undefined>;
+  details: Record<string, string | number | boolean | null | undefined | string[]>;
+}
+
+export interface TopologyLayerDefinition {
+  id: TopologyLayerId;
+  number: 1 | 2 | 3 | 4 | 5;
+  name: string;
+  subtitle: string;
+  badgeClass: string;
+  badgeColor: string;
+  chipText: string;
+  chipClass: string;
 }
 
 export interface TopologyPhaseDefinition {
   id: TopologyPhaseId;
-  letter: 'A' | 'B' | 'C' | 'D';
+  letter: 'A' | 'B' | 'C' | 'D' | '1' | '2' | '3' | '4' | '5';
   name: string;
   vietnameseName: string;
   description: string;

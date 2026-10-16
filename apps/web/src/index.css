@@ -3207,3 +3207,66 @@ button.incident-chip:hover {
   }
 }
 
+/* =========================================================================
+   System Topology & 5-Layer Industrial Architecture Pipeline (Issue #211)
+   ========================================================================= */
+
+.vertical-pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.pipeline-phase {
+  transition: all 0.25s var(--ease);
+}
+
+.pipeline-phase:hover {
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+}
+
+.decision-diamond-wrapper {
+  margin: 12px auto;
+  width: 100%;
+  max-width: 680px;
+}
+
+.decision-diamond-card {
+  position: relative;
+  transition: all 0.25s var(--ease);
+  user-select: none;
+}
+
+.decision-diamond-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(91, 91, 240, 0.16);
+}
+
+.decision-diamond-card.selected {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 3px rgba(91, 91, 240, 0.25), 0 12px 28px rgba(91, 91, 240, 0.18);
+}
+
+.streak-gauge-card {
+  transition: all 0.2s var(--ease);
+}
+
+.ui-ref-card {
+  transition: all 0.2s var(--ease);
+}
+
+.ui-ref-card:hover {
+  box-shadow: 0 6px 18px rgba(91, 91, 240, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .decision-diamond-card,
+  .pipeline-phase,
+  .ui-ref-card {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+

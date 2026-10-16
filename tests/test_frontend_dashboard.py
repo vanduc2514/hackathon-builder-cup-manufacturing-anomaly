@@ -232,8 +232,6 @@ def test_mobile_dock_clearance_and_tap_target_invariants() -> None:
     assert "height: 50px" in css_content, ".m-btn must declare height: 50px"
 
     # Invariant 2: .m-screen has bottom padding >= 80px to clear .m-dock (14px + 66px)
-    import re
-
     screen_rule_match = re.search(r"\.m-screen\s*\{([^}]+)\}", css_content)
     assert screen_rule_match is not None, "Could not find .m-screen CSS rule in mobile.css"
     screen_rule_body = screen_rule_match.group(1)
@@ -339,5 +337,6 @@ def test_overview_components_css_coverage() -> None:
     # Verify responsive layout rules for .ov-main and .kpi-strip
     assert ".ov-main" in css_text
     assert ".kpi-strip" in css_text
+    assert "@media (max-width: 1365.98px)" in css_text
     assert "@media (max-width: 1023.98px)" in css_text
     assert "@media (max-width: 759.98px)" in css_text

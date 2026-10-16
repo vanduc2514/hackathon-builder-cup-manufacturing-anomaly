@@ -1324,10 +1324,10 @@ input[type='range']::-moz-range-thumb {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: 0;
-  overflow: hidden;
 }
 
 .kpi-strip > .glass {
+  min-width: 0;
   background: none;
   border: none;
   border-radius: 0;
@@ -1340,8 +1340,21 @@ input[type='range']::-moz-range-thumb {
   border-left: 1px solid var(--hair) !important;
 }
 
+.kpi-strip .kpi-card {
+  min-width: 0;
+}
+
+.kpi-strip .kpi-card .row {
+  flex-wrap: wrap;
+}
+
 .kpi-strip .kpi-eyebrow {
-  white-space: nowrap;
+  white-space: normal;
+}
+
+.kpi-strip .kpi-line {
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .kpi-strip > .tone-green-soft {
@@ -2016,6 +2029,17 @@ button.incident-chip:hover {
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   animation: scrimIn 0.25s var(--ease) both;
+}
+
+@media (max-width: 1365.98px) {
+  .ov-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ov-main > .loss-card {
+    grid-column: auto;
+    grid-row: auto;
+  }
 }
 
 @media (max-width: 1023.98px) {

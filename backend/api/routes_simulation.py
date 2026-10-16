@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 
 from backend.agents.orchestrator import orchestrator
+from backend.core.config import settings
 from backend.core.models import (
     DefectInjectionRequest,
     SimulationInjectResponse,
@@ -15,6 +17,8 @@ from backend.core.models import (
 )
 from backend.tools.bigquery_tool import reset_buffers
 from backend.tools.factory_client import factory_client
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/simulation", tags=["simulation"])
 
@@ -35,11 +39,33 @@ def _resolve_trigger(req: DefectInjectionRequest) -> DefectInjectionRequest:
     return req.model_copy(update=unset)
 
 
-@router.post("/inject", response_model=SimulationInjectResponse)
+@router.post("/inject", response_model=SimulationInjectResponse, deprecated=True)
 async def inject_defect(
     req: DefectInjectionRequest = DefectInjectionRequest(),
+    response: Response = Response(),
 ) -> SimulationInjectResponse:
-    """Injects the scenario's defect burst into the simulator and starts the incident workflow."""
+    """Injects the scenario's defect burst into the simulator and starts the incident workflow.
+
+    DEPRECATED: Direct HTTP defect injection via /api/simulation/inject is deprecated in favor of
+    the event-driven Google Cloud Pub/Sub ingestion pipeline (topic: kaizen-quality-events) and
+    the factory simulator ingress (/api/factory/inject).
+    """
+    logger.warning(
+        "DEPRECATED ENDPOINT ACCESSED: POST /api/simulation/inject is deprecated and will be removed in a future release. "
+        "Production defect triggers must be published via Google Cloud Pub/Sub pipeline (topic: %s) "
+        "or POST /api/factory/inject.",
+        settings.pubsub_quality_events_topic,
+        extra={
+            "endpoint": "/api/simulation/inject",
+            "successor": "/api/factory/inject",
+            "pubsub_topic": settings.pubsub_quality_events_topic,
+            "scenario": req.scenario,
+            "machine_id": req.machine_id,
+        },
+    )
+    response.headers["Deprecation"] = "true"
+    response.headers["Link"] = '</api/factory/inject>; rel="successor-version"'
+
     # 1. Reject if incident already running before making any external calls
     if orchestrator.is_running:
         raise HTTPException(status_code=409, detail="An incident workflow is already running")

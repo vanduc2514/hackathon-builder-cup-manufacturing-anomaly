@@ -113,6 +113,7 @@ class Settings(BaseSettings):
     factory_api_key: str | None = None
     quality_event_max_age_seconds: int = 60
     quality_event_dedup_ttl_seconds: int = 300
+    quality_event_debounce_seconds: float = 10.0
 
     # Planned production targets & cell availability
     planned_availability: float = 0.92

@@ -15,6 +15,7 @@ from simulator.models import (
     FactoryStatusResponse,
     FactoryTickPacket,
     MachineTelemetryPayload,
+    PubSubDeliveryReport,
     QualityEventPayload,
     TraceabilityEventPayload,
 )
@@ -389,6 +390,7 @@ def test_cli_argument_parsing():
             assert service.speed == 2.0
             assert service.interval_sec == 0.5
 
+
 @pytest.mark.asyncio
 async def test_inject_with_dispatch_quality_event_false():
     """Verify dispatch_quality_event=False skips quality event but publishes telemetry & traceability."""
@@ -420,6 +422,7 @@ async def test_inject_with_dispatch_quality_event_false():
 def test_quality_event_payload_uuid_event_id():
     """Verify QualityEventPayload generates collision-resistant uuid4 event_id."""
     import uuid
+
     payload1 = QualityEventPayload()
     payload2 = QualityEventPayload()
     assert payload1.event_id != payload2.event_id
@@ -673,3 +676,76 @@ async def test_periodic_telemetry_dispatcher_error_does_not_crash_loop(monkeypat
         await loop_task
     except asyncio.CancelledError:
         pass
+
+
+@pytest.mark.asyncio
+async def test_inject_delivers_reports_and_edge_filter_metadata():
+    """Verify inject endpoint returns delivery reports and QualityEvent carries edge filter metadata."""
+    from simulator.server import FactoryServerService
+
+    custom_dispatcher = EdgePubSubDispatcher(dry_run=True)
+    custom_service = FactoryServerService(pubsub_dispatcher=custom_dispatcher)
+
+    res = await custom_service.inject(
+        scenario="cnc_tool_wear",
+        machine_id="CNC-02",
+        severity=1.2,
+        mode="fast",
+    )
+    assert res["status"] == "ok"
+    assert "delivery_reports" in res
+    reports = res["delivery_reports"]
+    assert len(reports) == 3
+    topics = [r["topic"] for r in reports]
+    assert "kaizen-quality-events" in topics
+    assert "kaizen-telemetry" in topics
+    assert "kaizen-traceability" in topics
+
+    for r in reports:
+        assert r["status"] in ("delivered", "buffered")
+        assert r["latency_ms"] >= 0.0
+        assert r["message_id"].startswith("sim-ack-")
+
+    # Verify quality event has filtered_frame and metadata edge stats
+    events = custom_dispatcher.get_published_events()
+    q_events = [e for e in events if e["topic"] == "kaizen-quality-events"]
+    assert len(q_events) == 1
+    q_payload = q_events[0]["payload"]
+    assert q_payload["filtered_frame"] is not None
+    assert q_payload["filtered_frame"]["classification"] == "DEFECT"
+    assert q_payload["filtered_frame"]["diverter_actuated"] is True
+    assert "edge_filter_stats" in q_payload["metadata"]
+    assert q_payload["metadata"]["edge_filter_stats"]["cloud_bandwidth_reduction_pct"] >= 0.0
+
+
+@pytest.mark.asyncio
+async def test_factory_tick_packet_carries_pubsub_delivery_snapshot():
+    """Verify get_current_snapshot and step carry pubsub_delivery after injection."""
+    from simulator.server import FactoryServerService
+
+    custom_dispatcher = EdgePubSubDispatcher(dry_run=True)
+    custom_service = FactoryServerService(pubsub_dispatcher=custom_dispatcher)
+
+    # Initial snapshot has no delivery reports
+    snap_before = custom_service.get_current_snapshot()
+    assert snap_before.pubsub_delivery is None
+
+    # Inject anomaly
+    await custom_service.inject(scenario="cnc_tool_wear")
+
+    # Snapshot now includes delivery reports
+    snap_after = custom_service.get_current_snapshot()
+    assert snap_after.pubsub_delivery is not None
+    assert len(snap_after.pubsub_delivery) == 3
+    assert isinstance(snap_after.pubsub_delivery[0], PubSubDeliveryReport)
+
+    # Step packet includes delivery reports
+    packet = await custom_service.step()
+    assert packet.pubsub_delivery is not None
+    assert len(packet.pubsub_delivery) == 3
+    assert isinstance(packet.pubsub_delivery[0], PubSubDeliveryReport)
+
+    # Reset clears delivery reports
+    custom_service.reset()
+    snap_reset = custom_service.get_current_snapshot()
+    assert snap_reset.pubsub_delivery is None

@@ -32,6 +32,30 @@ export interface ActiveAnomalyStatus {
   elapsed_seconds: number;
 }
 
+export interface PubSubDeliveryReport {
+  topic: string;
+  message_id: string;
+  latency_ms: number;
+  status: 'delivered' | 'buffered' | 'failed' | string;
+  timestamp: string;
+  payload_type?: string;
+  error?: string | null;
+}
+
+export interface InjectionResponse {
+  status: string;
+  message: string;
+  details?: any;
+  speed_multiplier?: number;
+  pubsub_dispatch?: {
+    quality_event: boolean;
+    telemetry: boolean;
+    traceability: boolean;
+  };
+  delivery_reports?: PubSubDeliveryReport[];
+  edge_stats?: EdgeFilterStatistics;
+}
+
 export interface FactoryTickPacket {
   tick_index: number;
   machines?: MachineTelemetry[];
@@ -40,4 +64,5 @@ export interface FactoryTickPacket {
   parts?: ConveyorPart[];
   edge_stats?: EdgeFilterStatistics;
   active_anomaly?: ActiveAnomalyStatus | null;
+  pubsub_delivery?: PubSubDeliveryReport[] | null;
 }

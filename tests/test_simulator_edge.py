@@ -22,6 +22,7 @@ from simulator.models import (
     FilteredFramePacket,
     MachineTelemetry,
     MachineTelemetryPayload,
+    PubSubDeliveryReport,
     QualityEventPayload,
     TraceabilityEventPayload,
 )
@@ -383,6 +384,78 @@ async def test_edge_classifier_and_dispatcher_resource_cleanup() -> None:
     _ = station.classifier._get_client()
     station.close()
     assert station.classifier._client is None
+
+
+async def test_pubsub_dispatcher_delivery_reports_tracking() -> None:
+    """Verifies EdgePubSubDispatcher records delivery reports with latency and message IDs."""
+    dispatcher = EdgePubSubDispatcher(dry_run=True)
+    assert dispatcher.get_last_delivery_reports() == []
+
+    q_payload = QualityEventPayload(
+        machine_id="CNC-02",
+        tool_id="T07",
+        defect_type="scratch_vertical",
+        scenario="cnc_tool_wear",
+    )
+    t_payload = MachineTelemetryPayload(
+        machine_id="CNC-02",
+        tool_id="T07",
+        spindle_vibration=3.4,
+        motor_current=18.5,
+        spindle_temp=58.0,
+        rpm=8500,
+        operating_status="ALARM",
+    )
+    tr_payload = TraceabilityEventPayload(
+        product_id="PRD-12345",
+        machine_id="CNC-02",
+        tool_id="T07",
+        status="DEFECT_SCRATCH",
+    )
+
+    await dispatcher.publish_quality_event(q_payload)
+    await dispatcher.publish_telemetry(t_payload)
+    await dispatcher.publish_traceability(tr_payload)
+
+    reports = dispatcher.get_last_delivery_reports()
+    assert len(reports) == 3
+    for report in reports:
+        assert isinstance(report, PubSubDeliveryReport)
+        assert report.latency_ms >= 0.0
+        assert report.status == "buffered"
+        assert report.message_id.startswith("sim-ack-")
+        assert report.payload_type in ("quality_event", "telemetry", "traceability")
+
+    dispatcher.clear_delivery_reports()
+    assert dispatcher.get_last_delivery_reports() == []
+
+
+async def test_pubsub_dispatcher_delivery_reports_with_live_publisher() -> None:
+    """Verifies EdgePubSubDispatcher records delivered status and gcp message ID when publisher succeeds."""
+    mock_publisher = MagicMock()
+    mock_future = MagicMock()
+    mock_future.result.return_value = "gcp-ack-11223344"
+    mock_publisher.publish.return_value = mock_future
+
+    dispatcher = EdgePubSubDispatcher(project_id="test-proj")
+    dispatcher._publisher = mock_publisher
+
+    q_payload = QualityEventPayload(
+        machine_id="CNC-02",
+        tool_id="T07",
+        defect_type="scratch_vertical",
+        scenario="cnc_tool_wear",
+    )
+    ok = await dispatcher.publish_quality_event(q_payload)
+    assert ok is True
+
+    reports = dispatcher.get_last_delivery_reports()
+    assert len(reports) == 1
+    report = reports[0]
+    assert report.status == "delivered"
+    assert report.message_id == "gcp-ack-11223344"
+    assert report.latency_ms >= 0.0
+    assert report.topic == "kaizen-quality-events"
 
 
 async def test_simulator_has_zero_import_dependencies_on_backend() -> None:

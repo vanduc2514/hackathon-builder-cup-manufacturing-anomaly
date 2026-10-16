@@ -39,7 +39,10 @@ class SimulatorSettings(BaseSettings):
     pubsub_quality_events_topic: str = os.getenv(
         "PUBSUB_QUALITY_EVENTS_TOPIC", "kaizen-quality-events"
     )
-    pubsub_telemetry_topic: str = os.getenv("PUBSUB_TELEMETRY_TOPIC", "kaizen-telemetry")
+    pubsub_telemetry_topic: str = os.getenv(
+        "PUBSUB_MACHINE_TELEMETRY_TOPIC",
+        os.getenv("PUBSUB_TELEMETRY_TOPIC", "kaizen-telemetry"),
+    )
     pubsub_traceability_topic: str = os.getenv("PUBSUB_TRACEABILITY_TOPIC", "kaizen-traceability")
 
     # Logging

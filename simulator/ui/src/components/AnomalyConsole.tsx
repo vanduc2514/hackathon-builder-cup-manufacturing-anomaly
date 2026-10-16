@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { ActiveAnomalyStatus } from '../types';
+import type { ActiveAnomalyStatus, PubSubDeliveryReport } from '../types';
 import OperatorKeyInput from './OperatorKeyInput';
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
   apiKey?: string;
   onApiKeyChange?: (key: string) => void;
   authError?: string | null;
+  deliveryReports?: PubSubDeliveryReport[];
 }
 
 export default function AnomalyConsole({
@@ -18,6 +19,7 @@ export default function AnomalyConsole({
   apiKey = '',
   onApiKeyChange,
   authError,
+  deliveryReports,
 }: Props): React.ReactElement {
   const [mode, setMode] = useState<'demo' | 'fast'>('demo');
   const [busy, setBusy] = useState(false);
@@ -94,6 +96,54 @@ export default function AnomalyConsole({
           <span className="material-symbols-outlined">restart_alt</span> Reset to Baseline
         </button>
       </div>
+
+      {deliveryReports && deliveryReports.length > 0 && (
+        <div className="pubsub-dispatch-panel">
+          <div className="pubsub-panel-title">
+            <span className="material-symbols-outlined text-sm accent-icon">cloud_done</span>
+            <span>Cloud Pub/Sub Ingestion Dispatch Guarantees</span>
+          </div>
+          <div className="pubsub-grid">
+            {deliveryReports.map((report, idx) => {
+              const isDelivered = report.status === 'delivered';
+              const isBuffered = report.status === 'buffered';
+              const badgeClass = isDelivered
+                ? 'badge-delivered'
+                : isBuffered
+                ? 'badge-buffered'
+                : 'badge-failed';
+              const statusLabel = isDelivered
+                ? 'DELIVERED (ACK)'
+                : isBuffered
+                ? 'BUFFERED (LOCAL)'
+                : 'FAILED';
+
+              return (
+                <div key={`${report.topic}-${idx}`} className="pubsub-report-card">
+                  <div className="pubsub-report-head">
+                    <span className="pubsub-topic-name mono">{report.topic}</span>
+                    <span className={`pubsub-badge ${badgeClass}`}>{statusLabel}</span>
+                  </div>
+                  <div className="pubsub-report-body">
+                    <div className="pubsub-metric">
+                      <span className="pubsub-metric-label">Message ID:</span>
+                      <span className="pubsub-metric-value mono" title={report.message_id}>
+                        {report.message_id.length > 22
+                          ? `${report.message_id.slice(0, 8)}...${report.message_id.slice(-8)}`
+                          : report.message_id}
+                      </span>
+                    </div>
+                    <div className="pubsub-metric">
+                      <span className="pubsub-metric-label">Latency:</span>
+                      <span className="pubsub-metric-value mono">{report.latency_ms.toFixed(1)} ms</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

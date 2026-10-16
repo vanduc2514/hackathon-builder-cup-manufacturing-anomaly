@@ -5,6 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
+import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union
 
 from simulator.config import settings
@@ -12,6 +15,7 @@ from simulator.models import (
     FilteredFramePacket,
     MachineTelemetry,
     MachineTelemetryPayload,
+    PubSubDeliveryReport,
     QualityEventPayload,
     TraceabilityEventPayload,
 )
@@ -40,6 +44,7 @@ class EdgePubSubDispatcher:
             self.dry_run = not settings.pubsub_enabled
         self._publisher: Any = None
         self._published_events: List[Dict[str, Any]] = []
+        self._last_delivery_reports: List[PubSubDeliveryReport] = []
 
     @property
     def is_emulator(self) -> bool:
@@ -69,35 +74,101 @@ class EdgePubSubDispatcher:
             return None
 
     async def _publish(
-        self, topic_name: str, payload_bytes: bytes, raw_dict: Dict[str, Any]
+        self,
+        topic_name: str,
+        payload_bytes: bytes,
+        raw_dict: Dict[str, Any],
+        payload_type: Optional[str] = None,
     ) -> bool:
+        t0 = time.perf_counter()
+        now_iso = datetime.now(timezone.utc).isoformat()
         publisher = self._get_publisher()
-        event_record = {"topic": topic_name, "payload": raw_dict}
 
         if publisher is None:
-            logger.debug("Pub/Sub offline/dry-run: recorded event for topic %s", topic_name)
+            latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+            msg_id = f"sim-ack-{int(time.time() * 1000)}-{uuid.uuid4().hex[:6]}"
+            report = PubSubDeliveryReport(
+                topic=topic_name,
+                message_id=msg_id,
+                latency_ms=latency_ms,
+                status="buffered",
+                timestamp=now_iso,
+                payload_type=payload_type,
+            )
+            event_record = {
+                "topic": topic_name,
+                "payload": raw_dict,
+                "message_id": msg_id,
+                "latency_ms": latency_ms,
+                "status": "buffered",
+                "timestamp": now_iso,
+            }
+            logger.debug(
+                "Pub/Sub offline/dry-run: recorded event for topic %s (msg_id=%s)",
+                topic_name,
+                msg_id,
+            )
             self._published_events.append(event_record)
+            self._last_delivery_reports.append(report)
             return True
 
         topic_path = f"projects/{self.project_id}/topics/{topic_name}"
 
-        def _sync_publish() -> None:
+        def _sync_publish() -> str:
             future = publisher.publish(topic_path, payload_bytes)
-            future.result(timeout=5.0)
+            return str(future.result(timeout=5.0))
 
         try:
             loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, _sync_publish)
+            msg_id = await loop.run_in_executor(None, _sync_publish)
+            latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+            report = PubSubDeliveryReport(
+                topic=topic_name,
+                message_id=msg_id,
+                latency_ms=latency_ms,
+                status="delivered",
+                timestamp=now_iso,
+                payload_type=payload_type,
+            )
+            event_record = {
+                "topic": topic_name,
+                "payload": raw_dict,
+                "message_id": msg_id,
+                "latency_ms": latency_ms,
+                "status": "delivered",
+                "timestamp": now_iso,
+            }
             self._published_events.append(event_record)
+            self._last_delivery_reports.append(report)
             return True
         except Exception as exc:
+            latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+            err_msg = str(exc)
             logger.warning(
                 "Pub/Sub publish failed for topic %s: %s. Storing in local fallback buffer.",
                 topic_name,
                 exc,
             )
-            event_record["error"] = str(exc)
+            report = PubSubDeliveryReport(
+                topic=topic_name,
+                message_id=f"err-{int(time.time() * 1000)}",
+                latency_ms=latency_ms,
+                status="failed",
+                timestamp=now_iso,
+                payload_type=payload_type,
+                error=err_msg,
+            )
+            event_record = {
+                "topic": topic_name,
+                "payload": raw_dict,
+                "message_id": report.message_id,
+                "latency_ms": latency_ms,
+                "status": "failed",
+                "error": err_msg,
+                "timestamp": now_iso,
+            }
             self._published_events.append(event_record)
+            self._last_delivery_reports.append(report)
             return False
 
     async def publish_quality_event(
@@ -106,7 +177,9 @@ class EdgePubSubDispatcher:
         """Publishes a QualityEventPayload to kaizen-quality-events topic."""
         topic = topic_name or settings.pubsub_quality_events_topic
         payload_data = event.model_dump_json().encode("utf-8")
-        return await self._publish(topic, payload_data, event.model_dump())
+        return await self._publish(
+            topic, payload_data, event.model_dump(), payload_type="quality_event"
+        )
 
     async def publish_telemetry(
         self,
@@ -130,7 +203,9 @@ class EdgePubSubDispatcher:
         else:
             payload = telemetry
         payload_data = payload.model_dump_json().encode("utf-8")
-        return await self._publish(topic, payload_data, payload.model_dump())
+        return await self._publish(
+            topic, payload_data, payload.model_dump(), payload_type="telemetry"
+        )
 
     async def publish_traceability(
         self, traceability: TraceabilityEventPayload, topic_name: Optional[str] = None
@@ -138,7 +213,9 @@ class EdgePubSubDispatcher:
         """Publishes a TraceabilityEventPayload to kaizen-traceability topic."""
         topic = topic_name or settings.pubsub_traceability_topic
         payload_data = traceability.model_dump_json().encode("utf-8")
-        return await self._publish(topic, payload_data, traceability.model_dump())
+        return await self._publish(
+            topic, payload_data, traceability.model_dump(), payload_type="traceability"
+        )
 
     async def dispatch_anomaly(
         self,
@@ -146,9 +223,9 @@ class EdgePubSubDispatcher:
         scenario: str = "cnc_tool_wear",
         mode: str = "demo",
         telemetry: Optional[Union[MachineTelemetry, MachineTelemetryPayload]] = None,
-    ) -> Dict[str, bool]:
+    ) -> Dict[str, Any]:
         """Dispatches structured payloads across quality-events, traceability, and telemetry topics."""
-        results: Dict[str, bool] = {}
+        results: Dict[str, Any] = {}
 
         # 1. Quality Event
         quality_evt = QualityEventPayload(
@@ -159,6 +236,11 @@ class EdgePubSubDispatcher:
             mode=mode,
             severity="high" if packet.confidence >= 0.90 else "medium",
             filtered_frame=packet,
+            metadata={
+                "filter_decision": packet.filter_decision,
+                "confidence": packet.confidence,
+                "diverter_actuated": packet.diverter_actuated,
+            },
         )
         results["quality_event"] = await self.publish_quality_event(quality_evt)
 
@@ -177,7 +259,16 @@ class EdgePubSubDispatcher:
         if telemetry is not None:
             results["telemetry"] = await self.publish_telemetry(telemetry)
 
+        results["reports"] = self.get_last_delivery_reports()[-len(results) :]
         return results
+
+    def get_last_delivery_reports(self) -> List[PubSubDeliveryReport]:
+        """Returns delivery status reports recorded during recent dispatches."""
+        return list(self._last_delivery_reports)
+
+    def clear_delivery_reports(self) -> None:
+        """Clears in-memory delivery reports buffer."""
+        self._last_delivery_reports.clear()
 
     def get_published_events(self) -> List[Dict[str, Any]]:
         """Returns recorded events from in-memory fallback or tracking buffer."""
@@ -186,6 +277,7 @@ class EdgePubSubDispatcher:
     def clear_published_events(self) -> None:
         """Clears in-memory buffer."""
         self._published_events.clear()
+        self._last_delivery_reports.clear()
 
     def close(self) -> None:
         """Closes publisher client connection."""

@@ -27,9 +27,11 @@ from simulator.models import (
     EdgeFilterStatistics,
     FactoryStatusResponse,
     FactoryTickPacket,
+    FilteredFramePacket,
     InjectAnomalyRequest,
     MachineTelemetry,
     MachineTelemetryPayload,
+    PubSubDeliveryReport,
     QualityEventPayload,
     TraceabilityEventPayload,
 )
@@ -116,6 +118,7 @@ class FactoryServerService:
         self.edge_tracker = EdgeFilterTracker()
         self._task: Optional[asyncio.Task[None]] = None
         self.pubsub_dispatcher = pubsub_dispatcher or EdgePubSubDispatcher()
+        self.last_delivery_reports: list[PubSubDeliveryReport] = []
         self._clock = clock or time.monotonic
         self._last_telemetry_publish_time: float = self._clock()
 
@@ -179,6 +182,7 @@ class FactoryServerService:
             recent_parts=list(self._recent_parts),
             edge_stats=self.edge_tracker.get_statistics(),
             active_anomaly=self.get_active_anomaly_status(),
+            pubsub_delivery=self.last_delivery_reports if self.last_delivery_reports else None,
         )
 
     def add_subscriber(self, q: asyncio.Queue[FactoryTickPacket]) -> None:
@@ -196,12 +200,31 @@ class FactoryServerService:
         severity: float = 1.0,
         mode: str = "demo",
         dispatch_quality_event: bool = True,
-    ) -> dict[str, bool]:
+    ) -> dict[str, Any]:
         """Dispatches quality event, anomalous telemetry, and traceability record to Pub/Sub."""
         tool = "MOLD-03" if scenario == "im_damp_material" else "T07"
         defect_type = "short_fill" if scenario == "im_damp_material" else "scratch_vertical"
         lot_id = "RESIN-HDPE-L09" if scenario == "im_damp_material" else "AL-5083-B4"
         now_iso = datetime.now(timezone.utc).isoformat()
+        edge_stats = self.edge_tracker.get_statistics()
+
+        # Edge Gemma 3 filtered frame packet capturing pass/fail filtering verdict
+        filtered_frame = FilteredFramePacket(
+            frame_hash=f"frame-{int(time.time() * 1000):x}-{machine_id}",
+            camera_id="CAM-OPT-01" if machine_id != "IM-05" else "CAM-OPT-02",
+            product_id=f"PRD-{int(time.time() * 1000) % 100000:05d}",
+            machine_id=machine_id,
+            tool_id=tool,
+            lot_id=lot_id,
+            conveyor_timestamp=now_iso,
+            classification="DEFECT",
+            is_defect=True,
+            defect_type=defect_type,
+            confidence=0.96 if severity >= 1.0 else 0.88,
+            uncertainty=0.04 if severity >= 1.0 else 0.12,
+            filter_decision="FORWARD",
+            diverter_actuated=True,
+        )
 
         # 1. Quality Event
         if dispatch_quality_event:
@@ -213,6 +236,14 @@ class FactoryServerService:
                 mode=mode,
                 severity="high" if severity >= 1.0 else "medium",
                 defect_rate=0.08 if scenario == "cnc_tool_wear" else 0.05,
+                filtered_frame=filtered_frame,
+                metadata={
+                    "edge_filter_stats": edge_stats.model_dump(),
+                    "cloud_bandwidth_reduction_pct": edge_stats.cloud_bandwidth_reduction_pct,
+                    "drop_ratio": edge_stats.drop_ratio,
+                    "pass_frames_dropped": edge_stats.pass_frames_dropped,
+                    "total_frames_evaluated": edge_stats.total_frames_evaluated,
+                },
             )
             q_ok = await self.pubsub_dispatcher.publish_quality_event(quality_evt)
         else:
@@ -244,6 +275,26 @@ class FactoryServerService:
         )
         tr_ok = await self.pubsub_dispatcher.publish_traceability(traceability_payload)
 
+        # Extract structured delivery reports
+        reports: list[dict[str, Any]] = []
+        if hasattr(self.pubsub_dispatcher, "get_last_delivery_reports"):
+            try:
+                raw_reports = self.pubsub_dispatcher.get_last_delivery_reports()
+                if isinstance(raw_reports, list):
+                    reports = [
+                        r.model_dump()
+                        if hasattr(r, "model_dump")
+                        else (r if isinstance(r, dict) else str(r))
+                        for r in raw_reports[-3:]
+                    ]
+                    self.last_delivery_reports = [
+                        r if isinstance(r, PubSubDeliveryReport) else PubSubDeliveryReport(**r)
+                        for r in raw_reports[-3:]
+                        if isinstance(r, (PubSubDeliveryReport, dict))
+                    ]
+            except Exception as exc:
+                logger.debug("Could not extract delivery reports: %s", exc)
+
         logger.info(
             "Dispatched injection events to Pub/Sub for %s (%s): quality=%s, telemetry=%s, traceability=%s",
             machine_id,
@@ -256,6 +307,7 @@ class FactoryServerService:
             "quality_event": q_ok,
             "telemetry": t_ok,
             "traceability": tr_ok,
+            "reports": reports,
         }
 
     async def inject(
@@ -285,23 +337,33 @@ class FactoryServerService:
             self.speed = 1.0
 
         pubsub_dispatched: dict[str, bool] = {}
+        delivery_reports: list[dict[str, Any]] = []
         try:
-            pubsub_dispatched = await self.dispatch_injection_events(
+            dispatch_res = await self.dispatch_injection_events(
                 scenario=scenario,
                 machine_id=target,
                 severity=severity,
                 mode=mode,
                 dispatch_quality_event=dispatch_quality_event,
             )
+            pubsub_dispatched = {
+                "quality_event": dispatch_res.get("quality_event", False),
+                "telemetry": dispatch_res.get("telemetry", False),
+                "traceability": dispatch_res.get("traceability", False),
+            }
+            delivery_reports = dispatch_res.get("reports", [])
         except Exception as exc:
             logger.warning("Failed to dispatch injection events to Pub/Sub: %s", exc)
 
+        edge_stats_dump = self.edge_tracker.get_statistics().model_dump()
         return {
             "status": "ok",
             "message": f"Injected scenario {scenario} into {target}",
             "details": res,
             "speed_multiplier": self.speed,
             "pubsub_dispatch": pubsub_dispatched,
+            "delivery_reports": delivery_reports,
+            "edge_stats": edge_stats_dump,
         }
 
     def reset(self) -> None:
@@ -311,8 +373,11 @@ class FactoryServerService:
         self.anomaly_start_time = None
         self.speed = 1.0
         self.edge_tracker.reset()
+        self.last_delivery_reports = []
         if hasattr(self, "pubsub_dispatcher") and self.pubsub_dispatcher is not None:
             self.pubsub_dispatcher.clear_published_events()
+            if hasattr(self.pubsub_dispatcher, "clear_delivery_reports"):
+                self.pubsub_dispatcher.clear_delivery_reports()
 
     async def step(self) -> FactoryTickPacket:
         """Advances simulation by one tick and broadcasts to all active SSE queues."""
@@ -333,6 +398,7 @@ class FactoryServerService:
             recent_parts=list(self._recent_parts),
             edge_stats=self.edge_tracker.get_statistics(),
             active_anomaly=self.get_active_anomaly_status(),
+            pubsub_delivery=self.last_delivery_reports if self.last_delivery_reports else None,
         )
 
         dead_queues = []

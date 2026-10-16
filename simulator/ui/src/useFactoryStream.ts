@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { FactoryTickPacket, MachineTelemetry } from './types';
+import type { FactoryTickPacket, InjectionResponse, MachineTelemetry, PubSubDeliveryReport } from './types';
 
 const BASE_MACHINES: MachineTelemetry[] = [
   { machine_id: 'CNC-01', tool_id: 'T01', spindle_vibration: 1.18, motor_current: 13.8, spindle_temp: 41.5, rpm: 8000, operating_status: 'NORMAL' },
@@ -18,6 +18,7 @@ export function useFactoryStream() {
     edge_stats: { total_frames_evaluated: 0, pass_frames_dropped: 0, defect_frames_forwarded: 0, estimated_bandwidth_saved_mb: 0, cloud_bandwidth_reduction_pct: 95.0 },
     active_anomaly: null,
   });
+  const [deliveryReports, setDeliveryReports] = useState<PubSubDeliveryReport[]>([]);
   const [connected, setConnected] = useState(false);
   const [apiKey, setApiKeyState] = useState<string>(() => {
     try {
@@ -49,7 +50,15 @@ export function useFactoryStream() {
       es = new EventSource('/api/factory/stream');
       es.onopen = () => setConnected(true);
       const handlePacket = (e: MessageEvent) => {
-        try { setPacket(JSON.parse(e.data)); } catch { /* ignore non-json */ }
+        try {
+          const data: FactoryTickPacket = JSON.parse(e.data);
+          setPacket(data);
+          if (data.pubsub_delivery && data.pubsub_delivery.length > 0) {
+            setDeliveryReports(data.pubsub_delivery);
+          }
+        } catch {
+          /* ignore non-json */
+        }
       };
       es.onmessage = handlePacket;
       es.addEventListener('factory_tick', handlePacket);
@@ -83,7 +92,18 @@ export function useFactoryStream() {
         setAuthError('Service Unavailable: Factory API Key unconfigured in production (503)');
         return false;
       }
-      return res.ok;
+      if (res.ok) {
+        try {
+          const resJson: InjectionResponse = await res.json();
+          if (resJson.delivery_reports && resJson.delivery_reports.length > 0) {
+            setDeliveryReports(resJson.delivery_reports);
+          }
+        } catch {
+          // ignore non-json
+        }
+        return true;
+      }
+      return false;
     } catch {
       return false;
     }
@@ -105,11 +125,15 @@ export function useFactoryStream() {
         setAuthError('Service Unavailable: Factory API Key unconfigured in production (503)');
         return false;
       }
-      return res.ok;
+      if (res.ok) {
+        setDeliveryReports([]);
+        return true;
+      }
+      return false;
     } catch {
       return false;
     }
   }, [apiKey]);
 
-  return { packet, connected, injectAnomaly, resetFactory, apiKey, setApiKey, authError };
+  return { packet, connected, injectAnomaly, resetFactory, apiKey, setApiKey, authError, deliveryReports };
 }

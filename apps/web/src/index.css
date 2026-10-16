@@ -3269,8 +3269,46 @@ button.incident-chip:hover {
 .node-row-5 {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.75rem;
   align-items: stretch;
+}
+
+.node-row-5 .node-card {
+  padding: 0.75rem 0.8rem;
+  min-height: 110px;
+}
+
+.node-row-5 .node-header {
+  gap: 0.35rem;
+}
+
+.node-row-5 .node-icon-title {
+  gap: 0.45rem;
+}
+
+.node-row-5 .node-icon-tile {
+  width: 30px;
+  height: 30px;
+}
+
+.node-row-5 .node-icon-tile .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.node-row-5 .node-name {
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.node-row-5 .node-sublabel {
+  font-size: 0.66rem;
+  line-height: 1.15;
+}
+
+.node-row-5 .status-badge {
+  font-size: 0.64rem;
+  padding: 1.5px 5.5px;
+  gap: 3px;
 }
 
 .node-row-4 {
@@ -3346,14 +3384,24 @@ button.incident-chip:hover {
   align-items: flex-start;
   gap: 0.5rem;
   width: 100%;
+  min-width: 0;
 }
 
 .node-icon-title {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.55rem;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.node-title-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .node-icon-tile {
@@ -3372,17 +3420,40 @@ button.incident-chip:hover {
 }
 
 .node-name {
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 700;
   color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.25;
 }
 
 .node-sublabel {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.status-badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+  max-width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  line-height: 1.2;
+  position: relative;
+  z-index: 1;
+}
+
+.status-badge-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

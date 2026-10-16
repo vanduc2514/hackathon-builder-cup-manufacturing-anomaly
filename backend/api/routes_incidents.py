@@ -23,7 +23,10 @@ from backend.core.models import (
     HandoverNoteRequest,
     IncidentState,
     IncidentSummary,
+    PresetEvidenceRequest,
+    VisualEvidencePayload,
 )
+from backend.tools.preset_catalog import get_preset
 
 router = APIRouter(prefix="/api/incidents", tags=["incidents"])
 
@@ -73,8 +76,13 @@ async def upload_incident_evidence(
     notes: Optional[str] = Form(None),
 ) -> Dict[str, Any]:
     """Uploads technician visual evidence for low-confidence RCA verification."""
-    image_bytes = await file.read()
     cur_st = blackboard.get_state()
+    if cur_st.status != "awaiting_evidence":
+        raise HTTPException(
+            status_code=409,
+            detail="The AI is not waiting for evidence right now",
+        )
+    image_bytes = await file.read()
     ev_payload = await analyze_visual_evidence_frame_async(
         image_bytes=image_bytes,
         machine_id=cur_st.suspect_machine or "CNC-02",
@@ -99,6 +107,68 @@ async def upload_incident_evidence(
     }
 
 
+@router.post("/evidence/preset")
+async def attach_preset_evidence(
+    request: PresetEvidenceRequest,
+) -> Dict[str, Any]:
+    """Attaches a curated benchmark visual evidence preset to the active incident."""
+    preset = get_preset(request.preset_id)
+    if preset is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Preset evidence not found: {request.preset_id}",
+        )
+
+    cur_st = blackboard.get_state()
+    if cur_st.status != "awaiting_evidence":
+        raise HTTPException(
+            status_code=409,
+            detail="The AI is not waiting for evidence right now",
+        )
+
+    ev_payload = VisualEvidencePayload(
+        preset_id=preset.id,
+        image_url=preset.image_url,
+        analysis=preset.analysis,
+        defect_detected=preset.expected_defect_detected,
+        wear_measurement_mm=preset.expected_wear_mm,
+        citation=f"Benchmark preset {preset.id} (curated ground truth)",
+    )
+
+    if preset.expected_defect_detected:
+        finding_text = (
+            f"Frontline technician selected benchmark preset {preset.id} "
+            f"confirming defect on {cur_st.suspect_machine or 'CNC-02'}: {preset.title}."
+        )
+    else:
+        finding_text = (
+            f"Frontline technician selected benchmark preset {preset.id} "
+            f"confirming nominal condition on {cur_st.suspect_machine or 'CNC-02'}: {preset.title}."
+        )
+
+    evidence_text = preset.analysis
+    if request.notes:
+        evidence_text += f" Ghi chú: {request.notes}"
+
+    finding = AgentFinding(
+        agent_id=AGENT_ID,
+        agent_name=AGENT_NAME,
+        phase=DIAGNOSTIC_PHASE,
+        finding=finding_text,
+        evidence=evidence_text,
+        confidence=0.92,
+        citation=ev_payload.citation,
+    )
+
+    new_state = orchestrator.attach_evidence(finding, ev_payload)
+    return {
+        "status": "success",
+        "evidence": ev_payload.model_dump(),
+        "finding": finding.model_dump(),
+        "incident_status": new_state.status,
+    }
+
+
 @router.post("/handover", response_model=HandoverNote)
 async def create_handover_note(
     request: HandoverNoteRequest,
@@ -107,4 +177,3 @@ async def create_handover_note(
     """Records a technician shift handover note on the active incident via Orchestrator."""
     author = current_user.display_name or current_user.username or "Frontline Technician"
     return orchestrator.add_handover_note(author=author, note=request.note)
-

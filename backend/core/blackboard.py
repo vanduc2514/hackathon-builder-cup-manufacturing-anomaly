@@ -55,9 +55,7 @@ class Blackboard:
         if len(self._history) > 50:
             self._history = self._history[:50]
 
-    def list_incidents(
-        self, limit: int = 20, status: str | None = None
-    ) -> list[IncidentState]:
+    def list_incidents(self, limit: int = 20, status: str | None = None) -> list[IncidentState]:
         """Lists incidents from Firestore if enabled, or falls back to in-memory history buffer."""
         if self.is_firestore_enabled and self._storage:
             results = self._storage.list_incidents(limit=limit, status=status)
@@ -68,10 +66,7 @@ class Blackboard:
         if self._state.incident_id and self._state.status != "normal":
             self._record_in_history(self._state)
 
-        filtered = [
-            inc for inc in self._history
-            if not status or inc.status == status
-        ]
+        filtered = [inc for inc in self._history if not status or inc.status == status]
         return filtered[:limit]
 
     def update_status(self, status: str, **kwargs) -> IncidentState:
@@ -79,7 +74,11 @@ class Blackboard:
         update_dict["status"] = status
         if status != "normal" and not update_dict.get("opened_at") and not kwargs.get("opened_at"):
             update_dict["opened_at"] = datetime.now(timezone.utc).isoformat()
-        if status in ("closed", "dismissed") and not update_dict.get("closed_at") and not kwargs.get("closed_at"):
+        if (
+            status in ("closed", "dismissed")
+            and not update_dict.get("closed_at")
+            and not kwargs.get("closed_at")
+        ):
             update_dict["closed_at"] = datetime.now(timezone.utc).isoformat()
         update_dict.update(kwargs)
         self._state = IncidentState(**update_dict)
@@ -115,9 +114,8 @@ class Blackboard:
         finding: AgentFinding,
         visual_evidence: VisualEvidencePayload | None = None,
     ) -> IncidentState:
-        """Attaches technician diagnostic field evidence and optional visual payload, transitioning to analyzing."""
+        """Attaches technician diagnostic field evidence and optional visual payload without clobbering status."""
         update_dict = self._state.model_dump()
-        update_dict["status"] = "analyzing"
         if visual_evidence:
             update_dict["visual_evidence"] = visual_evidence.model_dump()
         update_dict["diagnostic_request"] = None

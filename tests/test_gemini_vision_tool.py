@@ -185,6 +185,7 @@ async def test_analyze_visual_evidence_frame_async():
 
 
 def test_upload_incident_evidence_endpoint():
+    blackboard.update_status("awaiting_evidence")
     client = TestClient(app)
     fake_img = io.BytesIO(b"\xff\xd8\xff\xe0" + b"test_image_bytes")
     resp = client.post(

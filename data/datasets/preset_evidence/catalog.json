@@ -1,0 +1,58 @@
+[
+  {
+    "id": "preset-flank-wear-vb38",
+    "title": "CNC-02 Insert T07 Severe Flank Wear",
+    "category": "flank_wear",
+    "machine_id": "CNC-02",
+    "tool_id": "T07",
+    "description": "Flank wear VB = 0.38 mm (exceeds 0.30 mm UCL). Micro-grooves on carbide relief face.",
+    "analysis": "Visual metrology confirms severe abrasive flank wear VB = 0.38 mm exceeding 0.30 mm tolerance threshold.",
+    "thumbnail_url": "/presets/evidence/preset_flank_wear_vb38.jpg",
+    "image_url": "/presets/evidence/preset_flank_wear_vb38.jpg",
+    "expected_defect_detected": true,
+    "expected_wear_mm": 0.38,
+    "suggested_sop_code": 209
+  },
+  {
+    "id": "preset-edge-chipping-t07",
+    "title": "Primary Cutting Edge Chipping",
+    "category": "chipping",
+    "machine_id": "CNC-02",
+    "tool_id": "T07",
+    "description": "Localized brittle edge fracture (0.65 mm notch width) along cutting margin due to thermal shock.",
+    "analysis": "Visual metrology detects localized primary cutting edge chipping with 0.65 mm notch width along margin.",
+    "thumbnail_url": "/presets/evidence/preset_edge_chipping_t07.jpg",
+    "image_url": "/presets/evidence/preset_edge_chipping_t07.jpg",
+    "expected_defect_detected": true,
+    "expected_wear_mm": 0.65,
+    "suggested_sop_code": 209
+  },
+  {
+    "id": "preset-chatter-marks-wp",
+    "title": "Workpiece Surface Chatter Scoring",
+    "category": "chatter_marks",
+    "machine_id": "CNC-02",
+    "tool_id": null,
+    "description": "Periodic surface waviness pitch 1.2 mm, vertical chatter stripes from spindle vibration peak at 4.8 mm/s.",
+    "analysis": "Surface inspection reveals periodic chatter marks and waviness from spindle harmonics.",
+    "thumbnail_url": "/presets/evidence/preset_chatter_marks_wp.jpg",
+    "image_url": "/presets/evidence/preset_chatter_marks_wp.jpg",
+    "expected_defect_detected": true,
+    "expected_wear_mm": null,
+    "suggested_sop_code": 209
+  },
+  {
+    "id": "preset-normal-tool-t07",
+    "title": "Fresh Insert T07 Within Nominal Tolerance",
+    "category": "normal",
+    "machine_id": "CNC-02",
+    "tool_id": "T07",
+    "description": "Pristine TiAlN coated cutting edge. VB = 0.04 mm <= 0.30 mm. Sharp radius, no micro-fracture.",
+    "analysis": "Visual metrology confirms cutting insert within nominal specification. Flank wear VB = 0.04 mm, sharp cutting edge, no defect detected.",
+    "thumbnail_url": "/presets/evidence/preset_normal_tool_t07.jpg",
+    "image_url": "/presets/evidence/preset_normal_tool_t07.jpg",
+    "expected_defect_detected": false,
+    "expected_wear_mm": 0.04,
+    "suggested_sop_code": null
+  }
+]

@@ -519,6 +519,12 @@ class VisualEvidencePayload(BaseModel):
     image_base64: Optional[str] = Field(
         default=None, description="Optional base64 encoded preview or thumbnail"
     )
+    image_url: Optional[str] = Field(
+        default=None, description="Web-relative URL or CDN URL for image"
+    )
+    preset_id: Optional[str] = Field(
+        default=None, description="Benchmark preset ID if populated from catalog"
+    )
     analysis: str = Field(
         default="", description="Visual Metrology / Copilot assessment of the photo"
     )
@@ -556,6 +562,42 @@ class VisualInspectionResult(BaseModel):
         le=1.0,
         description="Confidence score between 0.0 and 1.0 of the visual analysis.",
     )
+
+
+class VisualEvidencePreset(BaseModel):
+    """Curated benchmark preset evidence item."""
+
+    id: str = Field(description="Unique alphanumeric preset identifier")
+    title: str = Field(description="Human-readable title of the sample")
+    category: Literal["flank_wear", "chipping", "chatter_marks", "normal"] = Field(
+        description="Defect archetype category"
+    )
+    machine_id: str = Field(default="CNC-02", description="Applicable equipment bay")
+    tool_id: Optional[str] = Field(default=None, description="Suspect tool slot")
+    description: str = Field(description="Detailed visual & metrology description")
+    analysis: str = Field(description="Visual Metrology ground truth assessment")
+    thumbnail_url: str = Field(description="Web-relative URL for preview thumbnail")
+    image_url: str = Field(description="Web-relative URL for high-res photo")
+    expected_defect_detected: bool = Field(default=True, description="Ground truth defect presence")
+    expected_wear_mm: Optional[float] = Field(
+        default=None, description="Flank wear dimension in mm"
+    )
+    suggested_sop_code: Optional[int] = Field(default=None, description="Linked SOP reference")
+
+
+class VisualEvidencePresetListResponse(BaseModel):
+    """Response envelope for catalog preset listing."""
+
+    presets: List[VisualEvidencePreset] = Field(
+        description="List of available preset media samples"
+    )
+
+
+class PresetEvidenceRequest(BaseModel):
+    """Request payload to attach a benchmark preset evidence item to active incident."""
+
+    preset_id: str = Field(description="ID of the benchmark preset to attach")
+    notes: Optional[str] = Field(default=None, description="Optional frontline technician notes")
 
 
 class HandoverNote(BaseModel):
@@ -715,9 +757,7 @@ class EsgLedgerEntryResponse(BaseModel):
     closed_at: Optional[str] = Field(
         default=None, description="ISO timestamp when incident was closed"
     )
-    approved: bool = Field(
-        default=True, description="Whether incident has shift-leader sign-off"
-    )
+    approved: bool = Field(default=True, description="Whether incident has shift-leader sign-off")
     impact: ImpactMetrics = Field(description="Impact metrics computed upon incident resolution")
     incident: IncidentState = Field(
         description="Full incident snapshot for client-side 8D / verified solution derivation"

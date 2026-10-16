@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 from types import ModuleType
+from typing import Any
 from uuid import uuid4
 
 from google.adk import Context, Event
@@ -241,6 +242,25 @@ async def rca_gate(ctx: Context, node_input: RootCauseFindingDraft) -> Event:
     )
 
 
+async def wait_for_evidence_node(ctx: Context, node_input: Any) -> dict:
+    """Waits for frontline technician visual evidence up to evidence_wait_seconds before proceeding to diagnostic probe."""
+    from backend.agents.orchestrator import orchestrator
+
+    mode = None
+    if hasattr(ctx, "state") and isinstance(ctx.state, dict):
+        trigger_data = ctx.state.get("trigger", {})
+        if isinstance(trigger_data, dict):
+            mode = trigger_data.get("mode")
+
+    if mode == "fast" or settings.evidence_wait_seconds <= 0:
+        timeout = 0.0
+    else:
+        timeout = settings.evidence_wait_seconds
+
+    await orchestrator.wait_for_evidence(timeout=timeout)
+    return blackboard.get_state().model_dump()
+
+
 async def record_field_evidence(node_input: FindingDraft) -> IncidentState:
     _record(agent_technician_copilot, node_input, phase=agent_technician_copilot.DIAGNOSTIC_PHASE)
     blackboard.update_status("analyzing", diagnostic_request=None)
@@ -342,4 +362,3 @@ def record_field_evidence_payload(
 ) -> IncidentState:
     """Records technician diagnostic field evidence and optional visual payload on the Blackboard."""
     return blackboard.attach_field_evidence(finding, visual_evidence)
-

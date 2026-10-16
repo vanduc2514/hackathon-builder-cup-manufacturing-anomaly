@@ -16,7 +16,7 @@ The previous System Topology interface presented system components as horizontal
 Following user and product design feedback, this redesign transforms the page into a **Top-to-Bottom (Vertical Flow) Execution Pipeline**:
 1. **Vertical Continuous Execution Flow:** Replaces horizontal swimlanes with a sequential top-to-bottom execution pipeline. Events start at the top at physical edge inspection (**Phase A: Detection**), stream downward into causal reasoning (**Phase B: Tracing & RCA**), branch into guided field intervention (**Phase C: Resolution**), and terminate at post-repair conveyor certification (**Phase D: Verification & Governance**).
 2. **Dual Decision Gates (Decision Diamonds):** Explicitly surfaces the AI uncertainty threshold (`Confidence >= 0.70?`) with a Diagnostic Loop return path, and the shop-floor physical proof gate (**Invariant #3**: `Streak >= 50 clean parts`) with an automatic defect reset loop.
-3. **Ergonomic Canvas Controls:** Introduces smooth SVG Bezier flowlines with animated pulse paths (`flowDash`), arrowheads indicating top-to-bottom motion, intuitive zoom/pan navigation (Zoom In, Zoom Out, Reset 100%, Fit-to-View), a live vertical Minimap preview, and full glove-friendly touch target compliance ($\ge 44 \times 44$ px).
+3. **Ergonomic Canvas Controls & Orthogonal Flowchart Routing:** Replaces soft Bézier curves with crisp, high-contrast orthogonal step connectors (`right-angled step routing`) and enlarged $8 \times 8$ px arrowhead markers. Default connectors use solid dark slate (`#475569`, 2.4px) for immediate readability on `#eef1fb`, switching to animated pulsed dashed lines during active execution. Includes intuitive zoom/pan navigation (Zoom In, Zoom Out, Reset 100%, Fit-to-View), a live vertical Minimap preview, and full glove-friendly touch target compliance ($\ge 44 \times 44$ px).
 4. **Calm Tech & Progressive Disclosure (3 Tiers):** Maintains a calm, low-cognitive-load lavender canvas (`#eef1fb`) with frosted glass nodes, reserving high-contrast semantic alerts only for active anomalies and decision branches.
 
 ---
@@ -111,7 +111,7 @@ flowchart TD
 - **Tier 1 (Glance - 1 second):**
   - Header health pill: `Line Health Nominal · All Nodes Standby` OR `Active Incident #INC-2026-B42 (Phase B: Tracing)`.
   - Phase header status chips (`Completed`, `Active Phase`, `Standby`).
-  - Active glowing Bezier edge paths showing downward direction of real-time data flow.
+  - Active glowing orthogonal step edge paths showing downward direction of real-time data flow.
 - **Tier 2 (Focus - 5 seconds):**
   - Node summary labels (`Edge Gateway: Gemma 3 2B`, `Quality Inspector: SPC UCL 3.0%`).
   - Live metric chips within nodes (`Latency: 42ms`, `Confidence: 89%`, `Streak: 42/50`).
@@ -159,6 +159,18 @@ flowchart TD
 | `--font-main` | `'Inter', sans-serif` | Body copy, technical specifications |
 | `--font-display`| `'Geist', sans-serif` | Headers, node names, phase titles |
 | `--font-mono` | `'JetBrains Mono', monospace` | Latencies, telemetry metrics, JSON blackboard payloads |
+
+### 5.1. Orthogonal Step Connectors & High-Contrast Arrowhead Tokens
+
+| Edge State / Element | Routing & Geometry | Visual Stroke / Token | Arrowhead Marker Token |
+|---|---|---|---|
+| **Default Resting Path** | Orthogonal right-angled step (`M x1 y1 V midY H x2 V y2`) | Solid `2.4px` · `#475569` (Slate 600) | `marker-arrow` (`8x8px`, `#475569`, `refX="7"`, `refY="5"`) |
+| **Active Processing Path**| Orthogonal step with animated dash offset | Dashed `3.0px` (`8 5`) · `#4f46e5` (`flowDash 1.2s`) | `marker-arrow-active` (`8x8px`, `#4f46e5`) |
+| **Completed / Verified Path**| Orthogonal step solid line | Solid `2.6px` · `#16a34a` (Green 600) | `marker-arrow-completed` (`8x8px`, `#16a34a`) |
+| **Decision Branch YES** | Orthogonal step bus routing through central alley | Dashed `2.8px` (`8 5`) · `#2563eb` (Blue 600) | `marker-arrow-yes` (`8x8px`, `#2563eb`) |
+| **Decision Branch NO** | Orthogonal step branching to Diagnostic Agent | Dashed `2.8px` (`8 5`) · `#d97706` (Amber 600) | `marker-arrow-warning` (`8x8px`, `#d97706`) |
+| **Reject / Reset Loop** | Orthogonal outer margin step (`M x1 y1 H xTrack V y2 H x2`) | Dashed `3.0px` (`8 5`) · `#dc2626` (Red 600) | `marker-arrow-danger` (`8x8px`, `#dc2626`) |
+| **Feedback Loopback** | Right-margin orthogonal routing into RCA right port | Dashed `2.4px` (`8 5`) · `#4f46e5` | `marker-arrow-active` (`8x8px`, orient left) |
 
 ---
 
@@ -416,7 +428,9 @@ flowchart TD
 |     ▼                             |
 | < Decision 1: Conf >= 0.70? >     |
 | ├── YES ──> Phase C               |
-| └── NO  ──> Diagnostic Loop       |
+| └── NO  ──> Diagnostic Agent      |
+|             └──> Tech Photo       |
+|                  └──> Phase C     |
 +-----------------------------------+
 | PHASE C: RESOLUTION & FIX         |
 | [7] Tech Copilot (Gemini Live)    |

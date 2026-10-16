@@ -552,38 +552,40 @@ body {
 
 .edge-path {
   fill: none;
-  stroke: var(--hair-strong);
-  stroke-width: 1.8;
-  stroke-dasharray: 4 4;
+  stroke: #475569;
+  stroke-width: 2.4px;
+  stroke-dasharray: none;
+  stroke-linecap: square;
+  stroke-linejoin: round;
   transition: stroke .3s, stroke-width .3s;
 }
 .edge-path.completed {
-  stroke: var(--success);
-  stroke-width: 2.2;
+  stroke: #16a34a;
+  stroke-width: 2.6px;
   stroke-dasharray: none;
 }
 .edge-path.active {
-  stroke: url(#gradient-active);
-  stroke-width: 3;
-  stroke-dasharray: 8 6;
+  stroke: #4f46e5;
+  stroke-width: 3px;
+  stroke-dasharray: 8 5;
   animation: flowDash 1.2s linear infinite;
 }
 .edge-path.decision-yes {
-  stroke: var(--accent);
-  stroke-width: 2.5;
-  stroke-dasharray: 6 4;
+  stroke: #2563eb;
+  stroke-width: 2.8px;
+  stroke-dasharray: 8 5;
   animation: flowDash 1.5s linear infinite;
 }
 .edge-path.decision-no {
-  stroke: var(--warning);
-  stroke-width: 2.5;
-  stroke-dasharray: 6 4;
+  stroke: #d97706;
+  stroke-width: 2.8px;
+  stroke-dasharray: 8 5;
   animation: flowDash 1.5s linear infinite;
 }
 .edge-path.reject-reset {
-  stroke: var(--danger);
-  stroke-width: 2.5;
-  stroke-dasharray: 6 4;
+  stroke: #dc2626;
+  stroke-width: 3px;
+  stroke-dasharray: 8 5;
   animation: flowDash 1s linear infinite;
 }
 
@@ -1307,18 +1309,24 @@ body {
                 <stop offset="0%" stop-color="#e5484d" />
                 <stop offset="100%" stop-color="#f5a524" />
               </linearGradient>
-              <!-- Arrowhead markers -->
-              <marker id="marker-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 1 L 8 5 L 0 9 z" fill="rgba(15, 23, 42, .3)" />
+              <!-- High-contrast crisp arrowhead markers (8-9px, refX 7, refY 5) -->
+              <marker id="marker-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#475569" />
               </marker>
-              <marker id="marker-arrow-active" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 1 L 8 5 L 0 9 z" fill="#5b5bf0" />
+              <marker id="marker-arrow-active" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#4f46e5" />
               </marker>
-              <marker id="marker-arrow-completed" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 1 L 8 5 L 0 9 z" fill="#12a150" />
+              <marker id="marker-arrow-completed" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#16a34a" />
               </marker>
-              <marker id="marker-arrow-danger" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 1 L 8 5 L 0 9 z" fill="#e5484d" />
+              <marker id="marker-arrow-danger" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#dc2626" />
+              </marker>
+              <marker id="marker-arrow-warning" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#d97706" />
+              </marker>
+              <marker id="marker-arrow-yes" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#2563eb" />
               </marker>
             </defs>
 
@@ -2284,10 +2292,11 @@ viewport.addEventListener('scroll', () => {
   updateMinimapViewport();
 });
 
-/* Render SVG Bezier Edges */
+/* Render SVG Orthogonal Step Edges (Right-Angled Flowchart Connectors) */
 function renderSvgEdges() {
   const group = document.getElementById('svg-paths-group');
   const container = document.getElementById('canvas-transform-layer');
+  if (!group || !container) return;
   const containerRect = container.getBoundingClientRect();
 
   let html = '';
@@ -2304,40 +2313,58 @@ function renderSvgEdges() {
     let markerId = 'marker-arrow';
 
     if (edge.type === 'horizontal') {
-      // Connect right side of fromEl to left side of toEl
+      // Connect right side of fromEl to left side of toEl with orthogonal routing
       const x1 = (fromRect.right - containerRect.left) / zoomScale;
       const y1 = (fromRect.top + fromRect.height / 2 - containerRect.top) / zoomScale;
       const x2 = (toRect.left - containerRect.left) / zoomScale;
       const y2 = (toRect.top + toRect.height / 2 - containerRect.top) / zoomScale;
-      const dx = Math.max(30, (x2 - x1) / 2);
-      pathD = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+      if (Math.abs(y1 - y2) < 2) {
+        pathD = `M ${x1} ${y1} H ${x2}`;
+      } else {
+        const midX = (x1 + x2) / 2;
+        pathD = `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`;
+      }
     }
     else if (edge.type === 'loopback') {
-      // Curved loopback from left of fromEl back to left of toEl
-      const x1 = (fromRect.left - containerRect.left) / zoomScale;
+      // Right-side loopback: from right of fromEl, steps right into margin, vertically up, and left into right of toEl
+      const x1 = (fromRect.right - containerRect.left) / zoomScale;
       const y1 = (fromRect.top + fromRect.height / 2 - containerRect.top) / zoomScale;
-      const x2 = (toRect.left - containerRect.left) / zoomScale;
+      const x2 = (toRect.right - containerRect.left) / zoomScale;
       const y2 = (toRect.top + toRect.height / 2 - containerRect.top) / zoomScale;
-      const offset = 80;
-      pathD = `M ${x1} ${y1} C ${x1 - offset} ${y1}, ${x2 - offset} ${y2}, ${x2} ${y2}`;
+      const xTrack = Math.max(x1, x2) + 40;
+      pathD = `M ${x1} ${y1} H ${xTrack} V ${y2} H ${x2}`;
     }
     else if (edge.type === 'loopback-long') {
-      // Loopback from reset node back to Copilot
+      // Left-side loopback: from left of fromEl, steps left into outer margin, vertically up, and right into left of toEl
       const x1 = (fromRect.left - containerRect.left) / zoomScale;
       const y1 = (fromRect.top + fromRect.height / 2 - containerRect.top) / zoomScale;
       const x2 = (toRect.left - containerRect.left) / zoomScale;
       const y2 = (toRect.top + toRect.height / 2 - containerRect.top) / zoomScale;
-      const offset = 120;
-      pathD = `M ${x1} ${y1} C ${x1 - offset} ${y1}, ${x2 - offset} ${y2}, ${x2} ${y2}`;
+      const xTrack = Math.min(x1, x2) - 50;
+      pathD = `M ${x1} ${y1} H ${xTrack} V ${y2} H ${x2}`;
     }
     else {
-      // Standard top-to-bottom vertical connection
+      // Standard top-to-bottom vertical connection (Orthogonal Right-Angled Step)
       const x1 = (fromRect.left + fromRect.width / 2 - containerRect.left) / zoomScale;
       const y1 = (fromRect.bottom - containerRect.top) / zoomScale;
       const x2 = (toRect.left + toRect.width / 2 - containerRect.left) / zoomScale;
       const y2 = (toRect.top - containerRect.top) / zoomScale;
-      const dy = Math.max(25, (y2 - y1) / 2);
-      pathD = `M ${x1} ${y1} C ${x1} ${y1 + dy}, ${x2} ${y2 - dy}, ${x2} ${y2}`;
+
+      if (Math.abs(x1 - x2) < 2) {
+        pathD = `M ${x1} ${y1} V ${y2}`;
+      } else if (edge.from === 'decision-gate-1' && (edge.to === 'node-copilot-live' || edge.to === 'node-agent-scribe')) {
+        // Special case: route down central alley past diagnostic cards before branching horizontally
+        const diagEl = document.getElementById('node-technician-photo') || document.getElementById('node-diagnostic-agent');
+        let stepY = (y1 + y2) / 2;
+        if (diagEl) {
+          const diagBottom = (diagEl.getBoundingClientRect().bottom - containerRect.top) / zoomScale;
+          stepY = diagBottom + 18;
+        }
+        pathD = `M ${x1} ${y1} V ${stepY} H ${x2} V ${y2}`;
+      } else {
+        const midY = (y1 + y2) / 2;
+        pathD = `M ${x1} ${y1} V ${midY} H ${x2} V ${y2}`;
+      }
     }
 
     // Determine path state according to scenario
@@ -2355,6 +2382,7 @@ function renderSvgEdges() {
         markerId = 'marker-arrow-completed';
       } else if (edge.from === 'node-agent-rca' || edge.from === 'decision-gate-1') {
         edgeClass += ' decision-no';
+        markerId = 'marker-arrow-warning';
       } else if (['node-diagnostic-agent', 'node-technician-photo', 'node-diagnostic-loop'].includes(edge.from)) {
         edgeClass += ' active';
         markerId = 'marker-arrow-active';

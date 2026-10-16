@@ -8,6 +8,8 @@ const BASE_MACHINES: MachineTelemetry[] = [
   { machine_id: 'IM-05', tool_id: 'MOLD-03', spindle_vibration: 0.08, motor_current: 28.5, spindle_temp: 78.0, rpm: 0, operating_status: 'NORMAL', dryer_dew_point: -40.0 },
 ];
 
+const STORAGE_KEY = 'factory_operator_key';
+
 export function useFactoryStream() {
   const [packet, setPacket] = useState<FactoryTickPacket>({
     tick_index: 0,
@@ -17,6 +19,28 @@ export function useFactoryStream() {
     active_anomaly: null,
   });
   const [connected, setConnected] = useState(false);
+  const [apiKey, setApiKeyState] = useState<string>(() => {
+    try {
+      return sessionStorage.getItem(STORAGE_KEY) || '';
+    } catch {
+      return '';
+    }
+  });
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const setApiKey = useCallback((key: string) => {
+    setApiKeyState(key);
+    setAuthError(null);
+    try {
+      if (key) {
+        sessionStorage.setItem(STORAGE_KEY, key);
+      } else {
+        sessionStorage.removeItem(STORAGE_KEY);
+      }
+    } catch {
+      // sessionStorage unavailable or restricted
+    }
+  }, []);
 
   useEffect(() => {
     let es: EventSource | null = null;
@@ -41,25 +65,51 @@ export function useFactoryStream() {
 
   const injectAnomaly = useCallback(async (scenario: string, machine_id?: string, severity = 1.0, mode = 'demo') => {
     try {
+      setAuthError(null);
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (apiKey.trim()) {
+        headers['X-API-Key'] = apiKey.trim();
+      }
       const res = await fetch('/api/factory/inject', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ scenario, machine_id, severity, mode }),
       });
+      if (res.status === 401) {
+        setAuthError('Unauthorized: Missing or invalid Operator Key (401)');
+        return false;
+      }
+      if (res.status === 503) {
+        setAuthError('Service Unavailable: Factory API Key unconfigured in production (503)');
+        return false;
+      }
       return res.ok;
     } catch {
       return false;
     }
-  }, []);
+  }, [apiKey]);
 
   const resetFactory = useCallback(async () => {
     try {
-      const res = await fetch('/api/factory/reset', { method: 'POST' });
+      setAuthError(null);
+      const headers: Record<string, string> = {};
+      if (apiKey.trim()) {
+        headers['X-API-Key'] = apiKey.trim();
+      }
+      const res = await fetch('/api/factory/reset', { method: 'POST', headers });
+      if (res.status === 401) {
+        setAuthError('Unauthorized: Missing or invalid Operator Key (401)');
+        return false;
+      }
+      if (res.status === 503) {
+        setAuthError('Service Unavailable: Factory API Key unconfigured in production (503)');
+        return false;
+      }
       return res.ok;
     } catch {
       return false;
     }
-  }, []);
+  }, [apiKey]);
 
-  return { packet, connected, injectAnomaly, resetFactory };
+  return { packet, connected, injectAnomaly, resetFactory, apiKey, setApiKey, authError };
 }

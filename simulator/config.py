@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,6 +13,9 @@ class SimulatorSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="allow")
 
+    app_env: str = os.getenv("APP_ENV", "development")
+    factory_api_key: Optional[str] = os.getenv("FACTORY_API_KEY", None)
+
     mqtt_broker_host: str = os.getenv("MQTT_BROKER_HOST", "broker.emqx.io")
     mqtt_broker_port: int = int(os.getenv("MQTT_BROKER_PORT", "1883"))
     mqtt_keepalive: int = 60
@@ -20,6 +24,9 @@ class SimulatorSettings(BaseSettings):
     # Timing & execution
     tick_interval_sec: float = float(os.getenv("SIMULATOR_TICK_SEC", "2.0"))
     speed_multiplier: float = float(os.getenv("SIMULATOR_SPEED", "1.0"))
+    telemetry_publish_interval_sec: float = float(
+        os.getenv("SIMULATOR_TELEMETRY_PUBLISH_SEC", "10.0")
+    )
 
     # Google Cloud Pub/Sub & Edge Dispatch
     gcp_project_id: str = os.getenv("GCP_PROJECT_ID", "kaizen-local")

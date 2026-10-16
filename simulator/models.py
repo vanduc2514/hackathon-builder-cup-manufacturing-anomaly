@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -141,7 +142,7 @@ class QualityEventPayload(BaseModel):
     """Quality / SPC anomaly event forwarded from edge gateway to Cloud via Pub/Sub."""
 
     event_id: str = Field(
-        default_factory=lambda: f"EVT-{int(datetime.now(timezone.utc).timestamp())}"
+        default_factory=lambda: str(uuid.uuid4())
     )
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     event_type: str = "defect_spc_breach"
@@ -194,6 +195,10 @@ class InjectAnomalyRequest(BaseModel):
     mode: str = Field(
         default="demo",
         description="Simulation speed mode: 'demo' (standard pace) or 'fast' (accelerated)",
+    )
+    dispatch_quality_event: bool = Field(
+        default=True,
+        description="Whether to dispatch a quality event to Pub/Sub on anomaly injection",
     )
 
 

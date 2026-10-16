@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hmac
 import logging
 import os
 import time
@@ -13,7 +14,7 @@ from datetime import datetime, timezone
 from typing import Any, AsyncIterator, Optional
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
 
@@ -103,6 +104,7 @@ class FactoryServerService:
         interval_sec: float = 1.0,
         speed: float = 1.0,
         pubsub_dispatcher: Optional[EdgePubSubDispatcher] = None,
+        clock: Optional[Any] = None,
     ) -> None:
         self.interval_sec = interval_sec
         self.speed = max(0.1, speed)
@@ -114,6 +116,8 @@ class FactoryServerService:
         self.edge_tracker = EdgeFilterTracker()
         self._task: Optional[asyncio.Task[None]] = None
         self.pubsub_dispatcher = pubsub_dispatcher or EdgePubSubDispatcher()
+        self._clock = clock or time.monotonic
+        self._last_telemetry_publish_time: float = self._clock()
 
         self.injection_engine = DefectInjectionEngine()
         # Always register IM-05 baseline so 4 machine bays (CNC-01..03, IM-05) are monitored
@@ -191,6 +195,7 @@ class FactoryServerService:
         machine_id: str = "CNC-02",
         severity: float = 1.0,
         mode: str = "demo",
+        dispatch_quality_event: bool = True,
     ) -> dict[str, bool]:
         """Dispatches quality event, anomalous telemetry, and traceability record to Pub/Sub."""
         tool = "MOLD-03" if scenario == "im_damp_material" else "T07"
@@ -199,16 +204,19 @@ class FactoryServerService:
         now_iso = datetime.now(timezone.utc).isoformat()
 
         # 1. Quality Event
-        quality_evt = QualityEventPayload(
-            machine_id=machine_id,
-            tool_id=tool,
-            defect_type=defect_type,
-            scenario=scenario,
-            mode=mode,
-            severity="high" if severity >= 1.0 else "medium",
-            defect_rate=0.08 if scenario == "cnc_tool_wear" else 0.05,
-        )
-        q_ok = await self.pubsub_dispatcher.publish_quality_event(quality_evt)
+        if dispatch_quality_event:
+            quality_evt = QualityEventPayload(
+                machine_id=machine_id,
+                tool_id=tool,
+                defect_type=defect_type,
+                scenario=scenario,
+                mode=mode,
+                severity="high" if severity >= 1.0 else "medium",
+                defect_rate=0.08 if scenario == "cnc_tool_wear" else 0.05,
+            )
+            q_ok = await self.pubsub_dispatcher.publish_quality_event(quality_evt)
+        else:
+            q_ok = False
 
         # 2. Machine Telemetry
         telemetry_payload = MachineTelemetryPayload(
@@ -256,6 +264,7 @@ class FactoryServerService:
         machine_id: Optional[str] = None,
         severity: float = 1.0,
         mode: str = "demo",
+        dispatch_quality_event: bool = True,
     ) -> dict[str, Any]:
         """Triggers a simulated defect scenario, accelerates timing, and dispatches to Pub/Sub."""
         if scenario == "im_damp_material" or machine_id == "IM-05":
@@ -282,6 +291,7 @@ class FactoryServerService:
                 machine_id=target,
                 severity=severity,
                 mode=mode,
+                dispatch_quality_event=dispatch_quality_event,
             )
         except Exception as exc:
             logger.warning("Failed to dispatch injection events to Pub/Sub: %s", exc)
@@ -296,6 +306,7 @@ class FactoryServerService:
 
     def reset(self) -> None:
         """Restores machines, conveyors, and statistics to pristine baseline."""
+        self._last_telemetry_publish_time = self._clock()
         self.injection_engine.reset()
         self.anomaly_start_time = None
         self.speed = 1.0
@@ -341,6 +352,44 @@ class FactoryServerService:
 
         return packet
 
+    async def _maybe_publish_periodic_telemetry(
+        self, telemetry_list: list[MachineTelemetry]
+    ) -> None:
+        """Publishes current machine telemetry to Pub/Sub kaizen-telemetry periodically.
+
+        Runs every telemetry_publish_interval_sec (monotonic clock).
+        Only active when settings.pubsub_enabled is True.
+        Catches and logs all errors so tick loop never crashes.
+        """
+        if not settings.pubsub_enabled:
+            return
+
+        interval = settings.telemetry_publish_interval_sec
+        if interval <= 0:
+            return
+
+        now = self._clock()
+        if now - self._last_telemetry_publish_time < interval:
+            return
+
+        self._last_telemetry_publish_time = now
+        try:
+            for item in telemetry_list:
+                payload = MachineTelemetryPayload(
+                    machine_id=item.machine_id,
+                    timestamp=item.timestamp,
+                    tool_id=item.tool_id,
+                    spindle_vibration=item.spindle_vibration,
+                    motor_current=item.motor_current,
+                    spindle_temp=item.spindle_temp,
+                    rpm=item.rpm,
+                    operating_status=item.operating_status,
+                    dryer_dew_point=item.dryer_dew_point,
+                )
+                await self.pubsub_dispatcher.publish_telemetry(payload)
+        except Exception as exc:
+            logger.warning("Periodic telemetry publish error: %s", exc)
+
     async def _run_loop(self) -> None:
         """Continuous async simulation clock."""
         self.running = True
@@ -351,7 +400,11 @@ class FactoryServerService:
         )
         try:
             while self.running:
-                await self.step()
+                try:
+                    packet = await self.step()
+                    await self._maybe_publish_periodic_telemetry(packet.telemetry)
+                except Exception as exc:
+                    logger.warning("Simulation loop tick error: %s", exc)
                 await asyncio.sleep(self.interval)
         except asyncio.CancelledError:
             logger.info("Factory simulation loop cancelled")
@@ -390,6 +443,32 @@ class FactoryServerService:
         )
 
 
+def require_api_key(
+    x_api_key: Optional[str] = Header(default=None, alias="X-API-Key"),
+) -> None:
+    """Enforces shared API key authentication on mutating simulator endpoints.
+
+    - Missing or invalid key -> 401 Unauthorized.
+    - Key unset with APP_ENV=production -> 503 Service Unavailable (fail closed).
+    - Key unset outside production -> allow request.
+    """
+    expected_key = settings.factory_api_key
+    app_env = getattr(settings, "app_env", os.getenv("APP_ENV", "development"))
+    if not expected_key:
+        if app_env == "production":
+            raise HTTPException(
+                status_code=503,
+                detail="Factory API key is not configured on production server",
+            )
+        return
+
+    if not x_api_key or not hmac.compare_digest(x_api_key, expected_key):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing X-API-Key header",
+        )
+
+
 # Global service coordinator
 service = FactoryServerService()
 
@@ -397,6 +476,15 @@ service = FactoryServerService()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Manages background simulation worker across FastAPI application lifecycle."""
+    if not settings.factory_api_key:
+        if getattr(settings, "app_env", os.getenv("APP_ENV", "development")) == "production":
+            logger.error(
+                "FACTORY_API_KEY is not configured in production; mutating endpoints will return 503"
+            )
+        else:
+            logger.warning(
+                "FACTORY_API_KEY is unset; mutating endpoints (/inject, /reset) are unprotected in development"
+            )
     service.start()
     yield
     service.stop()
@@ -431,7 +519,7 @@ async def get_factory_status() -> FactoryStatusResponse:
     return service.get_status()
 
 
-@app.post("/api/factory/inject")
+@app.post("/api/factory/inject", dependencies=[Depends(require_api_key)])
 async def inject_anomaly(req: InjectAnomalyRequest = InjectAnomalyRequest()) -> dict[str, Any]:
     """Triggers Scenario 1 (CNC Tool Wear) or Scenario 2 (IM Damp Material)."""
     return await service.inject(
@@ -439,10 +527,11 @@ async def inject_anomaly(req: InjectAnomalyRequest = InjectAnomalyRequest()) -> 
         machine_id=req.machine_id,
         severity=req.severity,
         mode=req.mode,
+        dispatch_quality_event=req.dispatch_quality_event,
     )
 
 
-@app.post("/api/factory/reset")
+@app.post("/api/factory/reset", dependencies=[Depends(require_api_key)])
 async def reset_factory() -> dict[str, Any]:
     """Restores all machinery to nominal baseline."""
     service.reset()

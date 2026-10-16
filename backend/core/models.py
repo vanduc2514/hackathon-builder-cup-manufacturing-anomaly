@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
@@ -771,6 +772,17 @@ class DefectInjectionRequest(BaseModel):
     )
 
 
+class FactorySyncResult(BaseModel):
+    """Result of an asynchronous synchronization call to the Factory Simulator."""
+
+    ok: bool = False
+    latency_ms: float = 0.0
+    endpoint: Optional[str] = None
+    error: Optional[str] = None
+    skipped: bool = False
+    details: Optional[dict[str, Any]] = None
+
+
 class SimulationStatusResponse(BaseModel):
     status: str
     active_scenario: Optional[str] = None
@@ -779,6 +791,31 @@ class SimulationStatusResponse(BaseModel):
     target_tool: Optional[str] = None
     elapsed_seconds: Optional[float] = None
     total_seconds: Optional[float] = None
+
+
+class SimulationInjectResponse(BaseModel):
+    """Response returned when an anomaly injection is triggered."""
+
+    status: str = "triggered"
+    scenario: str
+    mode: str
+    duration_seconds: float
+    defect_type: Optional[str] = None
+    target_machine: str
+    target_tool: Optional[str] = None
+    burst_telemetry: dict[str, Any] = Field(default_factory=dict)
+    message: str
+    factory_sync: Optional[FactorySyncResult] = None
+
+
+class SimulationResetResponse(BaseModel):
+    """Response returned when the simulation and blackboard are reset."""
+
+    status: str = "reset"
+    message: str
+    state: dict[str, Any] = Field(default_factory=dict)
+    bigquery: dict[str, Any] = Field(default_factory=dict)
+    factory_sync: Optional[FactorySyncResult] = None
 
 
 class SuspectCorrelation(BaseModel):
@@ -1263,7 +1300,7 @@ class QualityEventPayload(BaseModel):
     """Quality / SPC anomaly event forwarded from edge Gemma gateway to Orchestrator via Pub/Sub."""
 
     event_id: str = Field(
-        default_factory=lambda: f"EVT-{int(datetime.now(timezone.utc).timestamp())}",
+        default_factory=lambda: str(uuid.uuid4()),
         description="Unique quality event identifier",
     )
     timestamp: str = Field(

@@ -388,3 +388,288 @@ def test_cli_argument_parsing():
             assert kwargs["port"] == 8015
             assert service.speed == 2.0
             assert service.interval_sec == 0.5
+
+@pytest.mark.asyncio
+async def test_inject_with_dispatch_quality_event_false():
+    """Verify dispatch_quality_event=False skips quality event but publishes telemetry & traceability."""
+    with TestClient(app) as client:
+        res = client.post(
+            "/api/factory/inject",
+            json={
+                "scenario": "cnc_tool_wear",
+                "machine_id": "CNC-02",
+                "severity": 1.0,
+                "mode": "demo",
+                "dispatch_quality_event": False,
+            },
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "ok"
+        assert data["pubsub_dispatch"]["quality_event"] is False
+        assert data["pubsub_dispatch"]["telemetry"] is True
+        assert data["pubsub_dispatch"]["traceability"] is True
+
+        published = service.pubsub_dispatcher.get_published_events()
+        topics = [e["topic"] for e in published]
+        assert "kaizen-quality-events" not in topics
+        assert "kaizen-telemetry" in topics
+        assert "kaizen-traceability" in topics
+
+
+def test_quality_event_payload_uuid_event_id():
+    """Verify QualityEventPayload generates collision-resistant uuid4 event_id."""
+    import uuid
+    payload1 = QualityEventPayload()
+    payload2 = QualityEventPayload()
+    assert payload1.event_id != payload2.event_id
+    # Valid UUID format
+    parsed_uuid = uuid.UUID(payload1.event_id)
+    assert str(parsed_uuid) == payload1.event_id
+
+
+def test_api_key_missing_returns_401(monkeypatch):
+    """Verify mutating endpoints return 401 when FACTORY_API_KEY is configured and request has no key."""
+    from simulator.config import settings
+
+    monkeypatch.setattr(settings, "factory_api_key", "valid-factory-token-999")
+    monkeypatch.setattr(settings, "app_env", "development")
+
+    with TestClient(app) as client:
+        # 1. Inject without key -> 401
+        res_inject = client.post("/api/factory/inject", json={"scenario": "cnc_tool_wear"})
+        assert res_inject.status_code == 401
+        assert "Invalid or missing X-API-Key" in res_inject.json()["detail"]
+
+        # 2. Reset without key -> 401
+        res_reset = client.post("/api/factory/reset")
+        assert res_reset.status_code == 401
+        assert "Invalid or missing X-API-Key" in res_reset.json()["detail"]
+
+
+def test_api_key_invalid_returns_401(monkeypatch):
+    """Verify mutating endpoints return 401 when request provides invalid X-API-Key."""
+    from simulator.config import settings
+
+    monkeypatch.setattr(settings, "factory_api_key", "valid-factory-token-999")
+    monkeypatch.setattr(settings, "app_env", "development")
+
+    with TestClient(app) as client:
+        res_inject = client.post(
+            "/api/factory/inject",
+            headers={"X-API-Key": "wrong-key"},
+            json={"scenario": "cnc_tool_wear"},
+        )
+        assert res_inject.status_code == 401
+
+        res_reset = client.post("/api/factory/reset", headers={"X-API-Key": "wrong-key"})
+        assert res_reset.status_code == 401
+
+
+def test_api_key_valid_returns_200(monkeypatch):
+    """Verify mutating endpoints succeed (200) when correct X-API-Key is provided."""
+    from simulator.config import settings
+
+    monkeypatch.setattr(settings, "factory_api_key", "valid-factory-token-999")
+    monkeypatch.setattr(settings, "app_env", "development")
+
+    with TestClient(app) as client:
+        res_inject = client.post(
+            "/api/factory/inject",
+            headers={"X-API-Key": "valid-factory-token-999"},
+            json={"scenario": "cnc_tool_wear", "mode": "fast"},
+        )
+        assert res_inject.status_code == 200
+        assert res_inject.json()["status"] == "ok"
+
+        res_reset = client.post(
+            "/api/factory/reset",
+            headers={"X-API-Key": "valid-factory-token-999"},
+        )
+        assert res_reset.status_code == 200
+        assert res_reset.json()["status"] == "ok"
+
+
+def test_api_key_production_unset_fails_closed_503(monkeypatch):
+    """Verify mutating endpoints fail closed (503) in production if FACTORY_API_KEY is not configured."""
+    from simulator.config import settings
+
+    monkeypatch.setattr(settings, "factory_api_key", None)
+    monkeypatch.setattr(settings, "app_env", "production")
+
+    with TestClient(app) as client:
+        res_inject = client.post("/api/factory/inject", json={"scenario": "cnc_tool_wear"})
+        assert res_inject.status_code == 503
+        assert "not configured on production server" in res_inject.json()["detail"]
+
+        res_reset = client.post("/api/factory/reset")
+        assert res_reset.status_code == 503
+        assert "not configured on production server" in res_reset.json()["detail"]
+
+
+def test_api_key_development_unset_allows_mutations(monkeypatch):
+    """Verify mutating endpoints are allowed in development/local when FACTORY_API_KEY is unset."""
+    from simulator.config import settings
+
+    monkeypatch.setattr(settings, "factory_api_key", None)
+    monkeypatch.setattr(settings, "app_env", "development")
+
+    with TestClient(app) as client:
+        res_reset = client.post("/api/factory/reset")
+        assert res_reset.status_code == 200
+        assert res_reset.json()["status"] == "ok"
+
+
+def test_api_key_public_endpoints_unrestricted(monkeypatch):
+    """Verify health, status, and stream remain public without requiring X-API-Key."""
+    from simulator.config import settings
+
+    monkeypatch.setattr(settings, "factory_api_key", "strict-key-123")
+    monkeypatch.setattr(settings, "app_env", "production")
+
+    with TestClient(app) as client:
+        # Public health endpoints
+        assert client.get("/health").status_code == 200
+        assert client.get("/healthz").status_code == 200
+
+        # Public status endpoint
+        res_status = client.get("/api/factory/status")
+        assert res_status.status_code == 200
+        assert "machines" in res_status.json()
+
+
+@pytest.mark.asyncio
+async def test_periodic_telemetry_publishes_all_machines_per_interval(monkeypatch):
+    """Verify periodic telemetry publishes 1 payload per machine (CNC-01..03, IM-05) every interval."""
+    from simulator.config import settings
+    from simulator.server import FactoryServerService
+
+    current_time = 1000.0
+    mock_dispatcher = MagicMock(spec=EdgePubSubDispatcher)
+    mock_dispatcher.publish_telemetry = AsyncMock(return_value=True)
+
+    monkeypatch.setattr(settings, "pubsub_enabled", True)
+    monkeypatch.setattr(settings, "telemetry_publish_interval_sec", 10.0)
+
+    srv = FactoryServerService(
+        interval_sec=1.0,
+        pubsub_dispatcher=mock_dispatcher,
+        clock=lambda: current_time,
+    )
+
+    # 1. At t=1000, initial state: no periodic telemetry published yet
+    packet = await srv.step()
+    await srv._maybe_publish_periodic_telemetry(packet.telemetry)
+    assert mock_dispatcher.publish_telemetry.call_count == 0
+
+    # 2. Advance by 5s (< 10s interval): still nothing published
+    current_time = 1005.0
+    packet = await srv.step()
+    await srv._maybe_publish_periodic_telemetry(packet.telemetry)
+    assert mock_dispatcher.publish_telemetry.call_count == 0
+
+    # 3. Advance to 1010.0 (10s elapsed): exactly 4 machine telemetry packets published (CNC-01..03, IM-05)
+    current_time = 1010.0
+    packet = await srv.step()
+    await srv._maybe_publish_periodic_telemetry(packet.telemetry)
+    assert mock_dispatcher.publish_telemetry.call_count == 4
+
+    published_machines = [
+        call.args[0].machine_id for call in mock_dispatcher.publish_telemetry.await_args_list
+    ]
+    assert set(published_machines) == {"CNC-01", "CNC-02", "CNC-03", "IM-05"}
+
+    # 4. Advance to 1020.0 (second interval): another 4 packets (total 8)
+    current_time = 1020.0
+    packet = await srv.step()
+    await srv._maybe_publish_periodic_telemetry(packet.telemetry)
+    assert mock_dispatcher.publish_telemetry.call_count == 8
+
+
+@pytest.mark.asyncio
+async def test_periodic_telemetry_interval_zero_disabled(monkeypatch):
+    """Verify periodic telemetry publishing is completely disabled when interval is 0."""
+    from simulator.config import settings
+    from simulator.server import FactoryServerService
+
+    current_time = 1000.0
+    mock_dispatcher = MagicMock(spec=EdgePubSubDispatcher)
+    mock_dispatcher.publish_telemetry = AsyncMock(return_value=True)
+
+    monkeypatch.setattr(settings, "pubsub_enabled", True)
+    monkeypatch.setattr(settings, "telemetry_publish_interval_sec", 0.0)
+
+    srv = FactoryServerService(
+        interval_sec=1.0,
+        pubsub_dispatcher=mock_dispatcher,
+        clock=lambda: current_time,
+    )
+
+    current_time = 1050.0  # 50s pass
+    packet = await srv.step()
+    await srv._maybe_publish_periodic_telemetry(packet.telemetry)
+    assert mock_dispatcher.publish_telemetry.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_periodic_telemetry_pubsub_disabled_none_published(monkeypatch):
+    """Verify periodic telemetry publishing is skipped when pubsub_enabled is False."""
+    from simulator.config import settings
+    from simulator.server import FactoryServerService
+
+    current_time = 1000.0
+    mock_dispatcher = MagicMock(spec=EdgePubSubDispatcher)
+    mock_dispatcher.publish_telemetry = AsyncMock(return_value=True)
+
+    monkeypatch.setattr(settings, "pubsub_enabled", False)
+    monkeypatch.setattr(settings, "telemetry_publish_interval_sec", 10.0)
+
+    srv = FactoryServerService(
+        interval_sec=1.0,
+        pubsub_dispatcher=mock_dispatcher,
+        clock=lambda: current_time,
+    )
+
+    current_time = 1050.0  # 50s pass
+    packet = await srv.step()
+    await srv._maybe_publish_periodic_telemetry(packet.telemetry)
+    assert mock_dispatcher.publish_telemetry.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_periodic_telemetry_dispatcher_error_does_not_crash_loop(monkeypatch):
+    """Verify dispatcher exception does not stop the simulation run loop."""
+    from simulator.config import settings
+    from simulator.server import FactoryServerService
+
+    current_time = 1000.0
+    mock_dispatcher = MagicMock(spec=EdgePubSubDispatcher)
+    mock_dispatcher.publish_telemetry = AsyncMock(side_effect=RuntimeError("Pub/Sub outage"))
+
+    monkeypatch.setattr(settings, "pubsub_enabled", True)
+    monkeypatch.setattr(settings, "telemetry_publish_interval_sec", 10.0)
+
+    srv = FactoryServerService(
+        interval_sec=0.01,
+        pubsub_dispatcher=mock_dispatcher,
+        clock=lambda: current_time,
+    )
+
+    current_time = 1015.0
+    # Calling directly catches and logs
+    packet = await srv.step()
+    await srv._maybe_publish_periodic_telemetry(packet.telemetry)
+
+    # In loop: verify loop keeps ticking despite dispatcher errors
+    loop_task = asyncio.create_task(srv._run_loop())
+    await asyncio.sleep(0.05)
+    assert srv.running is True
+    assert srv.tick_count > 0
+
+    srv.stop()
+    await asyncio.sleep(0.02)
+    assert srv.running is False
+    try:
+        await loop_task
+    except asyncio.CancelledError:
+        pass

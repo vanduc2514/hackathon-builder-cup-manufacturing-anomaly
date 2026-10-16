@@ -7,8 +7,14 @@ from typing import Any, Dict
 from fastapi import APIRouter, HTTPException
 
 from backend.agents.orchestrator import orchestrator
-from backend.core.models import DefectInjectionRequest, SimulationStatusResponse
+from backend.core.models import (
+    DefectInjectionRequest,
+    SimulationInjectResponse,
+    SimulationResetResponse,
+    SimulationStatusResponse,
+)
 from backend.tools.bigquery_tool import reset_buffers
+from backend.tools.factory_client import factory_client
 
 router = APIRouter(prefix="/api/simulation", tags=["simulation"])
 
@@ -29,9 +35,12 @@ def _resolve_trigger(req: DefectInjectionRequest) -> DefectInjectionRequest:
     return req.model_copy(update=unset)
 
 
-@router.post("/inject")
-async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) -> Dict[str, Any]:
+@router.post("/inject", response_model=SimulationInjectResponse)
+async def inject_defect(
+    req: DefectInjectionRequest = DefectInjectionRequest(),
+) -> SimulationInjectResponse:
     """Injects the scenario's defect burst into the simulator and starts the incident workflow."""
+    # 1. Reject if incident already running before making any external calls
     if orchestrator.is_running:
         raise HTTPException(status_code=409, detail="An incident workflow is already running")
 
@@ -73,49 +82,48 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) 
         else (8.0 if trigger.mode == "fast" else 90.0)
     )
 
-    # Publish to Pub/Sub quality-events topic (triggers orchestrator subscriber in end-to-end flow)
-    from backend.core.models import QualityEventPayload
-    from backend.core.pubsub_manager import pubsub_manager
+    # 2. Claim the single-flight slot on the orchestrator FIRST (synchronous)
+    started = orchestrator.start_incident(trigger)
+    if not started:
+        raise HTTPException(status_code=409, detail="An incident workflow is already running")
 
-    quality_event = QualityEventPayload(
+    # 3. Call factory simulator to inject anomaly (skip quality event dispatch)
+    factory_sync = await factory_client.inject_anomaly(
+        scenario=trigger.scenario,
+        machine_id=trigger.machine_id,
+        severity=trigger.severity,
+        mode=trigger.mode,
+        dispatch_quality_event=False,
+    )
+
+    return SimulationInjectResponse(
+        status="triggered",
         scenario=trigger.scenario,
         mode=trigger.mode,
-        machine_id=trigger.machine_id,
-        tool_id=trigger.tool_id,
+        duration_seconds=duration,
         defect_type=trigger.defect_type,
-        defect_rate=trigger.defect_rate,
-        severity=trigger.severity,
+        target_machine=trigger.machine_id,
+        target_tool=trigger.tool_id,
+        burst_telemetry=burst,
+        message=message,
+        factory_sync=factory_sync,
     )
-    published = pubsub_manager.publish_quality_event(quality_event)
-
-    # If Pub/Sub not available or message not published, trigger orchestrator directly
-    if not published and not orchestrator.is_running:
-        orchestrator.start_incident(trigger)
-
-    return {
-        "status": "triggered",
-        "scenario": trigger.scenario,
-        "mode": trigger.mode,
-        "duration_seconds": duration,
-        "defect_type": trigger.defect_type,
-        "target_machine": trigger.machine_id,
-        "target_tool": trigger.tool_id,
-        "burst_telemetry": burst,
-        "message": message,
-    }
 
 
-@router.post("/reset")
-async def reset_simulation() -> Dict[str, Any]:
+@router.post("/reset", response_model=SimulationResetResponse)
+async def reset_simulation() -> SimulationResetResponse:
     """Cancels the running workflow, then restores the Blackboard, simulator and BigQuery buffers."""
     state = await orchestrator.reset()
     bq_reset = reset_buffers()
-    return {
-        "status": "reset",
-        "message": "Simulation reset to pristine baseline (Blackboard and BigQuery buffers restored)",
-        "state": state,
-        "bigquery": bq_reset,
-    }
+    factory_sync = await factory_client.reset_factory()
+    state_dict = state.model_dump() if hasattr(state, "model_dump") else state
+    return SimulationResetResponse(
+        status="reset",
+        message="Simulation reset to pristine baseline (Blackboard and BigQuery buffers restored)",
+        state=state_dict,
+        bigquery=bq_reset,
+        factory_sync=factory_sync,
+    )
 
 
 @router.get("/status", response_model=SimulationStatusResponse)

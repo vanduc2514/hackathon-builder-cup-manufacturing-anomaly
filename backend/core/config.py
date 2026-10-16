@@ -105,6 +105,13 @@ class Settings(BaseSettings):
     # Pause between simulated conveyor verification batches (seconds)
     simulation_step_delay: float = 0.4
 
+    # Factory Simulator service integration
+    factory_service_url: str | None = None
+    factory_timeout_seconds: float = 3.0
+    factory_api_key: str | None = None
+    quality_event_max_age_seconds: int = 60
+    quality_event_dedup_ttl_seconds: int = 300
+
     # Planned production targets & cell availability
     planned_availability: float = 0.92
     mttr_target_minutes: int = 15

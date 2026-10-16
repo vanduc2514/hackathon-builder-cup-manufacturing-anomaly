@@ -15,10 +15,6 @@ import DecisionGateNode from '../topology/DecisionGateNode';
 import TopologyNodeDrawer from '../topology/TopologyNodeDrawer';
 import { STATUS_LABEL, friendlyDefectName } from '../../lib/incident';
 
-const FACTORY_FLOOR_URL =
-  (import.meta.env.VITE_FACTORY_FLOOR_URL as string | undefined) ||
-  'https://kaizen-lab-factory.web.app';
-
 interface SystemTopologyViewProps {
   incident: IncidentState | null;
   onOpenIncident?: (incidentId: string) => void;
@@ -34,6 +30,10 @@ export default function SystemTopologyView({
 }: SystemTopologyViewProps): React.ReactElement {
   const [selectedNodeId, setSelectedNodeId] = useState<TopologyNodeId | null>(null);
   const [activeScenario, setActiveScenario] = useState<TopologyScenarioId | 'live'>('live');
+
+  const factoryFloorUrl =
+    (import.meta.env.VITE_FACTORY_FLOOR_URL as string | undefined) ||
+    'https://kaizen-lab-factory.web.app';
 
   // Derive node states: live incident or scenario override
   const nodeStates = useMemo(() => {
@@ -263,11 +263,11 @@ export default function SystemTopologyView({
               </div>
               <div className="window-actions">
                 <a
-                  href={FACTORY_FLOOR_URL}
+                  href={factoryFloorUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-quick-launch"
-                  title="Open Standalone Factory Floor Console (Window 1)"
+                  title="Open Standalone Factory Floor Console in new tab"
                   aria-label="Open Standalone Factory Floor Console in new tab"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }} aria-hidden="true">

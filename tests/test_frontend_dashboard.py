@@ -539,9 +539,8 @@ def test_topology_two_window_partitioning_and_phase_stepper_contracts() -> None:
     )
     assert "btn-quick-launch" in view_text, "Missing btn-quick-launch class in SystemTopologyView"
     assert (
-        "https://kaizen-lab-factory.web.app" in view_text
-        or "VITE_FACTORY_FLOOR_URL" in view_text
-    ), "Missing production link or VITE_FACTORY_FLOOR_URL in SystemTopologyView"
+        "kaizen-lab-factory.web.app" in view_text or "VITE_FACTORY_FLOOR_URL" in view_text
+    ), "Missing production Factory Floor URL or env fallback in SystemTopologyView"
     assert "Factory Floor Console" in view_text, (
         "Missing Factory Floor Console label in SystemTopologyView"
     )

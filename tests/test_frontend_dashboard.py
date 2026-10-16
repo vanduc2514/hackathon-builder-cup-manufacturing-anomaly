@@ -373,11 +373,15 @@ def test_frontend_topology_files_and_contracts() -> None:
         "human-approval",
     ]
     for node_id in expected_node_ids:
-        assert f"id: '{node_id}'" in topology_lib_text, f"Missing node {node_id} in TOPOLOGY_NODES catalog"
+        assert f"id: '{node_id}'" in topology_lib_text, (
+            f"Missing node {node_id} in TOPOLOGY_NODES catalog"
+        )
 
     expected_phases = ["phase-a", "phase-b", "phase-c", "phase-d"]
     for phase_id in expected_phases:
-        assert f"id: '{phase_id}'" in topology_lib_text, f"Missing phase {phase_id} in TOPOLOGY_PHASES catalog"
+        assert f"id: '{phase_id}'" in topology_lib_text, (
+            f"Missing phase {phase_id} in TOPOLOGY_PHASES catalog"
+        )
 
     assert "deriveNodeStates" in topology_lib_text
     assert "derivePhaseStates" in topology_lib_text
@@ -397,14 +401,27 @@ def test_frontend_topology_navigation_wiring() -> None:
     assert "topology: 'System Topology'" in app_text, "App.tsx must register topology breadcrumb"
 
     topheader_text = (web_src / "components" / "TopHeader.tsx").read_text(encoding="utf-8")
-    assert "tab: 'topology'" in topheader_text, "TopHeader.tsx must register topology in JUMP_TARGETS"
+    assert "tab: 'topology'" in topheader_text, (
+        "TopHeader.tsx must register topology in JUMP_TARGETS"
+    )
 
-    line_overview_text = (web_src / "components" / "views" / "LineOverviewView.tsx").read_text(encoding="utf-8")
-    assert "onOpenTopology" in line_overview_text, "LineOverviewView.tsx must support onOpenTopology"
-    assert 'id="overview-topology"' in line_overview_text or 'id="overview-jump-topology"' in line_overview_text
+    line_overview_text = (web_src / "components" / "views" / "LineOverviewView.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "onOpenTopology" in line_overview_text, (
+        "LineOverviewView.tsx must support onOpenTopology"
+    )
+    assert (
+        'id="overview-topology"' in line_overview_text
+        or 'id="overview-jump-topology"' in line_overview_text
+    )
 
-    incident_view_text = (web_src / "components" / "views" / "IncidentCommandView.tsx").read_text(encoding="utf-8")
-    assert "onOpenTopology" in incident_view_text, "IncidentCommandView.tsx must support onOpenTopology"
+    incident_view_text = (web_src / "components" / "views" / "IncidentCommandView.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "onOpenTopology" in incident_view_text, (
+        "IncidentCommandView.tsx must support onOpenTopology"
+    )
     assert 'id="incident-view-topology"' in incident_view_text
 
 
@@ -431,21 +448,30 @@ def test_topology_workflow_redesign_deliverables() -> None:
 
     # 1. Wireframe deliverable
     wireframe_path = repo_root / "docs" / "wireframe" / "system_topology_workflow_wireframe.md"
-    wireframes_mirrored = repo_root / "docs" / "wireframes" / "system_topology_workflow_wireframe.md"
+    wireframes_mirrored = (
+        repo_root / "docs" / "wireframes" / "system_topology_workflow_wireframe.md"
+    )
     assert wireframe_path.is_file(), f"Missing wireframe deliverable at {wireframe_path}"
-    assert wireframes_mirrored.is_file(), f"Missing mirrored wireframe deliverable at {wireframes_mirrored}"
+    assert wireframes_mirrored.is_file(), (
+        f"Missing mirrored wireframe deliverable at {wireframes_mirrored}"
+    )
 
     wf_text = wireframe_path.read_text(encoding="utf-8")
-    assert "Phase A: Detection & Ingestion" in wf_text
-    assert "Phase B: Tracing & RCA" in wf_text or "Phase B: Tracing" in wf_text
-    assert "Phase C: Resolution & Field Repair" in wf_text or "Phase C: Resolution" in wf_text
-    assert "Phase D: Verification & Governance" in wf_text or "Phase D: Verification" in wf_text
+    assert wireframes_mirrored.read_text(encoding="utf-8") == wf_text
+    for layer in (
+        "Layer 1: Factory Floor",
+        "Layer 2: On-Premises Gateway",
+        "Layer 3: Google Cloud",
+        "Layer 4: Agent Team",
+        "Layer 5: Human-in-the-Loop",
+    ):
+        assert layer in wf_text, f"Missing {layer} in wireframe"
     assert "Decision Gate 1" in wf_text
     assert "Confidence" in wf_text and "0.70" in wf_text
     assert "Decision Gate 2" in wf_text
     assert "Invariant #3" in wf_text
     assert "Streak ≥ 50" in wf_text or "Streak >= 50" in wf_text
-    assert "Diagnostic Loop Agent" in wf_text
+    assert "Diagnostic Agent" in wf_text
 
     # 2. Stitch interactive HTML prototype deliverable
     prototype_path = repo_root / ".stitch" / "designs" / "system_topology_workflow.html"
@@ -454,21 +480,26 @@ def test_topology_workflow_redesign_deliverables() -> None:
     proto_text = prototype_path.read_text(encoding="utf-8")
     assert "Lumina Slate" in proto_text or "--bg-app" in proto_text
     assert "--glass-bg" in proto_text
-    assert "svg-connection-layer" in proto_text
-    assert "gate1Container" in proto_text
-    assert "gate2Container" in proto_text
-    assert "node-drawer" in proto_text or "TopologyNodeDrawer" in proto_text
-    assert "edge-gemma" in proto_text
-    assert "cloud-ingest" in proto_text
-    assert "agent-qa" in proto_text
-    assert "agent-tra" in proto_text
-    assert "agent-pa" in proto_text
-    assert "agent-rca" in proto_text
-    assert "agent-diag" in proto_text
-    assert "copilot-live" in proto_text
-    assert "tech-exec" in proto_text
-    assert "gatekeeper-qa" in proto_text
-    assert "agent-learn" in proto_text
-    assert "human-approval" in proto_text
-
-
+    assert 'id="topology-svg"' in proto_text
+    assert 'id="decision-gate-1"' in proto_text
+    assert 'id="decision-gate-2"' in proto_text
+    assert 'id="node-drawer"' in proto_text
+    for node_id in (
+        "floor-machines",
+        "edge-gemma",
+        "edge-bridge",
+        "gcp-pubsub",
+        "gcp-bigquery",
+        "adk-orch",
+        "agent-qa",
+        "agent-tra",
+        "agent-pa",
+        "agent-rca",
+        "diagnostic-agent",
+        "copilot-live",
+        "agent-scribe",
+        "agent-learn",
+        "verify-camera",
+        "human-lead",
+    ):
+        assert f'data-node="{node_id}"' in proto_text, f"Missing node {node_id} in prototype"

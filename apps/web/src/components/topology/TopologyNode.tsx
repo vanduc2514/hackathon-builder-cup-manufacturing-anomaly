@@ -118,17 +118,24 @@ export default function TopologyNode({
       {/* Node Header: Icon, Name, Sublabel and Status Badge */}
       <div className="node-header">
         <div className="node-icon-title">
-          <div className="node-icon-tile">
+          <div className="node-icon-tile" aria-hidden="true">
             <span className="material-symbols-outlined">{node.icon}</span>
           </div>
-          <div>
-            <div className="node-name">{node.label}</div>
-            <div className="node-sublabel">{node.sublabel}</div>
+          <div className="node-title-group">
+            <div className="node-name" title={node.label}>
+              {node.label}
+            </div>
+            <div className="node-sublabel" title={node.sublabel}>
+              {node.sublabel}
+            </div>
           </div>
         </div>
-        <span className={`chip chip-sm ${cfg.chipClass} status-badge`}>
+        <span
+          className={`chip chip-sm ${cfg.chipClass} status-badge`}
+          title={`Status: ${state.badgeText ?? cfg.label}`}
+        >
           {cfg.dotClass && <span className={`dot ${cfg.dotClass}`} style={{ width: 6, height: 6 }} />}
-          {state.badgeText ?? cfg.label}
+          <span className="status-badge-text">{state.badgeText ?? cfg.label}</span>
         </span>
       </div>
 

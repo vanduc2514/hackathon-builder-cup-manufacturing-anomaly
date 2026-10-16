@@ -3594,6 +3594,18 @@ const EDGES = [
   { from: 'node-human-lead', to: 'node-output-docs', type: 'vertical', label: 'Certified E-Signature' }
 ];
 
+
+/* Canvas Viewport Zoom & Pan State */
+let zoomScale = 1.0;
+let panX = 0;
+let panY = 0;
+let isPanning = false;
+let startX = 0;
+let startY = 0;
+let currentScenario = 'nominal';
+let activeDrawerComponentId = null;
+let selectedNodeId = null;
+
 function applyZoom(delta) {
   zoomScale = Math.min(Math.max(0.65, zoomScale + delta), 1.6);
   updateTransform();
@@ -3687,20 +3699,32 @@ function renderSvgEdges() {
     let markerId = 'marker-arrow';
 
     if (edge.type === 'horizontal') {
-      // Connect right side of fromEl to left side of toEl with orthogonal routing
       const x1 = (fromRect.right - containerRect.left) / zoomScale;
       const y1 = (fromRect.top + fromRect.height / 2 - containerRect.top) / zoomScale;
       const x2 = (toRect.left - containerRect.left) / zoomScale;
       const y2 = (toRect.top + toRect.height / 2 - containerRect.top) / zoomScale;
-      if (Math.abs(y1 - y2) < 2) {
+      if (Math.abs(y1 - y2) < 4) {
         pathD = `M ${x1} ${y1} H ${x2}`;
       } else {
         const midX = (x1 + x2) / 2;
         pathD = `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`;
       }
     }
-    else if (edge.type === 'loopback') {
-      // Right-side loopback: from right of fromEl, steps right into margin, vertically up, and left into right of toEl
+    else if (edge.type === 'branch-left') {
+      const x1 = (fromRect.left - containerRect.left) / zoomScale;
+      const y1 = (fromRect.top + fromRect.height / 2 - containerRect.top) / zoomScale;
+      const x2 = (toRect.left + toRect.width / 2 - containerRect.left) / zoomScale;
+      const y2 = (toRect.top - containerRect.top) / zoomScale;
+      pathD = `M ${x1} ${y1} H ${x2} V ${y2}`;
+    }
+    else if (edge.type === 'branch-right') {
+      const x1 = (fromRect.right - containerRect.left) / zoomScale;
+      const y1 = (fromRect.top + fromRect.height / 2 - containerRect.top) / zoomScale;
+      const x2 = (toRect.left + toRect.width / 2 - containerRect.left) / zoomScale;
+      const y2 = (toRect.top - containerRect.top) / zoomScale;
+      pathD = `M ${x1} ${y1} H ${x2} V ${y2}`;
+    }
+    else if (edge.type === 'loopback' || edge.type === 'loop-right') {
       const x1 = (fromRect.right - containerRect.left) / zoomScale;
       const y1 = (fromRect.top + fromRect.height / 2 - containerRect.top) / zoomScale;
       const x2 = (toRect.right - containerRect.left) / zoomScale;
@@ -3708,17 +3732,15 @@ function renderSvgEdges() {
       const xTrack = Math.max(x1, x2) + 40;
       pathD = `M ${x1} ${y1} H ${xTrack} V ${y2} H ${x2}`;
     }
-    else if (edge.type === 'loopback-long') {
-      // Left-side loopback: from left of fromEl, steps left into outer margin, vertically up, and right into left of toEl
+    else if (edge.type === 'loopback-long' || edge.type === 'loop-left') {
       const x1 = (fromRect.left - containerRect.left) / zoomScale;
       const y1 = (fromRect.top + fromRect.height / 2 - containerRect.top) / zoomScale;
       const x2 = (toRect.left - containerRect.left) / zoomScale;
       const y2 = (toRect.top + toRect.height / 2 - containerRect.top) / zoomScale;
-      const xTrack = Math.min(x1, x2) - 50;
+      const xTrack = Math.min(x1, x2) - 44;
       pathD = `M ${x1} ${y1} H ${xTrack} V ${y2} H ${x2}`;
     }
     else if (edge.type === 'gutter-right') {
-      // Right-side gutter route: steps out to the right margin, vertically down, and enters right of target
       const x1 = (fromRect.right - containerRect.left) / zoomScale;
       const y1 = (fromRect.top + fromRect.height / 2 - containerRect.top) / zoomScale;
       const x2 = (toRect.right - containerRect.left) / zoomScale;
@@ -3735,15 +3757,6 @@ function renderSvgEdges() {
 
       if (Math.abs(x1 - x2) < 2) {
         pathD = `M ${x1} ${y1} V ${y2}`;
-      } else if (edge.from === 'decision-gate-1' && (edge.to === 'node-copilot-live' || edge.to === 'node-agent-scribe')) {
-        // Special case: route down central alley past diagnostic cards before branching horizontally
-        const diagEl = document.getElementById('node-technician-photo') || document.getElementById('node-diagnostic-agent');
-        let stepY = (y1 + y2) / 2;
-        if (diagEl) {
-          const diagBottom = (diagEl.getBoundingClientRect().bottom - containerRect.top) / zoomScale;
-          stepY = diagBottom + 18;
-        }
-        pathD = `M ${x1} ${y1} V ${stepY} H ${x2} V ${y2}`;
       } else {
         const midY = (y1 + y2) / 2;
         pathD = `M ${x1} ${y1} V ${midY} H ${x2} V ${y2}`;
@@ -3755,23 +3768,25 @@ function renderSvgEdges() {
     if (currentScenario === 'nominal') {
       edgeClass += '';
     } else if (currentScenario === 'detecting') {
-      if (['node-edge-gemma', 'node-factory-signals', 'node-cloud-ingest', 'node-agent-qa'].includes(edge.from)) {
+      if (['node-floor-machines', 'node-floor-cameras', 'node-floor-sensors', 'node-floor-mics', 'node-edge-gemma', 'node-edge-bridge', 'node-gcp-pubsub', 'node-adk-orch', 'node-agent-qa'].includes(edge.from)) {
         edgeClass += ' active';
         markerId = 'marker-arrow-active';
       }
     } else if (currentScenario === 'low_confidence') {
-      if (['node-edge-gemma', 'node-factory-signals', 'node-cloud-ingest', 'node-agent-qa', 'node-agent-tra', 'node-agent-pa'].includes(edge.from)) {
+      if (['node-floor-machines', 'node-floor-cameras', 'node-floor-sensors', 'node-floor-mics', 'node-edge-gemma', 'node-edge-bridge', 'node-gcp-pubsub', 'node-adk-orch', 'node-agent-qa', 'node-agent-tra', 'node-agent-pa'].includes(edge.from)) {
         edgeClass += ' completed';
         markerId = 'marker-arrow-completed';
       } else if (edge.from === 'node-agent-rca' || edge.from === 'decision-gate-1') {
-        edgeClass += ' decision-no';
-        markerId = 'marker-arrow-warning';
-      } else if (['node-diagnostic-agent', 'node-technician-photo', 'node-diagnostic-loop'].includes(edge.from)) {
+        if (edge.to === 'node-diagnostic-agent') {
+          edgeClass += ' decision-no';
+          markerId = 'marker-arrow-warning';
+        }
+      } else if (['node-diagnostic-agent', 'node-technician-photo'].includes(edge.from)) {
         edgeClass += ' active';
         markerId = 'marker-arrow-active';
       }
     } else if (currentScenario === 'streak_verifying') {
-      if (['node-edge-gemma', 'node-factory-signals', 'node-cloud-ingest', 'node-agent-qa', 'node-agent-tra', 'node-agent-pa', 'node-agent-rca', 'decision-gate-1', 'node-copilot-live', 'node-agent-scribe', 'node-field-action'].includes(edge.from)) {
+      if (['node-floor-machines', 'node-floor-cameras', 'node-floor-sensors', 'node-floor-mics', 'node-edge-gemma', 'node-edge-bridge', 'node-gcp-pubsub', 'node-adk-orch', 'node-agent-qa', 'node-agent-tra', 'node-agent-pa', 'node-agent-rca', 'decision-gate-1', 'node-copilot-live', 'node-agent-scribe', 'node-human-tech'].includes(edge.from)) {
         edgeClass += ' completed';
         markerId = 'marker-arrow-completed';
       } else if (edge.from === 'node-verify-camera' || edge.from === 'decision-gate-2') {
@@ -3779,7 +3794,7 @@ function renderSvgEdges() {
         markerId = 'marker-arrow-active';
       }
     } else if (currentScenario === 'streak_reset') {
-      if (edge.from === 'decision-gate-2' && edge.to === 'node-streak-reset' || edge.from === 'node-streak-reset') {
+      if ((edge.from === 'decision-gate-2' && edge.to === 'node-streak-reset') || edge.from === 'node-streak-reset') {
         edgeClass += ' reject-reset';
         markerId = 'marker-arrow-danger';
       } else {
@@ -4461,11 +4476,24 @@ function exportTopologyJson() {
 }
 
 // Initial layout rendering
-window.addEventListener('load', () => {
+// Initial render and lifecycle bindings
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    renderSvgEdges();
+    updateMinimapViewport();
+    setupComponentInteractions();
+  });
+} else {
   renderSvgEdges();
   updateMinimapViewport();
   setupComponentInteractions();
+}
+
+window.addEventListener('load', () => {
+  renderSvgEdges();
+  updateMinimapViewport();
 });
+
 window.addEventListener('resize', () => {
   renderSvgEdges();
 });

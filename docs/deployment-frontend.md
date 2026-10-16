@@ -29,6 +29,7 @@ Streaming routes therefore connect to the Cloud Run origin directly:
 
 - `/api/incidents/stream` and `/api/incidents/events` (SSE, both apps): `streamUrl()` in `apps/web/src/lib/api.ts` and `apps/mobile/src/api/kaizenApi.ts`.
 - `/api/gemini-live/ws` (WebSocket, mobile): `geminiLiveSocketUrl()` in `apps/mobile/src/api/kaizenApi.ts` switches `https://` to `wss://`.
+- `/api/factory/stream` (SSE, web Digital Twin): `useFactoryStream()` in `apps/web/src/hooks/useFactoryStream.ts` connects directly to the factory service origin (`VITE_FACTORY_STREAM_ORIGIN`) without proxying through backend and without requiring an auth token. In dev, Vite proxies `/api/factory` to `FACTORY_PROXY_TARGET` (`http://localhost:8010`). If the factory is offline, the UI shows a standby indicator without crashing.
 
 Both read the build-time `VITE_STREAM_ORIGIN`. It is unset in dev, so URLs stay relative and go through the Vite proxy. Cross-origin `EventSource` needs CORS: Cloud Run gets `CORS_ORIGINS` (each site's `.web.app` and `.firebaseapp.com` origin, `local.cors_origins` in `infra/terraform/locals.tf`), and `backend/api/main.py` adds `CORSMiddleware` for those origins only when the setting is non-empty. WebSockets are not subject to CORS.
 

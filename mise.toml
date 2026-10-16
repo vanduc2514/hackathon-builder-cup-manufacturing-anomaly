@@ -375,7 +375,7 @@ description = "Build apps/web against the Cloud Run stream origin and deploy it 
 depends = ["firebase:targets"]
 run = [
   { task = "install:web" },
-  'origin="$(terraform -chdir=infra/terraform output -raw service_url)" && cd apps/web && VITE_STREAM_ORIGIN="$origin" npm run build',
+  'origin="$(terraform -chdir=infra/terraform output -raw service_url)" && factory_origin="$(terraform -chdir=infra/terraform output -raw factory_service_url)" && cd apps/web && VITE_STREAM_ORIGIN="$origin" VITE_FACTORY_STREAM_ORIGIN="$factory_origin" npm run build',
   'firebase deploy --only hosting:web --project "$TF_VAR_project_id"',
 ]
 

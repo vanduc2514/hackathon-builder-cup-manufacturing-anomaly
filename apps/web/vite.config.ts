@@ -4,6 +4,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const apiTarget = process.env.API_PROXY_TARGET ?? 'http://localhost:8000';
+const factoryTarget = process.env.FACTORY_PROXY_TARGET ?? 'http://localhost:8010';
 
 export default defineConfig({
   plugins: [react()],
@@ -11,6 +12,10 @@ export default defineConfig({
     port: 3000,
     strictPort: true,
     proxy: {
+      '/api/factory': {
+        target: factoryTarget,
+        changeOrigin: true,
+      },
       '/api': {
         target: apiTarget,
         changeOrigin: true,

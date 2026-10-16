@@ -13,14 +13,19 @@
 
 The previous System Topology interface presented system components as horizontal swimlanes (`grid-template-columns: repeat(4, 1fr)`), which did not align with shop-floor cognitive intuition where physical production and reactive swarm incidents flow sequentially through time from **Top to Bottom**.
 
-Following user and product design feedback, this redesign transforms the page into a **Top-to-Bottom (Vertical Flow) Execution Pipeline**:
-1. **Vertical Continuous Execution Flow:** Replaces horizontal swimlanes with a sequential top-to-bottom execution pipeline. Events start at the top at physical edge inspection (**Phase A: Detection**), stream downward into causal reasoning (**Phase B: Tracing & RCA**), branch into guided field intervention (**Phase C: Resolution**), and terminate at post-repair conveyor certification (**Phase D: Verification & Governance**).
-2. **Dual Decision Gates (Decision Diamonds):** Explicitly surfaces the AI uncertainty threshold (`Confidence >= 0.70?`) with a Diagnostic Loop return path, and the shop-floor physical proof gate (**Invariant #3**: `Streak >= 50 clean parts`) with an automatic defect reset loop.
-3. **Ergonomic Canvas Controls & Orthogonal Flowchart Routing:** Replaces soft Bezier curves with crisp, high-contrast orthogonal step connectors (`right-angled step routing`) and enlarged $8 \times 8$ px arrowhead markers. Default connectors use solid dark slate (`#475569`, 2.4px) for immediate readability on `#eef1fb`, switching to animated pulsed dashed lines during active execution. Includes intuitive zoom/pan navigation (Zoom In, Zoom Out, Reset 100%, Fit-to-View), a live vertical Minimap preview, and full glove-friendly touch target compliance ($\ge 44 \times 44$ px).
-4. **Calm Tech & Progressive Disclosure (3 Tiers):** Maintains a calm, low-cognitive-load lavender canvas (`#eef1fb`) with frosted glass nodes, reserving high-contrast semantic alerts only for active anomalies and decision branches.
+Following user and product design feedback, this redesign transforms the page into a complete **5-Layer Industrial Architecture Execution Pipeline** matching [`docs/kaizen-agent-architecture.mmd`](../kaizen-agent-architecture.mmd):
+1. **5-Layer Continuous Vertical Execution Flow:** Replaces simplified swimlanes with the complete 5 architectural layers of the Kaizen industrial manufacturing platform:
+   - **Layer 1: Factory Floor · Edge Data Sources** (CNC / Injection Machines, End-of-Line Optical Cameras CAM-EOL, Vibration/Temp Sensors, Chamber Microphones, Traceability QR/Laser Marking).
+   - **Layer 2: On-Premises Gateway · Gemma Edge & Bridge** (Gemma 3 2B Local Inference with >95% frame pre-filtering & 50ms rejector, Industrial OPC-UA / MQTT 100Hz telemetry bridge).
+   - **Layer 3: Google Cloud · Data & AI Platform** (Cloud Pub/Sub real-time bus, BigQuery lot genealogy warehouse, Cloud Firestore reactive blackboard, Vertex AI Search / RAG defect library, Gemini 2.5 foundation models).
+   - **Layer 4: Agent Team · Google ADK Multi-Agent System** (ADK Orchestrator single entry/exit & sole blackboard writer, Quality Inspector Agent, Traceability Agent, Process Analyst Agent, Root Cause Agent, Diagnostic Agent, Technician Photo Gemini Vision, Technician Copilot Live, Incident Scribe Agent, Continuous Learning Agent).
+   - **Layer 5: Human-in-the-Loop & Operational Outputs** (Field Technician Mobile Copilot App, Post-repair Conveyor Optical Inspection Camera CAM-EOL, Streak Defect Reset & Bay Siren Alarm, Incident Board Dashboard, Shift Leader E-Signature Release Approval Modal, Operational Output Documents: 8D Report, Work Order, SOP Update, ESG Impact Card).
+2. **Dual Decision Gates (Decision Diamonds):** Explicitly surfaces the AI uncertainty threshold (**Gate 1**: `Confidence >= 0.70?`) with a Diagnostic Loop return path, and the shop-floor physical proof gate (**Gate 2 / Invariant #3**: `Streak >= 50 clean parts`) with an automatic defect reset loop to 0/50.
+3. **Live State & SideDrawer UI Deep References:** Clicking any of the 26 components or 2 decision gates opens Tier 3 Deep-Dive SideDrawer displaying live operational states across 6 scenarios, technical specs (SLA latency, protocol channel, fallback mode), formatted JSON payloads, and an explicit **UI Reference Card** directly deep-linking to the real production surface (Desktop Dashboard, Technician Mobile App, Shop-Floor Terminal, or Cloud Admin Console) with interactive preview and navigation CTA.
+4. **Ergonomic Canvas Controls & Orthogonal Flowchart Routing:** Replaces soft Bezier curves with crisp, high-contrast orthogonal step connectors (`right-angled step routing`) and enlarged $8 \times 8$ px arrowhead markers. Default connectors use solid dark slate (`#475569`, 2.4px) for immediate readability on `#eef1fb`, switching to animated pulsed dashed lines during active execution. Includes intuitive zoom/pan navigation (Zoom In, Zoom Out, Reset 100%, Fit-to-View), a live vertical Minimap preview, and full glove-friendly touch target compliance ($\ge 44 \times 44$ px).
 5. **Top-Most System Architecture Navigation:** Positions the independent `System Architecture` sidebar section (containing `System Topology`) at the very top of the desktop sidebar navigation (above `Operational Loop` and `Knowledge Loop`), highlighting system observability and multi-agent execution architecture as the primary structural anchor of the Kaizen platform.
-6. **Deep Visual Component Interactivity & Edge Highlighting:** Hovering or clicking any component triggers phase-calibrated glowing illumination (`#phase-a`: danger, `#phase-b`: warning/accent, `#phase-c`: info, `#phase-d`: success), highlights connected incoming and outgoing edges (`3.8px`, `#4338ca` with drop shadow) while dimming background edges (`opacity: 0.12`), rings immediate upstream/downstream neighbors, and unlocks interactive drawer triggers (`Simulate Trigger`, `Copy JSON`, `Inspect Logs`).
-7. **Compact Header Scenario Selector Dropdown:** Replaces horizontal scenario button strips with a compact, frosted-glass dropdown menu situated directly within the Top Header bar. Displays the active scenario state with a colored status dot, provides descriptive scenario summaries with checkmark indicators, and frees up vertical screen height for optimal workflow canvas viewing.
+6. **Deep Visual Component Interactivity & Edge Highlighting:** Hovering or clicking any component triggers layer-calibrated glowing illumination (`Layer 1`: emerald `#16a34a`, `Layer 2`: amber `#d97706`, `Layer 3`: blue `#2563eb`, `Layer 4`: purple `#7c3aed`, `Layer 5`: pink `#db2777`), highlights connected incoming and outgoing edges (`3.8px`, `#4338ca` with drop shadow) while dimming background edges (`opacity: 0.12`), rings immediate upstream/downstream neighbors, and unlocks interactive drawer triggers (`Simulate Trigger`, `Copy JSON`, `Inspect Logs`).
+7. **Compact Header Scenario Selector Dropdown:** Replaces horizontal scenario button strips with a compact, frosted-glass dropdown menu situated directly within the Top Header bar supporting 6 realistic plant states: Nominal Standby, Active Defect & SPC UCL Breach, Low Confidence (<0.70) Diagnostic Loop, Verification Streak Progress (42/50), Verification Defect & Streak Reset (0/50), and Invariant #3 Certified & 8D Released.
 
 ---
 
@@ -28,67 +33,105 @@ Following user and product design feedback, this redesign transforms the page in
 
 ```mermaid
 flowchart TD
-    subgraph PhaseA ["Phase A: Detection & Ingestion"]
+    subgraph Layer1 ["1. Factory Floor · Edge Data Sources"]
         direction TB
-        A1["Camera / Optical Station<br/>(Exit Conveyor · Gemma 3 2B Edge)"] -->|"Defect Spike (>95% frame drop)<br/>50ms Pneumatic Diverter"| A2["Pub/Sub & ADK Orchestrator<br/>(SPC UCL Breach / API Trigger)"]
-        A1b["Factory Physical Signals<br/>(Sensors & PLC Edge Gateway)"] -->|"100 Hz High-Freq OPC-UA / MQTT Buffer"| A2
-        A2 -->|"Open Incident Event<br/>blackboard session"| A3["Quality Inspector Agent<br/>(SPC Alarm UCL 3.0% Breach)"]
-        A1b -.->|"Continuous Telemetry (100Hz)<br/>Vibration FFT & Motor Load"| B2
+        L1_M["CNC / Injection / PLC Machines<br/>(Spindle 3200 RPM · Feed 0.28mm)"]
+        L1_C["End-of-Line Optical Cameras CAM-EOL<br/>(1080p @ 60 FPS)"]
+        L1_S["Physical Sensors (Vib/Temp)<br/>(100 Hz Continuous Sampling)"]
+        L1_A["Microphones (Acoustic Emissions)<br/>(20 kHz Machining Chamber)"]
+        L1_T["Traceability Code (QR / Laser)<br/>(Workpiece Barcode & Station)"]
     end
 
-    subgraph PhaseB ["Phase B: Tracing & Root Cause Analysis"]
+    subgraph Layer2 ["2. On-Premises Gateway · Gemma Edge & Bridge"]
         direction TB
-        A3 -->|"Trigger Anomaly Event"| B1["Traceability Agent<br/>(BigQuery Lot Genealogy)"]
-        A3 -->|"Window Telemetry"| B2["Process Analyst Agent<br/>(High-Freq Vibration Drift)"]
-        B1 -->|"Suspect CNC-02 / Tool T07"| B3["Root Cause Agent<br/>(5-Whys + Ishikawa + Vertex RAG)"]
-        B2 -->|"Vibration Surge +35%"| B3
-        B3 --> D1{"Decision Diamond 1<br/>Confidence >= 0.70?"}
+        L2_G["Gemma 3 2B Local Inference<br/>(>95% Frame Drop · 50ms Divert)"]
+        L2_B["OPC-UA / MQTT Bridge<br/>(High-Freq Telemetry Buffer)"]
+    end
+
+    subgraph Layer3 ["3. Google Cloud · Data & AI Platform"]
+        direction TB
+        L3_PS["Cloud Pub/Sub<br/>(Real-Time Ingestion Bus)"]
+        L3_BQ["BigQuery Warehouse<br/>(Traceability & Telemetry)"]
+        L3_FS["Cloud Firestore<br/>(Shared Incident Blackboard)"]
+        L3_RAG["Vertex AI Search & RAG<br/>(OEM Manuals, 8D Archives)"]
+        L3_GEM["Gemini on Vertex AI<br/>(Vision, Live API, Video)"]
+    end
+
+    subgraph Layer4 ["4. Agent Team · Google ADK Multi-Agent System"]
+        direction TB
+        L4_ORC["ADK Orchestrator Agent<br/>(Single Entry/Exit · Sole Writer)"]
+        L4_QA["Quality Inspector Agent<br/>(Defect Classification & SPC Alarm)"]
+        L4_TRA["Traceability Agent<br/>(BigQuery Lot Genealogy)"]
+        L4_PA["Process Analyst Agent<br/>(High-Freq Telemetry FFT)"]
+        L4_RCA["Root Cause Agent<br/>(5-Whys Synthesis + RAG)"]
         
-        %% Decision Diamond 1 Branches (< 0.70 vs >= 0.70)
-        D1 -->|"NO (< 0.70)"| B4["Diagnostic Agent<br/>(status: awaiting_evidence)"]
-        B4 -->|"Mobile Evidence Request"| B5["Technician Photo<br/>(Gemini Vision)"]
-        B5 -->|"Evidence Verified ➔ Resolution"| C1
-        B5 -.->|"Re-evaluate Evidence"| B3
-    end
-
-    subgraph PhaseC ["Phase C: Resolution & Field Intervention"]
-        direction TB
-        D1 -->|"YES (>= 0.70)<br/>Verified Cause"| C1["Copilot Agent<br/>(Gemini Live WebSocket)"]
-        D1 -->|"Root Cause Dossier"| C2["Incident Scribe Agent<br/>(WorkOrder, 8D, SOP)"]
-        C1 -->|"3-Step Guided Wrenching"| C3["Bay Technician Physical Confirmation<br/>[Repair Done] (48px Primary CTA)"]
-        C2 -->|"Work Order Attached"| C3
-    end
-
-    subgraph PhaseD ["Phase D: Verification & Learning"]
-        direction TB
-        C3 -->|"Confirm Repair Done<br/>(status: verifying)"| D2["Verify Repair<br/>(Conveyor Optical Inspection)"]
-        D2 --> D3{"Verification Gate (Invariant #3)<br/>Streak >= 50 Clean Parts?"}
+        GATE1{"Decision Gate 1<br/>Confidence >= 0.70?"}
         
-        %% Decision Diamond 2 Branches
-        D3 -->|"NO (Defect Detected)"| D4["Reset Streak to 0/50<br/>Escalate Alarm (escalated)"]
-        D4 -.->|"Re-inspect Tooling"| C1
+        L4_DIAG["Diagnostic Agent<br/>(status: awaiting_evidence)"]
+        L4_PHO["Technician Macro Photo<br/>(Gemini Vision Tool Inspection)"]
         
-        D3 -->|"YES (Streak >= 50)"| D5["[Close Incident]<br/>Invariant #3 Certified"]
-        D5 --> D6["Continuous Learning Agent<br/>(Scrap Avoided · CO2e · RAG Commit)"]
-        D6 --> D7["Shift Leader Approval<br/>(Digital E-Signature Gate)"]
-        D7 --> D8["Status: approved<br/>Nominal Release & Incident Archive"]
+        L4_COP["Technician Copilot Live<br/>(Gemini Live WebSocket)"]
+        L4_SCR["Incident Scribe Agent<br/>(8D Report & Work Order)"]
+        L4_LRN["Continuous Learning Agent<br/>(Video-to-Procedure RAG & ESG)"]
     end
 
-    PhaseA --> PhaseB
-    PhaseB --> PhaseC
-    PhaseC --> PhaseD
+    subgraph Layer5 ["5. Human-in-the-Loop & Operational Outputs"]
+        direction TB
+        L5_TECH["Bay 4 Field Technician<br/>(Mobile Copilot · 48px [Confirm Done])"]
+        L5_CAM["Conveyor Optical Camera CAM-EOL<br/>(Post-Repair Optical Inspection)"]
+        
+        GATE2{"Decision Gate 2 (Invariant #3)<br/>Verification Streak >= 50?"}
+        
+        L5_RST["Streak Defect Reset<br/>(Reset to 0/50 & Bay Siren Alarm)"]
+        L5_DASH["Incident Board Dashboard<br/>(Plant Ops Line Overview & Command)"]
+        L5_LEAD["Shift Leader Approval Gate<br/>(Digital E-Signature Release)"]
+        L5_DOC["Operational Output Documents<br/>(8D Dossier, Work Order, SOP Update)"]
+    end
 
-    classDef phaseA fill:#fee2e2,stroke:#ef4444,stroke-width:1.5px,color:#991b1b;
-    classDef phaseB fill:#fef3c7,stroke:#f59e0b,stroke-width:1.5px,color:#92400e;
-    classDef phaseC fill:#dbeafe,stroke:#3b82f6,stroke-width:1.5px,color:#1e40af;
-    classDef phaseD fill:#dcfce7,stroke:#10b981,stroke-width:1.5px,color:#065f46;
-    classDef diamond fill:#ffffff,stroke:#6366f1,stroke-width:2px,color:#312e81;
+    %% Inter-layer connections
+    L1_C -->|"60 FPS Optical Stream"| L2_G
+    L1_S -->|"100 Hz Sensors"| L2_B
+    L1_A -->|"Acoustic Spectrum"| L2_G
+    L1_M -->|"PLC State"| L2_B
+    L1_T -->|"Traceability Codes"| L3_PS
 
-    class A1,A2,A3 phaseA;
-    class B1,B2,B3,B4,B5 phaseB;
-    class C1,C2,C3 phaseC;
-    class D2,D4,D5,D6,D7,D8 phaseD;
-    class D1,D3 diamond;
+    L2_G -->|"Anomalous Frames"| L3_PS
+    L2_B -->|"MQTT Packets"| L3_PS
+
+    L3_PS -->|"Telemetry Event Stream"| L4_ORC
+    L3_PS -->|"Batch Stream"| L3_BQ
+    L3_FS <-->|"State Sync"| L4_ORC
+    L3_RAG -.->|"SOP Embeddings"| L4_RCA
+    L3_GEM -.->|"Multimodal Reasoning"| L4_RCA
+
+    L4_ORC --> L4_QA
+    L4_QA --> L4_TRA
+    L4_QA --> L4_PA
+    L4_TRA --> L4_RCA
+    L4_PA --> L4_RCA
+    L4_RCA --> GATE1
+
+    %% Gate 1 branches
+    GATE1 -->|"NO (< 0.70)"| L4_DIAG
+    L4_DIAG -->|"Field Request"| L4_PHO
+    L4_PHO -->|"Gemini Vision Re-eval"| L4_RCA
+    
+    GATE1 -->|"YES (>= 0.70)"| L4_COP
+    GATE1 -->|"Verified Cause"| L4_SCR
+    L4_COP --> L4_LRN
+
+    %% Layer 4 to Layer 5
+    L4_COP -->|"Live Guidance"| L5_TECH
+    L5_TECH -->|"[Confirm Done] CTA"| L5_CAM
+    L5_CAM --> GATE2
+
+    %% Gate 2 branches
+    GATE2 -->|"NO (Defect Detected)"| L5_RST
+    L5_RST -.->|"Streak Reset & Escalate"| L4_COP
+    GATE2 -->|"YES (Streak >= 50)"| L5_LEAD
+    GATE2 -.->|"Live Counter"| L5_DASH
+    L5_LEAD -->|"Signed Release"| L5_DOC
+    L4_LRN -.->|"Avoided Scrap & SOP"| L5_DOC
 ```
 
 ---

@@ -536,3 +536,140 @@ def test_api_key_public_endpoints_unrestricted(monkeypatch):
         res_status = client.get("/api/factory/status")
         assert res_status.status_code == 200
         assert "machines" in res_status.json()
+
+
+@pytest.mark.asyncio
+async def test_periodic_telemetry_publishes_all_machines_per_interval(monkeypatch):
+    """Verify periodic telemetry publishes 1 payload per machine (CNC-01..03, IM-05) every interval."""
+    from simulator.config import settings
+    from simulator.server import FactoryServerService
+
+    current_time = 1000.0
+    mock_dispatcher = MagicMock(spec=EdgePubSubDispatcher)
+    mock_dispatcher.publish_telemetry = AsyncMock(return_value=True)
+
+    monkeypatch.setattr(settings, "pubsub_enabled", True)
+    monkeypatch.setattr(settings, "telemetry_publish_interval_sec", 10.0)
+
+    srv = FactoryServerService(
+        interval_sec=1.0,
+        pubsub_dispatcher=mock_dispatcher,
+        clock=lambda: current_time,
+    )
+
+    # 1. At t=1000, initial state: no periodic telemetry published yet
+    packet = await srv.step()
+    await srv._maybe_publish_periodic_telemetry(packet.telemetry)
+    assert mock_dispatcher.publish_telemetry.call_count == 0
+
+    # 2. Advance by 5s (< 10s interval): still nothing published
+    current_time = 1005.0
+    packet = await srv.step()
+    await srv._maybe_publish_periodic_telemetry(packet.telemetry)
+    assert mock_dispatcher.publish_telemetry.call_count == 0
+
+    # 3. Advance to 1010.0 (10s elapsed): exactly 4 machine telemetry packets published (CNC-01..03, IM-05)
+    current_time = 1010.0
+    packet = await srv.step()
+    await srv._maybe_publish_periodic_telemetry(packet.telemetry)
+    assert mock_dispatcher.publish_telemetry.call_count == 4
+
+    published_machines = [
+        call.args[0].machine_id for call in mock_dispatcher.publish_telemetry.await_args_list
+    ]
+    assert set(published_machines) == {"CNC-01", "CNC-02", "CNC-03", "IM-05"}
+
+    # 4. Advance to 1020.0 (second interval): another 4 packets (total 8)
+    current_time = 1020.0
+    packet = await srv.step()
+    await srv._maybe_publish_periodic_telemetry(packet.telemetry)
+    assert mock_dispatcher.publish_telemetry.call_count == 8
+
+
+@pytest.mark.asyncio
+async def test_periodic_telemetry_interval_zero_disabled(monkeypatch):
+    """Verify periodic telemetry publishing is completely disabled when interval is 0."""
+    from simulator.config import settings
+    from simulator.server import FactoryServerService
+
+    current_time = 1000.0
+    mock_dispatcher = MagicMock(spec=EdgePubSubDispatcher)
+    mock_dispatcher.publish_telemetry = AsyncMock(return_value=True)
+
+    monkeypatch.setattr(settings, "pubsub_enabled", True)
+    monkeypatch.setattr(settings, "telemetry_publish_interval_sec", 0.0)
+
+    srv = FactoryServerService(
+        interval_sec=1.0,
+        pubsub_dispatcher=mock_dispatcher,
+        clock=lambda: current_time,
+    )
+
+    current_time = 1050.0  # 50s pass
+    packet = await srv.step()
+    await srv._maybe_publish_periodic_telemetry(packet.telemetry)
+    assert mock_dispatcher.publish_telemetry.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_periodic_telemetry_pubsub_disabled_none_published(monkeypatch):
+    """Verify periodic telemetry publishing is skipped when pubsub_enabled is False."""
+    from simulator.config import settings
+    from simulator.server import FactoryServerService
+
+    current_time = 1000.0
+    mock_dispatcher = MagicMock(spec=EdgePubSubDispatcher)
+    mock_dispatcher.publish_telemetry = AsyncMock(return_value=True)
+
+    monkeypatch.setattr(settings, "pubsub_enabled", False)
+    monkeypatch.setattr(settings, "telemetry_publish_interval_sec", 10.0)
+
+    srv = FactoryServerService(
+        interval_sec=1.0,
+        pubsub_dispatcher=mock_dispatcher,
+        clock=lambda: current_time,
+    )
+
+    current_time = 1050.0  # 50s pass
+    packet = await srv.step()
+    await srv._maybe_publish_periodic_telemetry(packet.telemetry)
+    assert mock_dispatcher.publish_telemetry.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_periodic_telemetry_dispatcher_error_does_not_crash_loop(monkeypatch):
+    """Verify dispatcher exception does not stop the simulation run loop."""
+    from simulator.config import settings
+    from simulator.server import FactoryServerService
+
+    current_time = 1000.0
+    mock_dispatcher = MagicMock(spec=EdgePubSubDispatcher)
+    mock_dispatcher.publish_telemetry = AsyncMock(side_effect=RuntimeError("Pub/Sub outage"))
+
+    monkeypatch.setattr(settings, "pubsub_enabled", True)
+    monkeypatch.setattr(settings, "telemetry_publish_interval_sec", 10.0)
+
+    srv = FactoryServerService(
+        interval_sec=0.01,
+        pubsub_dispatcher=mock_dispatcher,
+        clock=lambda: current_time,
+    )
+
+    current_time = 1015.0
+    # Calling directly catches and logs
+    packet = await srv.step()
+    await srv._maybe_publish_periodic_telemetry(packet.telemetry)
+
+    # In loop: verify loop keeps ticking despite dispatcher errors
+    loop_task = asyncio.create_task(srv._run_loop())
+    await asyncio.sleep(0.05)
+    assert srv.running is True
+    assert srv.tick_count > 0
+
+    srv.stop()
+    await asyncio.sleep(0.02)
+    assert srv.running is False
+    try:
+        await loop_task
+    except asyncio.CancelledError:
+        pass

@@ -24,6 +24,9 @@ class SimulatorSettings(BaseSettings):
     # Timing & execution
     tick_interval_sec: float = float(os.getenv("SIMULATOR_TICK_SEC", "2.0"))
     speed_multiplier: float = float(os.getenv("SIMULATOR_SPEED", "1.0"))
+    telemetry_publish_interval_sec: float = float(
+        os.getenv("SIMULATOR_TELEMETRY_PUBLISH_SEC", "10.0")
+    )
 
     # Google Cloud Pub/Sub & Edge Dispatch
     gcp_project_id: str = os.getenv("GCP_PROJECT_ID", "kaizen-local")

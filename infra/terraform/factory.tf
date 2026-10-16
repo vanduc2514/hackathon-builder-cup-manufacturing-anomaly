@@ -1,16 +1,17 @@
 locals {
   factory_env = {
-    APP_ENV                     = "production"
-    GCP_PROJECT_ID              = var.project_id
-    GCP_REGION                  = var.region
-    LOG_LEVEL                   = "INFO"
-    MQTT_BROKER_HOST            = "broker.emqx.io"
-    MQTT_BROKER_PORT            = "1883"
-    CORS_ORIGINS                = local.cors_origins
-    PUBSUB_TELEMETRY_TOPIC      = "kaizen-telemetry"
-    PUBSUB_TRACEABILITY_TOPIC   = "kaizen-traceability"
-    PUBSUB_QUALITY_EVENTS_TOPIC = "kaizen-quality-events"
-    SIMULATOR_PUBSUB_ENABLED    = "true"
+    APP_ENV                         = "production"
+    GCP_PROJECT_ID                  = var.project_id
+    GCP_REGION                      = var.region
+    LOG_LEVEL                       = "INFO"
+    MQTT_BROKER_HOST                = "broker.emqx.io"
+    MQTT_BROKER_PORT                = "1883"
+    CORS_ORIGINS                    = local.cors_origins
+    PUBSUB_TELEMETRY_TOPIC          = "kaizen-telemetry"
+    PUBSUB_TRACEABILITY_TOPIC       = "kaizen-traceability"
+    PUBSUB_QUALITY_EVENTS_TOPIC     = "kaizen-quality-events"
+    SIMULATOR_PUBSUB_ENABLED        = "true"
+    SIMULATOR_TELEMETRY_PUBLISH_SEC = "10"
   }
 }
 

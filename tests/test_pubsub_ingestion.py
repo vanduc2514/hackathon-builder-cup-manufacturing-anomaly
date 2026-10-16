@@ -326,3 +326,21 @@ async def test_factory_simulator_pubsub_dispatch():
         event = args[0]
         assert event.machine_id == "CNC-02"
         assert event.scenario == "cnc_tool_wear"
+
+
+def test_pubsub_telemetry_malformed_message_acked_not_nacked():
+    """Verifies malformed telemetry payloads are acked to prevent poison-pill infinite redelivery."""
+    manager = PubSubManager()
+    mock_msg = MagicMock()
+    mock_msg.data = b"not-valid-json-payload-poison-pill"
+
+    manager._handle_telemetry_message(mock_msg)
+    mock_msg.ack.assert_called_once()
+    mock_msg.nack.assert_not_called()
+
+    # Also test valid JSON with invalid schema fields
+    mock_msg_invalid_schema = MagicMock()
+    mock_msg_invalid_schema.data = b'{"completely_wrong": 123}'
+    manager._handle_telemetry_message(mock_msg_invalid_schema)
+    mock_msg_invalid_schema.ack.assert_called_once()
+    mock_msg_invalid_schema.nack.assert_not_called()

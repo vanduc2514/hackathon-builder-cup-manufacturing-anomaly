@@ -104,6 +104,7 @@ class FactoryServerService:
         interval_sec: float = 1.0,
         speed: float = 1.0,
         pubsub_dispatcher: Optional[EdgePubSubDispatcher] = None,
+        clock: Optional[Any] = None,
     ) -> None:
         self.interval_sec = interval_sec
         self.speed = max(0.1, speed)
@@ -115,6 +116,8 @@ class FactoryServerService:
         self.edge_tracker = EdgeFilterTracker()
         self._task: Optional[asyncio.Task[None]] = None
         self.pubsub_dispatcher = pubsub_dispatcher or EdgePubSubDispatcher()
+        self._clock = clock or time.monotonic
+        self._last_telemetry_publish_time: float = self._clock()
 
         self.injection_engine = DefectInjectionEngine()
         # Always register IM-05 baseline so 4 machine bays (CNC-01..03, IM-05) are monitored
@@ -303,6 +306,7 @@ class FactoryServerService:
 
     def reset(self) -> None:
         """Restores machines, conveyors, and statistics to pristine baseline."""
+        self._last_telemetry_publish_time = self._clock()
         self.injection_engine.reset()
         self.anomaly_start_time = None
         self.speed = 1.0
@@ -348,6 +352,44 @@ class FactoryServerService:
 
         return packet
 
+    async def _maybe_publish_periodic_telemetry(
+        self, telemetry_list: list[MachineTelemetry]
+    ) -> None:
+        """Publishes current machine telemetry to Pub/Sub kaizen-telemetry periodically.
+
+        Runs every telemetry_publish_interval_sec (monotonic clock).
+        Only active when settings.pubsub_enabled is True.
+        Catches and logs all errors so tick loop never crashes.
+        """
+        if not settings.pubsub_enabled:
+            return
+
+        interval = settings.telemetry_publish_interval_sec
+        if interval <= 0:
+            return
+
+        now = self._clock()
+        if now - self._last_telemetry_publish_time < interval:
+            return
+
+        self._last_telemetry_publish_time = now
+        try:
+            for item in telemetry_list:
+                payload = MachineTelemetryPayload(
+                    machine_id=item.machine_id,
+                    timestamp=item.timestamp,
+                    tool_id=item.tool_id,
+                    spindle_vibration=item.spindle_vibration,
+                    motor_current=item.motor_current,
+                    spindle_temp=item.spindle_temp,
+                    rpm=item.rpm,
+                    operating_status=item.operating_status,
+                    dryer_dew_point=item.dryer_dew_point,
+                )
+                await self.pubsub_dispatcher.publish_telemetry(payload)
+        except Exception as exc:
+            logger.warning("Periodic telemetry publish error: %s", exc)
+
     async def _run_loop(self) -> None:
         """Continuous async simulation clock."""
         self.running = True
@@ -358,7 +400,11 @@ class FactoryServerService:
         )
         try:
             while self.running:
-                await self.step()
+                try:
+                    packet = await self.step()
+                    await self._maybe_publish_periodic_telemetry(packet.telemetry)
+                except Exception as exc:
+                    logger.warning("Simulation loop tick error: %s", exc)
                 await asyncio.sleep(self.interval)
         except asyncio.CancelledError:
             logger.info("Factory simulation loop cancelled")

@@ -227,6 +227,15 @@ class PubSubManager:
         try:
             data_str = message.data.decode("utf-8")
             telemetry = MachineTelemetryPayload.model_validate_json(data_str)
+        except Exception as exc:
+            logger.warning(
+                "Malformed Pub/Sub telemetry message received; acknowledging and dropping poison-pill: %s",
+                exc,
+            )
+            message.ack()
+            return
+
+        try:
             from backend.tools.bigquery_tool import stream_sensor_telemetry
 
             stream_sensor_telemetry(telemetry)

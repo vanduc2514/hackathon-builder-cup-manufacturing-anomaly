@@ -16,7 +16,7 @@ The previous System Topology interface presented system components as horizontal
 Following user and product design feedback, this redesign transforms the page into a **Top-to-Bottom (Vertical Flow) Execution Pipeline**:
 1. **Vertical Continuous Execution Flow:** Replaces horizontal swimlanes with a sequential top-to-bottom execution pipeline. Events start at the top at physical edge inspection (**Phase A: Detection**), stream downward into causal reasoning (**Phase B: Tracing & RCA**), branch into guided field intervention (**Phase C: Resolution**), and terminate at post-repair conveyor certification (**Phase D: Verification & Governance**).
 2. **Dual Decision Gates (Decision Diamonds):** Explicitly surfaces the AI uncertainty threshold (`Confidence >= 0.70?`) with a Diagnostic Loop return path, and the shop-floor physical proof gate (**Invariant #3**: `Streak >= 50 clean parts`) with an automatic defect reset loop.
-3. **Ergonomic Canvas Controls & Orthogonal Flowchart Routing:** Replaces soft Bézier curves with crisp, high-contrast orthogonal step connectors (`right-angled step routing`) and enlarged $8 \times 8$ px arrowhead markers. Default connectors use solid dark slate (`#475569`, 2.4px) for immediate readability on `#eef1fb`, switching to animated pulsed dashed lines during active execution. Includes intuitive zoom/pan navigation (Zoom In, Zoom Out, Reset 100%, Fit-to-View), a live vertical Minimap preview, and full glove-friendly touch target compliance ($\ge 44 \times 44$ px).
+3. **Ergonomic Canvas Controls & Orthogonal Flowchart Routing:** Replaces soft Bezier curves with crisp, high-contrast orthogonal step connectors (`right-angled step routing`) and enlarged $8 \times 8$ px arrowhead markers. Default connectors use solid dark slate (`#475569`, 2.4px) for immediate readability on `#eef1fb`, switching to animated pulsed dashed lines during active execution. Includes intuitive zoom/pan navigation (Zoom In, Zoom Out, Reset 100%, Fit-to-View), a live vertical Minimap preview, and full glove-friendly touch target compliance ($\ge 44 \times 44$ px).
 4. **Calm Tech & Progressive Disclosure (3 Tiers):** Maintains a calm, low-cognitive-load lavender canvas (`#eef1fb`) with frosted glass nodes, reserving high-contrast semantic alerts only for active anomalies and decision branches.
 5. **Dedicated System Architecture Navigation:** Decouples the System Topology entry point from the task-focused `Operational Loop` (which contains `Line Overview` and active `Incidents`) into an independent `System Architecture` sidebar section positioned between Operational Loop and Knowledge Loop.
 6. **Deep Visual Component Interactivity & Edge Highlighting:** Hovering or clicking any component triggers phase-calibrated glowing illumination (`#phase-a`: danger, `#phase-b`: warning/accent, `#phase-c`: info, `#phase-d`: success), highlights connected incoming and outgoing edges (`3.8px`, `#4338ca` with drop shadow) while dimming background edges (`opacity: 0.12`), rings immediate upstream/downstream neighbors, and unlocks interactive drawer triggers (`Simulate Trigger`, `Copy JSON`, `Inspect Logs`).
@@ -242,7 +242,7 @@ To provide technicians and systems engineers with intuitive situational awarenes
 
 ```text
 +-----------------------------------------------------------------------------------------------------------------------------+
-| [K] KAIZEN AGENT   Cell Line 1 / System Topology     (o) Live SSE: Connected  (Active INC #INC-2026-B42)  [ Shift Lead: Tuấn ]|
+| [K] KAIZEN AGENT   Cell Line 1 / System Topology     (o) Live SSE: Connected  (Active INC #INC-2026-B42)  [ Shift Leader ]|
 +-----------------------------------------------------------------------------------------------------------------------------+
 | System Architecture & Execution Graph - Vertical Execution Pipeline       [ Scenarios: (Nominal) [■ Active CNC-02 ■] (Streak) ]|
 | Top-to-bottom reactive swarm: Edge Vision -> Event Ingest -> RCA -> Dual Gates -> Copilot Fix -> Optical Proof -> Release   |
@@ -305,7 +305,7 @@ To provide technicians and systems engineers with intuitive situational awarenes
 |   ║                          │                                               │                                          ║   |
 |   ║                          ├─ (Re-eval RCA) ──> [6] RCA                    │                                          ║   |
 |   ║                          │                                               │                                          ║   |
-|   ║                          └─ (Evidence Verified) ──> Nối vào Phase C ─────┘                                          ║   |
+|   ║                          └─ (Evidence Verified) ──> Connect to Phase C ─────┘                                          ║   |
 |   ╚══════════════════════════════════════════════════════════════════════════╪══════════════════════════════════════════╝   |
 |                                                                              │                                              |
 |                                                                              ▼ (Verified Cause & Work Order ➔ Resolution)   |

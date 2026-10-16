@@ -1356,7 +1356,7 @@ body {
         </span>
         <span style="font-family: var(--font-mono); font-size: 10px;">24ms</span>
       </div>
-      <div>Shift A · Supervisor Tuấn (Bay 4)</div>
+      <div>Shift A · Shift Leader (Bay 4)</div>
     </div>
   </aside>
 
@@ -1495,7 +1495,7 @@ body {
                   <div class="phase-badge a">A</div>
                   <div class="phase-title-col">
                     <span class="phase-title">Phase A: Detection & Ingestion</span>
-                    <span class="phase-subtitle">Phát hiện quang học tại trạm & Kích hoạt sự cố</span>
+                    <span class="phase-subtitle">Optical Edge Defect Detection & Real-time Incident Dispatch</span>
                   </div>
                 </div>
                 <span class="chip chip-sm chip-neutral" id="phase-a-chip">Standby</span>
@@ -1580,7 +1580,7 @@ body {
                   <div class="phase-badge b">B</div>
                   <div class="phase-title-col">
                     <span class="phase-title">Phase B: Tracing & Root Cause Analysis</span>
-                    <span class="phase-subtitle">Truy vết phả hệ lô & Phân tích nguyên nhân gốc rễ (5-Whys)</span>
+                    <span class="phase-subtitle">Lot Genealogy Tracing & Multi-Agent Causal Reasoning (5-Whys)</span>
                   </div>
                 </div>
                 <span class="chip chip-sm chip-neutral" id="phase-b-chip">Standby</span>
@@ -1723,7 +1723,7 @@ body {
                   <div class="phase-badge c">C</div>
                   <div class="phase-title-col">
                     <span class="phase-title">Phase C: Resolution & Field Intervention</span>
-                    <span class="phase-subtitle">Hỗ trợ kỹ thuật viên tại máy & Xác nhận sửa chữa</span>
+                    <span class="phase-subtitle">Multimodal Copilot Guidance & Shop-Floor Field Intervention</span>
                   </div>
                 </div>
                 <span class="chip chip-sm chip-neutral" id="phase-c-chip">Standby</span>
@@ -1808,7 +1808,7 @@ body {
                   <div class="phase-badge d">D</div>
                   <div class="phase-title-col">
                     <span class="phase-title">Phase D: Verification & Learning</span>
-                    <span class="phase-subtitle">Kiểm chứng Invariant #3, Ledger ESG & Ký duyệt mở xưởng</span>
+                    <span class="phase-subtitle">Invariant #3 Physical Proof, ESG Ledger & Digital Sign-off</span>
                   </div>
                 </div>
                 <span class="chip chip-sm chip-neutral" id="phase-d-chip">Standby</span>
@@ -1922,7 +1922,7 @@ body {
                   </div>
                   <p class="node-jtbd">Hard-disabled until Invariant #3 certifies 50 consecutive clean workpieces on the conveyor.</p>
                   <div class="node-footer">
-                    <span class="node-metric">Sign-off: <b>Shift Leader Tuấn</b></span>
+                    <span class="node-metric">Sign-off: <b>Shift Leader</b></span>
                     <span class="node-metric">Audit: <b>Immutable</b></span>
                   </div>
                 </div>
@@ -2196,7 +2196,7 @@ const NODE_DATA = {
       "reason": "RCA confidence 0.58 < 0.70 threshold",
       "evidence_type": "physical_tool_macro_photo",
       "target_machine": "CNC-02",
-      "technician_assigned": "Tuấn Lê (Bay 4)"
+      "technician_assigned": "Alex Morgan (Bay 4)"
     }
   },
   'technician-photo': {
@@ -2229,7 +2229,7 @@ const NODE_DATA = {
     payload: {
       "reason": "RCA confidence 0.58 < 0.70 threshold",
       "requested_evidence": "Macro photo of CNC-02 Turret Tool T07 carbide insert tip",
-      "technician_assigned": "Tuấn Lê (Bay 4)"
+      "technician_assigned": "Alex Morgan (Bay 4)"
     }
   },
   'copilot-live': {
@@ -2276,7 +2276,7 @@ const NODE_DATA = {
     jtbd: 'Technician confirms tool swap, chuck alignment, and test run completion. Triggers state transition from repairing to verifying.',
     icon: 'touch_app',
     payload: {
-      "technician": "Tuấn Lê (ID: TECH-04)",
+      "technician": "Alex Morgan (ID: TECH-04)",
       "action": "CONFIRM_REPAIR_COMPLETED",
       "timestamp": "2026-10-16T10:14:22Z",
       "safety_interlock_cleared": true
@@ -2690,7 +2690,7 @@ function applyScenario(scenario, btn) {
     document.querySelectorAll('.node-card').forEach(n => n.classList.add('done-node'));
     streakLabel.innerText = '50 / 50 (CERTIFIED)';
     streakFill.style.width = '100%';
-    setNodeStatus('node-human-approval', 'done', 'Signed by Tuấn Lê');
+    setNodeStatus('node-human-approval', 'done', 'Signed by Shift Leader');
     lockBadge.className = 'chip chip-sm chip-green status-badge';
     lockBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span> Approved';
   }

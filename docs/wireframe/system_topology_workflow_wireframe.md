@@ -20,6 +20,7 @@ Following user and product design feedback, this redesign transforms the page in
 4. **Calm Tech & Progressive Disclosure (3 Tiers):** Maintains a calm, low-cognitive-load lavender canvas (`#eef1fb`) with frosted glass nodes, reserving high-contrast semantic alerts only for active anomalies and decision branches.
 5. **Dedicated System Architecture Navigation:** Decouples the System Topology entry point from the task-focused `Operational Loop` (which contains `Line Overview` and active `Incidents`) into an independent `System Architecture` sidebar section positioned between Operational Loop and Knowledge Loop.
 6. **Deep Visual Component Interactivity & Edge Highlighting:** Hovering or clicking any component triggers phase-calibrated glowing illumination (`#phase-a`: danger, `#phase-b`: warning/accent, `#phase-c`: info, `#phase-d`: success), highlights connected incoming and outgoing edges (`3.8px`, `#4338ca` with drop shadow) while dimming background edges (`opacity: 0.12`), rings immediate upstream/downstream neighbors, and unlocks interactive drawer triggers (`Simulate Trigger`, `Copy JSON`, `Inspect Logs`).
+7. **Compact Header Scenario Selector Dropdown:** Replaces horizontal scenario button strips with a compact, frosted-glass dropdown menu situated directly within the Top Header bar. Displays the active scenario state with a colored status dot, provides descriptive scenario summaries with checkmark indicators, and frees up vertical screen height for optimal workflow canvas viewing.
 
 ---
 
@@ -242,9 +243,9 @@ To provide technicians and systems engineers with intuitive situational awarenes
 
 ```text
 +-----------------------------------------------------------------------------------------------------------------------------+
-| [K] KAIZEN AGENT   Cell Line 1 / System Topology     (o) Live SSE: Connected  (Active INC #INC-2026-B42)  [ Shift Leader ]|
+| [K] KAIZEN AGENT   Cell Line 1 / System Topology     (●) Nominal   [ Scenario: 1. Nominal Standby ▾ ]  [ Reset View ]           |
 +-----------------------------------------------------------------------------------------------------------------------------+
-| System Architecture & Execution Graph - Vertical Execution Pipeline       [ Scenarios: (Nominal) [■ Active CNC-02 ■] (Streak) ]|
+| Top-to-Bottom Multi-Agent Execution Graph   [ 12 Nodes · 2 Gates ] [ Invariant #3 Protected ]   [ Export Graph JSON ]           |
 | Top-to-bottom reactive swarm: Edge Vision -> Event Ingest -> RCA -> Dual Gates -> Copilot Fix -> Optical Proof -> Release   |
 +-----------------------------------------------------------------------------------------------------------------------------+
 | CANVAS CONTROLS: [ + Zoom In ] [ - Zoom Out ] [ 100% Reset ] [ [ ] Fit View ] [ (M) Map ]   | Legend: [▼] Flow  [✓] Done  [○] Idle|
@@ -499,3 +500,4 @@ To provide technicians and systems engineers with intuitive situational awarenes
 - [x] **AC-TOP-08:** Navigation entry point for System Topology is housed in a dedicated **`System Architecture`** sidebar section, fully decoupled from the task-oriented **`Operational Loop`** (`Line Overview`, `Incidents`) and educational **`Knowledge Loop`**.
 - [x] **AC-TOP-09:** Visual component interactivity enables deep inspection: hovering/selecting any node or decision gate applies a phase-aware halo ring, highlights connected incoming and outgoing edges (`3.8px`, `#4338ca`), dims unrelated background edges (`opacity: 0.12`), and indicates upstream/downstream neighbors.
 - [x] **AC-TOP-10:** SideDrawer features interactive action triggers ($\ge 44 	imes 44\text{ px}$): `Simulate Trigger` with canvas ripple feedback, `Copy JSON` with clipboard confirmation, and expandable `Inspect Logs` Cloud Logging stream.
+- [x] **AC-TOP-11:** Live simulation scenarios are selectable via a compact **Top Header Scenario Dropdown** (`aria-haspopup="true"`), displaying real-time scenario status dot, full option descriptions, and auto-dismiss on outside click while conserving canvas vertical space.

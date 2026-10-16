@@ -371,6 +371,135 @@ body {
   color: #fff;
 }
 
+/* Header Scenario Dropdown */
+.scenario-dropdown-wrapper {
+  position: relative;
+}
+.scenario-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, .82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--hair-strong);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .05);
+  font-family: var(--font-main);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all .2s var(--ease);
+  min-height: 38px;
+}
+.scenario-dropdown-trigger:hover {
+  background: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(91, 91, 240, .14);
+}
+.scenario-dropdown-trigger[aria-expanded="true"] {
+  background: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(91, 91, 240, .18);
+}
+.scenario-trigger-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+.dropdown-arrow {
+  font-size: 18px;
+  color: var(--muted);
+  transition: transform .2s var(--ease);
+}
+.scenario-dropdown-trigger[aria-expanded="true"] .dropdown-arrow {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+.scenario-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 320px;
+  z-index: 1000;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, .96);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, .9);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, .18), 0 0 0 1px rgba(15, 23, 42, .04);
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  animation: dropdownFadeIn .18s var(--ease);
+}
+.scenario-dropdown-menu.open {
+  display: flex;
+}
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.scenario-dropdown-header {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  padding: 6px 10px 4px;
+  border-bottom: 1px solid var(--hair);
+  margin-bottom: 2px;
+}
+.scenario-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all .15s var(--ease);
+  min-height: 46px;
+  border: 1px solid transparent;
+}
+.scenario-option:hover {
+  background: rgba(91, 91, 240, .07);
+}
+.scenario-option.active {
+  background: rgba(91, 91, 240, .12);
+  border-color: rgba(91, 91, 240, .24);
+}
+.scenario-option-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.scenario-option-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.scenario-option-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.3;
+}
+.option-check {
+  font-size: 18px;
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity .15s;
+}
+.scenario-option.active .option-check {
+  opacity: 1;
+}
+
 /* Toolbar & Scenario Bar */
 .topology-toolbar {
   display: flex;
@@ -1371,6 +1500,68 @@ body {
         </span>
       </div>
       <div class="top-header-right">
+        <!-- Compact Header Scenario Dropdown -->
+        <div class="scenario-dropdown-wrapper" id="scenario-dropdown-wrapper">
+          <button class="scenario-dropdown-trigger" id="scenario-dropdown-trigger" onclick="toggleScenarioDropdown(event)" aria-haspopup="true" aria-expanded="false">
+            <span class="scenario-trigger-icon" id="scenario-trigger-dot">
+              <span class="status-dot green"></span>
+            </span>
+            <span class="scenario-trigger-label" id="scenario-trigger-label">Scenario: 1. Nominal Standby</span>
+            <span class="material-symbols-outlined dropdown-arrow">expand_more</span>
+          </button>
+          <div class="scenario-dropdown-menu" id="scenario-dropdown-menu">
+            <div class="scenario-dropdown-header">Simulate Live Scenario</div>
+            <div class="scenario-option active" data-scenario="nominal" onclick="selectScenarioOption('nominal')">
+              <span class="status-dot green"></span>
+              <div class="scenario-option-text">
+                <div class="scenario-option-title">1. Nominal Standby</div>
+                <div class="scenario-option-desc">Normal line operation, 0 active anomalies</div>
+              </div>
+              <span class="material-symbols-outlined option-check">check</span>
+            </div>
+            <div class="scenario-option" data-scenario="detecting" onclick="selectScenarioOption('detecting')">
+              <span class="status-dot red pulse"></span>
+              <div class="scenario-option-text">
+                <div class="scenario-option-title">2. Active Anomaly (CNC-02)</div>
+                <div class="scenario-option-desc">Optical SPC breach & pub/sub triage event</div>
+              </div>
+              <span class="material-symbols-outlined option-check">check</span>
+            </div>
+            <div class="scenario-option" data-scenario="low_confidence" onclick="selectScenarioOption('low_confidence')">
+              <span class="status-dot amber pulse"></span>
+              <div class="scenario-option-text">
+                <div class="scenario-option-title">3. Low Conf (&lt;0.70) & Diag Loop</div>
+                <div class="scenario-option-desc">Technician macro photo order & RCA re-eval</div>
+              </div>
+              <span class="material-symbols-outlined option-check">check</span>
+            </div>
+            <div class="scenario-option" data-scenario="streak_verifying" onclick="selectScenarioOption('streak_verifying')">
+              <span class="status-dot blue"></span>
+              <div class="scenario-option-text">
+                <div class="scenario-option-title">4. Verification Streak (42/50)</div>
+                <div class="scenario-option-desc">Invariant #3 post-repair piece counter active</div>
+              </div>
+              <span class="material-symbols-outlined option-check">check</span>
+            </div>
+            <div class="scenario-option" data-scenario="streak_reset" onclick="selectScenarioOption('streak_reset')">
+              <span class="status-dot red"></span>
+              <div class="scenario-option-text">
+                <div class="scenario-option-title">5. Streak Defect Break (Reset)</div>
+                <div class="scenario-option-desc">Defect detected on piece #43, drops to 0/50</div>
+              </div>
+              <span class="material-symbols-outlined option-check">check</span>
+            </div>
+            <div class="scenario-option" data-scenario="approved" onclick="selectScenarioOption('approved')">
+              <span class="status-dot green"></span>
+              <div class="scenario-option-text">
+                <div class="scenario-option-title">6. Closed & E-Sign Approved</div>
+                <div class="scenario-option-desc">Invariant #3 certified 50/50, signed off</div>
+              </div>
+              <span class="material-symbols-outlined option-check">check</span>
+            </div>
+          </div>
+        </div>
+
         <button id="btn-open-incident" class="btn btn-sm btn-primary" style="display: none;">
           <span class="material-symbols-outlined" style="font-size: 16px;">warning</span>
           <span>Open Active INC-2026-B42</span>
@@ -1382,7 +1573,7 @@ body {
       </div>
     </header>
 
-    <!-- Toolbar & Scenario Preset Bar -->
+    <!-- Topology Toolbar -->
     <section class="topology-toolbar">
       <div class="toolbar-header">
         <div class="page-title-row">
@@ -1390,35 +1581,12 @@ body {
           <span class="chip chip-blue chip-sm">12 Nodes · 2 Decision Gates</span>
           <span class="chip chip-neutral chip-sm">Invariant #3 Protected</span>
         </div>
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; gap: 8px; align-items: center;">
           <button class="btn btn-sm" onclick="exportTopologyJson()">
             <span class="material-symbols-outlined" style="font-size: 16px;">download</span>
             Export Graph JSON
           </button>
         </div>
-      </div>
-
-      <!-- Live Scenario Tester -->
-      <div class="scenario-strip">
-        <span class="scenario-label">Simulate Live Scenario:</span>
-        <button class="scenario-btn active" onclick="applyScenario('nominal', this)">
-          <span class="status-dot green"></span> 1. Nominal Standby
-        </button>
-        <button class="scenario-btn" onclick="applyScenario('detecting', this)">
-          <span class="status-dot red pulse"></span> 2. Active Anomaly (CNC-02)
-        </button>
-        <button class="scenario-btn" onclick="applyScenario('low_confidence', this)">
-          <span class="status-dot amber pulse"></span> 3. Low Conf (&lt;0.70) & Diagnostic Loop
-        </button>
-        <button class="scenario-btn" onclick="applyScenario('streak_verifying', this)">
-          <span class="status-dot blue"></span> 4. Verification Streak (42/50)
-        </button>
-        <button class="scenario-btn" onclick="applyScenario('streak_reset', this)">
-          <span class="status-dot red"></span> 5. Streak Defect Break (Reset)
-        </button>
-        <button class="scenario-btn" onclick="applyScenario('approved', this)">
-          <span class="status-dot green"></span> 6. Closed & E-Sign Approved
-        </button>
       </div>
     </section>
 
@@ -2428,7 +2596,7 @@ function fitView() {
   updateTransform();
 }
 function resetToFit() {
-  applyScenario('nominal', document.querySelector('.scenario-btn'));
+  applyScenario('nominal');
   zoomReset();
 }
 
@@ -2603,12 +2771,67 @@ function renderSvgEdges() {
   group.innerHTML = html;
 }
 
+/* Header Scenario Dropdown State & Metadata */
+const SCENARIO_META = {
+  nominal: { label: 'Scenario: 1. Nominal Standby', dot: '<span class="status-dot green"></span>' },
+  detecting: { label: 'Scenario: 2. Active Anomaly (CNC-02)', dot: '<span class="status-dot red pulse"></span>' },
+  low_confidence: { label: 'Scenario: 3. Low Conf (<0.70) & Diag Loop', dot: '<span class="status-dot amber pulse"></span>' },
+  streak_verifying: { label: 'Scenario: 4. Verification Streak (42/50)', dot: '<span class="status-dot blue"></span>' },
+  streak_reset: { label: 'Scenario: 5. Streak Defect Break (Reset)', dot: '<span class="status-dot red"></span>' },
+  approved: { label: 'Scenario: 6. Closed & E-Sign Approved', dot: '<span class="status-dot green"></span>' }
+};
+
+function toggleScenarioDropdown(event) {
+  if (event) event.stopPropagation();
+  const menu = document.getElementById('scenario-dropdown-menu');
+  const trigger = document.getElementById('scenario-dropdown-trigger');
+  if (!menu || !trigger) return;
+  const isOpen = menu.classList.contains('open');
+  if (isOpen) {
+    menu.classList.remove('open');
+    trigger.setAttribute('aria-expanded', 'false');
+  } else {
+    menu.classList.add('open');
+    trigger.setAttribute('aria-expanded', 'true');
+  }
+}
+
+function selectScenarioOption(scenario) {
+  applyScenario(scenario);
+  const menu = document.getElementById('scenario-dropdown-menu');
+  if (menu) menu.classList.remove('open');
+  const trigger = document.getElementById('scenario-dropdown-trigger');
+  if (trigger) trigger.setAttribute('aria-expanded', 'false');
+}
+
+window.addEventListener('click', (e) => {
+  if (!e.target.closest('#scenario-dropdown-wrapper')) {
+    const menu = document.getElementById('scenario-dropdown-menu');
+    const trigger = document.getElementById('scenario-dropdown-trigger');
+    if (menu) menu.classList.remove('open');
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  }
+});
+
 /* Scenarios Application */
 function applyScenario(scenario, btn) {
   currentScenario = scenario;
 
-  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
+  // Update header dropdown trigger UI
+  const meta = SCENARIO_META[scenario];
+  if (meta) {
+    const dotEl = document.getElementById('scenario-trigger-dot');
+    const labelEl = document.getElementById('scenario-trigger-label');
+    if (dotEl) dotEl.innerHTML = meta.dot;
+    if (labelEl) labelEl.innerText = meta.label;
+  }
+  document.querySelectorAll('.scenario-option').forEach(opt => {
+    if (opt.getAttribute('data-scenario') === scenario) {
+      opt.classList.add('active');
+    } else {
+      opt.classList.remove('active');
+    }
+  });
 
   const headerPill = document.getElementById('header-status-pill');
   const openIncBtn = document.getElementById('btn-open-incident');

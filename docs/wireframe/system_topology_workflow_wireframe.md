@@ -31,7 +31,9 @@ flowchart TD
     subgraph PhaseA ["Phase A: Detection & Ingestion"]
         direction TB
         A1["Camera / Optical Station<br/>(Exit Conveyor · Gemma 3 2B Edge)"] -->|"Defect Spike (>95% frame drop)<br/>50ms Pneumatic Diverter"| A2["Pub/Sub & ADK Orchestrator<br/>(SPC UCL Breach / API Trigger)"]
+        A1b["Factory Physical Signals<br/>(Sensors & PLC Edge Gateway)"] -->|"100 Hz High-Freq OPC-UA / MQTT Buffer"| A2
         A2 -->|"Open Incident Event<br/>blackboard session"| A3["Quality Inspector Agent<br/>(SPC Alarm UCL 3.0% Breach)"]
+        A1b -.->|"Continuous Telemetry (100Hz)<br/>Vibration FFT & Motor Load"| B2
     end
 
     subgraph PhaseB ["Phase B: Tracing & Root Cause Analysis"]
@@ -197,6 +199,7 @@ flowchart TD
 
 ### Phase A: Detection & Ingestion (Top)
 - **Node A1 (Camera / Optical Station · Gemma 3 Edge):** Gemma 3 2B running locally on edge IPC at conveyor exit. Filters >95% nominal video frames; triggers 50ms pneumatic rejector on defect detection.
+- **Node A1b (Factory Physical Signals · Sensors & PLC Edge Gateway):** Ingests high-frequency CNC spindle vibration (3200 RPM), bearing temperatures, motor current, and hydraulic pressure via OPC-UA / MQTT (100 Hz sampling); streams continuous telemetry into Pub/Sub buffer and feeds time-series data to the Process Analyst Agent.
 - **Node A2 (Pub/Sub Ingestion & ADK Orchestrator):** Ingests defect frames and machine telemetry into Cloud Pub/Sub; triggers SPC UCL breach anomaly event and creates incident blackboard session in Firestore.
 - **Node A3 (Quality Inspector Agent):** Evaluates SPC Upper Control Limit (UCL 3.0%) across sliding 100-part window. Triggers formal anomaly ticket when Nelson Rule 1 or 2 is violated.
 
@@ -245,7 +248,7 @@ To provide technicians and systems engineers with intuitive situational awarenes
 +-----------------------------------------------------------------------------------------------------------------------------+
 | [K] KAIZEN AGENT   Cell Line 1 / System Topology     (●) Nominal   [ Scenario: 1. Nominal Standby ▾ ]  [ Reset View ]           |
 +-----------------------------------------------------------------------------------------------------------------------------+
-| Top-to-Bottom Multi-Agent Execution Graph   [ 12 Nodes · 2 Gates ] [ Invariant #3 Protected ]   [ Export Graph JSON ]           |
+| Top-to-Bottom Multi-Agent Execution Graph   [ 13 Nodes · 2 Gates ] [ Invariant #3 Protected ]   [ Export Graph JSON ]           |
 | Top-to-bottom reactive swarm: Edge Vision -> Event Ingest -> RCA -> Dual Gates -> Copilot Fix -> Optical Proof -> Release   |
 +-----------------------------------------------------------------------------------------------------------------------------+
 | CANVAS CONTROLS: [ + Zoom In ] [ - Zoom Out ] [ 100% Reset ] [ [ ] Fit View ] [ (M) Map ]   | Legend: [▼] Flow  [✓] Done  [○] Idle|
@@ -255,16 +258,23 @@ To provide technicians and systems engineers with intuitive situational awarenes
 |   ║ PHASE A: DETECTION & INGESTION                                                          [ Lamp: RED / SPC Breach ]  ║   |
 |   ║ ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────── ║   |
 |   ║   +---------------------------------------------+      +---------------------------------------------+              ║   |
-|   ║   | [1] Camera / Optical Station (Gemma 3 Edge) | ───> | [2] Pub/Sub Ingestion & ADK Orchestrator    |              ║   |
-|   ║   | Filters >95% normal frames; 50ms rejector   |      | SPC UCL Breach / Anomaly API Trigger Event  |              ║   |
-|   ║   +---------------------------------------------+      +----------------------+----------------------+              ║   |
-|   ║                                                                               |                                     ║   |
-|   ║                                                                               ▼ (Open Incident)                     ║   |
-|   ║                                                        +---------------------------------------------+              ║   |
-|   ║                                                        | [3] Quality Inspector Agent (ADK & SPC Gate)|              ║   |
-|   ║                                                        | Defect: Roughness scratch · UCL: 3.0% breach|              ║   |
-|   ║                                                        +----------------------+----------------------+              ║   |
-|   ╚═══════════════════════════════════════════════════════════════════════════════╪═════════════════════════════════════╝   |
+|   ║   | [1] Camera / Optical Station (Gemma 3 Edge) |      | [1b] Factory Physical Signals (PLC Gateway) |              ║   |
+|   ║   | Filters >95% normal frames; 50ms rejector   |      | 100 Hz CNC spindle vibration / temp / load  |              ║   |
+|   ║   +----------------------+----------------------+      +----------------------+----------------------+              ║   |
+|   ║                          │ (Defect Spike)                             │ (OPC-UA / MQTT Stream)                      ║   |
+|   ║                          └──────────────────────┬─────────────────────┘                                             ║   |
+|   ║                                                 ▼                                                                   ║   |
+|   ║                               +---------------------------------------------+                                       ║   |
+|   ║                               | [2] Pub/Sub Ingestion & ADK Orchestrator    |                                       ║   |
+|   ║                               | SPC UCL Breach / Anomaly API Trigger Event  |                                       ║   |
+|   ║                               +----------------------+----------------------+                                       ║   |
+|   ║                                                      │                                                              ║   |
+|   ║                                                      ▼ (Open Incident Blackboard)                                   ║   |
+|   ║                               +---------------------------------------------+                                       ║   |
+|   ║                               | [3] Quality Inspector Agent (ADK & SPC Gate)|                                       ║   |
+|   ║                               | Defect: Roughness scratch · UCL: 3.0% breach|                                       ║   |
+|   ║                               +----------------------+----------------------+                                       ║   |
+|   ╚══════════════════════════════════════════════════════╪═════════════════════════════════════════════════════════════╝   |
 |                                                                                   │                                         |
 |                                                                                   ▼ (Trigger Anomaly & Telemetry Window)    |
 |   ╔═══════════════════════════════════════════════════════════════════════════════╧═════════════════════════════════════╗   |
@@ -377,6 +387,19 @@ To provide technicians and systems engineers with intuitive situational awarenes
 | (icon: psychology)  Root Cause Agent                        |
 | ADK Multi-Agent Swarm · Tier 4 Focus Engine                 |
 | Status: ACTIVE PROCESSING (Confidence: 0.89)                |
++-------------------------------------------------------------+
+| ACTUAL UI REFERENCE (PRODUCTION SYSTEM DEEP LINK):          |
+| · Target Surface: Desktop Dashboard · Incident Command     |
+| · Screen Route:   Screen 3: /incident/INC-2026-B42#causal-tree|
+| · Live Component: <CausalChainTree /> & <IshikawaDiagram /> |
+|                                                             |
+| [ MINI CONTEXTUAL UI PREVIEW ]:                             |
+| ┌─────────────────────────────────────────────────────────┐ |
+| │ 5-Whys Causal Tree                     [ Conf: 0.89 ]   │ |
+| │ Root Cause: Tool T07 Flank Wear & Chipping              │ |
+| │ Citation: CNC-02 Manual Section 4.2 (Vertex RAG)        │ |
+| └─────────────────────────────────────────────────────────┘ |
+| [ Open in Production UI ➔ (>= 44px) ]                       |
 +-------------------------------------------------------------+
 | SINGLE JOB-TO-BE-DONE (JTBD):                               |
 | Synthesize lot genealogy graph from Traceability Agent and  |
@@ -501,3 +524,5 @@ To provide technicians and systems engineers with intuitive situational awarenes
 - [x] **AC-TOP-09:** Visual component interactivity enables deep inspection: hovering/selecting any node or decision gate applies a phase-aware halo ring, highlights connected incoming and outgoing edges (`3.8px`, `#4338ca`), dims unrelated background edges (`opacity: 0.12`), and indicates upstream/downstream neighbors.
 - [x] **AC-TOP-10:** SideDrawer features interactive action triggers ($\ge 44 	imes 44\text{ px}$): `Simulate Trigger` with canvas ripple feedback, `Copy JSON` with clipboard confirmation, and expandable `Inspect Logs` Cloud Logging stream.
 - [x] **AC-TOP-11:** Live simulation scenarios are selectable via a compact **Top Header Scenario Dropdown** (`aria-haspopup="true"`), displaying real-time scenario status dot, full option descriptions, and auto-dismiss on outside click while conserving canvas vertical space.
+- [x] **AC-TOP-12 (Factory Physical Signals Parallel Ingestion):** Phase A features parallel physical edge data sources (`node-edge-gemma` for optical defect vision and `node-factory-signals` for 100 Hz OPC-UA/MQTT sensor telemetry), converging into the Pub/Sub & ADK Orchestrator Gateway with a dedicated telemetry feed to the Process Analyst Agent.
+- [x] **AC-TOP-13 (Production UI Reference & Deep Linking):** SideDrawer displays an "Actual UI Reference (Production Deep Link)" module for all 13 nodes and 2 decision gates, specifying the exact target surface (Desktop Dashboard, Mobile Copilot, Shop-Floor Terminal), screen route, live React component name, interactive $\ge 44 	imes 44	ext{ px}$ navigation CTA, and contextual mini UI mockup.

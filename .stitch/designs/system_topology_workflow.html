@@ -1236,6 +1236,65 @@ body {
   pointer-events: none;
 }
 
+/* Production UI Reference Card in Drawer */
+.ui-ref-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, .82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--accent-ring);
+  box-shadow: 0 4px 16px rgba(91, 91, 240, .08);
+}
+.ui-ref-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ui-ref-icon-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ui-ref-icon-title .material-symbols-outlined {
+  color: var(--accent);
+  font-size: 22px;
+}
+.ui-ref-route {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+}
+.ui-ref-component {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.ui-ref-preview-box {
+  background: var(--bg-app);
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 11.5px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.ui-ref-cta-btn {
+  width: 100%;
+  min-height: 44px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 /* Side Drawer (Deep-Dive Tier 3) */
 .drawer-scrim {
   position: fixed;
@@ -1578,7 +1637,7 @@ body {
       <div class="toolbar-header">
         <div class="page-title-row">
           <h1 class="page-title">Top-to-Bottom Multi-Agent Execution Graph</h1>
-          <span class="chip chip-blue chip-sm">12 Nodes · 2 Decision Gates</span>
+          <span class="chip chip-blue chip-sm">13 Nodes · 2 Decision Gates</span>
           <span class="chip chip-neutral chip-sm">Invariant #3 Protected</span>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
@@ -1663,13 +1722,13 @@ body {
                   <div class="phase-badge a">A</div>
                   <div class="phase-title-col">
                     <span class="phase-title">Phase A: Detection & Ingestion</span>
-                    <span class="phase-subtitle">Optical Edge Defect Detection & Real-time Incident Dispatch</span>
+                    <span class="phase-subtitle">Factory Physical Signals, Edge Vision & Real-time Incident Dispatch</span>
                   </div>
                 </div>
                 <span class="chip chip-sm chip-neutral" id="phase-a-chip">Standby</span>
               </div>
 
-              <!-- Top Row: Node 1 ──> Node 2 -->
+              <!-- Row 1: Dual Parallel Physical Edge Data Sources -->
               <div class="node-row-2">
                 <!-- Node 1: Camera Optical Station / Gemma 3 Edge -->
                 <div class="node-card" id="node-edge-gemma" data-node="edge-gemma" onclick="openNodeDrawer('edge-gemma')">
@@ -1690,7 +1749,28 @@ body {
                   </div>
                 </div>
 
-                <!-- Node 2: Pub/Sub & ADK Orchestrator -->
+                <!-- Node 1b: Factory Physical Signals (Sensors & PLC Edge Gateway) -->
+                <div class="node-card" id="node-factory-signals" data-node="factory-signals" onclick="openNodeDrawer('factory-signals')">
+                  <div class="node-header">
+                    <div class="node-icon-title">
+                      <div class="node-icon-tile"><span class="material-symbols-outlined">sensors</span></div>
+                      <div>
+                        <div class="node-name">Factory Physical Signals</div>
+                        <div class="node-sublabel">Sensors & PLC Edge Gateway</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-sm chip-neutral status-badge">Healthy</span>
+                  </div>
+                  <p class="node-jtbd">Ingests high-frequency CNC spindle vibration (3200 RPM), bearing temperatures, motor current, and hydraulic pressure via OPC-UA / MQTT; streams telemetry into Pub/Sub buffer.</p>
+                  <div class="node-footer">
+                    <span class="node-metric">Sampling: <b>100 Hz</b></span>
+                    <span class="node-metric">Status: <b>0 Loss · Healthy</b></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row 2: Convergence into Pub/Sub & ADK Orchestrator -->
+              <div class="node-row-1">
                 <div class="node-card" id="node-cloud-ingest" data-node="cloud-ingest" onclick="openNodeDrawer('cloud-ingest')">
                   <div class="node-header">
                     <div class="node-icon-title">
@@ -1710,7 +1790,7 @@ body {
                 </div>
               </div>
 
-              <!-- Downward to Node 3: Quality Inspector Agent -->
+              <!-- Row 3: Downward to Quality Inspector Agent -->
               <div class="node-row-1">
                 <div class="node-card" id="node-agent-qa" data-node="agent-qa" onclick="openNodeDrawer('agent-qa')">
                   <div class="node-header">
@@ -2157,6 +2237,36 @@ body {
       </div>
     </div>
 
+    <!-- Actual UI Reference (Production System Deep Link) -->
+    <div class="drawer-section">
+      <div class="section-label" style="display: flex; align-items: center; justify-content: space-between;">
+        <span>Actual UI Reference (Production Deep Link)</span>
+        <span class="chip chip-blue chip-sm" id="drawer-ui-surface">Desktop Dashboard</span>
+      </div>
+      <div class="ui-ref-card">
+        <div class="ui-ref-header">
+          <div class="ui-ref-icon-title">
+            <span class="material-symbols-outlined" id="drawer-ui-icon">desktop_windows</span>
+            <div>
+              <div class="ui-ref-route" id="drawer-ui-route">Screen 1: /overview#diagnostics-modal</div>
+              <div class="ui-ref-component" id="drawer-ui-component">&lt;DiagnosticsModal /&gt;</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mini Contextual UI Preview Box -->
+        <div class="ui-ref-preview-box" id="drawer-ui-preview">
+          <!-- Dynamically populated UI mockup -->
+        </div>
+
+        <!-- Interactive Navigation CTA Button (>= 44px) -->
+        <button class="btn btn-sm btn-primary ui-ref-cta-btn" id="drawer-ui-cta" onclick="navigateToUiReference()">
+          <span id="drawer-ui-cta-label">Open in Production UI</span>
+          <span class="material-symbols-outlined" style="font-size: 16px;">arrow_outward</span>
+        </button>
+      </div>
+    </div>
+
     <!-- JTBD -->
     <div class="drawer-section">
       <div class="section-label">Single Job-to-be-Done (JTBD)</div>
@@ -2246,9 +2356,9 @@ body {
 const NODE_DATA = {
   'edge-gemma': {
     title: 'Camera / Optical Station (Gemma 3 2B)',
-    subtitle: 'On-Premise Industrial PC · Exit Conveyor',
+    subtitle: 'On-Premise Industrial PC · Exit Conveyor CAM-01',
     tier: 'Tier 1 & 2 · Glance (<1s) & Physical Actuation',
-    stack: 'Gemma 3 2B · ONNX · Raspberry Pi / Advantech IPC',
+    stack: 'Gemma 3 2B · ONNX · Advantech Industrial IPC',
     sla: '< 50ms inference cycle',
     channel: 'mqtt://edge/conveyor/optical_frames',
     fallback: 'Circular local ring buffer (500 frames)',
@@ -2260,6 +2370,62 @@ const NODE_DATA = {
       "frame_filter_ratio": "96.2%",
       "pneumatic_diverter_ms": 38,
       "inference_latency_ms": 42
+    },
+    uiRef: {
+      surface: 'Shop-Floor Terminal · Bay 4 Exit Conveyor',
+      route: 'Screen 1: /factory/edge-camera#stream',
+      component: '<OpticalEdgeTerminal />',
+      ctaLabel: 'Open Optical Edge Stream',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">CAM-01 Edge Inspection</span>
+          <span class="chip chip-sm chip-green">Active 50ms</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2); display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+          <div>Filter Drop: <b style="color: var(--accent);">96.2%</b></div>
+          <div>Inference: <b>42 ms</b></div>
+          <div>Diverter: <b>38 ms</b></div>
+          <div>Resolution: <b>1080p@60</b></div>
+        </div>
+      `
+    }
+  },
+  'factory-signals': {
+    title: 'Factory Physical Signals',
+    subtitle: 'Sensors & PLC Edge Gateway',
+    tier: 'Tier 1 & 2 · Glance (<1s) & Physical Ingestion',
+    stack: 'OPC-UA / MQTT · Beckhoff / Siemens PLC · Industrial Bus',
+    sla: '100 Hz sampling (< 10ms jitter)',
+    channel: 'mqtt://edge/telemetry/spindle_sensors',
+    fallback: 'Edge PLC Circular Ring Buffer (15 min cache)',
+    jtbd: 'Ingests high-frequency CNC spindle vibration (3200 RPM), bearing temperatures, motor current, and hydraulic pressure via OPC-UA / MQTT; streams telemetry into Pub/Sub buffer.',
+    icon: 'sensors',
+    payload: {
+      "sampling_rate": "100 Hz",
+      "spindle_vibration_mm_s": 2.84,
+      "spindle_speed_rpm": 3200,
+      "bearing_temp_c": 54.2,
+      "motor_current_a": 18.4,
+      "packet_loss": "0.00%",
+      "plc_status": "HEALTHY_STREAMING"
+    },
+    uiRef: {
+      surface: 'Desktop Dashboard · Line Overview',
+      route: 'Screen 1: /overview#machine-fleet-telemetry',
+      component: '<MachineFleetTable /> & <SpindleVibrationChart />',
+      ctaLabel: 'Open Spindle Telemetry',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">CNC-02 Real-time Sensors</span>
+          <span class="chip chip-sm chip-green">100 Hz Streaming</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2); display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+          <div>Vibration: <b style="color: var(--danger);">2.84 mm/s</b></div>
+          <div>Speed: <b>3200 RPM</b></div>
+          <div>Bearing: <b>54.2 °C</b></div>
+          <div>Current: <b>18.4 A</b></div>
+        </div>
+      `
     }
   },
   'cloud-ingest': {
@@ -2270,13 +2436,31 @@ const NODE_DATA = {
     sla: '< 150ms event delivery',
     channel: 'projects/kaizen/topics/anomaly-events',
     fallback: 'Exponential backoff dead-letter queue',
-    jtbd: 'Ingest defect frames from Edge Gateway, trigger anomaly event on SPC breach, and coordinate multi-agent swarm via Firestore blackboard state.',
+    jtbd: 'Ingest defect frames and physical telemetry from Edge Gateways, trigger anomaly event on SPC breach, and coordinate multi-agent swarm via Firestore blackboard state.',
     icon: 'cloud_sync',
     payload: {
       "subscription": "sub-anomaly-orchestrator",
       "ack_deadline_s": 30,
       "blackboard_session": "sess_inc_2026_b42",
       "orchestrator_version": "google-adk-2.4"
+    },
+    uiRef: {
+      surface: 'Desktop Dashboard · Incident Command & GCP Console',
+      route: 'Screen 3: /incident/INC-2026-B42#blackboard',
+      component: '<OrchestratorBlackboardFeed />',
+      ctaLabel: 'Inspect Blackboard Session',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">Pub/Sub Ingest Buffer</span>
+          <span class="chip chip-sm chip-blue">Firestore Sync</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2); display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+          <div>Session: <b>INC-2026-B42</b></div>
+          <div>Ack Latency: <b>118 ms</b></div>
+          <div>Orchestrator: <b>ADK 2.4</b></div>
+          <div>Buffer: <b>0 Backlog</b></div>
+        </div>
+      `
     }
   },
   'agent-qa': {
@@ -2294,6 +2478,24 @@ const NODE_DATA = {
       "measured_defect_rate": 0.0142,
       "ucl_threshold": 0.0025,
       "nelson_rule_triggered": "Rule 1 (1 point > 3 sigma)"
+    },
+    uiRef: {
+      surface: 'Desktop Dashboard · Line Overview & SPC Control',
+      route: 'Screen 1: /overview#spc-chart',
+      component: '<StatisticalProcessControlChart />',
+      ctaLabel: 'View SPC Nelson Rules',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">SPC Control Chart</span>
+          <span class="chip chip-sm chip-red">UCL 3.0% Breach</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2); display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+          <div>Defect Rate: <b style="color: var(--danger);">1.42%</b></div>
+          <div>Limit: <b>0.25% UCL</b></div>
+          <div>Rule: <b>Nelson Rule 1</b></div>
+          <div>Window: <b>100 parts</b></div>
+        </div>
+      `
     }
   },
   'agent-tra': {
@@ -2311,6 +2513,24 @@ const NODE_DATA = {
       "suspect_machine": "CNC-02",
       "cutting_tool": "T07 (Rough Turn Insert)",
       "billet_lot": "HEAT-8849-FC250"
+    },
+    uiRef: {
+      surface: 'Desktop Dashboard · Incident Command Workspace',
+      route: 'Screen 3: /incident/INC-2026-B42#lot-genealogy',
+      component: '<LotGenealogyTree />',
+      ctaLabel: 'Explore Lot Genealogy',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">Genealogy Graph</span>
+          <span class="chip chip-sm chip-blue">BigQuery Linked</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2); display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+          <div>Machine: <b style="color: var(--accent);">CNC-02</b></div>
+          <div>Tool ID: <b>T07 Insert</b></div>
+          <div>Billet Lot: <b>HEAT-8849</b></div>
+          <div>Barcode: <b>B42-0941</b></div>
+        </div>
+      `
     }
   },
   'agent-pa': {
@@ -2327,6 +2547,24 @@ const NODE_DATA = {
       "spindle_vibration_rms": "2.84 mm/s (Baseline: 1.50 mm/s)",
       "spindle_motor_load": "78.6% (Warning: 70%)",
       "bearing_temp_c": 54.2
+    },
+    uiRef: {
+      surface: 'Desktop Dashboard · Diagnostics Modal',
+      route: 'Screen 1: /overview#diagnostics-modal',
+      component: '<DiagnosticsModal />',
+      ctaLabel: 'Open Diagnostics Telemetry',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">FFT Telemetry Spectrum</span>
+          <span class="chip chip-sm chip-amber">High RMS Spike</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2); display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+          <div>RMS: <b style="color: var(--warning);">2.84 mm/s</b></div>
+          <div>Baseline: <b>1.50 mm/s</b></div>
+          <div>Load: <b>78.6%</b></div>
+          <div>Bearing: <b>54.2 °C</b></div>
+        </div>
+      `
     }
   },
   'agent-rca': {
@@ -2347,6 +2585,22 @@ const NODE_DATA = {
         "2. Why chipped? Cutting cycles exceeded rated life by 140 parts.",
         "3. Why exceeded? Billet lot HEAT-8849 has 15% higher Brinell hardness."
       ]
+    },
+    uiRef: {
+      surface: 'Desktop Dashboard · Incident Command Workspace',
+      route: 'Screen 3: /incident/INC-2026-B42#causal-tree',
+      component: '<CausalChainTree /> & <IshikawaDiagram />',
+      ctaLabel: 'Open 5-Whys Causal Tree',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">5-Whys Causal Tree</span>
+          <span class="chip chip-sm chip-green">Conf: 0.89</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2);">
+          <div>Root Cause: <b>Tool T07 Flank Wear & Chipping</b></div>
+          <div style="margin-top: 2px;">Citation: <i>CNC-02 Manual Section 4.2 (Vertex RAG)</i></div>
+        </div>
+      `
     }
   },
   'diagnostic-agent': {
@@ -2365,6 +2619,22 @@ const NODE_DATA = {
       "evidence_type": "physical_tool_macro_photo",
       "target_machine": "CNC-02",
       "technician_assigned": "Alex Morgan (Bay 4)"
+    },
+    uiRef: {
+      surface: 'Desktop Dashboard · Incident Triage Gate',
+      route: 'Screen 3: /incident/INC-2026-B42#diagnostic-request',
+      component: '<DiagnosticEvidenceRequestModal />',
+      ctaLabel: 'View Evidence Dispatch',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">Evidence Dispatch</span>
+          <span class="chip chip-sm chip-amber">Conf &lt; 0.70</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2);">
+          <div>Target: <b>CNC-02 Turret T07 Insert</b></div>
+          <div>Assignee: <b>Alex Morgan (Bay 4)</b></div>
+        </div>
+      `
     }
   },
   'technician-photo': {
@@ -2382,22 +2652,22 @@ const NODE_DATA = {
       "vision_confidence": 0.94,
       "detected_anomaly": "Severe Flank Wear & Edge Chipping",
       "route_to": "Copilot Resolution"
-    }
-  },
-  'diagnostic-loop': {
-    title: 'Diagnostic Loop Node',
-    subtitle: 'Technician Gemini Vision · Field Evidence Acquisition',
-    tier: 'Tier 4 · Field Evidence Acquisition',
-    stack: 'Mobile Camera · Gemini Vision · Live Feedback Loop',
-    sla: 'On-demand technician capture',
-    channel: 'blackboard.evidence_requests',
-    fallback: 'Secondary sensor recalculation',
-    jtbd: 'When Root Cause Agent confidence drops below 0.70, requests technician photo of physical cutter edge at the machine bay to verify tool condition before wrenching.',
-    icon: 'photo_camera',
-    payload: {
-      "reason": "RCA confidence 0.58 < 0.70 threshold",
-      "requested_evidence": "Macro photo of CNC-02 Turret Tool T07 carbide insert tip",
-      "technician_assigned": "Alex Morgan (Bay 4)"
+    },
+    uiRef: {
+      surface: 'Mobile App · Kaizen Technician Copilot',
+      route: 'Screen 2: /mobile#macro-capture',
+      component: '<EvidenceCaptureCamera />',
+      ctaLabel: 'Open Mobile Evidence View',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">Mobile Macro Viewfinder</span>
+          <span class="chip chip-sm chip-blue">Gemini Vision 94%</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2);">
+          <div>Evidence: <b>Tool T07 Flank Wear Photo</b></div>
+          <div>Routing: <b>Instant Copilot Hand-off</b></div>
+        </div>
+      `
     }
   },
   'copilot-live': {
@@ -2412,9 +2682,25 @@ const NODE_DATA = {
     icon: 'engineering',
     payload: {
       "websocket_status": "connected",
-      "voice_language": "vi-VN (Vietnamese)",
+      "voice_language": "en-US (English)",
       "active_step": "Step 2/3: Torque insert screw to 45 Nm",
       "current_checkpoint": "Torque audible click confirmed"
+    },
+    uiRef: {
+      surface: 'Mobile App · Technician Live Copilot',
+      route: 'Screen 2: /mobile#copilot-live',
+      component: '<GeminiLiveActionSheet />',
+      ctaLabel: 'Open Live Copilot Stream',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">Gemini Live Copilot</span>
+          <span class="chip chip-sm chip-blue">Voice & Video</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2);">
+          <div>Active Step: <b>Step 2/3: Torque Screw 45 Nm</b></div>
+          <div>Feedback: <b>Hands-free speech active</b></div>
+        </div>
+      `
     }
   },
   'agent-scribe': {
@@ -2431,6 +2717,22 @@ const NODE_DATA = {
       "8d_status": "D4 Root Cause & D5 Corrective Action Drafted",
       "sop_revision": "SOP-CNC-M04 v2.1 Proposed",
       "work_order_id": "WO-2026-8812"
+    },
+    uiRef: {
+      surface: 'Desktop Dashboard · Incident Command Workspace',
+      route: 'Screen 3: /incident/INC-2026-B42#8d-report',
+      component: '<EightDReportCard /> & <WorkOrderDraft />',
+      ctaLabel: 'View 8D Dossier Draft',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">8D Incident Dossier</span>
+          <span class="chip chip-sm chip-green">D1-D8 Drafted</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2);">
+          <div>Report: <b>Automotive 8D Complete</b></div>
+          <div>Work Order: <b>WO-2026-8812</b></div>
+        </div>
+      `
     }
   },
   'field-action': {
@@ -2448,6 +2750,22 @@ const NODE_DATA = {
       "action": "CONFIRM_REPAIR_COMPLETED",
       "timestamp": "2026-10-16T10:14:22Z",
       "safety_interlock_cleared": true
+    },
+    uiRef: {
+      surface: 'Mobile App & Station HMI · Bay 4',
+      route: 'Screen 2: /mobile#work-order-signoff',
+      component: '<WorkOrderConfirmationBar />',
+      ctaLabel: 'Inspect Bay 4 Work Order',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">Shop-Floor Confirmation</span>
+          <span class="chip chip-sm chip-green">Gloves-Ready</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2);">
+          <div>Operator: <b>Alex Morgan (TECH-04)</b></div>
+          <div>Interlock: <b>Physical clearance verified</b></div>
+        </div>
+      `
     }
   },
   'verify-camera': {
@@ -2465,6 +2783,22 @@ const NODE_DATA = {
       "inspection_metric": "Surface roughness Ra < 3.2 um",
       "verified_streak": 42,
       "required_target": 50
+    },
+    uiRef: {
+      surface: 'Shop-Floor Terminal · Exit Conveyor CAM-EOL',
+      route: 'Screen 1: /factory/exit-conveyor#streak-meter',
+      component: '<ConveyorStreakMonitor />',
+      ctaLabel: 'Open Optical Streak Feed',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">CAM-EOL Streak Counter</span>
+          <span class="chip chip-sm chip-blue">42 / 50 Clean</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2);">
+          <div>Surface Roughness: <b>Ra 2.1 µm (&lt; 3.2)</b></div>
+          <div>Conveyor Speed: <b>1.2 m/s</b></div>
+        </div>
+      `
     }
   },
   'streak-reset': {
@@ -2481,6 +2815,22 @@ const NODE_DATA = {
       "last_reset_reason": "Defect scratch detected on piece #43",
       "consecutive_resets": 1,
       "escalation_state": "technician_re_inspection"
+    },
+    uiRef: {
+      surface: 'Desktop Dashboard & Alarm Annunciator',
+      route: 'Screen 3: /incident/INC-2026-B42#escalation',
+      component: '<StreakResetAlarmBanner />',
+      ctaLabel: 'View Invariant #3 Escalation',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">Streak Penalty Alarm</span>
+          <span class="chip chip-sm chip-red">0 / 50 Reset</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2);">
+          <div>Reason: <b>Part #43 Defect Scratch</b></div>
+          <div>Action: <b>Loopback to Copilot & Tech</b></div>
+        </div>
+      `
     }
   },
   'agent-learn': {
@@ -2498,6 +2848,24 @@ const NODE_DATA = {
       "kwh_electricity_saved": 112.4,
       "co2e_reduction_kg": 38.6,
       "rag_vector_commit": "doc_id_8d_2026_b42_approved"
+    },
+    uiRef: {
+      surface: 'Desktop Dashboard · SOP Change Log & Impact Loop',
+      route: 'Screen 5: /sops#change-log',
+      component: '<SOPChangeLogCard /> & <ImpactCard />',
+      ctaLabel: 'Review SOP & ESG Updates',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">ESG & Knowledge Base</span>
+          <span class="chip chip-sm chip-green">RAG Committed</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2); display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+          <div>Scrap Avoided: <b>48.5 kg</b></div>
+          <div>Energy Saved: <b>112 kWh</b></div>
+          <div>CO2e Reduced: <b>38.6 kg</b></div>
+          <div>SOP Version: <b>v2.1 Active</b></div>
+        </div>
+      `
     }
   },
   'human-approval': {
@@ -2515,16 +2883,37 @@ const NODE_DATA = {
       "minimum_streak_required": 50,
       "current_streak": 42,
       "signed_by": null
+    },
+    uiRef: {
+      surface: 'Desktop Dashboard · Shift Leader Authorization Modal',
+      route: 'Screen 3: /incident/INC-2026-B42#release-modal',
+      component: '<ReleaseApprovalModal />',
+      ctaLabel: 'Open Shift Leader Sign-off',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">Digital Sign-off Modal</span>
+          <span class="chip chip-sm chip-neutral">Invariant #3 Lock</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2);">
+          <div>Prerequisite: <b>50/50 clean parts</b></div>
+          <div>Signer Role: <b>Shift Leader</b></div>
+        </div>
+      `
     }
   }
 };
 
 /* SVG Graph Edges (Top-to-Bottom Vertical Pipeline) */
 const EDGES = [
-  // Phase A: Node 1 ──> Node 2 (horizontal)
-  { from: 'node-edge-gemma', to: 'node-cloud-ingest', type: 'horizontal', label: 'MQTT Telemetry' },
-  // Phase A: Node 2 ──> Node 3 (vertical down)
+  // Phase A: Dual Parallel Physical Sources ──> Cloud Ingest & Orchestrator
+  { from: 'node-edge-gemma', to: 'node-cloud-ingest', type: 'vertical', label: 'Optical Defect Events' },
+  { from: 'node-factory-signals', to: 'node-cloud-ingest', type: 'vertical', label: 'OPC-UA / MQTT Buffer' },
+
+  // Phase A: Ingest & Orchestrator ──> Quality Inspector Agent
   { from: 'node-cloud-ingest', to: 'node-agent-qa', type: 'vertical', label: 'Event Stream' },
+
+  // Phase A: Factory Signals continuous telemetry stream down to Process Analyst Agent
+  { from: 'node-factory-signals', to: 'node-agent-pa', type: 'gutter-right', label: 'Continuous Telemetry (100Hz)' },
 
   // Phase A ──> Phase B (Quality Inspector to Traceability & Process Analyst)
   { from: 'node-agent-qa', to: 'node-agent-tra', type: 'vertical', label: 'Trigger Anomaly' },
@@ -2700,6 +3089,15 @@ function renderSvgEdges() {
       const xTrack = Math.min(x1, x2) - 50;
       pathD = `M ${x1} ${y1} H ${xTrack} V ${y2} H ${x2}`;
     }
+    else if (edge.type === 'gutter-right') {
+      // Right-side gutter route: steps out to the right margin, vertically down, and enters right of target
+      const x1 = (fromRect.right - containerRect.left) / zoomScale;
+      const y1 = (fromRect.top + fromRect.height / 2 - containerRect.top) / zoomScale;
+      const x2 = (toRect.right - containerRect.left) / zoomScale;
+      const y2 = (toRect.top + toRect.height / 2 - containerRect.top) / zoomScale;
+      const xTrack = Math.max(x1, x2) + 28;
+      pathD = `M ${x1} ${y1} H ${xTrack} V ${y2} H ${x2}`;
+    }
     else {
       // Standard top-to-bottom vertical connection (Orthogonal Right-Angled Step)
       const x1 = (fromRect.left + fromRect.width / 2 - containerRect.left) / zoomScale;
@@ -2729,12 +3127,12 @@ function renderSvgEdges() {
     if (currentScenario === 'nominal') {
       edgeClass += '';
     } else if (currentScenario === 'detecting') {
-      if (['node-edge-gemma', 'node-cloud-ingest', 'node-agent-qa'].includes(edge.from)) {
+      if (['node-edge-gemma', 'node-factory-signals', 'node-cloud-ingest', 'node-agent-qa'].includes(edge.from)) {
         edgeClass += ' active';
         markerId = 'marker-arrow-active';
       }
     } else if (currentScenario === 'low_confidence') {
-      if (['node-edge-gemma', 'node-cloud-ingest', 'node-agent-qa', 'node-agent-tra', 'node-agent-pa'].includes(edge.from)) {
+      if (['node-edge-gemma', 'node-factory-signals', 'node-cloud-ingest', 'node-agent-qa', 'node-agent-tra', 'node-agent-pa'].includes(edge.from)) {
         edgeClass += ' completed';
         markerId = 'marker-arrow-completed';
       } else if (edge.from === 'node-agent-rca' || edge.from === 'decision-gate-1') {
@@ -2745,7 +3143,7 @@ function renderSvgEdges() {
         markerId = 'marker-arrow-active';
       }
     } else if (currentScenario === 'streak_verifying') {
-      if (['node-edge-gemma', 'node-cloud-ingest', 'node-agent-qa', 'node-agent-tra', 'node-agent-pa', 'node-agent-rca', 'decision-gate-1', 'node-copilot-live', 'node-agent-scribe', 'node-field-action'].includes(edge.from)) {
+      if (['node-edge-gemma', 'node-factory-signals', 'node-cloud-ingest', 'node-agent-qa', 'node-agent-tra', 'node-agent-pa', 'node-agent-rca', 'decision-gate-1', 'node-copilot-live', 'node-agent-scribe', 'node-field-action'].includes(edge.from)) {
         edgeClass += ' completed';
         markerId = 'marker-arrow-completed';
       } else if (edge.from === 'node-verify-camera' || edge.from === 'decision-gate-2') {
@@ -2857,6 +3255,7 @@ function applyScenario(scenario, btn) {
     streakLabel.innerText = '0 / 50';
     streakFill.style.width = '0%';
     lockBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">lock</span> Locked';
+    setNodeStatus('node-factory-signals', 'done', 'Streaming 100Hz · Healthy');
   }
   else if (scenario === 'detecting') {
     headerPill.className = 'chip chip-red';
@@ -2865,6 +3264,7 @@ function applyScenario(scenario, btn) {
     document.getElementById('phase-a').classList.add('phase-active');
     
     setNodeStatus('node-edge-gemma', 'done', 'Verified 50ms Divert');
+    setNodeStatus('node-factory-signals', 'active', 'Vibration Drift (2.84 mm/s)');
     setNodeStatus('node-cloud-ingest', 'active', 'Streaming Pub/Sub');
     setNodeStatus('node-agent-qa', 'active', 'UCL 3.0% Breach (1.42%)');
   }
@@ -2875,6 +3275,7 @@ function applyScenario(scenario, btn) {
     document.getElementById('phase-b').classList.add('phase-active');
 
     setNodeStatus('node-edge-gemma', 'done', 'Done');
+    setNodeStatus('node-factory-signals', 'done', 'FFT Anomaly Logged');
     setNodeStatus('node-cloud-ingest', 'done', 'Done');
     setNodeStatus('node-agent-qa', 'done', 'Done');
     setNodeStatus('node-agent-tra', 'done', 'Lot Matched');
@@ -2888,7 +3289,7 @@ function applyScenario(scenario, btn) {
     openIncBtn.style.display = 'inline-flex';
     document.getElementById('phase-d').classList.add('phase-active');
 
-    ['node-edge-gemma', 'node-cloud-ingest', 'node-agent-qa', 'node-agent-tra', 'node-agent-pa', 'node-agent-rca', 'node-diagnostic-agent', 'node-technician-photo', 'node-copilot-live', 'node-agent-scribe', 'node-field-action'].forEach(id => {
+    ['node-edge-gemma', 'node-factory-signals', 'node-cloud-ingest', 'node-agent-qa', 'node-agent-tra', 'node-agent-pa', 'node-agent-rca', 'node-diagnostic-agent', 'node-technician-photo', 'node-copilot-live', 'node-agent-scribe', 'node-field-action'].forEach(id => {
       setNodeStatus(id, 'done', 'Completed');
     });
     setNodeStatus('node-verify-camera', 'active', 'Inspecting 42/50');
@@ -2902,6 +3303,7 @@ function applyScenario(scenario, btn) {
     openIncBtn.style.display = 'inline-flex';
     streakLabel.innerText = '0 / 50 (RESET)';
     streakFill.style.width = '0%';
+    setNodeStatus('node-factory-signals', 'active', 'Spindle Micro-Chatter');
     setNodeStatus('node-verify-camera', 'active', 'Defect Detected!');
     setNodeStatus('node-streak-reset', 'active', 'Reset to 0/50 & Escalate');
     lockBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">error</span> Escalated';
@@ -3030,6 +3432,32 @@ function setupComponentInteractions() {
   }
 }
 
+/* Production UI Reference Navigation & Drawer Integration */
+let currentUiRef = null;
+
+function populateUiRef(uiRef) {
+  currentUiRef = uiRef;
+  if (!uiRef) return;
+  const surfaceEl = document.getElementById('drawer-ui-surface');
+  const routeEl = document.getElementById('drawer-ui-route');
+  const compEl = document.getElementById('drawer-ui-component');
+  const prevEl = document.getElementById('drawer-ui-preview');
+  const ctaEl = document.getElementById('drawer-ui-cta-label');
+  if (surfaceEl) surfaceEl.innerText = uiRef.surface;
+  if (routeEl) routeEl.innerText = uiRef.route;
+  if (compEl) compEl.innerText = uiRef.component;
+  if (prevEl) prevEl.innerHTML = uiRef.previewHtml;
+  if (ctaEl) ctaEl.innerText = uiRef.ctaLabel + ' ➔';
+}
+
+function navigateToUiReference() {
+  if (currentUiRef) {
+    showToast(`🚀 Deep linked to ${currentUiRef.surface}: ${currentUiRef.route} (${currentUiRef.component})`, 'info');
+  } else {
+    showToast('🚀 Navigating to Production UI surface...', 'info');
+  }
+}
+
 /* Side Drawer Controls */
 function openNodeDrawer(nodeId) {
   const data = NODE_DATA[nodeId];
@@ -3051,6 +3479,11 @@ function openNodeDrawer(nodeId) {
   document.getElementById('drawer-fallback').innerText = data.fallback;
   document.getElementById('drawer-payload').innerText = JSON.stringify(data.payload, null, 2);
   document.getElementById('drawer-icon').innerHTML = `<span class="material-symbols-outlined">${data.icon}</span>`;
+
+  // Populate Actual UI Reference section
+  if (data.uiRef) {
+    populateUiRef(data.uiRef);
+  }
 
   // Hide logs box by default on new node selection
   const logsBox = document.getElementById('drawer-logs-box');
@@ -3101,6 +3534,22 @@ function openDecisionDrawer(num) {
       }
     }, null, 2);
     document.getElementById('drawer-icon').innerHTML = '<span class="material-symbols-outlined">alt_route</span>';
+    populateUiRef({
+      surface: 'Desktop Dashboard · Incident Triage Gate',
+      route: 'Screen 3: /incident/INC-2026-B42#decision-gate-1',
+      component: '<ConfidenceGateBanner />',
+      ctaLabel: 'Inspect Gate 1 Logic',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">RCA Confidence Triage Gate</span>
+          <span class="chip chip-sm chip-amber">Threshold: 0.70</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2);">
+          <div>Evaluated Score: <b style="color: var(--accent);">0.89</b> (Nominal) / <b style="color: var(--warning);">0.58</b> (Evidence Req)</div>
+          <div style="margin-top: 4px; color: var(--muted);">Auto-diverts to Copilot Live or Mobile Diagnostic Loop.</div>
+        </div>
+      `
+    });
   } else {
     document.getElementById('drawer-title').innerText = 'Decision Diamond 2: Invariant #3 Strict Streak Gate';
     document.getElementById('drawer-subtitle').innerText = 'Shop-Floor Product Evidence Law';
@@ -3119,6 +3568,22 @@ function openDecisionDrawer(num) {
       "reset_penalty_on_defect": "Drop to 0 and escalate"
     }, null, 2);
     document.getElementById('drawer-icon').innerHTML = '<span class="material-symbols-outlined">gavel</span>';
+    populateUiRef({
+      surface: 'Desktop Dashboard & Line Conveyor',
+      route: 'Screen 1: /overview#invariant-3-gate',
+      component: '<ConveyorStreakMonitor /> & <ReleaseGate />',
+      ctaLabel: 'Inspect Gate 2 Invariant',
+      previewHtml: `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--ink);">Invariant #3 Streak Gate</span>
+          <span class="chip chip-sm chip-blue">Target: 50/50</span>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-2);">
+          <div>Current Counter: <b style="color: var(--accent);">42 / 50 clean parts</b></div>
+          <div style="margin-top: 4px; color: var(--muted);">Hard-locks shift leader e-signature until 50 consecutive good parts.</div>
+        </div>
+      `
+    });
   }
 
   document.getElementById('drawer-scrim').classList.add('open');

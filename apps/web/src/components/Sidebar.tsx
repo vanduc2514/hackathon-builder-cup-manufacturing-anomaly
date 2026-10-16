@@ -26,6 +26,8 @@ interface SidebarProps {
   onOpenIncidents: () => void;
   onSelectIncident: (id: string) => void;
   onCloseIncident: (id: string) => void;
+  navOpen?: boolean;
+  onCloseNav?: () => void;
 }
 
 interface NavItemProps {
@@ -89,6 +91,8 @@ export default function Sidebar({
   onOpenIncidents,
   onSelectIncident,
   onCloseIncident,
+  navOpen = false,
+  onCloseNav,
 }: SidebarProps): React.ReactElement {
   const [now, setNow] = useState<Date>(new Date());
   useEffect(() => {
@@ -101,44 +105,45 @@ export default function Sidebar({
 
   return (
     <aside
-      className="glass glass-strong"
-      style={{
-        position: 'fixed',
-        left: 12,
-        top: 12,
-        bottom: 12,
-        width: 'calc(var(--sidebar-w) - 12px)',
-        borderRadius: 24,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: '1.2rem 0.85rem',
-        zIndex: 50,
-        overflowY: 'auto',
-      }}
+      id="app-sidebar"
+      className="glass glass-strong app-sidebar"
+      data-open={navOpen ? 'true' : 'false'}
+      aria-label="Application navigation"
     >
       <div className="col" style={{ gap: '1.4rem' }}>
         <div className="col" style={{ gap: '0.9rem', padding: '0 0.4rem' }}>
-          <div className="row" style={{ gap: '0.65rem' }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 9,
-                background: 'linear-gradient(160deg, #1f2937, #0b1220)',
-                color: '#fff',
-                display: 'grid',
-                placeItems: 'center',
-                fontWeight: 800,
-                fontSize: '0.9rem',
-                boxShadow: '0 6px 14px -4px rgba(11,18,32,0.5), inset 0 1px 0 rgba(255,255,255,0.15)',
-              }}
-            >
-              K
+          <div className="row between" style={{ gap: '0.65rem' }}>
+            <div className="row" style={{ gap: '0.65rem' }}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 9,
+                  background: 'linear-gradient(160deg, #1f2937, #0b1220)',
+                  color: '#fff',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontWeight: 800,
+                  fontSize: '0.9rem',
+                  boxShadow: '0 6px 14px -4px rgba(11,18,32,0.5), inset 0 1px 0 rgba(255,255,255,0.15)',
+                }}
+              >
+                K
+              </div>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.05rem', letterSpacing: '-0.02em' }}>
+                KAIZEN AGENT
+              </span>
             </div>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.05rem', letterSpacing: '-0.02em' }}>
-              KAIZEN AGENT
-            </span>
+            {onCloseNav && (
+              <button
+                type="button"
+                className="btn btn-sm mobile-sidebar-close"
+                aria-label="Close navigation"
+                onClick={onCloseNav}
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            )}
           </div>
           <div className="btn glass-inset line-select" style={{ cursor: 'default' }} title="Production line">
             <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{LINE_LABEL}</span>

@@ -14,6 +14,7 @@ export const INITIAL_FACTORY_PACKET: FactoryTickPacket = {
 export interface UseFactoryStreamOptions {
   enabled?: boolean;
   reconnectIntervalMs?: number;
+  watchdogTimeoutMs?: number;
 }
 
 export interface UseFactoryStreamResult {
@@ -27,7 +28,7 @@ export interface UseFactoryStreamResult {
 }
 
 export function useFactoryStream(options: UseFactoryStreamOptions = {}): UseFactoryStreamResult {
-  const { enabled = true, reconnectIntervalMs = 3000 } = options;
+  const { enabled = true, reconnectIntervalMs = 3000, watchdogTimeoutMs = 5000 } = options;
   const [packet, setPacket] = useState<FactoryTickPacket>(INITIAL_FACTORY_PACKET);
   const [connected, setConnected] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,12 +36,17 @@ export function useFactoryStream(options: UseFactoryStreamOptions = {}): UseFact
 
   const esRef = useRef<EventSource | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
+  const watchdogTimerRef = useRef<number | null>(null);
   const isUnmountedRef = useRef<boolean>(false);
 
   const cleanup = useCallback(() => {
     if (reconnectTimerRef.current !== null) {
       window.clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
+    }
+    if (watchdogTimerRef.current !== null) {
+      window.clearTimeout(watchdogTimerRef.current);
+      watchdogTimerRef.current = null;
     }
     if (esRef.current) {
       esRef.current.close();
@@ -55,14 +61,43 @@ export function useFactoryStream(options: UseFactoryStreamOptions = {}): UseFact
     const factoryOrigin = import.meta.env.VITE_FACTORY_STREAM_ORIGIN ?? "";
     const streamUrl = `${factoryOrigin}/api/factory/stream`;
 
+    const resetWatchdog = () => {
+      if (watchdogTimerRef.current !== null) {
+        window.clearTimeout(watchdogTimerRef.current);
+        watchdogTimerRef.current = null;
+      }
+      if (watchdogTimeoutMs > 0 && !isUnmountedRef.current && enabled) {
+        watchdogTimerRef.current = window.setTimeout(() => {
+          if (isUnmountedRef.current) return;
+          // Silent connection death detected: no packet or ping within bounded window
+          setConnected(false);
+          setError("Factory stream heartbeat timed out — attempting auto-reconnect...");
+          if (esRef.current) {
+            esRef.current.close();
+            esRef.current = null;
+          }
+          if (reconnectTimerRef.current !== null) {
+            window.clearTimeout(reconnectTimerRef.current);
+          }
+          reconnectTimerRef.current = window.setTimeout(() => {
+            if (!isUnmountedRef.current && enabled) {
+              connect();
+            }
+          }, reconnectIntervalMs);
+        }, watchdogTimeoutMs);
+      }
+    };
+
     try {
       const es = new EventSource(streamUrl);
       esRef.current = es;
+      resetWatchdog();
 
       es.onopen = () => {
         if (isUnmountedRef.current) return;
         setConnected(true);
         setError(null);
+        resetWatchdog();
       };
 
       const handlePacketData = (rawData: string) => {
@@ -73,16 +108,19 @@ export function useFactoryStream(options: UseFactoryStreamOptions = {}): UseFact
           setLastTickAt(Date.now());
           setConnected(true);
           setError(null);
+          resetWatchdog();
         } catch {
           // ignore malformed packets
         }
       };
 
       es.onmessage = (event: MessageEvent) => {
+        resetWatchdog();
         if (event.data) handlePacketData(event.data);
       };
 
       es.addEventListener("factory_tick", (event: MessageEvent) => {
+        resetWatchdog();
         if (event.data) handlePacketData(event.data);
       });
 
@@ -90,15 +128,23 @@ export function useFactoryStream(options: UseFactoryStreamOptions = {}): UseFact
         if (isUnmountedRef.current) return;
         setConnected(true);
         setError(null);
+        resetWatchdog();
       });
 
       es.onerror = () => {
         if (isUnmountedRef.current) return;
+        if (watchdogTimerRef.current !== null) {
+          window.clearTimeout(watchdogTimerRef.current);
+          watchdogTimerRef.current = null;
+        }
         setConnected(false);
         setError("Factory stream disconnected — attempting auto-reconnect...");
         if (esRef.current) {
           esRef.current.close();
           esRef.current = null;
+        }
+        if (reconnectTimerRef.current !== null) {
+          window.clearTimeout(reconnectTimerRef.current);
         }
         reconnectTimerRef.current = window.setTimeout(() => {
           if (!isUnmountedRef.current && enabled) {
@@ -111,7 +157,7 @@ export function useFactoryStream(options: UseFactoryStreamOptions = {}): UseFact
       setConnected(false);
       setError(err instanceof Error ? err.message : "Error connecting to factory stream");
     }
-  }, [cleanup, enabled, reconnectIntervalMs]);
+  }, [cleanup, enabled, reconnectIntervalMs, watchdogTimeoutMs]);
 
   useEffect(() => {
     isUnmountedRef.current = false;

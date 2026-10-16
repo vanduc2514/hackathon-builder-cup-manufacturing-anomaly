@@ -204,4 +204,75 @@ describe("useFactoryStream hook", () => {
 
     vi.useRealTimers();
   });
+
+  it("detects silent stream death via watchdog timer without onerror and auto-reconnects", () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() =>
+      useFactoryStream({ reconnectIntervalMs: 1000, watchdogTimeoutMs: 2000 })
+    );
+    expect(MockEventSource.instances.length).toBe(1);
+    const es1 = MockEventSource.instances[0];
+
+    act(() => {
+      es1.simulateOpen();
+    });
+    expect(result.current.connected).toBe(true);
+
+    const mockPacket: FactoryTickPacket = {
+      tick_index: 5,
+      machines: [
+        {
+          machine_id: "CNC-01",
+          tool_id: "T01",
+          spindle_vibration: 1.0,
+          motor_current: 12.0,
+          spindle_temp: 38.0,
+          rpm: 8000,
+          operating_status: "NORMAL",
+        },
+      ],
+      recent_parts: [],
+      edge_stats: null,
+      active_anomaly: null,
+    };
+    act(() => {
+      es1.simulateEvent("factory_tick", mockPacket);
+    });
+    expect(result.current.hasReceivedData).toBe(true);
+    expect(result.current.connected).toBe(true);
+    expect(result.current.isStale).toBe(false);
+
+    // Simulate silent death: no onerror is fired, time passes beyond watchdogTimeoutMs (2000ms)
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    // Hook must detect timeout, close old EventSource, mark connected=false, isStale=true
+    expect(es1.closed).toBe(true);
+    expect(result.current.connected).toBe(false);
+    expect(result.current.isStale).toBe(true);
+    expect(result.current.error).toContain("timed out");
+
+    // Advance time by reconnectIntervalMs (1000ms)
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    // A new EventSource connection attempt must be made
+    expect(MockEventSource.instances.length).toBe(2);
+    const es2 = MockEventSource.instances[1];
+    expect(es2.closed).toBe(false);
+
+    // When the stream recovers, it connects and clears stale state
+    act(() => {
+      es2.simulateOpen();
+      es2.simulateEvent("factory_tick", { ...mockPacket, tick_index: 6 });
+    });
+    expect(result.current.connected).toBe(true);
+    expect(result.current.isStale).toBe(false);
+    expect(result.current.packet.tick_index).toBe(6);
+
+    vi.useRealTimers();
+  });
 });
+

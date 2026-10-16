@@ -79,6 +79,11 @@ resource "google_cloud_run_v2_service" "factory" {
           value = env.value
         }
       }
+
+      env {
+        name  = "FACTORY_API_KEY"
+        value = random_password.factory_api_key.result
+      }
     }
   }
 

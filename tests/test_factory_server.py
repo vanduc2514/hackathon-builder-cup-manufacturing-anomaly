@@ -426,3 +426,113 @@ def test_quality_event_payload_uuid_event_id():
     # Valid UUID format
     parsed_uuid = uuid.UUID(payload1.event_id)
     assert str(parsed_uuid) == payload1.event_id
+
+
+def test_api_key_missing_returns_401(monkeypatch):
+    """Verify mutating endpoints return 401 when FACTORY_API_KEY is configured and request has no key."""
+    from simulator.config import settings
+
+    monkeypatch.setattr(settings, "factory_api_key", "valid-factory-token-999")
+    monkeypatch.setattr(settings, "app_env", "development")
+
+    with TestClient(app) as client:
+        # 1. Inject without key -> 401
+        res_inject = client.post("/api/factory/inject", json={"scenario": "cnc_tool_wear"})
+        assert res_inject.status_code == 401
+        assert "Invalid or missing X-API-Key" in res_inject.json()["detail"]
+
+        # 2. Reset without key -> 401
+        res_reset = client.post("/api/factory/reset")
+        assert res_reset.status_code == 401
+        assert "Invalid or missing X-API-Key" in res_reset.json()["detail"]
+
+
+def test_api_key_invalid_returns_401(monkeypatch):
+    """Verify mutating endpoints return 401 when request provides invalid X-API-Key."""
+    from simulator.config import settings
+
+    monkeypatch.setattr(settings, "factory_api_key", "valid-factory-token-999")
+    monkeypatch.setattr(settings, "app_env", "development")
+
+    with TestClient(app) as client:
+        res_inject = client.post(
+            "/api/factory/inject",
+            headers={"X-API-Key": "wrong-key"},
+            json={"scenario": "cnc_tool_wear"},
+        )
+        assert res_inject.status_code == 401
+
+        res_reset = client.post("/api/factory/reset", headers={"X-API-Key": "wrong-key"})
+        assert res_reset.status_code == 401
+
+
+def test_api_key_valid_returns_200(monkeypatch):
+    """Verify mutating endpoints succeed (200) when correct X-API-Key is provided."""
+    from simulator.config import settings
+
+    monkeypatch.setattr(settings, "factory_api_key", "valid-factory-token-999")
+    monkeypatch.setattr(settings, "app_env", "development")
+
+    with TestClient(app) as client:
+        res_inject = client.post(
+            "/api/factory/inject",
+            headers={"X-API-Key": "valid-factory-token-999"},
+            json={"scenario": "cnc_tool_wear", "mode": "fast"},
+        )
+        assert res_inject.status_code == 200
+        assert res_inject.json()["status"] == "ok"
+
+        res_reset = client.post(
+            "/api/factory/reset",
+            headers={"X-API-Key": "valid-factory-token-999"},
+        )
+        assert res_reset.status_code == 200
+        assert res_reset.json()["status"] == "ok"
+
+
+def test_api_key_production_unset_fails_closed_503(monkeypatch):
+    """Verify mutating endpoints fail closed (503) in production if FACTORY_API_KEY is not configured."""
+    from simulator.config import settings
+
+    monkeypatch.setattr(settings, "factory_api_key", None)
+    monkeypatch.setattr(settings, "app_env", "production")
+
+    with TestClient(app) as client:
+        res_inject = client.post("/api/factory/inject", json={"scenario": "cnc_tool_wear"})
+        assert res_inject.status_code == 503
+        assert "not configured on production server" in res_inject.json()["detail"]
+
+        res_reset = client.post("/api/factory/reset")
+        assert res_reset.status_code == 503
+        assert "not configured on production server" in res_reset.json()["detail"]
+
+
+def test_api_key_development_unset_allows_mutations(monkeypatch):
+    """Verify mutating endpoints are allowed in development/local when FACTORY_API_KEY is unset."""
+    from simulator.config import settings
+
+    monkeypatch.setattr(settings, "factory_api_key", None)
+    monkeypatch.setattr(settings, "app_env", "development")
+
+    with TestClient(app) as client:
+        res_reset = client.post("/api/factory/reset")
+        assert res_reset.status_code == 200
+        assert res_reset.json()["status"] == "ok"
+
+
+def test_api_key_public_endpoints_unrestricted(monkeypatch):
+    """Verify health, status, and stream remain public without requiring X-API-Key."""
+    from simulator.config import settings
+
+    monkeypatch.setattr(settings, "factory_api_key", "strict-key-123")
+    monkeypatch.setattr(settings, "app_env", "production")
+
+    with TestClient(app) as client:
+        # Public health endpoints
+        assert client.get("/health").status_code == 200
+        assert client.get("/healthz").status_code == 200
+
+        # Public status endpoint
+        res_status = client.get("/api/factory/status")
+        assert res_status.status_code == 200
+        assert "machines" in res_status.json()

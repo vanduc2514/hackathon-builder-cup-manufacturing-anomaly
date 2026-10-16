@@ -32,6 +32,12 @@ resource "random_password" "auth_secret" {
   special = false
 }
 
+# Shared API key for mutating factory simulator endpoints (/inject, /reset).
+resource "random_password" "factory_api_key" {
+  length  = 32
+  special = false
+}
+
 resource "google_cloud_run_v2_service" "backend" {
   name                = var.service_name
   location            = var.region
@@ -124,6 +130,11 @@ resource "google_cloud_run_v2_service" "backend" {
       env {
         name  = "FACTORY_SERVICE_URL"
         value = google_cloud_run_v2_service.factory.uri
+      }
+
+      env {
+        name  = "FACTORY_API_KEY"
+        value = random_password.factory_api_key.result
       }
     }
   }

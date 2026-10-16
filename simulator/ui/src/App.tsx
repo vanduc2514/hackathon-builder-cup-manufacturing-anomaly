@@ -6,7 +6,15 @@ import EdgeFilterCard from './components/EdgeFilterCard';
 import AnomalyConsole from './components/AnomalyConsole';
 
 export default function App(): React.ReactElement {
-  const { packet, connected, injectAnomaly, resetFactory } = useFactoryStream();
+  const {
+    packet,
+    connected,
+    injectAnomaly,
+    resetFactory,
+    apiKey,
+    setApiKey,
+    authError,
+  } = useFactoryStream();
   const machines = packet?.machines || packet?.telemetry || [];
   const parts = packet?.recent_parts || packet?.parts || [];
 
@@ -29,7 +37,14 @@ export default function App(): React.ReactElement {
       </header>
 
       <main className="content-stack">
-        <AnomalyConsole activeAnomaly={packet?.active_anomaly} onInject={injectAnomaly} onReset={resetFactory} />
+        <AnomalyConsole
+          activeAnomaly={packet?.active_anomaly}
+          onInject={injectAnomaly}
+          onReset={resetFactory}
+          apiKey={apiKey}
+          onApiKeyChange={setApiKey}
+          authError={authError}
+        />
         <MachineBay machines={machines} />
         <div className="split-grid">
           <ConveyorBelt parts={parts} />

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hmac
 import logging
 import os
 import time
@@ -13,7 +14,7 @@ from datetime import datetime, timezone
 from typing import Any, AsyncIterator, Optional
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
 
@@ -396,6 +397,32 @@ class FactoryServerService:
         )
 
 
+def require_api_key(
+    x_api_key: Optional[str] = Header(default=None, alias="X-API-Key"),
+) -> None:
+    """Enforces shared API key authentication on mutating simulator endpoints.
+
+    - Missing or invalid key -> 401 Unauthorized.
+    - Key unset with APP_ENV=production -> 503 Service Unavailable (fail closed).
+    - Key unset outside production -> allow request.
+    """
+    expected_key = settings.factory_api_key
+    app_env = getattr(settings, "app_env", os.getenv("APP_ENV", "development"))
+    if not expected_key:
+        if app_env == "production":
+            raise HTTPException(
+                status_code=503,
+                detail="Factory API key is not configured on production server",
+            )
+        return
+
+    if not x_api_key or not hmac.compare_digest(x_api_key, expected_key):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing X-API-Key header",
+        )
+
+
 # Global service coordinator
 service = FactoryServerService()
 
@@ -403,6 +430,15 @@ service = FactoryServerService()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Manages background simulation worker across FastAPI application lifecycle."""
+    if not settings.factory_api_key:
+        if getattr(settings, "app_env", os.getenv("APP_ENV", "development")) == "production":
+            logger.error(
+                "FACTORY_API_KEY is not configured in production; mutating endpoints will return 503"
+            )
+        else:
+            logger.warning(
+                "FACTORY_API_KEY is unset; mutating endpoints (/inject, /reset) are unprotected in development"
+            )
     service.start()
     yield
     service.stop()
@@ -437,7 +473,7 @@ async def get_factory_status() -> FactoryStatusResponse:
     return service.get_status()
 
 
-@app.post("/api/factory/inject")
+@app.post("/api/factory/inject", dependencies=[Depends(require_api_key)])
 async def inject_anomaly(req: InjectAnomalyRequest = InjectAnomalyRequest()) -> dict[str, Any]:
     """Triggers Scenario 1 (CNC Tool Wear) or Scenario 2 (IM Damp Material)."""
     return await service.inject(
@@ -449,7 +485,7 @@ async def inject_anomaly(req: InjectAnomalyRequest = InjectAnomalyRequest()) -> 
     )
 
 
-@app.post("/api/factory/reset")
+@app.post("/api/factory/reset", dependencies=[Depends(require_api_key)])
 async def reset_factory() -> dict[str, Any]:
     """Restores all machinery to nominal baseline."""
     service.reset()

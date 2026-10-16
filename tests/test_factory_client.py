@@ -149,3 +149,45 @@ async def test_client_read_timeout_handled_gracefully():
     assert res.skipped is False
     assert res.error is not None
     assert "read timed out" in res.error.lower()
+
+
+@pytest.mark.asyncio
+async def test_client_sends_api_key_header():
+    """Verify FactorySimulatorClient sends X-API-Key header when configured."""
+    recorded_headers = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        recorded_headers.update(dict(request.headers))
+        return httpx.Response(200, json={"status": "ok"})
+
+    mock_transport = httpx.MockTransport(handler)
+    client = FactorySimulatorClient(
+        base_url="http://mock-factory:8080",
+        transport=mock_transport,
+        api_key="test-secret-key-123",
+    )
+
+    res = await client.inject_anomaly()
+    assert res.ok is True
+    assert recorded_headers.get("x-api-key") == "test-secret-key-123"
+
+
+@pytest.mark.asyncio
+async def test_client_401_unauthorized_maps_to_ok_false():
+    """Verify 401 Unauthorized maps to ok=False with clear error message without raising."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, text="Invalid or missing X-API-Key header")
+
+    mock_transport = httpx.MockTransport(handler)
+    client = FactorySimulatorClient(
+        base_url="http://mock-factory:8080",
+        transport=mock_transport,
+        api_key="wrong-key",
+    )
+
+    res = await client.reset_factory()
+    assert res.ok is False
+    assert res.skipped is False
+    assert res.error is not None
+    assert "401" in res.error
+    assert "Invalid or missing X-API-Key" in res.error

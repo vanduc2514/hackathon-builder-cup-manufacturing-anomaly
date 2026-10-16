@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -11,6 +12,9 @@ class SimulatorSettings(BaseSettings):
     """Configuration parameters for the factory simulator."""
 
     model_config = SettingsConfigDict(env_file=".env", extra="allow")
+
+    app_env: str = os.getenv("APP_ENV", "development")
+    factory_api_key: Optional[str] = os.getenv("FACTORY_API_KEY", None)
 
     mqtt_broker_host: str = os.getenv("MQTT_BROKER_HOST", "broker.emqx.io")
     mqtt_broker_port: int = int(os.getenv("MQTT_BROKER_PORT", "1883"))

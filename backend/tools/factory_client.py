@@ -41,10 +41,12 @@ class FactorySimulatorClient:
         base_url: Optional[str] = None,
         timeout: Optional[float] = None,
         transport: Optional[httpx.AsyncBaseTransport] = None,
+        api_key: Optional[str] = None,
     ) -> None:
         self._explicit_base_url = base_url
         self._explicit_timeout = timeout
         self._transport = transport
+        self._explicit_api_key = api_key
 
     @property
     def base_url(self) -> Optional[str]:
@@ -62,6 +64,13 @@ class FactorySimulatorClient:
         if self._explicit_timeout is not None:
             return self._explicit_timeout
         return settings.factory_timeout_seconds
+
+    @property
+    def api_key(self) -> Optional[str]:
+        """Resolves API key from explicit parameter or settings."""
+        if self._explicit_api_key is not None:
+            return self._explicit_api_key
+        return settings.factory_api_key
 
     def is_configured(self) -> bool:
         """True if a non-empty factory service URL is configured."""
@@ -91,8 +100,13 @@ class FactorySimulatorClient:
             client_kwargs: dict[str, Any] = {"timeout": self.timeout}
             if self._transport is not None:
                 client_kwargs["transport"] = self._transport
+            headers: dict[str, str] = {}
+            if self.api_key:
+                headers["X-API-Key"] = self.api_key
             async with httpx.AsyncClient(**client_kwargs) as client:
-                response = await client.request(method, endpoint, json=json_payload)
+                response = await client.request(
+                    method, endpoint, json=json_payload, headers=headers
+                )
                 latency_ms = round((time.monotonic() - start_time) * 1000.0, 2)
 
                 if response.is_success:

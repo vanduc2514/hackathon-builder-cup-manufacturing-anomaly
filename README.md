@@ -22,6 +22,8 @@ The system is organised into four sequential phases, coordinated by a central **
 
 **Phase A — Detection**
 A Gemma 3-powered edge gateway at the camera inspection station classifies product defects in real time and publishes anomaly events when the defect rate breaches the Statistical Process Control (SPC) upper control limit.
+*Note on Edge Architecture:* The Gemma 3 edge classifier runs exclusively on-premises (factory floor IPC, Jetson, or local edge simulator) by design. Processing high-resolution optical frames locally guarantees sub-50ms latency for physical pneumatic scrap diverters, drops >95% of normal inspection frames before network egress, and safeguards factory IP. Cloud Run hosts only the ADK Multi-Agent Orchestrator and Gemini 2.0 reasoning services; Cloud Run and Terraform intentionally do not provision an Ollama/Gemma host.
+
 
 **Phase B — Tracing & Root Cause**
 Three agents work in parallel:

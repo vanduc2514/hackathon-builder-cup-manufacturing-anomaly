@@ -21,6 +21,11 @@ Gemma 3 Edge runs lightweight open-source models (Gemma 2B, 9B, PaliGemma) on in
 - **Edge Hardware Targets**: Industrial PCs (IPCs), Raspberry Pi 5, Coral Edge TPU, NVIDIA Jetson, or the local simulator.
 - **Inference Optimization**: 4-bit / 8-bit quantization (`q4_K_M`) ensures sub-50ms inference latency on factory gateways.
 
+### Architectural Boundary: Edge-Only by Design
+- **Local On-Premises Isolation**: In the Kaizen architecture, Gemma 3 vision inference is strictly local/on-premise by design. It resides at the physical inspection station to provide deterministic sub-50ms pass/fail signals to the pneumatic scrap diverter and drop >95% of benign frames locally.
+- **Zero Cloud GPU / Ollama Overhead**: The Google Cloud Run deployment and Terraform configuration deliberately do *not* host Gemma or Ollama in the cloud. Raw inspection video streams are never transmitted off-premise, preserving network bandwidth and plant IP.
+- **Cloud Transition**: Central incident orchestration, multi-agent causal analysis (5-Whys, 8D report generation), and technician multimodal copilot are powered in the cloud by Gemini 2.0 Flash / Pro via Vertex AI.
+
 ## Key Capabilities & References
 
 - **Edge Filtering & Bandwidth Reduction**: Dropping 95%+ of normal product frames locally. See [references/edge-filtering.md](references/edge-filtering.md)

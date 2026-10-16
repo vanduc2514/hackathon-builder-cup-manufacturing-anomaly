@@ -369,3 +369,54 @@ def test_edge_simulator_runner_execution():
     assert stats.total_frames_evaluated > 0
     assert stats.pass_frames_dropped > 0
     assert stats.cloud_bandwidth_reduction_pct > 0.0
+
+
+def test_gemma_edge_classifier_on_premise_boundary():
+    """Validates that GemmaEdgeClassifier adheres to the edge-only architectural boundary."""
+    # Ensure allowed modes strictly represent edge/local operations
+    allowed_modes = {mode.value for mode in EdgeClassifierMode}
+    assert allowed_modes == {"ollama", "heuristic", "dataset_playback"}
+
+    # Default heuristic mode requires zero cloud credentials or network services
+    classifier = GemmaEdgeClassifier(mode="heuristic")
+    frame = InspectionFrame(
+        product_id="PRD-1099",
+        machine_id="CNC-02",
+        tool_id="T07",
+        status="DEFECT_SCRATCH",
+        defect_type="scratch_vertical",
+    )
+    result = classifier.classify_frame(frame)
+    assert result.is_defect is True
+    assert result.defect_type == "scratch_vertical"
+    assert result.diverter_actuated is True
+    assert result.model_name == "gemma-3-2b-edge"
+    # Guaranteed sub-50ms constraint for physical scrap diverter actuation
+    assert result.inference_time_ms < 50.0
+
+
+def test_gemma_edge_classifier_zero_cloud_dependency(monkeypatch: pytest.MonkeyPatch):
+    """Verifies edge classifier operates without GCP cloud credentials or external cloud connectivity."""
+    # Clear any cloud environment variables to simulate isolated factory floor
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
+    monkeypatch.delenv("GCP_PROJECT_ID", raising=False)
+
+    classifier = GemmaEdgeClassifier(
+        mode=EdgeClassifierMode.OLLAMA,
+        ollama_url="http://127.0.0.1:9999",  # Unreachable local port
+        timeout_seconds=0.1,
+    )
+
+    # Should gracefully degrade to heuristic fallback on-premise without throwing or calling cloud
+    frame = InspectionFrame(
+        product_id="PRD-TEST-OFFLINE",
+        machine_id="CNC-01",
+        tool_id="T04",
+        status="PASS",
+    )
+    res = classifier.classify_frame(frame)
+    assert res.is_defect is False
+    assert res.operating_mode == "heuristic_fallback"
+    assert res.diverter_actuated is False

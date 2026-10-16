@@ -87,6 +87,8 @@ It covers:
     ```
 * **Pricing & Free Tier:**
   * **$0 Cloud Cost**. 100% free open weights; executes purely on edge hardware.
+* **Deployment Decision (Architectural Invariant):**
+  * **Local-only / On-Premise by Design**: Physical optical inspection requires sub-50ms inference to drive pneumatic scrap diverters and drop >95% of frames before network egress. Cloud Run and Terraform deliberately do *not* provision an Ollama/Gemma host in the cloud; cloud intelligence is delegated to Gemini 2.0 Flash / Pro on Vertex AI.
 
 ---
 

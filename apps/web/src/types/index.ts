@@ -474,3 +474,82 @@ export interface EsgLedgerResponse {
   entries: EsgLedgerEntryResponse[];
   factory_type: string;
 }
+
+// System Topology & Realtime Execution Graph Types (Issue #205)
+
+export type TopologyNodeId =
+  | 'edge-gemma'
+  | 'cloud-ingest'
+  | 'agent-qa'
+  | 'agent-tra'
+  | 'agent-pa'
+  | 'agent-rca'
+  | 'copilot-live'
+  | 'agent-scribe'
+  | 'gatekeeper-qa'
+  | 'agent-learn'
+  | 'human-approval';
+
+export type TopologyPhaseId = 'phase-a' | 'phase-b' | 'phase-c' | 'phase-d';
+
+export type TopologyTier =
+  | 'Tier 1 & 2'
+  | 'Tier 3 & 4'
+  | 'Tier 4'
+  | 'Tier 4 & 5'
+  | 'Tier 5';
+
+export type TopologyNodeStatus =
+  | 'idle'
+  | 'active'
+  | 'done'
+  | 'error'
+  | 'pending_approval'
+  | 'waiting';
+
+export interface TopologyNodeDefinition {
+  id: TopologyNodeId;
+  phase: TopologyPhaseId;
+  label: string;
+  sublabel: string;
+  tier: TopologyTier;
+  tierDescription: string;
+  icon: string;
+  techStack: string[];
+  jtbd: string;
+  order: number;
+}
+
+export interface TopologyEdgeDefinition {
+  from: TopologyNodeId;
+  to: TopologyNodeId;
+  label?: string;
+}
+
+export interface TopologyNodeState {
+  id: TopologyNodeId;
+  status: TopologyNodeStatus;
+  badgeText?: string;
+  summary: string;
+  isInferred: boolean;
+  details: Record<string, string | number | boolean | null | undefined>;
+}
+
+export interface TopologyPhaseDefinition {
+  id: TopologyPhaseId;
+  letter: 'A' | 'B' | 'C' | 'D';
+  name: string;
+  vietnameseName: string;
+  description: string;
+  lampColor: 'red' | 'yellow' | 'blue' | 'green';
+  lampHex: string;
+}
+
+export interface TopologyPhaseState {
+  id: TopologyPhaseId;
+  status: 'idle' | 'active' | 'completed' | 'error';
+  activeNodeCount: number;
+  completedNodeCount: number;
+  totalNodeCount: number;
+}
+

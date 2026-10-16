@@ -10,6 +10,7 @@ import IncidentsEmptyView from '../components/views/IncidentsEmptyView';
 import KaizenImpactView from '../components/views/KaizenImpactView';
 import TechWalkthroughsView from '../components/views/TechWalkthroughsView';
 import SopLibraryView from '../components/views/SopLibraryView';
+import SystemTopologyView from '../components/views/SystemTopologyView';
 
 interface DashboardProps {
   incident: IncidentState | null;
@@ -70,6 +71,14 @@ export default function Dashboard({
           onOpenIncident={onOpenIncident}
           onOpenEsgHub={() => onSelectTab('impact')}
           onOpenSimulation={onOpenSimulation}
+          onOpenTopology={() => onSelectTab('topology')}
+          onNotify={onNotify}
+        />
+      )}
+      {currentTab === 'topology' && (
+        <SystemTopologyView
+          incident={incident}
+          onOpenIncident={onOpenIncident}
           onNotify={onNotify}
         />
       )}
@@ -79,6 +88,7 @@ export default function Dashboard({
           incident={openIncident.incident}
           product={openIncident.product}
           onNavigateHome={goHome}
+          onOpenTopology={() => onSelectTab('topology')}
           onNotify={onNotify}
         />
       )}

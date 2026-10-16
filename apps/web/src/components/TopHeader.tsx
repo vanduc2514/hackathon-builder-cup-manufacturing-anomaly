@@ -17,6 +17,7 @@ interface TopHeaderProps {
 
 const JUMP_TARGETS: { tab: DashboardTab; label: string; hint: string; icon: string }[] = [
   { tab: 'overview', label: 'Line Overview', hint: 'Cell Line 1 · fleet telemetry, SPC & OEE', icon: 'dashboard' },
+  { tab: 'topology', label: 'System Topology', hint: '4-phase multi-agent architecture & live state diagram', icon: 'account_tree' },
   { tab: 'walkthroughs', label: 'Tech Walkthroughs', hint: 'Repair videos by machine station', icon: 'smart_display' },
   { tab: 'impact', label: 'Knowledge Base', hint: 'Signed-off 8D fixes · scrap, downtime & CO₂ saved', icon: 'local_library' },
   { tab: 'sops', label: 'SOP Change Log', hint: 'Procedures & revisions', icon: 'history' },

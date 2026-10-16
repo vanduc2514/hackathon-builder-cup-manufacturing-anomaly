@@ -301,9 +301,9 @@ export default function LineOverviewView({
         />
       </div>
 
-      <FactoryDigitalTwin incident={incident} />
-
       <MachineFleetTable rows={rows} loading={telemetry.loading || fleet.loading} onOpenIncident={onOpenIncident} onDiagnostics={setDiagId} />
+
+      <FactoryDigitalTwin incident={incident} />
 
       {diagRow && (
         <DiagnosticsModal

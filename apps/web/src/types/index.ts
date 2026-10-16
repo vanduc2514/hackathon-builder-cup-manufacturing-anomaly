@@ -581,6 +581,7 @@ export interface VisualEvidencePresetListResponse {
 export interface PresetEvidenceRequest {
   preset_id: string;
   notes?: string | null;
+}
 
 export interface FactoryMachineTelemetry {
   machine_id: string;
@@ -622,6 +623,6 @@ export interface FactoryTickPacket {
   telemetry?: FactoryMachineTelemetry[];
   recent_parts?: FactoryConveyorPart[];
   parts?: FactoryConveyorPart[];
-  edge_stats?: FactoryEdgeStatistics;
+  edge_stats?: FactoryEdgeStatistics | null;
   active_anomaly?: FactoryActiveAnomaly | null;
 }

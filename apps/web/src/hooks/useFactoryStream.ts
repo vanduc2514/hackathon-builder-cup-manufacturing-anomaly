@@ -1,57 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { FactoryTickPacket, FactoryMachineTelemetry } from "../types";
 
-export const DEFAULT_MACHINES: FactoryMachineTelemetry[] = [
-  {
-    machine_id: "CNC-01",
-    tool_id: "T01",
-    spindle_vibration: 1.18,
-    motor_current: 13.8,
-    spindle_temp: 41.5,
-    rpm: 8000,
-    operating_status: "NORMAL",
-  },
-  {
-    machine_id: "CNC-02",
-    tool_id: "T07",
-    spindle_vibration: 1.25,
-    motor_current: 14.2,
-    spindle_temp: 42.0,
-    rpm: 8000,
-    operating_status: "NORMAL",
-  },
-  {
-    machine_id: "CNC-03",
-    tool_id: "T03",
-    spindle_vibration: 1.15,
-    motor_current: 13.5,
-    spindle_temp: 40.8,
-    rpm: 8000,
-    operating_status: "NORMAL",
-  },
-  {
-    machine_id: "IM-05",
-    tool_id: "MOLD-03",
-    spindle_vibration: 0.08,
-    motor_current: 28.5,
-    spindle_temp: 78.0,
-    rpm: 0,
-    operating_status: "NORMAL",
-    dryer_dew_point: -40.0,
-  },
-];
+export const DEFAULT_MACHINES: FactoryMachineTelemetry[] = [];
 
 export const INITIAL_FACTORY_PACKET: FactoryTickPacket = {
   tick_index: 0,
-  machines: DEFAULT_MACHINES,
+  machines: [],
   recent_parts: [],
-  edge_stats: {
-    total_frames_evaluated: 0,
-    pass_frames_dropped: 0,
-    defect_frames_forwarded: 0,
-    estimated_bandwidth_saved_mb: 0,
-    cloud_bandwidth_reduction_pct: 95.0,
-  },
+  edge_stats: null,
   active_anomaly: null,
 };
 
@@ -63,6 +19,8 @@ export interface UseFactoryStreamOptions {
 export interface UseFactoryStreamResult {
   packet: FactoryTickPacket;
   connected: boolean;
+  isStale: boolean;
+  hasReceivedData: boolean;
   error: string | null;
   lastTickAt: number | null;
   reconnect: () => void;
@@ -169,5 +127,16 @@ export function useFactoryStream(options: UseFactoryStreamOptions = {}): UseFact
     connect();
   }, [connect]);
 
-  return { packet, connected, error, lastTickAt, reconnect };
+  const hasReceivedData = lastTickAt !== null;
+  const isStale = !connected && hasReceivedData;
+
+  return {
+    packet,
+    connected,
+    isStale,
+    hasReceivedData,
+    error,
+    lastTickAt,
+    reconnect,
+  };
 }

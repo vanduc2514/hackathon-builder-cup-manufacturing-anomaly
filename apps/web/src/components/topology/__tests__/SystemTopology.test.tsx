@@ -135,6 +135,7 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     expect(approvedStates['human-lead'].status).toBe('done');
     expect(approvedStates['output-docs'].status).toBe('done');
   });
+
   it('verifies two-window partitioning in layers, nodes, and accessors (TKT-051 #226)', () => {
     // Layer window assignments
     const l1 = TOPOLOGY_LAYERS.find((l) => l.id === 'layer-1');
@@ -422,5 +423,86 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     // Status chip in Window 2
     const statusChip = document.getElementById('window-2-status-chip');
     expect(statusChip).not.toBeNull();
+  });
+
+  it('verifies Phase Stepper Bar keyboard navigation with Space/Enter across all steps (TKT-053 #228)', () => {
+    const handleScroll = vi.fn();
+    render(<PhaseStepperBar incident={mockIncident} scenario="nominal" onScrollToLayer={handleScroll} />);
+
+    const stepA = document.getElementById('step-phase-a');
+    const stepB = document.getElementById('step-phase-b');
+    const stepC = document.getElementById('step-phase-c');
+    const stepD = document.getElementById('step-phase-d');
+
+    // Test Space key on Step A -> phase-1
+    fireEvent.keyDown(stepA!, { key: ' ' });
+    expect(handleScroll).toHaveBeenCalledWith('phase-1');
+
+    // Test Space key on Step B -> phase-3
+    fireEvent.keyDown(stepB!, { key: ' ' });
+    expect(handleScroll).toHaveBeenCalledWith('phase-3');
+
+    // Test Enter key on Step C -> phase-4
+    fireEvent.keyDown(stepC!, { key: 'Enter' });
+    expect(handleScroll).toHaveBeenCalledWith('phase-4');
+
+    // Test Space key on Step D -> phase-5
+    fireEvent.keyDown(stepD!, { key: ' ' });
+    expect(handleScroll).toHaveBeenCalledWith('phase-5');
+  });
+
+  it('verifies SVG path generation and active edge highlighting for recovery-handshake and gate-2-to-esg (TKT-053 #228)', () => {
+    const { container } = render(<SystemTopologyView incident={mockIncident} />);
+
+    // SVG container exists
+    const svgOverlay = container.querySelector('.topology-svg-overlay');
+    expect(svgOverlay).not.toBeNull();
+
+    // Verify recovery-handshake edge exists in TOPOLOGY_EDGES and has correct configuration
+    const recoveryEdge = TOPOLOGY_EDGES.find((e) => e.id === 'recovery-handshake');
+    expect(recoveryEdge).toBeDefined();
+    expect(recoveryEdge?.from).toBe('copilot-live');
+    expect(recoveryEdge?.to).toBe('floor-machines');
+    expect(recoveryEdge?.type).toBe('loopback-long');
+
+    // Verify gate-2-to-esg edge exists in TOPOLOGY_EDGES and has correct configuration
+    const esgEdge = TOPOLOGY_EDGES.find((e) => e.id === 'gate-2-to-esg');
+    expect(esgEdge).toBeDefined();
+    expect(esgEdge?.from).toBe('decision-gate-2');
+    expect(esgEdge?.to).toBe('agent-learn');
+    expect(esgEdge?.type).toBe('branch-right');
+
+    // Check node states for streak_verifying: copilot-live and floor-machines
+    const streakStates = deriveNodeStates(mockIncident, 'streak_verifying');
+    expect(streakStates['copilot-live'].status).toBe('done');
+    expect(streakStates['decision-gate-2'].status).toBe('active');
+
+    // Check node states for approved: decision-gate-2 and agent-learn
+    const approvedStates = deriveNodeStates(mockIncident, 'approved');
+    expect(approvedStates['decision-gate-2'].status).toBe('done');
+    expect(approvedStates['agent-learn'].status).toBe('done');
+  });
+
+  it('verifies two-window DOM ordering and Quick-Launch link attributes (TKT-053 #228)', () => {
+    const { container } = render(<SystemTopologyView incident={mockIncident} />);
+
+    const w1 = container.querySelector('#window-1-container');
+    const bridge = container.querySelector('#pubsub-cross-bridge');
+    const w2 = container.querySelector('#window-2-container');
+
+    expect(w1).not.toBeNull();
+    expect(bridge).not.toBeNull();
+    expect(w2).not.toBeNull();
+
+    // Verify sequential DOM placement: Window 1 comes before Bridge, Bridge comes before Window 2
+    expect(w1!.compareDocumentPosition(bridge!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(bridge!.compareDocumentPosition(w2!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // Quick-Launch link attributes
+    const qlLink = container.querySelector('.btn-quick-launch');
+    expect(qlLink).not.toBeNull();
+    expect(qlLink?.getAttribute('href')).toBe('http://localhost:3002');
+    expect(qlLink?.getAttribute('target')).toBe('_blank');
+    expect(qlLink?.getAttribute('rel')).toBe('noopener noreferrer');
   });
 });

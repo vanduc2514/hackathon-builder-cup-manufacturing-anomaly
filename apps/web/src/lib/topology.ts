@@ -11,8 +11,11 @@ import type {
   TopologyPhaseId,
   TopologyPhaseState,
   TopologyScenarioId,
+  TopologyWindowId,
 } from '../types';
 import { matchesAgentRole } from './incident';
+
+export type { TopologyWindowId };
 
 export interface TopologyScenarioConfig {
   id: TopologyScenarioId;
@@ -69,6 +72,7 @@ export const TOPOLOGY_LAYERS: TopologyLayerDefinition[] = [
     description: 'Continuous physical telemetry, high-speed optical vision, acoustic emission, and workpiece genealogy.',
     badgeColor: 'chip-green',
     badgeHex: '#16a34a',
+    window: 'window-1',
     nodeIds: ['floor-machines', 'floor-cameras', 'floor-sensors', 'floor-mics', 'floor-tags'],
   },
   {
@@ -79,6 +83,7 @@ export const TOPOLOGY_LAYERS: TopologyLayerDefinition[] = [
     description: 'Local on-prem SLM inference pre-filtering >95% nominal video frames and industrial PLC protocol translation.',
     badgeColor: 'chip-amber',
     badgeHex: '#d97706',
+    window: 'window-1',
     nodeIds: ['edge-gemma', 'edge-bridge'],
   },
   {
@@ -89,6 +94,7 @@ export const TOPOLOGY_LAYERS: TopologyLayerDefinition[] = [
     description: 'High-throughput asynchronous event ingestion, petabyte lot warehousing, reactive blackboard, and enterprise RAG/multimodal reasoning.',
     badgeColor: 'chip-blue',
     badgeHex: '#2563eb',
+    window: 'window-2',
     nodeIds: ['gcp-pubsub', 'gcp-bigquery', 'gcp-firestore', 'gcp-rag', 'gcp-gemini'],
   },
   {
@@ -99,6 +105,7 @@ export const TOPOLOGY_LAYERS: TopologyLayerDefinition[] = [
     description: 'Deterministic multi-agent execution with root cause confidence gate, field photo diagnostic loop, and multimodal copilot.',
     badgeColor: 'chip-purple',
     badgeHex: '#7c3aed',
+    window: 'window-2',
     nodeIds: [
       'adk-orch',
       'agent-qa',
@@ -121,6 +128,7 @@ export const TOPOLOGY_LAYERS: TopologyLayerDefinition[] = [
     description: 'Hands-free mobile technician wrenching, conveyor optical proof (streak >= 50 clean parts), shift leader sign-off, and compliance dossiers.',
     badgeColor: 'chip-pink',
     badgeHex: '#db2777',
+    window: 'window-2',
     nodeIds: [
       'human-tech',
       'verify-camera',
@@ -138,11 +146,23 @@ export const TOPOLOGY_PHASES: TopologyPhaseDefinition[] = [
   {
     id: 'phase-a',
     letter: 'A',
-    name: 'Detection & Ingestion',
-    vietnameseName: 'Detection & Ingestion',
+    name: 'Detection & Ingest',
+    vietnameseName: 'Detection & Ingest',
     description: 'On-premise vision classification, MQTT streaming, and SPC upper control limit monitoring.',
     lampColor: 'red',
     lampHex: '#e5484d',
+    window: 'window-1',
+    nodeIds: [
+      'floor-machines',
+      'floor-cameras',
+      'floor-sensors',
+      'floor-mics',
+      'floor-tags',
+      'edge-gemma',
+      'edge-bridge',
+      'gcp-pubsub',
+      'agent-qa',
+    ],
   },
   {
     id: 'phase-b',
@@ -152,6 +172,16 @@ export const TOPOLOGY_PHASES: TopologyPhaseDefinition[] = [
     description: 'BigQuery lot graph traceability, sensor anomaly analysis, and grounded 5-Whys causal reasoning.',
     lampColor: 'yellow',
     lampHex: '#f5a524',
+    window: 'window-2',
+    nodeIds: [
+      'gcp-bigquery',
+      'agent-tra',
+      'agent-pa',
+      'agent-rca',
+      'decision-gate-1',
+      'diagnostic-agent',
+      'technician-photo',
+    ],
   },
   {
     id: 'phase-c',
@@ -161,15 +191,31 @@ export const TOPOLOGY_PHASES: TopologyPhaseDefinition[] = [
     description: 'Gemini Live multimodal technician guidance, 8D documentation, and 50-part clean conveyor verification.',
     lampColor: 'blue',
     lampHex: '#3b82f6',
+    window: 'window-2',
+    nodeIds: [
+      'copilot-live',
+      'human-tech',
+      'verify-camera',
+      'decision-gate-2',
+      'streak-reset',
+    ],
   },
   {
     id: 'phase-d',
     letter: 'D',
-    name: 'Learning & Governance',
-    vietnameseName: 'Learning & Governance',
+    name: 'Closure & Continuous Learning',
+    vietnameseName: 'Closure & Continuous Learning',
     description: 'RAG institutional memory indexing, ESG sustainability ledger, and shift-leader sign-off.',
     lampColor: 'green',
     lampHex: '#12a150',
+    window: 'window-2',
+    nodeIds: [
+      'human-lead',
+      'human-dash',
+      'agent-scribe',
+      'agent-learn',
+      'output-docs',
+    ],
   },
 ];
 
@@ -181,6 +227,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'floor-machines',
     phase: 'layer-1',
     layer: 'layer-1',
+    window: 'window-1',
     order: 1,
     label: 'CNC / Injection',
     sublabel: 'Cell Line 1 Turning',
@@ -213,6 +260,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'floor-cameras',
     phase: 'layer-1',
     layer: 'layer-1',
+    window: 'window-1',
     order: 2,
     label: 'EOL Cameras',
     sublabel: 'CAM-EOL Station',
@@ -244,6 +292,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'floor-sensors',
     phase: 'layer-1',
     layer: 'layer-1',
+    window: 'window-1',
     order: 3,
     label: 'Sensors (Vib/Temp)',
     sublabel: 'Spindle Tri-axial',
@@ -274,6 +323,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'floor-mics',
     phase: 'layer-1',
     layer: 'layer-1',
+    window: 'window-1',
     order: 4,
     label: 'Microphones',
     sublabel: 'Acoustic Emissions',
@@ -304,6 +354,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'floor-tags',
     phase: 'layer-1',
     layer: 'layer-1',
+    window: 'window-1',
     order: 5,
     label: 'Traceability Code',
     sublabel: 'QR / Laser Marking',
@@ -337,6 +388,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'edge-gemma',
     phase: 'layer-2',
     layer: 'layer-2',
+    window: 'window-1',
     order: 6,
     label: 'Gemma Local Inference',
     sublabel: 'Gemma 3 2B Edge On-Prem',
@@ -368,6 +420,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'edge-bridge',
     phase: 'layer-2',
     layer: 'layer-2',
+    window: 'window-1',
     order: 7,
     label: 'OPC-UA / MQTT Bridge',
     sublabel: 'High-Freq Telemetry Buffer',
@@ -402,6 +455,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'gcp-pubsub',
     phase: 'layer-3',
     layer: 'layer-3',
+    window: 'window-2',
     order: 8,
     label: 'Cloud Pub/Sub',
     sublabel: 'Real-Time Ingestion Bus',
@@ -432,6 +486,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'gcp-bigquery',
     phase: 'layer-3',
     layer: 'layer-3',
+    window: 'window-2',
     order: 9,
     label: 'BigQuery Warehouse',
     sublabel: 'Traceability & Telemetry',
@@ -462,6 +517,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'gcp-firestore',
     phase: 'layer-3',
     layer: 'layer-3',
+    window: 'window-2',
     order: 10,
     label: 'Cloud Firestore',
     sublabel: 'Shared Incident Blackboard',
@@ -493,6 +549,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'gcp-rag',
     phase: 'layer-3',
     layer: 'layer-3',
+    window: 'window-2',
     order: 11,
     label: 'Vertex AI Search & RAG',
     sublabel: '8D Archives & Manuals',
@@ -524,6 +581,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'gcp-gemini',
     phase: 'layer-3',
     layer: 'layer-3',
+    window: 'window-2',
     order: 12,
     label: 'Gemini on Vertex AI',
     sublabel: 'Vision, Live API & Video',
@@ -558,6 +616,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'adk-orch',
     phase: 'layer-4',
     layer: 'layer-4',
+    window: 'window-2',
     order: 13,
     label: 'Orchestrator Agent (ADK)',
     sublabel: 'Single Entry/Exit · Sole Blackboard Writer',
@@ -588,6 +647,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'agent-qa',
     phase: 'layer-4',
     layer: 'layer-4',
+    window: 'window-2',
     order: 14,
     label: 'Quality Inspector Agent',
     sublabel: 'Phase A: Defect Classification & SPC Alarm',
@@ -619,6 +679,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'agent-tra',
     phase: 'layer-4',
     layer: 'layer-4',
+    window: 'window-2',
     order: 15,
     label: 'Traceability Agent',
     sublabel: 'Phase B: BigQuery Lot Genealogy',
@@ -650,6 +711,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'agent-pa',
     phase: 'layer-4',
     layer: 'layer-4',
+    window: 'window-2',
     order: 16,
     label: 'Process Analyst Agent',
     sublabel: 'Phase B: High-Freq Telemetry FFT',
@@ -681,6 +743,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'agent-rca',
     phase: 'layer-4',
     layer: 'layer-4',
+    window: 'window-2',
     order: 17,
     label: 'Root Cause Agent',
     sublabel: 'Phase B: 5-Whys Synthesis + RAG',
@@ -712,6 +775,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'decision-gate-1',
     phase: 'layer-4',
     layer: 'layer-4',
+    window: 'window-2',
     order: 18,
     label: 'Decision Gate 1: Confidence >= 0.70?',
     sublabel: 'Causal Confidence Evaluation Gate',
@@ -747,6 +811,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'diagnostic-agent',
     phase: 'layer-4',
     layer: 'layer-4',
+    window: 'window-2',
     order: 19,
     label: 'Diagnostic Agent',
     sublabel: 'Loop: Awaiting Field Evidence',
@@ -776,6 +841,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'technician-photo',
     phase: 'layer-4',
     layer: 'layer-4',
+    window: 'window-2',
     order: 20,
     label: 'Technician Photo',
     sublabel: 'Loop: Gemini Vision Tool Inspection',
@@ -806,6 +872,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'copilot-live',
     phase: 'layer-4',
     layer: 'layer-4',
+    window: 'window-2',
     order: 21,
     label: 'Technician Copilot Live',
     sublabel: 'Phase C: Gemini Live WebSocket',
@@ -837,6 +904,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'agent-scribe',
     phase: 'layer-4',
     layer: 'layer-4',
+    window: 'window-2',
     order: 22,
     label: 'Incident Scribe Agent',
     sublabel: 'Phase C: 8D Report & Work Order',
@@ -866,6 +934,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'agent-learn',
     phase: 'layer-4',
     layer: 'layer-4',
+    window: 'window-2',
     order: 23,
     label: 'Continuous Learning Agent',
     sublabel: 'Phase D: Video-to-Procedure RAG & ESG',
@@ -901,6 +970,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'human-tech',
     phase: 'layer-5',
     layer: 'layer-5',
+    window: 'window-2',
     order: 24,
     label: 'Bay 4 Field Technician',
     sublabel: 'Mobile Operator App · Guided Wrenching',
@@ -931,6 +1001,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'verify-camera',
     phase: 'layer-5',
     layer: 'layer-5',
+    window: 'window-2',
     order: 25,
     label: 'Conveyor Optical Camera',
     sublabel: 'Post-Repair Optical Inspection',
@@ -961,6 +1032,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'decision-gate-2',
     phase: 'layer-5',
     layer: 'layer-5',
+    window: 'window-2',
     order: 26,
     label: 'Verification Gate (Invariant #3): Streak >= 50 Clean Parts?',
     sublabel: 'Shop-Floor Product Evidence Law',
@@ -993,6 +1065,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'streak-reset',
     phase: 'layer-5',
     layer: 'layer-5',
+    window: 'window-2',
     order: 27,
     label: 'Streak Defect Reset',
     sublabel: 'Invariant #3 Failure Penalty',
@@ -1024,6 +1097,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'human-dash',
     phase: 'layer-5',
     layer: 'layer-5',
+    window: 'window-2',
     order: 28,
     label: 'Incident Board Dashboard',
     sublabel: 'Plant Ops Line Overview & Command',
@@ -1054,6 +1128,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'human-lead',
     phase: 'layer-5',
     layer: 'layer-5',
+    window: 'window-2',
     order: 29,
     label: 'Shift Leader Approval',
     sublabel: 'Digital E-Signature · Release Gate',
@@ -1083,6 +1158,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     id: 'output-docs',
     phase: 'layer-5',
     layer: 'layer-5',
+    window: 'window-2',
     order: 30,
     label: 'Operational Output Documents',
     sublabel: '8D Dossier, Work Order & SOP Update',
@@ -1116,6 +1192,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
   {
     id: 'cloud-ingest',
     phase: 'phase-a',
+    window: 'window-2',
     order: 91,
     label: 'Pub/Sub & Orchestrator',
     sublabel: 'Data Plane Ingestion',
@@ -1128,6 +1205,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
   {
     id: 'gatekeeper-qa',
     phase: 'phase-c',
+    window: 'window-2',
     order: 92,
     label: 'Quality Gatekeeper',
     sublabel: 'Conveyor Streak Verification',
@@ -1140,6 +1218,7 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
   {
     id: 'human-approval',
     phase: 'phase-d',
+    window: 'window-2',
     order: 93,
     label: 'Shift Leader Approval',
     sublabel: 'Human-in-the-Loop Governance',
@@ -1199,6 +1278,24 @@ export const TOPOLOGY_EDGES: TopologyEdgeDefinition[] = [
   { from: 'decision-gate-2', to: 'human-lead', type: 'vertical', label: 'YES (Streak >= 50): Unlock Approval' },
   { from: 'decision-gate-2', to: 'human-dash', type: 'branch-left', label: 'Real-time Streak Progress' },
   { from: 'human-lead', to: 'output-docs', type: 'vertical', label: 'Certified E-Signature' },
+
+  // Operational Handshake & Verification Feedback Edges (TKT-051 #226)
+  {
+    id: 'recovery-handshake',
+    from: 'copilot-live',
+    to: 'floor-machines',
+    type: 'loopback-long',
+    label: 'Clear Interlock & Resume Feed (PLC Handshake)',
+    activeScenarios: ['streak_verifying', 'approved'],
+  },
+  {
+    id: 'gate-2-to-esg',
+    from: 'decision-gate-2',
+    to: 'agent-learn',
+    type: 'branch-right',
+    label: '50/50 Streak Verified -> Record Scrap & Carbon Ledger',
+    activeScenarios: ['approved'],
+  },
 
   // Backward-compatibility edges for legacy tests
   { from: 'edge-gemma', to: 'cloud-ingest', label: 'MQTT Telemetry' },
@@ -1874,4 +1971,80 @@ export function derivePhaseStates(
   }
 
   return result;
+}
+
+/**
+ * Helper accessor to retrieve all nodes partitioned to Window 1 (Factory Floor & On-Prem Edge Gateway).
+ */
+export function getWindow1Nodes(): TopologyNodeDefinition[] {
+  return TOPOLOGY_NODES.filter((node) => node.window === 'window-1');
+}
+
+/**
+ * Helper accessor to retrieve all nodes partitioned to Window 2 (Cloud Platform, ADK Agent Swarm, Governance & Outputs).
+ */
+export function getWindow2Nodes(): TopologyNodeDefinition[] {
+  return TOPOLOGY_NODES.filter((node) => node.window === 'window-2');
+}
+
+/**
+ * Derives the active architectural Phase ('phase-a' | 'phase-b' | 'phase-c' | 'phase-d')
+ * based on the current scenario or live incident state.
+ */
+export function deriveActivePhase(
+  incident: IncidentState | null,
+  scenario?: TopologyScenarioId,
+): TopologyPhaseId {
+  if (scenario) {
+    switch (scenario) {
+      case 'nominal':
+      case 'detecting':
+        return 'phase-a';
+      case 'low_confidence':
+        return 'phase-b';
+      case 'streak_verifying':
+      case 'streak_reset':
+        return 'phase-c';
+      case 'approved':
+        return 'phase-d';
+      default:
+        return 'phase-a';
+    }
+  }
+
+  if (!incident || incident.status === 'normal' || incident.status === 'detecting') {
+    return 'phase-a';
+  }
+
+  const { status } = incident;
+
+  if (
+    status === 'tracing' ||
+    status === 'investigating' ||
+    status === 'analyzing' ||
+    status === 'awaiting_evidence'
+  ) {
+    return 'phase-b';
+  }
+
+  if (status === 'repairing' || status === 'verifying') {
+    return 'phase-c';
+  }
+
+  if (status === 'closed' || status === 'dismissed') {
+    return 'phase-d';
+  }
+
+  if (status === 'escalated') {
+    if (incident.repair_done || (incident.verification_count ?? 0) > 0) {
+      return 'phase-c';
+    }
+    return 'phase-b';
+  }
+
+  if (status === 'error') {
+    return 'phase-b';
+  }
+
+  return 'phase-a';
 }

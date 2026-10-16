@@ -484,6 +484,8 @@ export type TopologyLayerId =
   | 'layer-4'
   | 'layer-5';
 
+export type TopologyWindowId = 'window-1' | 'window-2';
+
 export type TopologyScenarioId =
   | 'nominal'
   | 'detecting'
@@ -578,6 +580,7 @@ export interface TopologyNodeDefinition {
   id: TopologyNodeId;
   phase: TopologyPhaseId;
   layer?: TopologyLayerId;
+  window?: TopologyWindowId;
   label: string;
   sublabel: string;
   tier: TopologyTier;
@@ -607,10 +610,12 @@ export type TopologyEdgeType =
   | 'loopback-long';
 
 export interface TopologyEdgeDefinition {
+  id?: string;
   from: TopologyNodeId;
   to: TopologyNodeId;
   type?: TopologyEdgeType;
   label?: string;
+  activeScenarios?: TopologyScenarioId[];
 }
 
 export interface TopologyNodeState {
@@ -630,6 +635,7 @@ export interface TopologyLayerDefinition {
   description: string;
   badgeColor: string;
   badgeHex: string;
+  window: TopologyWindowId;
   nodeIds: TopologyNodeId[];
 }
 
@@ -641,6 +647,8 @@ export interface TopologyPhaseDefinition {
   description: string;
   lampColor: 'red' | 'yellow' | 'blue' | 'green' | string;
   lampHex: string;
+  window?: TopologyWindowId;
+  nodeIds?: TopologyNodeId[];
 }
 
 export interface TopologyPhaseState {

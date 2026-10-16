@@ -30,7 +30,9 @@ resource "google_cloud_run_v2_service" "factory" {
 
     scaling {
       min_instance_count = var.min_instances
-      max_instance_count = 1
+      # 1 caused 429s under concurrent demo load (cold start + request-queue limit); session_affinity
+      # above keeps each client pinned to one instance so simulator state stays consistent per session.
+      max_instance_count = 3
     }
 
     containers {

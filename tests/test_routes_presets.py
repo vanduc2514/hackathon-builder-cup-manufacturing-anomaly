@@ -19,20 +19,21 @@ TECH = AuthAccount(
 
 
 def test_get_preset_evidence_gallery_success():
-    """GET /api/presets/evidence returns the 4 benchmark presets."""
+    """GET /api/presets/evidence returns the 5 benchmark presets."""
     client = TestClient(app)
     response = client.get("/api/presets/evidence")
     assert response.status_code == 200
 
     data = response.json()
     assert "presets" in data
-    assert len(data["presets"]) == 4
+    assert len(data["presets"]) == 5
 
     preset_ids = [p["id"] for p in data["presets"]]
-    assert "preset-flank-wear-vb38" in preset_ids
-    assert "preset-edge-chipping-t07" in preset_ids
-    assert "preset-chatter-marks-wp" in preset_ids
-    assert "preset-normal-tool-t07" in preset_ids
+    assert "preset-im05-normal" in preset_ids
+    assert "preset-im05-surface-scratch" in preset_ids
+    assert "preset-im05-crack" in preset_ids
+    assert "preset-im05-fracture" in preset_ids
+    assert "preset-im05-assembly-gap" in preset_ids
 
     # Verify no absolute filesystem paths or localhost addresses
     for p in data["presets"]:
@@ -69,4 +70,4 @@ def test_get_preset_evidence_gallery_real_auth_gate(monkeypatch: pytest.MonkeyPa
     )
     assert auth_resp.status_code == 200
     body = auth_resp.json()
-    assert len(body["presets"]) == 4
+    assert len(body["presets"]) == 5

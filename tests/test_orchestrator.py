@@ -103,7 +103,7 @@ def clean_state():
 
 def _run(llm: FakeLlm, req: DefectInjectionRequest | None = None) -> IncidentState:
     LlmAgent.set_default_model(llm)
-    return asyncio.run(Orchestrator(step_delay=0).run_incident(req or DefectInjectionRequest()))
+    return asyncio.run(Orchestrator(step_delay=0).run_incident(req or DefectInjectionRequest(mode="fast")))
 
 
 def _ids(state: IncidentState) -> list[str]:
@@ -171,7 +171,7 @@ def test_approval_accepted_only_once_after_verified_close():
     assert orch.approve() is None  # nothing to approve on a baseline board
 
     LlmAgent.set_default_model(FakeLlm(rca_confidences=[0.87]))
-    asyncio.run(orch.run_incident(DefectInjectionRequest()))
+    asyncio.run(orch.run_incident(DefectInjectionRequest(mode="fast")))
     assert blackboard.get_state().approved is False
 
     assert orch.approve().approved is True

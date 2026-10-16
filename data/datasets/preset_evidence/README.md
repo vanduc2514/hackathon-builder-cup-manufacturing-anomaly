@@ -1,15 +1,16 @@
 # Preset Evidence Benchmark Dataset
 
-Curated industrial macro inspection images representing key machining defect archetypes and nominal baselines for visual metrology analysis.
+Curated industrial visual inspection images representing injection molding defect archetypes and nominal baseline for visual metrology analysis on machine `IM-05` (mold `MOLD-03`).
 
 ## Assets & Provenance
 
 | Filename | Defect Archetype | Dimensions | Target Asset / Tool | Description & Ground Truth | Source & License |
 |---|---|---|---|---|---|
-| `preset_flank_wear_vb38.jpg` | `flank_wear` | 800x600 px | CNC-02 / T07 | Flank wear $VB = 0.38\text{ mm}$ exceeding $0.30\text{ mm}$ tolerance limit. Micro-grooves on carbide relief face. | AI synthetic macro photograph generated via Imagen 3 (Prompt: Industrial macro photo of CNC carbide cutting insert showing severe flank wear VB 0.38mm), licensed CC0 / Public Domain dedication. |
-| `preset_edge_chipping_t07.jpg` | `chipping` | 800x600 px | CNC-02 / T07 | Localized brittle edge fracture ($0.65\text{ mm}$ notch width) along cutting margin due to thermal shock. | AI synthetic macro photograph generated via Imagen 3 (Prompt: Industrial macro photo of Sandvik WNMG cutting insert with brittle edge chipping), licensed CC0 / Public Domain dedication. |
-| `preset_chatter_marks_wp.jpg` | `chatter_marks` | 800x600 px | CNC-02 / Workpiece | Periodic surface waviness pitch $1.2\text{ mm}$, vertical chatter stripes from spindle vibration peak at $4.8\text{ mm/s}$. | AI synthetic macro photograph generated via Imagen 3 (Prompt: Industrial photo of machined steel shaft workpiece with periodic vibration chatter marks), licensed CC0 / Public Domain dedication. |
-| `preset_normal_tool_t07.jpg` | `normal` | 800x600 px | CNC-02 / T07 | Pristine TiAlN coated cutting edge. $VB = 0.04\text{ mm} \le 0.30\text{ mm}$. Sharp radius, no micro-fracture. | AI synthetic macro photograph generated via Imagen 3 (Prompt: Industrial macro photo of pristine Sandvik SNMG insert toolholder within nominal tolerance), licensed CC0 / Public Domain dedication. |
+| `preset_im05_normal.jpg` | `normal` | 1000x750 px | IM-05 / MOLD-03 | Intact molded plastic tray with uniform surface finish and structural integrity matching nominal CAD specifications. | Team photos (Drive knowledge base, 2026-10-12: `Original Image/20261012_224035.jpg`). No third-party licence. |
+| `preset_im05_surface_scratch.jpg` | `surface_scratch` | 1000x750 px | IM-05 / MOLD-03 | Linear abrasive scratches and scuff marks across the molded component face. | Team photos (Drive knowledge base, 2026-10-12: `image error/Error_part_4`). Defect variants are digitally edited illustrations of the originals, not real failure photos; no third-party licence. |
+| `preset_im05_crack.jpg` | `crack` | 750x1000 px | IM-05 / MOLD-03 | Visible longitudinal surface crack along the molded housing wall section. | Team photos (Drive knowledge base, 2026-10-12: `image error/Error_part_3`). Defect variants are digitally edited illustrations of the originals, not real failure photos; no third-party licence. |
+| `preset_im05_fracture.jpg` | `fracture` | 750x1000 px | IM-05 / MOLD-03 | Through-thickness fracture and corner breakage on molded plastic housing. | Team photos (Drive knowledge base, 2026-10-12: `image error/Error_part_7`). Defect variants are digitally edited illustrations of the originals, not real failure photos; no third-party licence. |
+| `preset_im05_assembly_gap.jpg` | `assembly_gap` | 750x1000 px | IM-05 / MOLD-03 | Seam gap and perimeter parting line misalignment from uneven thermal shrinkage. | Team photos (Drive knowledge base, 2026-10-12: `image error/Error_part_65`). Defect variants are digitally edited illustrations of the originals, not real failure photos; no third-party licence. |
 
 ## Deployment Locations
 

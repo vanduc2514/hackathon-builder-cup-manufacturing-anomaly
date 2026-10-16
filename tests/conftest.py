@@ -54,6 +54,7 @@ def _emulator_env_isolation(
     monkeypatch.setattr(settings, "bigquery_emulator_host", None)
     monkeypatch.setattr(settings, "pubsub_emulator_host", None)
     monkeypatch.setattr(settings, "firestore_emulator_host", None)
+    monkeypatch.setattr(settings, "evidence_wait_seconds", 0.0)
     pubsub_manager.reset_availability_cache()
     reset_firestore_adapter()
     blackboard.set_storage(get_firestore_adapter())

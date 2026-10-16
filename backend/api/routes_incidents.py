@@ -13,7 +13,7 @@ from backend.agents.agent_technician_copilot import (
     DIAGNOSTIC_PHASE,
     analyze_visual_evidence_frame_async,
 )
-from backend.agents.orchestrator import orchestrator
+from backend.agents.orchestrator import EvidenceNotAwaitedError, orchestrator
 from backend.core.auth import require_user
 from backend.core.blackboard import blackboard
 from backend.core.models import (
@@ -98,7 +98,13 @@ async def upload_incident_evidence(
         confidence=0.92,
         citation=ev_payload.citation,
     )
-    new_state = orchestrator.attach_evidence(finding, ev_payload)
+    try:
+        new_state = orchestrator.attach_evidence(finding, ev_payload)
+    except EvidenceNotAwaitedError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
     return {
         "status": "success",
         "evidence": ev_payload.model_dump(),
@@ -160,7 +166,13 @@ async def attach_preset_evidence(
         citation=ev_payload.citation,
     )
 
-    new_state = orchestrator.attach_evidence(finding, ev_payload)
+    try:
+        new_state = orchestrator.attach_evidence(finding, ev_payload)
+    except EvidenceNotAwaitedError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
     return {
         "status": "success",
         "evidence": ev_payload.model_dump(),

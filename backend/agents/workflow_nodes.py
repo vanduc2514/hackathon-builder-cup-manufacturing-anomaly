@@ -223,6 +223,9 @@ async def rca_gate(ctx: Context, node_input: RootCauseFindingDraft) -> Event:
                 tool_id=state.suspect_tool,
                 defect_type=state.defect_type,
             )
+        from backend.agents.orchestrator import orchestrator
+
+        orchestrator.arm_evidence_wait()
         blackboard.update_status("awaiting_evidence", diagnostic_request=diag_req)
         return Event(route="NEED_EVIDENCE", output=blackboard.get_state().model_dump())
 
@@ -243,19 +246,20 @@ async def rca_gate(ctx: Context, node_input: RootCauseFindingDraft) -> Event:
 
 
 async def wait_for_evidence_node(ctx: Context, node_input: Any) -> dict:
-    """Waits for frontline technician visual evidence up to evidence_wait_seconds before proceeding to diagnostic probe."""
+    """Waits for frontline technician visual evidence up to timeout."""
     from backend.agents.orchestrator import orchestrator
 
-    mode = None
-    if hasattr(ctx, "state") and isinstance(ctx.state, dict):
-        trigger_data = ctx.state.get("trigger", {})
-        if isinstance(trigger_data, dict):
-            mode = trigger_data.get("mode")
+    trigger = (
+        ctx.state.get("trigger", {})
+        if hasattr(ctx, "state") and hasattr(ctx.state, "get")
+        else {}
+    )
+    mode = trigger.get("mode") if isinstance(trigger, dict) else None
 
     if mode == "fast" or settings.evidence_wait_seconds <= 0:
         timeout = 0.0
     else:
-        timeout = settings.evidence_wait_seconds
+        timeout = float(settings.evidence_wait_seconds)
 
     await orchestrator.wait_for_evidence(timeout=timeout)
     return blackboard.get_state().model_dump()

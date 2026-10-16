@@ -569,11 +569,11 @@ class VisualEvidencePreset(BaseModel):
 
     id: str = Field(description="Unique alphanumeric preset identifier")
     title: str = Field(description="Human-readable title of the sample")
-    category: Literal["flank_wear", "chipping", "chatter_marks", "normal"] = Field(
-        description="Defect archetype category"
-    )
-    machine_id: str = Field(default="CNC-02", description="Applicable equipment bay")
-    tool_id: Optional[str] = Field(default=None, description="Suspect tool slot")
+    category: Literal[
+        "surface_scratch", "crack", "fracture", "assembly_gap", "normal"
+    ] = Field(description="Defect archetype category")
+    machine_id: str = Field(default="IM-05", description="Applicable equipment bay")
+    tool_id: Optional[str] = Field(default="MOLD-03", description="Suspect tool slot")
     description: str = Field(description="Detailed visual & metrology description")
     analysis: str = Field(description="Visual Metrology ground truth assessment")
     thumbnail_url: str = Field(description="Web-relative URL for preview thumbnail")
@@ -757,7 +757,9 @@ class EsgLedgerEntryResponse(BaseModel):
     closed_at: Optional[str] = Field(
         default=None, description="ISO timestamp when incident was closed"
     )
-    approved: bool = Field(default=True, description="Whether incident has shift-leader sign-off")
+    approved: bool = Field(
+        default=True, description="Whether incident has shift-leader sign-off"
+    )
     impact: ImpactMetrics = Field(description="Impact metrics computed upon incident resolution")
     incident: IncidentState = Field(
         description="Full incident snapshot for client-side 8D / verified solution derivation"

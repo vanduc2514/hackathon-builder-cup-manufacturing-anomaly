@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import HTTPException
 from google.adk import Workflow
 from google.adk.agents import LlmAgent, RunConfig
 from google.adk.models import Gemini
@@ -191,6 +190,11 @@ def dump_crash(
         return None
 
 
+class EvidenceNotAwaitedError(Exception):
+    """Raised when field or preset evidence is attached outside the awaiting_evidence state."""
+    pass
+
+
 class Orchestrator:
     """Single input/output boundary: starts, approves and resets incidents; one at a time."""
 
@@ -342,20 +346,20 @@ class Orchestrator:
         if self._evidence_event is not None:
             self._evidence_event.set()
 
-    async def wait_for_evidence(self, timeout: float | None = None) -> bool:
+    def arm_evidence_wait(self) -> None:
+        """Arms or resets the evidence event for an awaiting_evidence round."""
+        if self._evidence_event is None:
+            self._evidence_event = asyncio.Event()
+        else:
+            self._evidence_event.clear()
+
+    async def wait_for_evidence(self, timeout: float = 0.0) -> bool:
         """Awaits technician visual evidence up to timeout seconds.
 
         Returns True if evidence arrived, False if timed out.
         """
         if self._evidence_event is None:
             self._evidence_event = asyncio.Event()
-
-        if timeout is None:
-            mode = self._trigger.mode if self._trigger else None
-            if mode == "fast" or settings.evidence_wait_seconds <= 0:
-                timeout = 0.0
-            else:
-                timeout = settings.evidence_wait_seconds
 
         if timeout <= 0:
             return self._evidence_event.is_set()
@@ -374,10 +378,7 @@ class Orchestrator:
         """Dispatches technician field evidence through the workflow node (Key Invariant 2)."""
         cur_st = blackboard.get_state()
         if cur_st.status != "awaiting_evidence":
-            raise HTTPException(
-                status_code=409,
-                detail="The AI is not waiting for evidence right now",
-            )
+            raise EvidenceNotAwaitedError("The AI is not waiting for evidence right now")
         state = record_field_evidence_payload(finding=finding, visual_evidence=visual_evidence)
         self.notify_evidence()
         return state

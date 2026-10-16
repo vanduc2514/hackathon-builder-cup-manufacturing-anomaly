@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -28,14 +29,14 @@ def setup_blackboard():
     blackboard.reset()
 
 
-def test_post_preset_flank_wear_confirms_defect_and_relative_url():
-    """Attaching flank wear preset returns defect=True, VB=0.38, and relative web image URL."""
-    blackboard.update_status("awaiting_evidence", suspect_machine="CNC-02", suspect_tool="T07")
+def test_post_preset_crack_confirms_defect_and_relative_url():
+    """Attaching crack preset returns defect=True, wear=None, and relative web image URL."""
+    blackboard.update_status("awaiting_evidence", suspect_machine="IM-05", suspect_tool="MOLD-03")
     client = TestClient(app)
 
     response = client.post(
         "/api/incidents/evidence/preset",
-        json={"preset_id": "preset-flank-wear-vb38", "notes": "Inspected cutting edge"},
+        json={"preset_id": "preset-im05-crack", "notes": "Inspected housing sidewall"},
     )
     assert response.status_code == 200
 
@@ -45,48 +46,48 @@ def test_post_preset_flank_wear_confirms_defect_and_relative_url():
 
     # Validate evidence payload
     ev = data["evidence"]
-    assert ev["preset_id"] == "preset-flank-wear-vb38"
+    assert ev["preset_id"] == "preset-im05-crack"
     assert ev["defect_detected"] is True
-    assert ev["wear_measurement_mm"] == 0.38
-    assert ev["image_url"] == "/presets/evidence/preset_flank_wear_vb38.jpg"
+    assert ev["wear_measurement_mm"] is None
+    assert ev["image_url"] == "/presets/evidence/preset_im05_crack.jpg"
     assert "Users" not in ev["image_url"]
-    assert ev["citation"] == "Benchmark preset preset-flank-wear-vb38 (curated ground truth)"
+    assert ev["citation"] == "Benchmark preset preset-im05-crack (curated ground truth)"
 
     # Validate finding
     finding = data["finding"]
     assert "confir" in finding["finding"].lower()
-    assert "preset-flank-wear-vb38" in finding["finding"]
-    assert "Ghi chú: Inspected cutting edge" in finding["evidence"]
+    assert "preset-im05-crack" in finding["finding"]
+    assert "Ghi chú: Inspected housing sidewall" in finding["evidence"]
 
     # Verify blackboard state snapshot
     state = blackboard.get_state()
     assert state.status == "awaiting_evidence"
     assert state.visual_evidence is not None
-    assert state.visual_evidence.wear_measurement_mm == 0.38
-    assert state.visual_evidence.preset_id == "preset-flank-wear-vb38"
+    assert state.visual_evidence.wear_measurement_mm is None
+    assert state.visual_evidence.preset_id == "preset-im05-crack"
 
 
 def test_post_preset_normal_tool_confirms_nominal_baseline():
-    """Attaching normal tool preset returns defect=False, VB=0.04, and nominal finding."""
-    blackboard.update_status("awaiting_evidence", suspect_machine="CNC-02", suspect_tool="T07")
+    """Attaching normal tool preset returns defect=False, wear=None, and nominal finding."""
+    blackboard.update_status("awaiting_evidence", suspect_machine="IM-05", suspect_tool="MOLD-03")
     client = TestClient(app)
 
     response = client.post(
         "/api/incidents/evidence/preset",
-        json={"preset_id": "preset-normal-tool-t07"},
+        json={"preset_id": "preset-im05-normal"},
     )
     assert response.status_code == 200
 
     data = response.json()
     ev = data["evidence"]
-    assert ev["preset_id"] == "preset-normal-tool-t07"
+    assert ev["preset_id"] == "preset-im05-normal"
     assert ev["defect_detected"] is False
-    assert ev["wear_measurement_mm"] == 0.04
-    assert ev["image_url"] == "/presets/evidence/preset_normal_tool_t07.jpg"
+    assert ev["wear_measurement_mm"] is None
+    assert ev["image_url"] == "/presets/evidence/preset_im05_normal.jpg"
 
     finding = data["finding"]
     assert "nominal" in finding["finding"].lower()
-    assert ev["citation"] == "Benchmark preset preset-normal-tool-t07 (curated ground truth)"
+    assert ev["citation"] == "Benchmark preset preset-im05-normal (curated ground truth)"
 
 
 def test_post_preset_unknown_returns_404():
@@ -110,7 +111,7 @@ def test_post_preset_outside_awaiting_evidence_returns_409(status: str):
 
     response = client.post(
         "/api/incidents/evidence/preset",
-        json={"preset_id": "preset-flank-wear-vb38"},
+        json={"preset_id": "preset-im05-crack"},
     )
     assert response.status_code == 409
     assert response.json()["detail"] == "The AI is not waiting for evidence right now"
@@ -122,13 +123,29 @@ def test_post_upload_evidence_outside_awaiting_evidence_returns_409(status: str)
     blackboard.update_status(status)
     client = TestClient(app)
 
-    fake_file = io.BytesIO(b"\xff\xd8\xff\xe0" + b"dummypixels" * 10)
+    fake_file = io.BytesIO(bytes([0xFF, 0xD8, 0xFF, 0xE0]) + b"dummypixels" * 10)
     response = client.post(
         "/api/incidents/evidence",
         files={"file": ("test_tool.jpg", fake_file, "image/jpeg")},
     )
     assert response.status_code == 409
     assert response.json()["detail"] == "The AI is not waiting for evidence right now"
+
+
+def test_domain_error_mapped_to_409():
+    """When orchestrator.attach_evidence raises EvidenceNotAwaitedError, route maps it to 409."""
+    import backend.api.routes_incidents as routes_incidents
+    blackboard.update_status("awaiting_evidence")
+    client = TestClient(app)
+
+    err = routes_incidents.EvidenceNotAwaitedError("Simulated domain rejection")
+    with patch.object(routes_incidents.orchestrator, "attach_evidence", side_effect=err):
+        response = client.post(
+            "/api/incidents/evidence/preset",
+            json={"preset_id": "preset-im05-crack"},
+        )
+        assert response.status_code == 409
+        assert response.json()["detail"] == "Simulated domain rejection"
 
 
 @pytest.mark.real_auth
@@ -143,7 +160,7 @@ def test_post_preset_evidence_real_auth_gate(monkeypatch: pytest.MonkeyPatch):
     # 1. Anonymous rejected
     anon_resp = client.post(
         "/api/incidents/evidence/preset",
-        json={"preset_id": "preset-flank-wear-vb38"},
+        json={"preset_id": "preset-im05-crack"},
     )
     assert anon_resp.status_code == 401
 
@@ -158,7 +175,7 @@ def test_post_preset_evidence_real_auth_gate(monkeypatch: pytest.MonkeyPatch):
     # 3. Authenticated accepted
     auth_resp = client.post(
         "/api/incidents/evidence/preset",
-        json={"preset_id": "preset-flank-wear-vb38"},
+        json={"preset_id": "preset-im05-crack"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert auth_resp.status_code == 200

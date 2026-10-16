@@ -3815,7 +3815,7 @@ function updateMinimapViewport() {
 /* Mouse Panning */
 const viewport = document.getElementById('canvas-viewport');
 viewport.addEventListener('mousedown', (e) => {
-  if (e.target.closest('.node-card') || e.target.closest('.diamond-card') || e.target.closest('button')) return;
+  if (e.target.closest('.node-card') || e.target.closest('.decision-diamond-card') || e.target.closest('.diamond-card') || e.target.closest('button')) return;
   isPanning = true;
   startX = e.clientX - panX;
   startY = e.clientY - panY;
@@ -4380,6 +4380,8 @@ function setupComponentInteractions() {
     viewport.addEventListener('click', (e) => {
       if (!e.target.closest('.node-card') && 
           !e.target.closest('.decision-gateway') && 
+          !e.target.closest('.decision-diamond-card') && 
+          !e.target.closest('.decision-diamond-wrapper') && 
           !e.target.closest('#node-drawer') && 
           !e.target.closest('.canvas-toolbar') && 
           !e.target.closest('.scenario-bar')) {

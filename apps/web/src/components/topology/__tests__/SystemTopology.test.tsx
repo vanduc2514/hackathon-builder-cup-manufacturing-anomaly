@@ -9,9 +9,12 @@ import {
   TOPOLOGY_SCENARIOS,
   deriveNodeStates,
   deriveActivePhase,
+  derivePhaseStepperInfo,
+  deriveWindow2State,
   getWindow1Nodes,
   getWindow2Nodes,
 } from '../../../lib/topology';
+import PhaseStepperBar from '../PhaseStepperBar';
 import type { IncidentState } from '../../../types';
 
 const mockIncident: IncidentState = {
@@ -273,5 +276,151 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     expect(esgEdge?.type).toBe('branch-right');
     expect(esgEdge?.label).toContain('50/50 Streak Verified');
     expect(esgEdge?.activeScenarios).toEqual(['approved']);
+  });
+
+  it('derives Tier 1 Glance Phase Stepper Info and Window 2 state across scenarios and incident lifecycle (TKT-052 #227)', () => {
+    // Phase Stepper - Scenario states
+    const nominalSteps = derivePhaseStepperInfo(null, 'nominal');
+    expect(nominalSteps).toHaveLength(4);
+    expect(nominalSteps.map((s) => s.status)).toEqual(['idle', 'idle', 'idle', 'idle']);
+
+    const detectingSteps = derivePhaseStepperInfo(null, 'detecting');
+    expect(detectingSteps[0].status).toBe('completed');
+    expect(detectingSteps[1].status).toBe('active');
+    expect(detectingSteps[1].statusText).toBe('RCA Active');
+
+    const lowConfSteps = derivePhaseStepperInfo(null, 'low_confidence');
+    expect(lowConfSteps[1].status).toBe('warning');
+    expect(lowConfSteps[1].statusText).toBe('Evidence Req');
+
+    const streakVerifyingSteps = derivePhaseStepperInfo(null, 'streak_verifying');
+    expect(streakVerifyingSteps[2].status).toBe('completed');
+    expect(streakVerifyingSteps[3].status).toBe('active');
+    expect(streakVerifyingSteps[3].statusText).toBe('42 / 50');
+
+    const streakResetSteps = derivePhaseStepperInfo(null, 'streak_reset');
+    expect(streakResetSteps[3].status).toBe('danger');
+    expect(streakResetSteps[3].statusText).toBe('0 / 50 Reset');
+
+    const approvedSteps = derivePhaseStepperInfo(null, 'approved');
+    expect(approvedSteps.every((s) => s.status === 'completed')).toBe(true);
+
+    // Live Incident states
+    const liveVerifying = derivePhaseStepperInfo({ ...mockIncident, status: 'verifying', verification_count: 35 });
+    expect(liveVerifying[3].status).toBe('active');
+    expect(liveVerifying[3].statusText).toBe('35 / 50');
+
+    const liveEscalated = derivePhaseStepperInfo({ ...mockIncident, status: 'escalated', verification_count: 0 });
+    expect(liveEscalated[3].status).toBe('danger');
+    expect(liveEscalated[3].statusText).toBe('0 / 50 Reset');
+
+    // Window 2 States
+    expect(deriveWindow2State(null, 'nominal')).toEqual({ pulseClass: '', statusText: 'Standby Nominal' });
+    expect(deriveWindow2State(null, 'detecting')).toEqual({ pulseClass: 'calm-pulse-active', statusText: 'RCA In-Flight' });
+    expect(deriveWindow2State(null, 'low_confidence')).toEqual({ pulseClass: 'calm-pulse-warning', statusText: 'Diagnostic Loop (<0.70)' });
+    expect(deriveWindow2State(null, 'streak_verifying')).toEqual({ pulseClass: 'calm-pulse-active', statusText: 'Verifying Streak (42/50)' });
+    expect(deriveWindow2State(null, 'streak_reset')).toEqual({ pulseClass: 'calm-pulse-danger', statusText: 'Defect Alarm (0/50)' });
+    expect(deriveWindow2State(null, 'approved')).toEqual({ pulseClass: '', statusText: 'Closed & Certified' });
+
+    expect(deriveWindow2State({ ...mockIncident, status: 'awaiting_evidence' })).toEqual({ pulseClass: 'calm-pulse-warning', statusText: 'Diagnostic Loop (<0.70)' });
+    expect(deriveWindow2State({ ...mockIncident, status: 'verifying', verification_count: 35 })).toEqual({ pulseClass: 'calm-pulse-active', statusText: 'Verifying Streak (35/50)' });
+    expect(deriveWindow2State({ ...mockIncident, status: 'error' })).toEqual({ pulseClass: 'calm-pulse-danger', statusText: 'Defect Alarm (Reset)' });
+  });
+
+  it('renders PhaseStepperBar with 4 steps, status indicators, and handles click navigation (TKT-052 #227)', () => {
+    const handleScroll = vi.fn();
+    render(<PhaseStepperBar incident={mockIncident} scenario="streak_verifying" onScrollToLayer={handleScroll} />);
+
+    expect(screen.getByRole('navigation', { name: /incident lifecycle phases/i })).toBeDefined();
+    const stepper = document.getElementById('phase-stepper-bar');
+    expect(stepper).not.toBeNull();
+
+    // 4 Steps present
+    const stepA = document.getElementById('step-phase-a');
+    const stepB = document.getElementById('step-phase-b');
+    const stepC = document.getElementById('step-phase-c');
+    const stepD = document.getElementById('step-phase-d');
+
+    expect(stepA).not.toBeNull();
+    expect(stepB).not.toBeNull();
+    expect(stepC).not.toBeNull();
+    expect(stepD).not.toBeNull();
+
+    expect(stepA?.className).toContain('step-completed');
+    expect(stepB?.className).toContain('step-completed');
+    expect(stepC?.className).toContain('step-completed');
+    expect(stepD?.className).toContain('step-active');
+
+    expect(stepD?.textContent).toContain('42 / 50');
+
+    // Click step A navigates to phase-1
+    fireEvent.click(stepA!);
+    expect(handleScroll).toHaveBeenCalledWith('phase-1');
+
+    // Click step B navigates to phase-3
+    fireEvent.click(stepB!);
+    expect(handleScroll).toHaveBeenCalledWith('phase-3');
+
+    // Keydown Enter on step C navigates to phase-4
+    fireEvent.keyDown(stepC!, { key: 'Enter' });
+    expect(handleScroll).toHaveBeenCalledWith('phase-4');
+  });
+
+  it('renders Window 1 & 2 containers, Quick-Launch button, and Cross-Window conduit (TKT-052 #227)', () => {
+    render(<SystemTopologyView incident={mockIncident} />);
+
+    // 1. Window 1 Container & Header
+    const window1Container = document.getElementById('window-1-container');
+    expect(window1Container).not.toBeNull();
+    expect(window1Container?.className).toContain('window-boundary-card');
+    expect(window1Container?.className).toContain('window-1-boundary');
+    expect(window1Container?.querySelector('.window-pill')?.getAttribute('aria-label')).toBe('Window 1 · Factory Floor (Edge & On-Premises)');
+    expect(window1Container?.textContent).toContain('Factory Floor (Edge & On-Premises)');
+    expect(window1Container?.textContent).toContain('CNC-02 Spindle 3200 RPM');
+    expect(window1Container?.textContent).toContain('OPC-UA / MQTT 100 Hz');
+
+    // Quick-Launch Button
+    const quickLaunchBtn = screen.getByRole('link', { name: /factory floor console/i });
+    expect(quickLaunchBtn).toBeDefined();
+    expect(quickLaunchBtn.getAttribute('href')).toBe('http://localhost:3002');
+    expect(quickLaunchBtn.getAttribute('target')).toBe('_blank');
+    expect(quickLaunchBtn.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(quickLaunchBtn.className).toContain('btn-quick-launch');
+
+    // Verify Window 1 contains Layer 1 and Layer 2
+    const layer1 = document.getElementById('phase-1');
+    const layer2 = document.getElementById('phase-2');
+    expect(window1Container?.contains(layer1)).toBe(true);
+    expect(window1Container?.contains(layer2)).toBe(true);
+
+    // 2. Cross-Window Conduit (Pub/Sub Bridge)
+    const crossBridge = document.getElementById('pubsub-cross-bridge');
+    expect(crossBridge).not.toBeNull();
+    expect(crossBridge?.className).toContain('cross-window-bridge');
+    expect(crossBridge?.textContent).toContain('Google Cloud Pub/Sub');
+    expect(crossBridge?.textContent).toContain('Cross-Window Event Conduit');
+    expect(crossBridge?.textContent).toContain('100 Hz');
+
+    // 3. Window 2 Container & Header
+    const window2Container = document.getElementById('window-2-container');
+    expect(window2Container).not.toBeNull();
+    expect(window2Container?.className).toContain('window-boundary-card');
+    expect(window2Container?.className).toContain('window-2-boundary');
+    expect(window2Container?.querySelector('.window-pill')?.getAttribute('aria-label')).toBe('Window 2 · Cloud Control Plane (Google Cloud & ADK Swarm)');
+    expect(window2Container?.textContent).toContain('Cloud Control Plane (Google Cloud & ADK Swarm)');
+    expect(window2Container?.textContent).toContain('Cloud Run Orchestrator :8000');
+    expect(window2Container?.textContent).toContain('Firestore Shared Blackboard');
+
+    // Verify Window 2 contains Layer 3, 4, 5
+    const layer3 = document.getElementById('phase-3');
+    const layer4 = document.getElementById('phase-4');
+    const layer5 = document.getElementById('phase-5');
+    expect(window2Container?.contains(layer3)).toBe(true);
+    expect(window2Container?.contains(layer4)).toBe(true);
+    expect(window2Container?.contains(layer5)).toBe(true);
+
+    // Status chip in Window 2
+    const statusChip = document.getElementById('window-2-status-chip');
+    expect(statusChip).not.toBeNull();
   });
 });

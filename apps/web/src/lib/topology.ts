@@ -2048,3 +2048,243 @@ export function deriveActivePhase(
 
   return 'phase-a';
 }
+
+
+export type PhaseStepperStatus = 'idle' | 'active' | 'completed' | 'warning' | 'danger';
+
+export interface PhaseStepInfo {
+  id: string;
+  phaseId: TopologyPhaseId;
+  title: string;
+  shortTitle: string;
+  description: string;
+  status: PhaseStepperStatus;
+  statusText: string;
+  icon: string;
+  targetLayerId: string;
+}
+
+/**
+ * Derives dynamic step states and labels for the Tier 1 Glance Phase Stepper Bar
+ * across scenarios and incident lifecycle progression (AC-TOP-23, Issue #227).
+ */
+export function derivePhaseStepperInfo(
+  incident: IncidentState | null,
+  scenario?: TopologyScenarioId | 'live',
+): PhaseStepInfo[] {
+  const activeScenario = scenario === 'live' ? undefined : scenario;
+
+  let stepA: { status: PhaseStepperStatus; text: string; icon: string };
+  let stepB: { status: PhaseStepperStatus; text: string; icon: string };
+  let stepC: { status: PhaseStepperStatus; text: string; icon: string };
+  let stepD: { status: PhaseStepperStatus; text: string; icon: string };
+
+  if (activeScenario) {
+    switch (activeScenario) {
+      case 'nominal':
+        stepA = { status: 'idle', text: 'Idle', icon: 'sensors' };
+        stepB = { status: 'idle', text: 'Idle', icon: 'psychology' };
+        stepC = { status: 'idle', text: 'Idle', icon: 'support_agent' };
+        stepD = { status: 'idle', text: 'Idle', icon: 'verified' };
+        break;
+      case 'detecting':
+        stepA = { status: 'completed', text: 'Detected', icon: 'check_circle' };
+        stepB = { status: 'active', text: 'RCA Active', icon: 'psychology' };
+        stepC = { status: 'idle', text: 'Queued', icon: 'support_agent' };
+        stepD = { status: 'idle', text: 'Locked', icon: 'lock' };
+        break;
+      case 'low_confidence':
+        stepA = { status: 'completed', text: 'Detected', icon: 'check_circle' };
+        stepB = { status: 'warning', text: 'Evidence Req', icon: 'warning' };
+        stepC = { status: 'idle', text: 'Queued', icon: 'support_agent' };
+        stepD = { status: 'idle', text: 'Locked', icon: 'lock' };
+        break;
+      case 'streak_verifying':
+        stepA = { status: 'completed', text: 'Resolved', icon: 'check_circle' };
+        stepB = { status: 'completed', text: 'RCA OK', icon: 'check_circle' };
+        stepC = { status: 'completed', text: 'Repaired', icon: 'check_circle' };
+        stepD = { status: 'active', text: '42 / 50', icon: 'sync' };
+        break;
+      case 'streak_reset':
+        stepA = { status: 'completed', text: 'Resolved', icon: 'check_circle' };
+        stepB = { status: 'completed', text: 'RCA OK', icon: 'check_circle' };
+        stepC = { status: 'completed', text: 'Repaired', icon: 'check_circle' };
+        stepD = { status: 'danger', text: '0 / 50 Reset', icon: 'error' };
+        break;
+      case 'approved':
+        stepA = { status: 'completed', text: 'Verified', icon: 'check_circle' };
+        stepB = { status: 'completed', text: 'Verified', icon: 'check_circle' };
+        stepC = { status: 'completed', text: 'Verified', icon: 'check_circle' };
+        stepD = { status: 'completed', text: '50/50 Certified', icon: 'verified' };
+        break;
+      default:
+        stepA = { status: 'idle', text: 'Idle', icon: 'sensors' };
+        stepB = { status: 'idle', text: 'Idle', icon: 'psychology' };
+        stepC = { status: 'idle', text: 'Idle', icon: 'support_agent' };
+        stepD = { status: 'idle', text: 'Idle', icon: 'verified' };
+        break;
+    }
+  } else {
+    // Live Incident state progression
+    const status = incident?.status ?? 'normal';
+    const streak = incident?.verification_count ?? 0;
+    const target = incident?.verification_target ?? 50;
+
+    if (!incident || status === 'normal') {
+      stepA = { status: 'idle', text: 'Idle', icon: 'sensors' };
+      stepB = { status: 'idle', text: 'Idle', icon: 'psychology' };
+      stepC = { status: 'idle', text: 'Idle', icon: 'support_agent' };
+      stepD = { status: 'idle', text: 'Idle', icon: 'verified' };
+    } else if (status === 'detecting') {
+      stepA = { status: 'active', text: 'Detecting', icon: 'sensors' };
+      stepB = { status: 'idle', text: 'Queued', icon: 'psychology' };
+      stepC = { status: 'idle', text: 'Queued', icon: 'support_agent' };
+      stepD = { status: 'idle', text: 'Locked', icon: 'lock' };
+    } else if (status === 'tracing' || status === 'investigating' || status === 'analyzing') {
+      stepA = { status: 'completed', text: 'Detected', icon: 'check_circle' };
+      stepB = { status: 'active', text: 'RCA Active', icon: 'psychology' };
+      stepC = { status: 'idle', text: 'Queued', icon: 'support_agent' };
+      stepD = { status: 'idle', text: 'Locked', icon: 'lock' };
+    } else if (status === 'awaiting_evidence') {
+      stepA = { status: 'completed', text: 'Detected', icon: 'check_circle' };
+      stepB = { status: 'warning', text: 'Evidence Req', icon: 'warning' };
+      stepC = { status: 'idle', text: 'Queued', icon: 'support_agent' };
+      stepD = { status: 'idle', text: 'Locked', icon: 'lock' };
+    } else if (status === 'repairing') {
+      stepA = { status: 'completed', text: 'Resolved', icon: 'check_circle' };
+      stepB = { status: 'completed', text: 'RCA OK', icon: 'check_circle' };
+      stepC = { status: 'active', text: 'Repairing', icon: 'support_agent' };
+      stepD = { status: 'idle', text: 'Locked', icon: 'lock' };
+    } else if (status === 'verifying') {
+      stepA = { status: 'completed', text: 'Resolved', icon: 'check_circle' };
+      stepB = { status: 'completed', text: 'RCA OK', icon: 'check_circle' };
+      stepC = { status: 'completed', text: 'Repaired', icon: 'check_circle' };
+      stepD = { status: 'active', text: `${streak} / ${target}`, icon: 'sync' };
+    } else if (status === 'closed') {
+      stepA = { status: 'completed', text: 'Verified', icon: 'check_circle' };
+      stepB = { status: 'completed', text: 'Verified', icon: 'check_circle' };
+      stepC = { status: 'completed', text: 'Verified', icon: 'check_circle' };
+      stepD = { status: 'completed', text: '50/50 Certified', icon: 'verified' };
+    } else if (status === 'dismissed') {
+      stepA = { status: 'completed', text: 'Verified', icon: 'check_circle' };
+      stepB = { status: 'completed', text: 'Verified', icon: 'check_circle' };
+      stepC = { status: 'completed', text: 'Verified', icon: 'check_circle' };
+      stepD = { status: 'completed', text: 'Dismissed', icon: 'verified' };
+    } else if (status === 'escalated' || status === 'error') {
+      stepA = { status: 'completed', text: 'Resolved', icon: 'check_circle' };
+      stepB = { status: 'completed', text: 'RCA OK', icon: 'check_circle' };
+      stepC = { status: 'completed', text: 'Repaired', icon: 'check_circle' };
+      stepD = { status: 'danger', text: `${streak} / ${target} Reset`, icon: 'error' };
+    } else {
+      stepA = { status: 'idle', text: 'Idle', icon: 'sensors' };
+      stepB = { status: 'idle', text: 'Idle', icon: 'psychology' };
+      stepC = { status: 'idle', text: 'Idle', icon: 'support_agent' };
+      stepD = { status: 'idle', text: 'Idle', icon: 'verified' };
+    }
+  }
+
+  return [
+    {
+      id: 'step-phase-a',
+      phaseId: 'phase-a',
+      title: 'Phase A: Detection & Ingest',
+      shortTitle: 'Detection & Ingest',
+      description: 'Edge Gemma 3 · MQTT 100Hz · UCL 3.0%',
+      status: stepA.status,
+      statusText: stepA.text,
+      icon: stepA.icon,
+      targetLayerId: 'phase-1',
+    },
+    {
+      id: 'step-phase-b',
+      phaseId: 'phase-b',
+      title: 'Phase B: Tracing & RCA',
+      shortTitle: 'Tracing & RCA',
+      description: 'BigQuery Lots · FFT Drift · 5-Whys Swarm',
+      status: stepB.status,
+      statusText: stepB.text,
+      icon: stepB.icon,
+      targetLayerId: 'phase-3',
+    },
+    {
+      id: 'step-phase-c',
+      phaseId: 'phase-c',
+      title: 'Phase C: Resolution & Fix',
+      shortTitle: 'Resolution & Fix',
+      description: 'Gemini Live Copilot · Field Repair · WO-8812',
+      status: stepC.status,
+      statusText: stepC.text,
+      icon: stepC.icon,
+      targetLayerId: 'phase-4',
+    },
+    {
+      id: 'step-phase-d',
+      phaseId: 'phase-d',
+      title: 'Phase D: Closure & Continuous Learning',
+      shortTitle: 'Closure & Learning',
+      description: 'Invariant #3 (50/50) · E-Sign · ESG Ledger',
+      status: stepD.status,
+      statusText: stepD.text,
+      icon: stepD.icon,
+      targetLayerId: 'phase-5',
+    },
+  ];
+}
+
+/**
+ * Derives dynamic pulse styling and status pill text for Window 2 container (AC-TOP-21, AC-TOP-22).
+ */
+export function deriveWindow2State(
+  incident: IncidentState | null,
+  scenario?: TopologyScenarioId | 'live',
+): { pulseClass: string; statusText: string } {
+  if (scenario && scenario !== 'live') {
+    switch (scenario) {
+      case 'nominal':
+        return { pulseClass: '', statusText: 'Standby Nominal' };
+      case 'detecting':
+        return { pulseClass: 'calm-pulse-active', statusText: 'RCA In-Flight' };
+      case 'low_confidence':
+        return { pulseClass: 'calm-pulse-warning', statusText: 'Diagnostic Loop (<0.70)' };
+      case 'streak_verifying':
+        return { pulseClass: 'calm-pulse-active', statusText: 'Verifying Streak (42/50)' };
+      case 'streak_reset':
+        return { pulseClass: 'calm-pulse-danger', statusText: 'Defect Alarm (0/50)' };
+      case 'approved':
+        return { pulseClass: '', statusText: 'Closed & Certified' };
+      default:
+        return { pulseClass: '', statusText: 'Swarm Active' };
+    }
+  }
+
+  const status = incident?.status ?? 'normal';
+  if (!incident || status === 'normal') {
+    return { pulseClass: '', statusText: 'Standby Nominal' };
+  }
+  if (status === 'detecting') {
+    return { pulseClass: 'calm-pulse-active', statusText: 'Anomaly Ingest' };
+  }
+  if (status === 'tracing' || status === 'investigating' || status === 'analyzing') {
+    return { pulseClass: 'calm-pulse-active', statusText: 'RCA In-Flight' };
+  }
+  if (status === 'awaiting_evidence') {
+    return { pulseClass: 'calm-pulse-warning', statusText: 'Diagnostic Loop (<0.70)' };
+  }
+  if (status === 'repairing') {
+    return { pulseClass: 'calm-pulse-active', statusText: 'Technician Repair Active' };
+  }
+  if (status === 'verifying') {
+    return {
+      pulseClass: 'calm-pulse-active',
+      statusText: `Verifying Streak (${incident.verification_count ?? 0}/50)`,
+    };
+  }
+  if (status === 'escalated' || status === 'error') {
+    return { pulseClass: 'calm-pulse-danger', statusText: 'Defect Alarm (Reset)' };
+  }
+  if (status === 'closed' || status === 'dismissed') {
+    return { pulseClass: '', statusText: 'Closed & Certified' };
+  }
+
+  return { pulseClass: '', statusText: 'Swarm Active' };
+}

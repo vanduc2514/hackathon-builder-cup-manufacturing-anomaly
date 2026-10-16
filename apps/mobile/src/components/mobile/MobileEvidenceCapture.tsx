@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import type { VisualEvidencePreset } from '../../types';
 import type { EvidenceItem, MediaType, WorkOrder } from '../../types/mobile';
 import { readFileAsDataUrl, useCamera } from '../../hooks/useCamera';
 import PresetGallerySheet from './PresetGallerySheet';
@@ -8,6 +9,7 @@ interface MobileEvidenceCaptureProps {
   item: EvidenceItem;
   onClose: () => void;
   onSave: (itemId: string, thumbnail: string) => void;
+  onPresetAttached?: (order: WorkOrder, preset: VisualEvidencePreset) => void;
 }
 
 type Phase = 'aim' | 'recording' | 'review';
@@ -22,6 +24,7 @@ export default function MobileEvidenceCapture({
   item,
   onClose,
   onSave,
+  onPresetAttached,
 }: MobileEvidenceCaptureProps): React.ReactElement {
   const [mode, setMode] = useState<MediaType>(item.mediaType);
   const [phase, setPhase] = useState<Phase>('aim');
@@ -266,11 +269,17 @@ export default function MobileEvidenceCapture({
 
       <PresetGallerySheet
         open={showPresetGallery}
-        status={order.live?.status ?? (order.kind === 'evidence' ? 'awaiting_evidence' : 'normal')}
+        status={order.live?.status ?? 'normal'}
+        isLive={Boolean(order.live)}
+        canSubmitEvidence={Boolean(order.live?.canSubmitEvidence)}
         onClose={() => setShowPresetGallery(false)}
         onSelectSuccess={(preset) => {
           setShowPresetGallery(false);
-          onSave(item.id, preset.thumbnail_url);
+          if (order.live && onPresetAttached) {
+            onPresetAttached(order, preset);
+          } else {
+            onSave(item.id, preset.thumbnail_url);
+          }
         }}
       />
     </div>

@@ -260,4 +260,53 @@ describe("PresetGallerySheet", () => {
     expect(onSelectSuccess).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it("in demo mode (isLive=false), selecting preset triggers onSelectSuccess without calling POST API", async () => {
+    render(
+      <PresetGallerySheet
+        open={true}
+        isLive={false}
+        status="normal"
+        onClose={onClose}
+        onSelectSuccess={onSelectSuccess}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("preset-select-btn-preset-im05-crack")).toBeDefined();
+    });
+
+    // Warning should NOT be present in demo mode
+    expect(screen.queryByTestId("preset-status-warning")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("preset-select-btn-preset-im05-crack"));
+
+    // Verify authFetch POST was never called
+    expect(mockAuthFetch).not.toHaveBeenCalledWith(
+      "/api/incidents/evidence/preset",
+      expect.anything()
+    );
+    expect(onSelectSuccess).toHaveBeenCalledWith(mockPresets[1]);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("in live mode, when canSubmitEvidence is false, selection is disabled even if status is awaiting_evidence", async () => {
+    render(
+      <PresetGallerySheet
+        open={true}
+        isLive={true}
+        canSubmitEvidence={false}
+        status="awaiting_evidence"
+        onClose={onClose}
+        onSelectSuccess={onSelectSuccess}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("preset-status-warning")).toBeDefined();
+    });
+
+    const selectBtn = screen.getByTestId("preset-select-btn-preset-im05-crack") as HTMLButtonElement;
+    expect(selectBtn.disabled).toBe(true);
+  });
 });

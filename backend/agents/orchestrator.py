@@ -254,13 +254,8 @@ class Orchestrator:
             step_delay = self._step_delay
             if step_delay is None and trigger.mode == "fast":
                 step_delay = 0.05
-            initial_state = {}
             if step_delay is not None:
-                initial_state["step_delay"] = step_delay
-            if getattr(trigger, "require_evidence", False):
-                initial_state["require_evidence"] = True
-            if initial_state:
-                session_kwargs["state"] = initial_state
+                session_kwargs["state"] = {"step_delay": step_delay}
             session = await runner.session_service.create_session(
                 app_name=APP_NAME, user_id="orchestrator", **session_kwargs
             )

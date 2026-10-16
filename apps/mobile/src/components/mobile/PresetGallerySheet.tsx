@@ -4,14 +4,18 @@ import type { IncidentStatus, VisualEvidencePreset, VisualEvidencePresetListResp
 
 export interface PresetGallerySheetProps {
   open: boolean;
-  status: IncidentStatus | string;
+  status?: IncidentStatus | string;
+  isLive?: boolean;
+  canSubmitEvidence?: boolean;
   onClose: () => void;
   onSelectSuccess: (preset: VisualEvidencePreset) => void;
 }
 
 export default function PresetGallerySheet({
   open,
-  status,
+  status = "normal",
+  isLive = true,
+  canSubmitEvidence,
   onClose,
   onSelectSuccess,
 }: PresetGallerySheetProps): React.ReactElement | null {
@@ -22,7 +26,9 @@ export default function PresetGallerySheet({
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
 
-  const isAwaitingEvidence = status === "awaiting_evidence";
+  const isAwaitingEvidence = isLive
+    ? (canSubmitEvidence !== undefined ? canSubmitEvidence : status === "awaiting_evidence")
+    : true;
 
   useEffect(() => {
     if (!open) {
@@ -62,6 +68,12 @@ export default function PresetGallerySheet({
   if (!open) return null;
 
   const handleSelectPreset = async (preset: VisualEvidencePreset) => {
+    if (!isLive) {
+      onSelectSuccess(preset);
+      onClose();
+      return;
+    }
+
     if (!isAwaitingEvidence) {
       setActionError("Chỉ có thể gửi ảnh mẫu khi hệ thống đang ở trạng thái chờ bằng chứng (awaiting_evidence).");
       return;
@@ -176,7 +188,7 @@ export default function PresetGallerySheet({
           />
         </div>
 
-        {!isAwaitingEvidence && (
+        {isLive && !isAwaitingEvidence && (
           <div
             className="m-alert-box"
             style={{

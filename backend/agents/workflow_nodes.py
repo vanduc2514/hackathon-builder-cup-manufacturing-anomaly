@@ -77,11 +77,7 @@ def _record_verification(finding: str, evidence: str, confidence: float) -> None
 
 async def open_incident(ctx: Context, node_input: DefectInjectionRequest) -> IncidentState:
     """Initialises workflow state and opens a fresh incident on the Blackboard."""
-    trigger_dict = (
-        node_input.model_dump()
-        if hasattr(node_input, "model_dump")
-        else (node_input if isinstance(node_input, dict) else {})
-    )
+    trigger_dict = node_input.model_dump()
     ctx.state["trigger"] = trigger_dict
     ctx.state["evidence_rounds"] = 0
     if trigger_dict.get("require_evidence"):

@@ -26,7 +26,7 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 | **Screen 2: Technician Mobile App** | Evidence capture, guided repair, verification hand-off | Work List segmented Active / Processing / Completed | WorkOrderCards → Collect evidence / Repair brief | Evidence capture camera, Gemini Live guided repair, Finish sheet, Work status | [`02_technician_copilot.md`](./02_technician_copilot.md) |
 | **Screen 3: Incident Command (`incident-detail`)** | Product-evidence verification & 8D sign-off | `#INC` chip + title + step circles + StepRail | Current StepSection + `Approve 8D & Release Line` (locked until 50/50) | CausalTreeTabs, sensor history, documents, EightDReportCard, AgentAttribution | [`03_incident_workspace.md`](./03_incident_workspace.md) |
 | **Screen 4: Knowledge Loop (`walkthroughs` / `impact` / `sops`)** | Institutional memory search & ESG savings quantification | Recertification strip · 3 KPI cards (Scrap, Downtime, CO₂) · Needs review strip | Station sections · KnowledgeSearch + Signed-off 8D fixes · SOP table | WalkthroughPlayer, EightDSheet, WhatIfCalculator, SopDetailDrawer | [`04_knowledge_sustainability_hub.md`](./04_knowledge_sustainability_hub.md) |
-| **Screen 5: System Topology (`topology`)** | Live multi-agent execution tracing & decision gates | Phase lamps & status chips · Active execution flowline pulse | Node summaries & Decision Diamonds (Confidence ≥ 0.70 & Invariant #3 Streak ≥ 50) | `TopologyNodeDrawer` (JTBD, tech stack, blackboard telemetry, logs) | [`system_topology_workflow_wireframe.md`](../wireframe/system_topology_workflow_wireframe.md) |
+| **Screen 5: System Topology (`topology`)** | Live multi-agent execution tracing & decision gates | Phase lamps & status chips · Active execution flowline pulse | Node summaries & Decision Diamonds (Confidence ≥ 0.70 & Invariant #3 Streak ≥ 50) | `TopologyNodeDrawer` (JTBD, tech stack, blackboard telemetry, logs) | [`system_topology_workflow_wireframe.md`](./system_topology_workflow_wireframe.md) |
 
 ---
 
@@ -155,7 +155,7 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 
 ## 7. Screen 5: System Topology Workflow
 
-> **Full Specification:** [`system_topology_workflow_wireframe.md`](../wireframe/system_topology_workflow_wireframe.md)  
+> **Full Specification:** [`system_topology_workflow_wireframe.md`](./system_topology_workflow_wireframe.md)  
 > **Target Personas:** Shift Leader, Plant Operations Manager, Systems & Automation Architect  
 > **Single JTBD:** Visualize real-time multi-agent execution paths, inspect AI confidence & Invariant #3 decision gates, and audit node health.
 

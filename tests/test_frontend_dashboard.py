@@ -447,17 +447,13 @@ def test_topology_workflow_redesign_deliverables() -> None:
     repo_root = Path(__file__).resolve().parent.parent
 
     # 1. Wireframe deliverable
-    wireframe_path = repo_root / "docs" / "wireframe" / "system_topology_workflow_wireframe.md"
-    wireframes_mirrored = (
-        repo_root / "docs" / "wireframes" / "system_topology_workflow_wireframe.md"
-    )
+    wireframe_path = repo_root / "docs" / "wireframes" / "system_topology_workflow_wireframe.md"
     assert wireframe_path.is_file(), f"Missing wireframe deliverable at {wireframe_path}"
-    assert wireframes_mirrored.is_file(), (
-        f"Missing mirrored wireframe deliverable at {wireframes_mirrored}"
+    assert not (repo_root / "docs" / "wireframe").exists(), (
+        "docs/wireframe directory should not exist; use docs/wireframes"
     )
 
     wf_text = wireframe_path.read_text(encoding="utf-8")
-    assert wireframes_mirrored.read_text(encoding="utf-8") == wf_text
     for layer in (
         "Layer 1: Factory Floor",
         "Layer 2: On-Premises Gateway",
@@ -516,22 +512,36 @@ def test_topology_two_window_partitioning_and_phase_stepper_contracts() -> None:
     index_css_file = web_src / "index.css"
 
     assert stepper_file.is_file(), f"PhaseStepperBar.tsx must exist at {stepper_file}"
-    assert topology_view_file.is_file(), f"SystemTopologyView.tsx must exist at {topology_view_file}"
+    assert topology_view_file.is_file(), (
+        f"SystemTopologyView.tsx must exist at {topology_view_file}"
+    )
     assert topology_lib_file.is_file(), f"topology.ts must exist at {topology_lib_file}"
     assert index_css_file.is_file(), f"index.css must exist at {index_css_file}"
 
     # 2. SystemTopologyView.tsx contracts: Window 1, Window 2, Cross-Window bridge, Quick-Launch button
     view_text = topology_view_file.read_text(encoding="utf-8")
-    assert 'id="window-1-container"' in view_text, "Missing #window-1-container in SystemTopologyView"
-    assert 'id="window-2-container"' in view_text, "Missing #window-2-container in SystemTopologyView"
-    assert 'id="pubsub-cross-bridge"' in view_text, "Missing #pubsub-cross-bridge in SystemTopologyView"
-    assert 'id="window-2-status-chip"' in view_text, "Missing #window-2-status-chip in SystemTopologyView"
+    assert 'id="window-1-container"' in view_text, (
+        "Missing #window-1-container in SystemTopologyView"
+    )
+    assert 'id="window-2-container"' in view_text, (
+        "Missing #window-2-container in SystemTopologyView"
+    )
+    assert 'id="pubsub-cross-bridge"' in view_text, (
+        "Missing #pubsub-cross-bridge in SystemTopologyView"
+    )
+    assert 'id="window-2-status-chip"' in view_text, (
+        "Missing #window-2-status-chip in SystemTopologyView"
+    )
     assert "window-1-boundary" in view_text, "Missing window-1-boundary class in SystemTopologyView"
     assert "window-2-boundary" in view_text, "Missing window-2-boundary class in SystemTopologyView"
-    assert "cross-window-bridge" in view_text, "Missing cross-window-bridge class in SystemTopologyView"
+    assert "cross-window-bridge" in view_text, (
+        "Missing cross-window-bridge class in SystemTopologyView"
+    )
     assert "btn-quick-launch" in view_text, "Missing btn-quick-launch class in SystemTopologyView"
     assert "http://localhost:3002" in view_text, "Missing link to port 3002 in SystemTopologyView"
-    assert "Factory Floor Console" in view_text, "Missing Factory Floor Console label in SystemTopologyView"
+    assert "Factory Floor Console" in view_text, (
+        "Missing Factory Floor Console label in SystemTopologyView"
+    )
 
     # 3. PhaseStepperBar.tsx contracts
     stepper_text = stepper_file.read_text(encoding="utf-8")

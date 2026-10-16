@@ -124,9 +124,9 @@ export default function IncidentsEmptyView({
             style={{ minHeight: 44, padding: '0 1.25rem' }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 19 }}>
-              play_arrow
+              sensors
             </span>
-            Inject demo anomaly
+            Incident &amp; Factory Monitor
           </button>
           <button
             id="incidents-empty-back-btn"

@@ -1,10 +1,9 @@
-// DemoController: glass slide-over for scenario defect injection, timing mode, blackboard reset and live run status.
+// DemoController: glass slide-over for passive incident execution monitoring, factory stream health, and blackboard reset.
 import React, { useState } from 'react';
 import type {
   GeminiLiveStatus,
   HealthResponse,
   IncidentState,
-  InjectionResponse,
   ResetResponse,
   SimulationStatusResponse,
   TelemetryBaselineResponse,
@@ -12,7 +11,8 @@ import type {
 import { useApi } from '../lib/api';
 import { authFetch } from '../lib/auth';
 import type { ToastTone } from '../App';
-import { STATUS_LABEL } from '../lib/incident';
+import { STATUS_LABEL, friendlyDefectName } from '../lib/incident';
+import { useFactoryStream } from '../hooks/useFactoryStream';
 
 interface DemoControllerProps {
   open: boolean;
@@ -24,7 +24,6 @@ interface DemoControllerProps {
 }
 
 type Scenario = 'cnc_tool_wear' | 'im_damp_material';
-type TimingMode = 'demo' | 'fast';
 
 const SCENARIOS: {
   id: Scenario;
@@ -59,7 +58,7 @@ const SCENARIOS: {
 ];
 
 const PHASE_SCRIPT: Record<string, string> = {
-  normal: 'All stations nominal. Inject a scenario to watch the agent team respond.',
+  normal: 'All stations nominal. Trigger an anomaly on the Factory Floor (Window 1) to watch the agent team respond.',
   detecting: 'Quality Inspector sees the defect rate breach the 3.00% UCL and opens an incident.',
   tracing: 'Traceability agent walks part genealogy in BigQuery to isolate the suspect station.',
   investigating: 'Process Analyst correlates spindle vibration and current with defect onset.',
@@ -81,67 +80,45 @@ export default function DemoController({
   onStatusChange,
   onNotify,
 }: DemoControllerProps): React.ReactElement {
-  const [scenario, setScenario] = useState<Scenario>('cnc_tool_wear');
-  const [mode, setMode] = useState<TimingMode>('demo');
-  const [busy, setBusy] = useState<'inject' | 'reset' | null>(null);
-  const [injectedDuration, setInjectedDuration] = useState<number | null>(null);
-  const [lastInject, setLastInject] = useState<InjectionResponse | null>(null);
+  const [busy, setBusy] = useState<'reset' | null>(null);
   const [lastReset, setLastReset] = useState<ResetResponse | null>(null);
 
+  const factoryStream = useFactoryStream({ enabled: open });
   const health = useApi<HealthResponse>(open ? '/health' : null, 10000);
   const live = useApi<GeminiLiveStatus>(open ? '/api/gemini-live/status' : null, 10000);
   const baseline = useApi<TelemetryBaselineResponse>(open ? '/api/telemetry/baseline' : null);
 
-  const running = simStatus?.status === 'running';
-  const elapsed = simStatus?.elapsed_seconds ?? 0;
-  const total = simStatus?.total_seconds ?? injectedDuration ?? (simStatus?.mode === 'fast' || mode === 'fast' ? 8 : 90);
-  const runPct = running ? Math.min(100, (elapsed / Math.max(1, total)) * 100) : 0;
   const status = incident?.status ?? 'normal';
+  const isIncidentActive = status !== 'normal' && status !== 'closed' && status !== 'dismissed';
+  const running = simStatus?.status === 'running' || isIncidentActive;
 
-  const inject = async () => {
-    const s = SCENARIOS.find((x) => x.id === scenario);
-    if (!s) return;
-    setBusy('inject');
-    try {
-      const payload: Record<string, unknown> = {
-        scenario: s.id,
-        mode,
-        machine_id: s.machine,
-        tool_id: s.tool,
-      };
-      if (s.id === 'im_damp_material') {
-        payload.require_evidence = true;
-      }
-      const res = await authFetch('/api/simulation/inject', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
-      const data = (await res.json()) as InjectionResponse;
-      setLastInject(data);
-      setLastReset(null);
-      if (typeof data.duration_seconds === 'number') {
-        setInjectedDuration(data.duration_seconds);
-      }
-      onNotify(data.message ?? `Scenario ${s.index} injected on ${s.machine} (${mode === 'demo' ? '90s' : '8s'})`);
-      onStatusChange();
-    } catch (err) {
-      onNotify(err instanceof Error ? `Injection failed: ${err.message}` : 'Injection failed', 'error');
-    } finally {
-      setBusy(null);
-    }
-  };
+  const elapsed =
+    simStatus?.elapsed_seconds ??
+    (incident?.opened_at ? Math.max(0, Math.round((Date.now() - new Date(incident.opened_at).getTime()) / 1000)) : 0);
+  const total = simStatus?.total_seconds ?? (simStatus?.mode === 'fast' ? 8 : 90);
+  const runPct = running ? Math.min(100, (elapsed / Math.max(1, total)) * 100) : 0;
+
+  const suspectMachine = incident?.suspect_machine ?? simStatus?.target_machine ?? null;
+  const activeDefectType = incident?.defect_type
+    ? friendlyDefectName(incident.defect_type)
+    : simStatus?.active_scenario ?? factoryStream.packet.active_anomaly?.scenario ?? null;
+
+  const factoryUiUrl =
+    (import.meta.env.VITE_FACTORY_UI_URL as string | undefined) ||
+    (typeof window !== 'undefined'
+      ? `${window.location.protocol}//${window.location.hostname}:3002`
+      : 'http://localhost:3002');
+
+  const factoryStreamOrigin = import.meta.env.VITE_FACTORY_STREAM_ORIGIN ?? '';
+  const factoryStreamEndpoint = `${factoryStreamOrigin || (typeof window !== 'undefined' ? window.location.origin : '')}/api/factory/stream`;
 
   const reset = async () => {
     setBusy('reset');
-    setInjectedDuration(null);
     try {
       const res = await authFetch('/api/simulation/reset', { method: 'POST' });
       if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
       const data = (await res.json()) as ResetResponse;
       setLastReset(data);
-      setLastInject(null);
       onNotify(data.message ?? 'Blackboard reset to nominal baseline');
       onStatusChange();
     } catch (err) {
@@ -168,7 +145,7 @@ export default function DemoController({
         }}
       />
       <aside
-        aria-label="Simulation and defect injection controller"
+        aria-label="Incident Execution & Factory Monitor"
         aria-hidden={!open}
         className="glass glass-strong"
         style={{
@@ -176,7 +153,7 @@ export default function DemoController({
           top: 12,
           right: 12,
           bottom: 12,
-          width: 'min(420px, calc(100vw - 24px))',
+          width: 'min(440px, calc(100vw - 24px))',
           zIndex: 90,
           borderRadius: 26,
           padding: '1.3rem',
@@ -189,19 +166,71 @@ export default function DemoController({
           transition: `transform 0.5s var(--ease), visibility 0s linear ${open ? '0s' : '0.5s'}`,
         }}
       >
+        {/* Header */}
         <div className="row between">
           <div>
-            <div className="eyebrow">Simulation &amp; Defect Injection</div>
+            <div className="eyebrow">Physical Separation · Control Plane</div>
             <h2 className="card-title" style={{ fontSize: '1.2rem', marginTop: 2 }}>
-              Demo Controller
+              Incident &amp; Factory Monitor
             </h2>
           </div>
-          <button type="button" className="btn btn-sm" onClick={onClose} aria-label="Close simulation panel">
+          <button type="button" className="btn btn-sm" onClick={onClose} aria-label="Close monitor panel">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
 
-        <div className={running ? 'glass-dark' : 'glass-inset'} style={{ padding: '0.95rem 1rem' }}>
+        {/* Window 1 Navigation Banner */}
+        <div
+          className="glass-inset col"
+          style={{
+            padding: '1rem',
+            borderRadius: 18,
+            gap: 10,
+            border: '1px solid rgba(91, 91, 240, 0.25)',
+            background: 'linear-gradient(145deg, rgba(244, 246, 255, 0.9) 0%, rgba(235, 240, 255, 0.6) 100%)',
+          }}
+        >
+          <div className="row between" style={{ alignItems: 'center' }}>
+            <span className="row" style={{ gap: 6, alignItems: 'center' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--accent)' }}>
+                precision_manufacturing
+              </span>
+              <strong style={{ fontSize: '0.82rem', color: 'var(--ink)' }}>Window 1: Factory Floor Client</strong>
+            </span>
+            <span className="chip chip-blue mono" style={{ fontSize: '0.65rem' }}>
+              Edge Ingress
+            </span>
+          </div>
+          <p style={{ fontSize: '0.74rem', color: 'var(--text)', lineHeight: 1.5, margin: 0 }}>
+            In the decoupled architecture, anomaly injection belongs exclusively to the physical factory floor. The
+            Cloud AI Control Plane listens passively to Google Cloud Pub/Sub events.
+          </p>
+          <a
+            id="open-factory-floor-btn"
+            href={factoryUiUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-accent btn-block"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              textDecoration: 'none',
+              padding: '0.75rem',
+              fontWeight: 650,
+              fontSize: '0.82rem',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+              open_in_new
+            </span>
+            Open Factory Floor UI (Window 1)
+          </a>
+        </div>
+
+        {/* Active Incident Execution Progress */}
+        <div className={running ? 'glass-dark' : 'glass-inset'} style={{ padding: '0.95rem 1rem', borderRadius: 16 }}>
           <div className="row between">
             <span className="row" style={{ gap: 8, fontSize: '0.8rem', fontWeight: 650 }}>
               <span
@@ -209,49 +238,184 @@ export default function DemoController({
                 style={{ width: 8, height: 8, borderRadius: 999, background: running ? '#f87171' : 'var(--green)' }}
               />
               {running
-                ? `Running · ${simStatus?.active_scenario ?? ''}${simStatus?.target_machine ? ` · ${simStatus.target_machine}${simStatus.target_tool ? `/${simStatus.target_tool}` : ''}` : ''}`
-                : 'Idle · ready to inject'}
+                ? `Active · ${STATUS_LABEL[status]}${suspectMachine ? ` · ${suspectMachine}` : ''}`
+                : 'Nominal · Monitoring line'}
             </span>
             <span className="mono" style={{ fontSize: '0.72rem', opacity: 0.75 }}>
-              {running ? `${elapsed.toFixed(0)}s / ${total}s` : simStatus ? 'backend ok' : 'backend offline'}
+              {running ? `${elapsed.toFixed(0)}s / ${total}s` : simStatus ? 'backend connected' : 'backend offline'}
             </span>
           </div>
+
           {running && (
             <div className="progress" style={{ marginTop: 10, background: 'rgba(255,255,255,0.15)' }}>
               <span style={{ width: `${runPct}%`, background: 'linear-gradient(90deg,#f87171,#fbbf24)' }} />
             </div>
           )}
-          <div style={{ marginTop: 10, fontSize: '0.76rem', opacity: running ? 0.85 : 1, color: running ? '#e2e8f0' : 'var(--text)' }}>
+
+          <div
+            style={{
+              marginTop: 10,
+              fontSize: '0.76rem',
+              opacity: running ? 0.9 : 1,
+              color: running ? '#e2e8f0' : 'var(--text)',
+              lineHeight: 1.5,
+            }}
+          >
             <strong>{STATUS_LABEL[status]}:</strong> {PHASE_SCRIPT[status] ?? PHASE_SCRIPT.normal}
           </div>
+
+          {incident && isIncidentActive && (
+            <div
+              className="row wrap mono"
+              style={{
+                gap: 6,
+                marginTop: 8,
+                fontSize: '0.7rem',
+                color: running ? '#cbd5e1' : 'var(--muted)',
+              }}
+            >
+              <span className="chip" style={{ background: running ? 'rgba(255,255,255,0.12)' : undefined }}>
+                ID: #{incident.incident_id}
+              </span>
+              {suspectMachine && (
+                <span className="chip" style={{ background: running ? 'rgba(255,255,255,0.12)' : undefined }}>
+                  Station: {suspectMachine}
+                </span>
+              )}
+              {activeDefectType && (
+                <span className="chip" style={{ background: running ? 'rgba(255,255,255,0.12)' : undefined }}>
+                  Defect: {activeDefectType}
+                </span>
+              )}
+              {status === 'verifying' && (
+                <span className="chip chip-green mono">
+                  Streak: {incident.verification_count}/{incident.verification_target}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        {lastInject && (
-          <div className="glass-inset col" style={{ padding: '0.8rem 0.95rem', gap: 6 }} aria-label="Last injection summary">
-            <div className="row between">
-              <span className="eyebrow">Last injection</span>
-              <span className="chip chip-green mono">{lastInject.status}</span>
-            </div>
-            <div className="mono" style={{ fontSize: '0.74rem', lineHeight: 1.6 }}>
-              {lastInject.scenario} · {lastInject.mode} · {lastInject.duration_seconds}s
-              <br />
-              target {lastInject.target_machine ?? '—'}/{lastInject.target_tool ?? '—'} · defect {lastInject.defect_type ?? 'auto'}
-            </div>
-            {lastInject.burst_telemetry && Object.keys(lastInject.burst_telemetry).length > 0 && (
-              <div className="row wrap mono" style={{ gap: 6, fontSize: '0.7rem' }}>
-                {Object.entries(lastInject.burst_telemetry)
-                  .filter(([k]) => !['scenario', 'machine_id', 'tool_id'].includes(k))
-                  .map(([k, v]) => (
-                    <span key={k} className="chip">
-                      {k}: {typeof v === 'object' ? JSON.stringify(v) : String(v)}
-                    </span>
-                  ))}
-              </div>
-            )}
+        {/* Live Factory Stream Health & Edge Status */}
+        <div className="glass-inset col" style={{ padding: '0.85rem 0.95rem', gap: 6, borderRadius: 16 }}>
+          <div className="row between" style={{ alignItems: 'center' }}>
+            <span className="eyebrow">Factory Floor Stream (SSE)</span>
+            <span
+              className={`chip ${factoryStream.connected ? 'chip-green' : 'chip-amber'} mono`}
+              style={{ fontSize: '0.68rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  backgroundColor: factoryStream.connected ? 'var(--green, #0e8a43)' : '#f59e0b',
+                  display: 'inline-block',
+                }}
+              />
+              {factoryStream.connected ? 'Live Stream Active' : 'Connecting…'}
+            </span>
           </div>
-        )}
+
+          <div className="mono" style={{ fontSize: '0.72rem', lineHeight: 1.6 }}>
+            Endpoint: <span style={{ opacity: 0.85 }}>{factoryStreamEndpoint}</span>
+            <br />
+            Conveyor Tick: <span style={{ fontWeight: 600 }}>#{factoryStream.packet.tick_index}</span>
+            {factoryStream.lastTickAt && (
+              <span style={{ opacity: 0.7 }}> ({new Date(factoryStream.lastTickAt).toLocaleTimeString()})</span>
+            )}
+            <br />
+            Edge Anomaly:{' '}
+            <span
+              style={{
+                color: factoryStream.packet.active_anomaly ? 'var(--red, #e5484d)' : 'var(--green, #12a150)',
+                fontWeight: 600,
+              }}
+            >
+              {factoryStream.packet.active_anomaly
+                ? `${factoryStream.packet.active_anomaly.scenario ?? 'Active Anomaly'} (${(factoryStream.packet.active_anomaly.severity * 100).toFixed(0)}% sev)`
+                : 'None (Nominal)'}
+            </span>
+          </div>
+
+          {factoryStream.packet.edge_stats && (
+            <div
+              className="row wrap mono"
+              style={{ gap: 6, fontSize: '0.68rem', marginTop: 4, color: 'var(--muted)' }}
+            >
+              <span className="chip">
+                Gemma 3 Reduction: {factoryStream.packet.edge_stats.cloud_bandwidth_reduction_pct.toFixed(1)}%
+              </span>
+              <span className="chip">
+                Defects: {factoryStream.packet.edge_stats.defect_frames_forwarded} / {factoryStream.packet.edge_stats.total_frames_evaluated}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Factory Scenarios Catalog Guide */}
+        <div className="col" style={{ gap: 8 }}>
+          <div className="row between" style={{ alignItems: 'center' }}>
+            <span className="eyebrow">Factory Anomaly Scenarios</span>
+            <span className="chip mono" style={{ fontSize: '0.65rem' }}>
+              Window 1 Triggers
+            </span>
+          </div>
+          {SCENARIOS.map((s) => (
+            <div
+              key={s.id}
+              id={`factory-scenario-${s.index}`}
+              className="glass-inset"
+              style={{
+                textAlign: 'left',
+                padding: '0.85rem 0.95rem',
+                borderRadius: 14,
+                display: 'flex',
+                gap: 12,
+                alignItems: 'flex-start',
+              }}
+            >
+              <span
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  flexShrink: 0,
+                  display: 'grid',
+                  placeItems: 'center',
+                  background: 'rgba(91,91,240,0.1)',
+                  color: 'var(--accent)',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  {s.icon}
+                </span>
+              </span>
+              <span className="col" style={{ gap: 2, minWidth: 0, flex: 1 }}>
+                <span className="row between wrap" style={{ gap: 6 }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 650 }}>
+                    Scenario {s.index}: {s.title}
+                  </span>
+                  <span className="mono" style={{ fontSize: '0.68rem', color: 'var(--accent)' }}>
+                    {s.machine} · {s.tool}
+                  </span>
+                </span>
+                <span className="mono" style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>
+                  Signal: {s.signal}
+                </span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: 2 }}>{s.detail}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Last Reset Summary */}
         {lastReset && (
-          <div className="glass-inset col" style={{ padding: '0.8rem 0.95rem', gap: 6 }} aria-label="Last reset summary">
+          <div
+            className="glass-inset col"
+            style={{ padding: '0.8rem 0.95rem', gap: 6, borderRadius: 14 }}
+            aria-label="Last reset summary"
+          >
             <div className="row between">
               <span className="eyebrow">Last reset</span>
               <span className="chip chip-green mono">{lastReset.status}</span>
@@ -265,99 +429,14 @@ export default function DemoController({
           </div>
         )}
 
-        <div className="col" style={{ gap: 8 }}>
-          <div className="eyebrow">Scenario</div>
-          {SCENARIOS.map((s) => {
-            const selected = scenario === s.id;
-            return (
-              <button
-                key={s.id}
-                id={`sim-scenario-${s.index}`}
-                type="button"
-                onClick={() => setScenario(s.id)}
-                className={selected ? 'glass tone-accent' : 'glass-inset'}
-                style={{
-                  textAlign: 'left',
-                  padding: '0.9rem 1rem',
-                  borderRadius: 16,
-                  border: '1px solid',
-                  borderColor: selected ? 'rgba(91,91,240,0.35)' : 'rgba(255,255,255,0.85)',
-                  display: 'flex',
-                  gap: 12,
-                  alignItems: 'flex-start',
-                  boxShadow: selected ? '0 0 0 3px var(--accent-ring)' : undefined,
-                  transition: 'all 0.25s var(--ease)',
-                }}
-              >
-                <span
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 11,
-                    flexShrink: 0,
-                    display: 'grid',
-                    placeItems: 'center',
-                    background: selected ? 'var(--accent)' : 'rgba(255,255,255,0.9)',
-                    color: selected ? '#fff' : 'var(--muted)',
-                  }}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 19 }}>
-                    {s.icon}
-                  </span>
-                </span>
-                <span className="col" style={{ gap: 3, minWidth: 0 }}>
-                  <span className="row" style={{ gap: 6 }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 650 }}>
-                      Scenario {s.index}: {s.title}
-                    </span>
-                  </span>
-                  <span className="mono" style={{ fontSize: '0.68rem', color: 'var(--accent)' }}>
-                    {s.machine} · {s.tool} · {s.signal}
-                  </span>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{s.detail}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="col" style={{ gap: 8 }}>
-          <div className="eyebrow">Timing Envelope</div>
-          <div className="seg" style={{ width: '100%' }}>
-            <button
-              id="sim-mode-demo"
-              type="button"
-              className={mode === 'demo' ? 'active' : ''}
-              style={{ flex: 1, justifyContent: 'center' }}
-              onClick={() => setMode('demo')}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
-                slideshow
-              </span>
-              Demo · 90s
-            </button>
-            <button
-              id="sim-mode-fast"
-              type="button"
-              className={mode === 'fast' ? 'active' : ''}
-              style={{ flex: 1, justifyContent: 'center' }}
-              onClick={() => setMode('fast')}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
-                fast_forward
-              </span>
-              Fast · 8s
-            </button>
+        {/* Backend Services & Diagnostics */}
+        <div className="glass-inset col" style={{ padding: '0.8rem 0.95rem', gap: 6, borderRadius: 14 }} aria-label="Backend services">
+          <div className="row between" style={{ alignItems: 'center' }}>
+            <span className="eyebrow">Cloud AI Control Plane</span>
+            <span className={`chip ${health.data ? 'chip-green' : 'chip-amber'} mono`} style={{ fontSize: '0.65rem' }}>
+              {health.data ? 'Healthy' : 'Checking…'}
+            </span>
           </div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
-            {mode === 'demo'
-              ? 'Paced for narration — each Andon phase is visible on the wall display.'
-              : 'Fast-forward for smoke testing the full pipeline.'}
-          </span>
-        </div>
-
-        <div className="glass-inset col" style={{ padding: '0.8rem 0.95rem', gap: 6 }} aria-label="Backend services">
-          <div className="eyebrow">Backend services</div>
           <div className="mono" style={{ fontSize: '0.74rem', lineHeight: 1.7 }}>
             API: {health.data ? `${health.data.status} · ${health.data.app} v${health.data.version}` : health.error ? 'unreachable' : '…'}
             <br />
@@ -377,23 +456,13 @@ export default function DemoController({
           )}
         </div>
 
+        {/* Reset Action */}
         <div className="col" style={{ gap: 8, marginTop: 'auto' }}>
-          <button
-            id="sim-inject"
-            type="button"
-            className="btn btn-accent btn-block"
-            style={{ padding: '0.8rem' }}
-            disabled={busy !== null || running}
-            onClick={inject}
-          >
-            <span className="material-symbols-outlined">bolt</span>
-            {busy === 'inject' ? 'Injecting…' : running ? 'Scenario in progress' : 'Inject Defect'}
-          </button>
           <button
             id="sim-reset"
             type="button"
             className="btn btn-block"
-            style={{ padding: '0.7rem' }}
+            style={{ padding: '0.75rem' }}
             disabled={busy !== null}
             onClick={reset}
           >
@@ -401,7 +470,7 @@ export default function DemoController({
             {busy === 'reset' ? 'Resetting…' : 'Reset Blackboard'}
           </button>
           <span style={{ fontSize: '0.68rem', color: 'var(--faint)', textAlign: 'center' }}>
-            Inputs route through the Orchestrator · reset clears the shared Blackboard
+            Anomalies route via Factory Pub/Sub · Reset restores the shared Blackboard
           </span>
         </div>
       </aside>

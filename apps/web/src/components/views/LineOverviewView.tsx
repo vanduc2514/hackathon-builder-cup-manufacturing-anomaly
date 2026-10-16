@@ -201,8 +201,8 @@ export default function LineOverviewView({
             Export Shift Report
           </button>
           <button id="overview-new-run" type="button" className="btn btn-dark btn-sm" onClick={onOpenSimulation}>
-            <span className="material-symbols-outlined">play_arrow</span>
-            New Run
+            <span className="material-symbols-outlined">sensors</span>
+            Incident Monitor
           </button>
         </div>
       </header>

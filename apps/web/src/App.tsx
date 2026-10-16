@@ -4,7 +4,7 @@ import Sidebar, { type BackendLink, type DashboardTab, type IncidentTab } from '
 import TopHeader from './components/TopHeader';
 import DemoController from './components/DemoController';
 import Dashboard from './pages/Dashboard';
-import { ACTIVE_PRODUCT, productIncidents } from './lib/incident';
+import { ACTIVE_PRODUCT, productIncidents, STATUS_LABEL } from './lib/incident';
 import { isIncidentOpen, toEsgTotals, toLedgerEntries } from './lib/fleet';
 import { streamUrl } from './lib/api';
 import { authFetch, withToken } from './lib/auth';
@@ -180,6 +180,31 @@ export default function App(): React.ReactElement {
       if (soundOn) playAlertTone();
     }
   }, [incident, soundOn]);
+
+  // Track previous incident status and notify on passive state transitions received via SSE.
+  const prevIncidentRef = useRef<{ id: string; status: string } | null>(null);
+  useEffect(() => {
+    if (!incident) return;
+    const prev = prevIncidentRef.current;
+    const currentId = incident.incident_id;
+    const currentStatus = incident.status;
+
+    if (prev && prev.id === currentId && prev.status !== currentStatus) {
+      const label = STATUS_LABEL[currentStatus] || currentStatus;
+      const tone: ToastTone =
+        currentStatus === 'error' || currentStatus === 'escalated'
+          ? 'error'
+          : currentStatus === 'closed'
+            ? 'success'
+            : 'info';
+      notify(`Incident #${currentId}: Transitioned to ${label}`, tone);
+    } else if (prev && prev.id !== currentId && currentStatus !== 'normal') {
+      const label = STATUS_LABEL[currentStatus] || currentStatus;
+      notify(`New incident #${currentId} detected on ${incident.suspect_machine || 'Line-01'} (${label})`, 'info');
+    }
+
+    prevIncidentRef.current = { id: currentId, status: currentStatus };
+  }, [incident, notify]);
 
   const refreshLedger = useCallback(async () => {
     try {

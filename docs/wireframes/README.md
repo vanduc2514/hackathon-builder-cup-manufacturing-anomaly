@@ -40,11 +40,11 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
  ╭──────────────────────╮  ╭─────────────────────────────╮        (●) 1 Active Anomaly  ╭ ⌘K Search… ╮ (♪) Shift Leader (◉)
  │ [K] KAIZEN AGENT     │  │ Cell Line 1 / Line Overview │                              ╰────────────╯
  │ ╭ Cell Line 1 …    ╮ │  ╰─────────────────────────────╯
- │ OPERATIONAL LOOP     │  PageTitle                                         [ Button ] [■ Button primary ■]
- │ ▣ Line Overview  *   │  ╭── GlassCard (24) ────────────────────────────────────────────────────────────╮
- │ ⚠ Incidents          │  │  {tab content: overview · incident-detail · topology · walkthroughs · …}     │
- │ SYSTEM ARCHITECTURE  │  ╰──────────────────────────────────────────────────────────────────────────────╯
- │ ⑂ System Topology    │
+ │ SYSTEM ARCHITECTURE  │  PageTitle                                         [ Button ] [■ Button primary ■]
+ │ ⑂ System Topology    │  ╭── GlassCard (24) ────────────────────────────────────────────────────────────╮
+ │ OPERATIONAL LOOP     │  │  {tab content: topology · overview · incident-detail · walkthroughs · …}     │
+ │ ▣ Line Overview  *   │  ╰──────────────────────────────────────────────────────────────────────────────╯
+ │ ⚠ Incidents          │
  │ KNOWLEDGE LOOP       │
  │ ▶ Tech Walkthroughs  │
  │ ▤ Knowledge Base     │                                                          ╭─ Toast (DarkGlass) ╮

@@ -503,3 +503,64 @@ def test_topology_workflow_redesign_deliverables() -> None:
         "human-lead",
     ):
         assert f'data-node="{node_id}"' in proto_text, f"Missing node {node_id} in prototype"
+
+
+def test_topology_two_window_partitioning_and_phase_stepper_contracts() -> None:
+    """Verifies contracts and deliverables for Two-Window partitioning and Phase Stepper (Issue #227 / #228, TKT-052 & TKT-053)."""
+    web_src = APPS_DIR / "web" / "src"
+
+    # 1. Component files exist
+    stepper_file = web_src / "components" / "topology" / "PhaseStepperBar.tsx"
+    topology_view_file = web_src / "components" / "views" / "SystemTopologyView.tsx"
+    topology_lib_file = web_src / "lib" / "topology.ts"
+    index_css_file = web_src / "index.css"
+
+    assert stepper_file.is_file(), f"PhaseStepperBar.tsx must exist at {stepper_file}"
+    assert topology_view_file.is_file(), f"SystemTopologyView.tsx must exist at {topology_view_file}"
+    assert topology_lib_file.is_file(), f"topology.ts must exist at {topology_lib_file}"
+    assert index_css_file.is_file(), f"index.css must exist at {index_css_file}"
+
+    # 2. SystemTopologyView.tsx contracts: Window 1, Window 2, Cross-Window bridge, Quick-Launch button
+    view_text = topology_view_file.read_text(encoding="utf-8")
+    assert 'id="window-1-container"' in view_text, "Missing #window-1-container in SystemTopologyView"
+    assert 'id="window-2-container"' in view_text, "Missing #window-2-container in SystemTopologyView"
+    assert 'id="pubsub-cross-bridge"' in view_text, "Missing #pubsub-cross-bridge in SystemTopologyView"
+    assert 'id="window-2-status-chip"' in view_text, "Missing #window-2-status-chip in SystemTopologyView"
+    assert "window-1-boundary" in view_text, "Missing window-1-boundary class in SystemTopologyView"
+    assert "window-2-boundary" in view_text, "Missing window-2-boundary class in SystemTopologyView"
+    assert "cross-window-bridge" in view_text, "Missing cross-window-bridge class in SystemTopologyView"
+    assert "btn-quick-launch" in view_text, "Missing btn-quick-launch class in SystemTopologyView"
+    assert "http://localhost:3002" in view_text, "Missing link to port 3002 in SystemTopologyView"
+    assert "Factory Floor Console" in view_text, "Missing Factory Floor Console label in SystemTopologyView"
+
+    # 3. PhaseStepperBar.tsx contracts
+    stepper_text = stepper_file.read_text(encoding="utf-8")
+    assert 'id="phase-stepper-bar"' in view_text or 'id="phase-stepper-bar"' in stepper_text
+    assert "handleStepClick" in stepper_text
+    assert "targetLayerId" in stepper_text
+    assert "derivePhaseStepperInfo" in stepper_text
+
+    # 4. topology.ts exports & logic
+    lib_text = topology_lib_file.read_text(encoding="utf-8")
+    assert "derivePhaseStepperInfo" in lib_text
+    assert "deriveWindow2State" in lib_text
+    assert "getWindow1Nodes" in lib_text
+    assert "getWindow2Nodes" in lib_text
+    assert "recovery-handshake" in lib_text
+    assert "gate-2-to-esg" in lib_text
+    assert "step-phase-a" in lib_text
+    assert "step-phase-b" in lib_text
+    assert "step-phase-c" in lib_text
+    assert "step-phase-d" in lib_text
+
+    # 5. CSS rules in index.css
+    css_text = index_css_file.read_text(encoding="utf-8")
+    assert ".window-boundary-card" in css_text
+    assert ".window-1-boundary" in css_text
+    assert ".window-2-boundary" in css_text
+    assert ".cross-window-bridge" in css_text
+    assert ".btn-quick-launch" in css_text
+    assert ".phase-stepper-bar" in css_text
+    assert ".calm-pulse-active" in css_text
+    assert ".calm-pulse-warning" in css_text
+    assert ".calm-pulse-danger" in css_text

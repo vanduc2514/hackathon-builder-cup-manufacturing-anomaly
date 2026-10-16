@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -225,11 +226,12 @@ def test_mobile_dock_clearance_and_tap_target_invariants() -> None:
     css_content = mobile_css_path.read_text(encoding="utf-8")
 
     # Invariant 1: .m-btn tap target height >= 44px per AGENTS.md §6
-    assert "min-height: 44px" in css_content, ".m-btn must declare min-height: 44px per AGENTS.md §6"
+    assert "min-height: 44px" in css_content, (
+        ".m-btn must declare min-height: 44px per AGENTS.md §6"
+    )
     assert "height: 50px" in css_content, ".m-btn must declare height: 50px"
 
     # Invariant 2: .m-screen has bottom padding >= 80px to clear .m-dock (14px + 66px)
-    import re
     screen_rule_match = re.search(r"\.m-screen\s*\{([^}]+)\}", css_content)
     assert screen_rule_match is not None, "Could not find .m-screen CSS rule in mobile.css"
     screen_rule_body = screen_rule_match.group(1)
@@ -263,4 +265,78 @@ def test_mobile_dock_clearance_and_tap_target_invariants() -> None:
     assert settings_tsx_path.is_file(), f"{settings_tsx_path} must exist"
     settings_content = settings_tsx_path.read_text(encoding="utf-8")
     assert 'id="m-sign-out"' in settings_content, "MobileSettings must render #m-sign-out button"
-    assert 'className="m-btn glass"' in settings_content or 'm-btn' in settings_content
+    assert 'className="m-btn glass"' in settings_content or "m-btn" in settings_content
+
+
+def test_overview_components_css_coverage() -> None:
+    """Verifies that all static and dynamic classNames in Line Overview components exist in index.css.
+
+    Prevents regression of PR #116 / Issue #186/#188 where overview CSS was stripped during relocation.
+    """
+    web_dir = APPS_DIR / "web" / "src"
+    css_path = web_dir / "index.css"
+    assert css_path.is_file(), f"{css_path} must exist"
+    css_text = css_path.read_text(encoding="utf-8")
+
+    css_classes = set(re.findall(r"\.([a-zA-Z0-9_-]+)", css_text))
+
+    overview_files = list((web_dir / "components" / "overview").glob("*.tsx")) + [
+        web_dir / "components" / "views" / "LineOverviewView.tsx"
+    ]
+    assert len(overview_files) >= 5, f"Expected overview component files in {web_dir}"
+
+    all_used_classes: set[str] = set()
+
+    for file_path in overview_files:
+        content = file_path.read_text(encoding="utf-8")
+        for m in re.finditer(r"className=(?:\"([^\"]+)\"|`([^`]+)`)", content):
+            val = m.group(1) or m.group(2)
+            # Expand dynamic interpolations
+            val = val.replace("${l.incidentId ? 'loss-hot' : ''}", "loss-hot")
+            val = val.replace("${hot ? 'loss-item-hot' : ''}", "loss-item-hot")
+            val = val.replace("${off ? 'legend-off' : ''}", "legend-off")
+            val = val.replace("${range === r.min ? 'seg-on' : ''}", "seg-on")
+            val = val.replace("${o.id === scope ? 'machine-option-on' : ''}", "machine-option-on")
+            val = val.replace("${o.hot ? 'machine-option-hot' : ''}", "machine-option-hot")
+            val = val.replace("${delta < 0 ? 'chip-red' : 'chip-green'}", "chip-red chip-green")
+            val = val.replace("${norm}", "planned downtime speed quality")
+            val = re.sub(r"\$\{[^}]+\}", "", val)
+            val = re.sub(r"[^a-zA-Z0-9_-]", " ", val)
+            for c in val.split():
+                c = c.strip()
+                if c and not c.isdigit():
+                    all_used_classes.add(c)
+
+    missing = sorted([c for c in all_used_classes if c not in css_classes])
+    assert not missing, f"Missing CSS rules in apps/web/src/index.css for classes: {missing}"
+
+    # Also verify critical dynamic and responsive selectors
+    required_dynamic = [
+        "loss-planned",
+        "loss-downtime",
+        "loss-speed",
+        "loss-quality",
+        "loss-hot",
+        "loss-icon-planned",
+        "loss-icon-downtime",
+        "loss-icon-speed",
+        "loss-icon-quality",
+        "loss-item-hot",
+        "legend-btn",
+        "legend-off",
+        "seg-on",
+        "machine-option",
+        "machine-option-on",
+        "machine-option-hot",
+        "chip-neutral",
+        "chip-btn",
+    ]
+    missing_dynamic = [c for c in required_dynamic if c not in css_classes]
+    assert not missing_dynamic, f"Missing dynamic overview CSS rules: {missing_dynamic}"
+
+    # Verify responsive layout rules for .ov-main and .kpi-strip
+    assert ".ov-main" in css_text
+    assert ".kpi-strip" in css_text
+    assert "@media (max-width: 1365.98px)" in css_text
+    assert "@media (max-width: 1023.98px)" in css_text
+    assert "@media (max-width: 759.98px)" in css_text

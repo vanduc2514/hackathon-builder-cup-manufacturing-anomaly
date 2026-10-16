@@ -589,6 +589,151 @@ body {
   animation: flowDash 1s linear infinite;
 }
 
+/* Component Visual Interactivity & Edge Highlighting */
+.node-card {
+  transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease), opacity .25s var(--ease);
+}
+.decision-gateway .diamond-card {
+  transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease), opacity .25s var(--ease);
+}
+
+/* Phase-aware glow when highlighted or selected */
+#phase-a .node-card.highlighted,
+#phase-a .node-card.selected {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 3px rgba(229, 72, 77, 0.28), 0 12px 28px rgba(229, 72, 77, 0.16) !important;
+  transform: translateY(-2px);
+  background: #fff !important;
+}
+#phase-b .node-card.highlighted,
+#phase-b .node-card.selected {
+  border-color: var(--warning) !important;
+  box-shadow: 0 0 0 3px rgba(245, 165, 36, 0.28), 0 12px 28px rgba(245, 165, 36, 0.16) !important;
+  transform: translateY(-2px);
+  background: #fff !important;
+}
+#phase-c .node-card.highlighted,
+#phase-c .node-card.selected {
+  border-color: var(--info) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.28), 0 12px 28px rgba(59, 130, 246, 0.16) !important;
+  transform: translateY(-2px);
+  background: #fff !important;
+}
+#phase-d .node-card.highlighted,
+#phase-d .node-card.selected {
+  border-color: var(--success) !important;
+  box-shadow: 0 0 0 3px rgba(18, 161, 80, 0.28), 0 12px 28px rgba(18, 161, 80, 0.16) !important;
+  transform: translateY(-2px);
+  background: #fff !important;
+}
+
+/* Decision Diamonds glow */
+.decision-gateway.highlighted .diamond-card,
+.decision-gateway.selected .diamond-card {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 4px rgba(91, 91, 240, 0.3), 0 14px 32px rgba(91, 91, 240, 0.22) !important;
+  transform: scale(1.02);
+  background: #fff !important;
+}
+
+/* Connected Upstream/Downstream Neighbors */
+.node-card.connected-neighbor {
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.28), 0 6px 18px rgba(30, 41, 90, 0.08) !important;
+  border-color: #818cf8 !important;
+}
+.decision-gateway.connected-neighbor .diamond-card {
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.32), 0 6px 18px rgba(30, 41, 90, 0.08) !important;
+  border-color: #818cf8 !important;
+}
+
+/* SVG Edge Dimming and Highlight */
+.edge-path {
+  transition: opacity .25s ease, stroke .25s ease, stroke-width .25s ease, filter .25s ease;
+}
+.edge-path.edge-highlighted {
+  opacity: 1 !important;
+  stroke: #4338ca !important;
+  stroke-width: 3.8px !important;
+  filter: drop-shadow(0 2px 8px rgba(67, 56, 202, 0.45));
+}
+.edge-path.edge-dimmed {
+  opacity: 0.12 !important;
+}
+
+/* Pulse animation for simulated trigger */
+@keyframes triggerSimulationPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); }
+  50% { transform: scale(1.03); box-shadow: 0 0 0 14px rgba(79, 70, 229, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+}
+.trigger-pulsing {
+  animation: triggerSimulationPulse 0.8s ease-in-out 2 !important;
+}
+
+/* Toast Notifications (Lumina Slate compliant) */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 10000;
+  pointer-events: none;
+}
+.toast {
+  background: rgba(15, 23, 42, 0.94);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.28);
+  font-size: 13px;
+  font-family: var(--font-main);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: all 0.25s var(--ease);
+  pointer-events: auto;
+  max-width: 440px;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.toast-success { border-left: 4px solid var(--success); }
+.toast-warning { border-left: 4px solid var(--warning); }
+.toast-info { border-left: 4px solid var(--accent); }
+
+/* Inline Drawer Log Inspector */
+.log-stream-box {
+  background: #0f172a;
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  margin-top: 10px;
+  display: none;
+  max-height: 140px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.log-stream-box.open {
+  display: block;
+}
+.log-line {
+  display: flex;
+  gap: 8px;
+}
+.log-time { color: #64748b; }
+.log-level-ok { color: #22c55e; font-weight: 600; }
+.log-msg { color: #f1f5f9; }
+
 /* Top-to-Bottom Vertical Pipeline Structure */
 .vertical-pipeline {
   position: relative;
@@ -1178,6 +1323,10 @@ body {
         <span class="material-symbols-outlined">warning</span>
         Incidents
       </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-heading">System Architecture</div>
       <button class="nav-item active">
         <span class="material-symbols-outlined">account_tree</span>
         System Topology
@@ -1811,6 +1960,9 @@ body {
   </main>
 </div>
 
+<!-- Toast Notification Container -->
+<div class="toast-container" id="toast-container"></div>
+
 <!-- Side Drawer (Deep-Dive Tier 3) -->
 <div class="drawer-scrim" id="drawer-scrim" onclick="closeDrawer()"></div>
 <aside class="node-drawer" id="node-drawer">
@@ -1872,6 +2024,43 @@ body {
     <div class="drawer-section">
       <div class="section-label">Live Blackboard Payload</div>
       <pre class="code-block" id="drawer-payload">{}</pre>
+    </div>
+
+    <!-- Component Actions & Interactive Simulation Bar -->
+    <div class="drawer-section">
+      <div class="section-label">Component Actions & Interactive Simulation</div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button class="btn btn-sm btn-outline" id="btn-simulate-trigger" onclick="simulateActiveComponentTrigger()" style="flex: 1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+          <span class="material-symbols-outlined" style="font-size: 18px; color: var(--accent);">bolt</span>
+          <span>Simulate Trigger</span>
+        </button>
+        <button class="btn btn-sm btn-outline" id="btn-copy-json" onclick="copyBlackboardPayload()" style="flex: 1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+          <span class="material-symbols-outlined" style="font-size: 18px;">content_copy</span>
+          <span>Copy JSON</span>
+        </button>
+        <button class="btn btn-sm btn-outline" id="btn-inspect-logs" onclick="inspectComponentLogs()" style="flex: 1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+          <span class="material-symbols-outlined" style="font-size: 18px;">receipt_long</span>
+          <span>Inspect Logs</span>
+        </button>
+      </div>
+      <!-- Expandable Log Stream Preview -->
+      <div class="log-stream-box" id="drawer-logs-box">
+        <div class="log-line">
+          <span class="log-time">17:42:01.102</span>
+          <span class="log-level-ok">[INFO]</span>
+          <span class="log-msg" id="log-msg-1">Service endpoint healthcheck: 200 OK</span>
+        </div>
+        <div class="log-line">
+          <span class="log-time">17:42:01.214</span>
+          <span class="log-level-ok">[STATE]</span>
+          <span class="log-msg" id="log-msg-2">Blackboard channel subscription synchronized</span>
+        </div>
+        <div class="log-line">
+          <span class="log-time">17:42:01.350</span>
+          <span class="log-level-ok">[ACK]</span>
+          <span class="log-msg" id="log-msg-3">Telemetry payload valid. SLA threshold met.</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2408,7 +2597,7 @@ function renderSvgEdges() {
       markerId = 'marker-arrow-completed';
     }
 
-    html += `<path d="${pathD}" class="${edgeClass}" marker-end="url(#${markerId})" />`;
+    html += `<path d="${pathD}" class="${edgeClass}" data-from="${edge.from}" data-to="${edge.to}" id="edge-${edge.from}-${edge.to}" marker-end="url(#${markerId})" />`;
   }
 
   group.innerHTML = html;
@@ -2529,10 +2718,105 @@ function setNodeStatus(id, type, label) {
   }
 }
 
+/* Selected Node & Component Interactivity State */
+let selectedNodeId = null;
+let activeDrawerComponentId = null;
+
+/* Visual Interactivity & Edge Highlighting */
+function highlightConnections(elementId) {
+  if (!elementId) {
+    if (selectedNodeId) {
+      highlightConnections(selectedNodeId);
+      return;
+    }
+    clearHighlights();
+    return;
+  }
+
+  // Clear previous temporary highlights but keep selected if any
+  document.querySelectorAll('.node-card, .decision-gateway').forEach(n => {
+    n.classList.remove('highlighted', 'connected-neighbor');
+  });
+
+  const targetEl = document.getElementById(elementId);
+  if (targetEl) targetEl.classList.add('highlighted');
+
+  const connectedNeighbors = new Set();
+
+  document.querySelectorAll('.edge-path').forEach(p => {
+    const from = p.getAttribute('data-from');
+    const to = p.getAttribute('data-to');
+    if (from === elementId || to === elementId) {
+      p.classList.add('edge-highlighted');
+      p.classList.remove('edge-dimmed');
+      if (from === elementId && to) connectedNeighbors.add(to);
+      if (to === elementId && from) connectedNeighbors.add(from);
+    } else {
+      p.classList.add('edge-dimmed');
+      p.classList.remove('edge-highlighted');
+    }
+  });
+
+  // Mark upstream / downstream neighbors
+  connectedNeighbors.forEach(neighborId => {
+    const neighborEl = document.getElementById(neighborId);
+    if (neighborEl && neighborId !== elementId) {
+      neighborEl.classList.add('connected-neighbor');
+    }
+  });
+}
+
+function clearHighlights() {
+  document.querySelectorAll('.edge-path').forEach(p => {
+    p.classList.remove('edge-highlighted', 'edge-dimmed');
+  });
+  document.querySelectorAll('.node-card, .decision-gateway').forEach(n => {
+    if (n.id !== selectedNodeId) {
+      n.classList.remove('highlighted', 'connected-neighbor');
+    }
+  });
+}
+
+function setupComponentInteractions() {
+  const components = document.querySelectorAll('.node-card, .decision-gateway');
+  components.forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      highlightConnections(el.id);
+    });
+    el.addEventListener('mouseleave', () => {
+      if (selectedNodeId) {
+        highlightConnections(selectedNodeId);
+      } else {
+        clearHighlights();
+      }
+    });
+  });
+
+  // Dismiss on clicking canvas background
+  const viewport = document.getElementById('canvas-viewport');
+  if (viewport) {
+    viewport.addEventListener('click', (e) => {
+      if (!e.target.closest('.node-card') && 
+          !e.target.closest('.decision-gateway') && 
+          !e.target.closest('#node-drawer') && 
+          !e.target.closest('.canvas-toolbar') && 
+          !e.target.closest('.scenario-bar')) {
+        closeDrawer();
+      }
+    });
+  }
+}
+
 /* Side Drawer Controls */
 function openNodeDrawer(nodeId) {
   const data = NODE_DATA[nodeId];
   if (!data) return;
+
+  const card = document.querySelector(`[data-node="${nodeId}"]`) || document.getElementById(`node-${nodeId}`);
+  const domId = card ? card.id : `node-${nodeId}`;
+
+  selectedNodeId = domId;
+  activeDrawerComponentId = domId;
 
   document.getElementById('drawer-title').innerText = data.title;
   document.getElementById('drawer-subtitle').innerText = data.subtitle;
@@ -2545,36 +2829,60 @@ function openNodeDrawer(nodeId) {
   document.getElementById('drawer-payload').innerText = JSON.stringify(data.payload, null, 2);
   document.getElementById('drawer-icon').innerHTML = `<span class="material-symbols-outlined">${data.icon}</span>`;
 
-  document.querySelectorAll('.node-card').forEach(c => c.classList.remove('selected'));
-  const card = document.querySelector(`[data-node="${nodeId}"]`);
+  // Hide logs box by default on new node selection
+  const logsBox = document.getElementById('drawer-logs-box');
+  if (logsBox) logsBox.classList.remove('open');
+
+  document.querySelectorAll('.node-card, .decision-gateway').forEach(c => c.classList.remove('selected'));
   if (card) card.classList.add('selected');
+
+  highlightConnections(domId);
 
   document.getElementById('drawer-scrim').classList.add('open');
   document.getElementById('node-drawer').classList.add('open');
 }
 
 function openDecisionDrawer(num) {
+  const domId = num === 1 ? 'decision-gate-1' : 'decision-gate-2';
+  selectedNodeId = domId;
+  activeDrawerComponentId = domId;
+
+  const gateEl = document.getElementById(domId);
+  document.querySelectorAll('.node-card, .decision-gateway').forEach(c => c.classList.remove('selected'));
+  if (gateEl) gateEl.classList.add('selected');
+
+  highlightConnections(domId);
+
+  // Hide logs box by default
+  const logsBox = document.getElementById('drawer-logs-box');
+  if (logsBox) logsBox.classList.remove('open');
+
   if (num === 1) {
     document.getElementById('drawer-title').innerText = 'Decision Diamond 1: Root Cause Confidence';
     document.getElementById('drawer-subtitle').innerText = 'Threshold: Confidence >= 0.70 Gate';
     document.getElementById('drawer-tier-chip').innerText = 'Tier 4 · Swarm Convergence Gate';
-    document.getElementById('drawer-jtbd').innerText = 'Evaluates statistical and causal certainty of the Root Cause Agent before initiating physical field repair at the machine.';
+    document.getElementById('drawer-jtbd').innerText = 'Evaluates statistical and causal certainty of the Root Cause Agent before initiating physical field repair at the machine. Routes to Copilot (>= 0.70) or Diagnostic Agent (< 0.70).';
     document.getElementById('drawer-stack').innerText = 'Deterministic Logic Gate · ADK Route';
     document.getElementById('drawer-sla').innerText = '< 20ms evaluation';
     document.getElementById('drawer-channel').innerText = 'blackboard.decisions.confidence_gate';
     document.getElementById('drawer-fallback').innerText = 'Route to Diagnostic Loop on error';
     document.getElementById('drawer-payload').innerText = JSON.stringify({
+      "gate_id": "GATE-01-CONFIDENCE",
       "threshold": 0.70,
       "evaluated_confidence": 0.89,
       "result": "FORWARD_PHASE_C_RESOLUTION",
-      "alternative_route": "DIAGNOSTIC_LOOP_AWAITING_EVIDENCE"
+      "alternative_route": "DIAGNOSTIC_LOOP_AWAITING_EVIDENCE",
+      "branches": {
+        "yes_branch": "node-copilot-live",
+        "no_branch": "node-diagnostic-agent"
+      }
     }, null, 2);
     document.getElementById('drawer-icon').innerHTML = '<span class="material-symbols-outlined">alt_route</span>';
   } else {
     document.getElementById('drawer-title').innerText = 'Decision Diamond 2: Invariant #3 Strict Streak Gate';
     document.getElementById('drawer-subtitle').innerText = 'Shop-Floor Product Evidence Law';
     document.getElementById('drawer-tier-chip').innerText = 'Tier 5 · Physical Proof Gate';
-    document.getElementById('drawer-jtbd').innerText = 'Invariant #3 strictly forbids closure sign-off until the conveyor optical camera records 50 consecutive clean workpieces without defect.';
+    document.getElementById('drawer-jtbd').innerText = 'Invariant #3 strictly forbids closure sign-off until the conveyor optical camera records 50 consecutive clean workpieces without defect. Any defect drops streak to 0/50.';
     document.getElementById('drawer-stack').innerText = 'Conveyor Vision · Hardware Counter';
     document.getElementById('drawer-sla').innerText = '50 consecutive cycles';
     document.getElementById('drawer-channel').innerText = 'blackboard.verification.streak_counter';
@@ -2583,6 +2891,7 @@ function openDecisionDrawer(num) {
       "invariant": "Invariant #3 (Product Evidence)",
       "target_streak": 50,
       "current_streak": 42,
+      "streak_progress_pct": "84%",
       "shift_leader_approval_unlocked": false,
       "reset_penalty_on_defect": "Drop to 0 and escalate"
     }, null, 2);
@@ -2596,7 +2905,83 @@ function openDecisionDrawer(num) {
 function closeDrawer() {
   document.getElementById('drawer-scrim').classList.remove('open');
   document.getElementById('node-drawer').classList.remove('open');
-  document.querySelectorAll('.node-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.node-card, .decision-gateway').forEach(c => c.classList.remove('selected', 'highlighted', 'connected-neighbor'));
+  selectedNodeId = null;
+  activeDrawerComponentId = null;
+  clearHighlights();
+}
+
+/* Interactive Actions & Simulation Handlers */
+function simulateActiveComponentTrigger() {
+  const targetId = activeDrawerComponentId || selectedNodeId;
+  if (!targetId) return;
+
+  const el = document.getElementById(targetId);
+  const title = document.getElementById('drawer-title').innerText;
+  const sla = document.getElementById('drawer-sla').innerText;
+
+  if (el) {
+    el.classList.add('trigger-pulsing');
+    setTimeout(() => el.classList.remove('trigger-pulsing'), 1800);
+  }
+
+  // Flash outgoing edges with active pulse
+  document.querySelectorAll(`.edge-path[data-from="${targetId}"]`).forEach(edge => {
+    edge.classList.add('active');
+    setTimeout(() => {
+      if (currentScenario === 'nominal') edge.classList.remove('active');
+    }, 2400);
+  });
+
+  showToast(`⚡ Simulated trigger event dispatched to: ${title} (${sla})`, 'info');
+}
+
+function copyBlackboardPayload() {
+  const payloadText = document.getElementById('drawer-payload').innerText;
+  if (!payloadText) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(payloadText).then(() => {
+      showToast('📋 Blackboard JSON payload copied to clipboard', 'success');
+    }).catch(() => {
+      showToast('📋 Blackboard JSON payload ready', 'info');
+    });
+  } else {
+    showToast('📋 Blackboard JSON payload ready', 'info');
+  }
+}
+
+function inspectComponentLogs() {
+  const channel = document.getElementById('drawer-channel').innerText;
+  const logsBox = document.getElementById('drawer-logs-box');
+  if (logsBox) {
+    logsBox.classList.toggle('open');
+    if (logsBox.classList.contains('open')) {
+      document.getElementById('log-msg-1').innerText = `Service endpoint healthcheck: 200 OK (${channel})`;
+      document.getElementById('log-msg-2').innerText = `State sync: Received ACK from Cloud Run cluster`;
+      document.getElementById('log-msg-3').innerText = `Telemetry payload stream active · 0 errors reported`;
+      showToast(`🔍 Inspecting live logs for channel: ${channel}`, 'info');
+    }
+  }
+}
+
+function showToast(msg, type = 'info') {
+  let toastContainer = document.getElementById('toast-container');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.id = 'toast-container';
+    toastContainer.className = 'toast-container';
+    document.body.appendChild(toastContainer);
+  }
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  const icon = type === 'success' ? 'check_circle' : type === 'warning' ? 'warning' : 'info';
+  toast.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px; color: ${type === 'success' ? 'var(--success)' : type === 'warning' ? 'var(--warning)' : 'var(--accent)'};">${icon}</span> <span>${msg}</span>`;
+  toastContainer.appendChild(toast);
+  setTimeout(() => toast.classList.add('show'), 10);
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
 }
 
 window.addEventListener('keydown', (e) => {
@@ -2615,6 +3000,7 @@ function exportTopologyJson() {
 window.addEventListener('load', () => {
   renderSvgEdges();
   updateMinimapViewport();
+  setupComponentInteractions();
 });
 window.addEventListener('resize', () => {
   renderSvgEdges();

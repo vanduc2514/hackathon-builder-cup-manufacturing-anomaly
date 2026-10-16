@@ -18,6 +18,8 @@ Following user and product design feedback, this redesign transforms the page in
 2. **Dual Decision Gates (Decision Diamonds):** Explicitly surfaces the AI uncertainty threshold (`Confidence >= 0.70?`) with a Diagnostic Loop return path, and the shop-floor physical proof gate (**Invariant #3**: `Streak >= 50 clean parts`) with an automatic defect reset loop.
 3. **Ergonomic Canvas Controls & Orthogonal Flowchart Routing:** Replaces soft Bézier curves with crisp, high-contrast orthogonal step connectors (`right-angled step routing`) and enlarged $8 \times 8$ px arrowhead markers. Default connectors use solid dark slate (`#475569`, 2.4px) for immediate readability on `#eef1fb`, switching to animated pulsed dashed lines during active execution. Includes intuitive zoom/pan navigation (Zoom In, Zoom Out, Reset 100%, Fit-to-View), a live vertical Minimap preview, and full glove-friendly touch target compliance ($\ge 44 \times 44$ px).
 4. **Calm Tech & Progressive Disclosure (3 Tiers):** Maintains a calm, low-cognitive-load lavender canvas (`#eef1fb`) with frosted glass nodes, reserving high-contrast semantic alerts only for active anomalies and decision branches.
+5. **Dedicated System Architecture Navigation:** Decouples the System Topology entry point from the task-focused `Operational Loop` (which contains `Line Overview` and active `Incidents`) into an independent `System Architecture` sidebar section positioned between Operational Loop and Knowledge Loop.
+6. **Deep Visual Component Interactivity & Edge Highlighting:** Hovering or clicking any component triggers phase-calibrated glowing illumination (`#phase-a`: danger, `#phase-b`: warning/accent, `#phase-c`: info, `#phase-d`: success), highlights connected incoming and outgoing edges (`3.8px`, `#4338ca` with drop shadow) while dimming background edges (`opacity: 0.12`), rings immediate upstream/downstream neighbors, and unlocks interactive drawer triggers (`Simulate Trigger`, `Copy JSON`, `Inspect Logs`).
 
 ---
 
@@ -220,6 +222,22 @@ flowchart TD
 
 ---
 
+## 7. Deep Component Visual Interactivity & Flow Tracing
+
+To provide technicians and systems engineers with intuitive situational awareness without visual overload, each component on the Topology canvas supports deep visual interactivity:
+
+| Interaction Event | Visual & Behavioral Feedback | Shop-Floor Ergonomics |
+|---|---|---|
+| **Hover on Node / Gate** | Immediate phase-calibrated glowing border (`0 0 0 3px` tint) + `$2\text{px}$` elevation lift. Connected incoming/outgoing edges switch to `.edge-highlighted` (`3.8px`, `#4338ca`, drop shadow); all non-connected edges dim to `opacity: 0.12`. | Clear visual tracing of data provenance without clicking. |
+| **Click / Select Node** | Locks component selection with persistent glowing border. Immediate upstream/downstream neighbors receive subtle `.connected-neighbor` accent ring. Slides open the Tier 3 `TopologyNodeDrawer`. | Glove-friendly hit target covers entire node card ($360 \times 104\text{ px}$). |
+| **Click Decision Gate** | Selects Diamond Gateway (`decision-gate-1` or `decision-gate-2`), highlights incoming upstream metrics and outgoing branch conduits. Opens gate decision logic in Drawer. | Diamond card touch target $580 \times 80\text{ px}$. |
+| **Drawer: Simulate Trigger** | Dispatches an interactive simulation ripple (`@keyframes triggerSimulationPulse`) across the canvas node, flashes outgoing flow paths with animated pulses, and displays a Lumina Slate toast alert: `⚡ Simulated trigger event dispatched to: [Node Name] ([SLA])`. | Instant visual verification of component execution behavior. |
+| **Drawer: Copy JSON** | Copies formatted blackboard JSON payload to system clipboard; displays confirmation toast: `📋 Blackboard JSON payload copied to clipboard`. | Fast export for diagnostics and debugging. |
+| **Drawer: Inspect Logs** | Toggles inline monospace Cloud Logging stream showing recent timestamped entries (`[INFO]`, `[STATE]`, `[ACK]`) and channel synchronization status. | Immediate access to audit trails without navigating away. |
+| **Canvas Background Click** | Clears active selection, closes SideDrawer, and restores all SVG connectors to standard scenario opacity. | Ergonomic one-touch dismiss on touchscreens. |
+
+---
+
 ## 8. Low-Fi ASCII Wireframe: Desktop Layout (1440 × 900 px)
 
 ```text
@@ -388,8 +406,16 @@ flowchart TD
 | 2. Why tool worn? Cutting cycle exceeded rating by 140 pcs. |
 | 3. Why exceeded? Lot genealogy shows FC250 hardness surge.  |
 +-------------------------------------------------------------+
-| ACTIONS:                                                    |
-| [ View in Incident Command -> ]      [ Copy Node Telemetry ]|
+| COMPONENT ACTIONS & INTERACTIVE SIMULATION:                 |
+| [ ⚡ Simulate Trigger ] [ 📋 Copy JSON ] [ 🔍 Inspect Logs ]  |
+|                                                             |
+| LOG STREAM PREVIEW (EXPANDABLE):                            |
+| 17:42:01.102 [INFO]  Service endpoint healthcheck: 200 OK   |
+| 17:42:01.214 [STATE] Blackboard channel synchronized        |
+| 17:42:01.350 [ACK]   Telemetry payload valid. SLA met.      |
++-------------------------------------------------------------+
+| PRIMARY CTA:                                                |
+| [ Inspect in Incident Command -> (48px) ]   [ Dismiss ]     |
 +-------------------------------------------------------------+
 ```
 
@@ -470,3 +496,6 @@ flowchart TD
 - [x] **AC-TOP-05:** Tapping any node card or decision gate opens the `TopologyNodeDrawer` with complete technical specification, cognitive tier classification, blackboard channel, and JSON payload.
 - [x] **AC-TOP-06:** Lumina Slate Design System tokens (pure CSS, light mode `#eef1fb`, frosted glass cards) applied 100% without external libraries or dark canvas.
 - [x] **AC-TOP-07:** Six interactive simulation scenarios testable directly in the prototype (Nominal, Active Anomaly, Low Confidence Loop, Verification Streak, Streak Reset, Closed & Approved).
+- [x] **AC-TOP-08:** Navigation entry point for System Topology is housed in a dedicated **`System Architecture`** sidebar section, fully decoupled from the task-oriented **`Operational Loop`** (`Line Overview`, `Incidents`) and educational **`Knowledge Loop`**.
+- [x] **AC-TOP-09:** Visual component interactivity enables deep inspection: hovering/selecting any node or decision gate applies a phase-aware halo ring, highlights connected incoming and outgoing edges (`3.8px`, `#4338ca`), dims unrelated background edges (`opacity: 0.12`), and indicates upstream/downstream neighbors.
+- [x] **AC-TOP-10:** SideDrawer features interactive action triggers ($\ge 44 	imes 44\text{ px}$): `Simulate Trigger` with canvas ripple feedback, `Copy JSON` with clipboard confirmation, and expandable `Inspect Logs` Cloud Logging stream.

@@ -42,8 +42,10 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
  │ ╭ Cell Line 1 …    ╮ │  ╰─────────────────────────────╯
  │ OPERATIONAL LOOP     │  PageTitle                                         [ Button ] [■ Button primary ■]
  │ ▣ Line Overview  *   │  ╭── GlassCard (24) ────────────────────────────────────────────────────────────╮
- │ ⚠ Incidents          │  │  {tab content: overview · incident-detail · walkthroughs · impact · sops}    │
- │ KNOWLEDGE LOOP       │  ╰──────────────────────────────────────────────────────────────────────────────╯
+ │ ⚠ Incidents          │  │  {tab content: overview · incident-detail · topology · walkthroughs · …}     │
+ │ SYSTEM ARCHITECTURE  │  ╰──────────────────────────────────────────────────────────────────────────────╯
+ │ ⑂ System Topology    │
+ │ KNOWLEDGE LOOP       │
  │ ▶ Tech Walkthroughs  │
  │ ▤ Knowledge Base     │                                                          ╭─ Toast (DarkGlass) ╮
  │ ☰ SOP Change Log     │                                                          ╰────────────────────╯

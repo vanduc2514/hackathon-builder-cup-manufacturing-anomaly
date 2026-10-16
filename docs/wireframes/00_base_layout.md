@@ -25,6 +25,7 @@ flowchart TD
         B -->|"Shift Leader / Plant Ops"| C["Floating glass Sidebar + floating TopHeader pills + main"]
         C --> D{"Sidebar groups (DashboardTab state)"}
         D -->|"Operational Loop"| D1["Line Overview (overview) • Incidents (incident-detail + per-incident sub-tabs)"]
+        D -->|"System Architecture"| D3["System Topology (topology)"]
         D -->|"Knowledge Loop"| D2["Tech Walkthroughs (walkthroughs) • Knowledge Base (impact) • SOP Change Log (sops)"]
         C --> E["TopHeader: crumb pill • N Active Anomaly chip • ⌘K jump palette • sound toggle • avatar"]
         C --> F["Sidebar footer: latency dot • shift chip • role card (icon + Shift Leader)"]
@@ -56,6 +57,8 @@ Root App
 │   │   ├── NavItem: Line Overview
 │   │   └── NavItem: Incidents
 │   │       └── closable mono sub-tabs, one per opened incident (indented left rule)
+│   ├── Eyebrow "System Architecture"
+│   │   └── NavItem: System Topology
 │   ├── Eyebrow "Knowledge Loop"
 │   │   ├── NavItem: Tech Walkthroughs
 │   │   ├── NavItem: Knowledge Base
@@ -101,10 +104,13 @@ Root App
   │ ⚠ Incidents          │   │   {Each tab mounts its focused content into Page}                                                           │
   │   │ #INC-… ×         │   │                                                                                                             │
   │                      │   │   - overview:        AnomalyBanner + 4 KPI cards + MachineFleetTable                                        │
-  │ KNOWLEDGE LOOP       │   │   - incident-detail: 5 StepSections + StepRail + 8D sign-off                                                │
-  │ ▶ Tech Walkthroughs  │   │   - walkthroughs / impact / sops: Knowledge Loop pages                                                      │
-  │ ▤ Knowledge Base     │   │                                                                                                             │
-  │ ☰ SOP Change Log     │   ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  │ SYSTEM ARCHITECTURE  │   │   - incident-detail: 5 StepSections + StepRail + 8D sign-off                                                │
+  │ ⑂ System Topology    │   │   - topology:        Top-to-Bottom 4-Phase Reactive Workflow Pipeline                                       │
+  │                      │   │   - walkthroughs / impact / sops: Knowledge Loop pages                                                      │
+  │ KNOWLEDGE LOOP       │   │                                                                                                             │
+  │ ▶ Tech Walkthroughs  │   ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  │ ▤ Knowledge Base     │
+  │ ☰ SOP Change Log     │
   │                      │
   │ (●) 24 ms  [Shift A] │                                                                                       ╭─ Toast (DarkGlass) ──────╮
   │ (◉) Shift Leader     │                                                                                       │ ✓ Message (auto 5s)      │

@@ -475,29 +475,80 @@ export interface EsgLedgerResponse {
   factory_type: string;
 }
 
-// System Topology & Realtime Execution Graph Types (Issue #205)
+// System Topology & Realtime Execution Graph Types (Issue #205 & Issue #211)
+
+export type TopologyLayerId =
+  | 'layer-1'
+  | 'layer-2'
+  | 'layer-3'
+  | 'layer-4'
+  | 'layer-5';
+
+export type TopologyScenarioId =
+  | 'nominal'
+  | 'detecting'
+  | 'low_confidence'
+  | 'streak_verifying'
+  | 'streak_reset'
+  | 'approved';
 
 export type TopologyNodeId =
+  // Layer 1: Factory Floor · Edge Data Sources
+  | 'floor-machines'
+  | 'floor-cameras'
+  | 'floor-sensors'
+  | 'floor-mics'
+  | 'floor-tags'
+  // Layer 2: On-Premises Gateway · Gemma Edge & Bridge
   | 'edge-gemma'
-  | 'cloud-ingest'
+  | 'edge-bridge'
+  // Layer 3: Google Cloud · Data & AI Platform
+  | 'gcp-pubsub'
+  | 'gcp-bigquery'
+  | 'gcp-firestore'
+  | 'gcp-rag'
+  | 'gcp-gemini'
+  // Layer 4: Agent Team · Google ADK Multi-Agent System
+  | 'adk-orch'
   | 'agent-qa'
   | 'agent-tra'
   | 'agent-pa'
   | 'agent-rca'
+  | 'decision-gate-1'
+  | 'diagnostic-agent'
+  | 'technician-photo'
   | 'copilot-live'
   | 'agent-scribe'
-  | 'gatekeeper-qa'
   | 'agent-learn'
+  // Layer 5: Human-in-the-Loop & Operational Outputs
+  | 'human-tech'
+  | 'verify-camera'
+  | 'decision-gate-2'
+  | 'streak-reset'
+  | 'human-dash'
+  | 'human-lead'
+  | 'output-docs'
+  // Backward-compatibility aliases for legacy tests (Issue #205)
+  | 'cloud-ingest'
+  | 'gatekeeper-qa'
   | 'human-approval';
 
-export type TopologyPhaseId = 'phase-a' | 'phase-b' | 'phase-c' | 'phase-d';
+export type TopologyPhaseId =
+  | 'phase-a'
+  | 'phase-b'
+  | 'phase-c'
+  | 'phase-d'
+  | TopologyLayerId;
 
 export type TopologyTier =
   | 'Tier 1 & 2'
+  | 'Tier 1'
+  | 'Tier 2'
   | 'Tier 3 & 4'
   | 'Tier 4'
   | 'Tier 4 & 5'
-  | 'Tier 5';
+  | 'Tier 5'
+  | string;
 
 export type TopologyNodeStatus =
   | 'idle'
@@ -505,11 +556,28 @@ export type TopologyNodeStatus =
   | 'done'
   | 'error'
   | 'pending_approval'
-  | 'waiting';
+  | 'waiting'
+  | 'nominal'
+  | 'warning'
+  | 'danger'
+  | 'locked'
+  | 'completed';
+
+export type DashboardTab = 'overview' | 'topology' | 'incident-detail' | 'impact' | 'walkthroughs' | 'sops';
+
+export interface TopologyUiRef {
+  surface: string;
+  route: string;
+  component: string;
+  ctaLabel: string;
+  previewHtml?: string;
+  targetTab?: 'overview' | 'topology' | 'incident-detail' | 'impact' | 'walkthroughs' | 'sops';
+}
 
 export interface TopologyNodeDefinition {
   id: TopologyNodeId;
   phase: TopologyPhaseId;
+  layer?: TopologyLayerId;
   label: string;
   sublabel: string;
   tier: TopologyTier;
@@ -518,11 +586,30 @@ export interface TopologyNodeDefinition {
   techStack: string[];
   jtbd: string;
   order: number;
+  sla?: string;
+  channel?: string;
+  fallback?: string;
+  uiRef?: TopologyUiRef;
+  payload?: Record<string, unknown>;
+  isDecisionGate?: boolean;
 }
+
+export type TopologyEdgeType =
+  | 'vertical'
+  | 'horizontal'
+  | 'branch-left'
+  | 'branch-right'
+  | 'loop-left'
+  | 'loop-right'
+  | 'gutter-right'
+  | 'gutter-left'
+  | 'loopback'
+  | 'loopback-long';
 
 export interface TopologyEdgeDefinition {
   from: TopologyNodeId;
   to: TopologyNodeId;
+  type?: TopologyEdgeType;
   label?: string;
 }
 
@@ -535,13 +622,24 @@ export interface TopologyNodeState {
   details: Record<string, string | number | boolean | null | undefined>;
 }
 
+export interface TopologyLayerDefinition {
+  id: TopologyLayerId;
+  tag: string;
+  name: string;
+  subtitle: string;
+  description: string;
+  badgeColor: string;
+  badgeHex: string;
+  nodeIds: TopologyNodeId[];
+}
+
 export interface TopologyPhaseDefinition {
   id: TopologyPhaseId;
-  letter: 'A' | 'B' | 'C' | 'D';
+  letter: 'A' | 'B' | 'C' | 'D' | '1' | '2' | '3' | '4' | '5' | string;
   name: string;
   vietnameseName: string;
   description: string;
-  lampColor: 'red' | 'yellow' | 'blue' | 'green';
+  lampColor: 'red' | 'yellow' | 'blue' | 'green' | string;
   lampHex: string;
 }
 

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -138,27 +141,22 @@ def test_api_docs_are_served_only_outside_production(monkeypatch: pytest.MonkeyP
         importlib.reload(main_module)
 
 
-def test_backend_has_zero_import_dependencies_on_simulator(monkeypatch: pytest.MonkeyPatch):
+def test_backend_has_zero_import_dependencies_on_simulator():
     """Verifies that backend modules have zero import dependencies on simulator package."""
-    import importlib
-    import sys
-
-    # Simulate runtime environment without simulator on sys.path
-    monkeypatch.setitem(sys.modules, "simulator", None)
-    monkeypatch.setitem(sys.modules, "simulator.injection_engine", None)
-    monkeypatch.setitem(sys.modules, "simulator.conveyor_simulator", None)
-    monkeypatch.setitem(sys.modules, "simulator.machine_simulator", None)
-    monkeypatch.setitem(sys.modules, "simulator.models", None)
-
-    import backend.agents.agent_quality_inspector
-    import backend.agents.orchestrator
-    import backend.agents.workflow_nodes
-    import backend.api.main
-    import backend.api.routes_simulation
-
-    # Reload to verify imports do not reach out to simulator
-    importlib.reload(backend.agents.agent_quality_inspector)
-    importlib.reload(backend.agents.workflow_nodes)
-    importlib.reload(backend.api.routes_simulation)
-    importlib.reload(backend.agents.orchestrator)
-    importlib.reload(backend.api.main)
+    code = (
+        "import sys\n"
+        "sys.modules['simulator'] = None\n"
+        "sys.modules['simulator.injection_engine'] = None\n"
+        "sys.modules['simulator.conveyor_simulator'] = None\n"
+        "sys.modules['simulator.machine_simulator'] = None\n"
+        "sys.modules['simulator.models'] = None\n"
+        "import backend.agents.agent_quality_inspector\n"
+        "import backend.agents.orchestrator\n"
+        "import backend.agents.workflow_nodes\n"
+        "import backend.api.main\n"
+        "import backend.api.routes_simulation\n"
+    )
+    env = dict(os.environ)
+    env["PYTHONPATH"] = "."
+    res = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env)
+    assert res.returncode == 0, f"Import failed without simulator:\n{res.stderr}"

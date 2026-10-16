@@ -109,17 +109,18 @@ class FactorySimulatorClient:
                         details=data if isinstance(data, dict) else None,
                     )
 
+                body_preview = response.text[:200]
                 logger.warning(
                     "Factory simulator request to %s returned HTTP %d: %s",
                     endpoint,
                     response.status_code,
-                    response.text,
+                    body_preview,
                 )
                 return FactorySyncResult(
                     ok=False,
                     latency_ms=latency_ms,
                     endpoint=endpoint,
-                    error=f"HTTP {response.status_code}: {response.text}",
+                    error=f"HTTP {response.status_code}: {body_preview}",
                     skipped=False,
                 )
         except Exception as exc:

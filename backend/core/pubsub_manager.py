@@ -72,6 +72,7 @@ class PubSubManager:
         self._cached_available = None
         self._publisher = None
         self._subscriber = None
+        self._loop = None
         with self._dedup_lock:
             self._seen_events.clear()
 
@@ -206,6 +207,8 @@ class PubSubManager:
 
         return msg_id is not None
 
+    publish_traceability_record = publish_traceability
+
     def publish_quality_event(self, payload: QualityEventPayload) -> bool:
         """Publishes defect/SPC breach event to quality-events topic, triggering Orchestrator."""
         if not self.is_available():
@@ -297,8 +300,6 @@ class PubSubManager:
                     message.ack()
                     return
 
-                self._seen_events[event.event_id] = now_mono
-
             # 3. Single-flight guard: ignore & ack duplicate events when incident is active
             from backend.agents.orchestrator import orchestrator
 
@@ -306,6 +307,8 @@ class PubSubManager:
                 logger.info(
                     "Ignored duplicate quality event %s while incident is active", event.event_id
                 )
+                with self._dedup_lock:
+                    self._seen_events[event.event_id] = time.monotonic()
                 message.ack()
                 return
 
@@ -316,8 +319,13 @@ class PubSubManager:
             else:
                 started = orchestrator.start_incident(trigger)
             logger.info("Quality event %s dispatched to Orchestrator: %s", event.event_id, started)
+            with self._dedup_lock:
+                self._seen_events[event.event_id] = time.monotonic()
             message.ack()
         except Exception as exc:
+            if "event" in locals() and hasattr(event, "event_id"):
+                with self._dedup_lock:
+                    self._seen_events.pop(event.event_id, None)
             logger.error("Error processing Pub/Sub quality event message: %s", exc)
             message.nack()
 

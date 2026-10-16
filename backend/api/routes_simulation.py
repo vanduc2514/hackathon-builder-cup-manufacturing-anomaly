@@ -7,7 +7,12 @@ from typing import Any, Dict
 from fastapi import APIRouter, HTTPException
 
 from backend.agents.orchestrator import orchestrator
-from backend.core.models import DefectInjectionRequest, SimulationStatusResponse
+from backend.core.models import (
+    DefectInjectionRequest,
+    SimulationInjectResponse,
+    SimulationResetResponse,
+    SimulationStatusResponse,
+)
 from backend.tools.bigquery_tool import reset_buffers
 from backend.tools.factory_client import factory_client
 
@@ -30,8 +35,10 @@ def _resolve_trigger(req: DefectInjectionRequest) -> DefectInjectionRequest:
     return req.model_copy(update=unset)
 
 
-@router.post("/inject")
-async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) -> Dict[str, Any]:
+@router.post("/inject", response_model=SimulationInjectResponse)
+async def inject_defect(
+    req: DefectInjectionRequest = DefectInjectionRequest(),
+) -> SimulationInjectResponse:
     """Injects the scenario's defect burst into the simulator and starts the incident workflow."""
     # 1. Reject if incident already running before making any external calls
     if orchestrator.is_running:
@@ -75,7 +82,12 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) 
         else (8.0 if trigger.mode == "fast" else 90.0)
     )
 
-    # 2. Call factory simulator to inject anomaly (skip quality event dispatch)
+    # 2. Claim the single-flight slot on the orchestrator FIRST (synchronous)
+    started = orchestrator.start_incident(trigger)
+    if not started:
+        raise HTTPException(status_code=409, detail="An incident workflow is already running")
+
+    # 3. Call factory simulator to inject anomaly (skip quality event dispatch)
     factory_sync = await factory_client.inject_anomaly(
         scenario=trigger.scenario,
         machine_id=trigger.machine_id,
@@ -84,36 +96,34 @@ async def inject_defect(req: DefectInjectionRequest = DefectInjectionRequest()) 
         dispatch_quality_event=False,
     )
 
-    # 3. Directly start incident on orchestrator
-    orchestrator.start_incident(trigger)
-
-    return {
-        "status": "triggered",
-        "scenario": trigger.scenario,
-        "mode": trigger.mode,
-        "duration_seconds": duration,
-        "defect_type": trigger.defect_type,
-        "target_machine": trigger.machine_id,
-        "target_tool": trigger.tool_id,
-        "burst_telemetry": burst,
-        "message": message,
-        "factory_sync": factory_sync.model_dump(),
-    }
+    return SimulationInjectResponse(
+        status="triggered",
+        scenario=trigger.scenario,
+        mode=trigger.mode,
+        duration_seconds=duration,
+        defect_type=trigger.defect_type,
+        target_machine=trigger.machine_id,
+        target_tool=trigger.tool_id,
+        burst_telemetry=burst,
+        message=message,
+        factory_sync=factory_sync,
+    )
 
 
-@router.post("/reset")
-async def reset_simulation() -> Dict[str, Any]:
+@router.post("/reset", response_model=SimulationResetResponse)
+async def reset_simulation() -> SimulationResetResponse:
     """Cancels the running workflow, then restores the Blackboard, simulator and BigQuery buffers."""
     state = await orchestrator.reset()
     bq_reset = reset_buffers()
     factory_sync = await factory_client.reset_factory()
-    return {
-        "status": "reset",
-        "message": "Simulation reset to pristine baseline (Blackboard and BigQuery buffers restored)",
-        "state": state,
-        "bigquery": bq_reset,
-        "factory_sync": factory_sync.model_dump(),
-    }
+    state_dict = state.model_dump() if hasattr(state, "model_dump") else state
+    return SimulationResetResponse(
+        status="reset",
+        message="Simulation reset to pristine baseline (Blackboard and BigQuery buffers restored)",
+        state=state_dict,
+        bigquery=bq_reset,
+        factory_sync=factory_sync,
+    )
 
 
 @router.get("/status", response_model=SimulationStatusResponse)

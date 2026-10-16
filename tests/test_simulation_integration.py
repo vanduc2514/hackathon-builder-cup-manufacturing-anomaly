@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, PropertyMock, patch
 
+import httpx
 import pytest
+from httpx import ASGITransport
 from starlette.testclient import TestClient
 
 from backend.agents.orchestrator import orchestrator
@@ -14,6 +17,7 @@ from backend.api.main import app
 from backend.core.config import settings
 from backend.core.models import FactorySyncResult, QualityEventPayload
 from backend.core.pubsub_manager import pubsub_manager
+from backend.tools.factory_client import FactorySimulatorClient
 
 
 @pytest.fixture(autouse=True)
@@ -36,9 +40,13 @@ def test_simulation_inject_calls_factory_with_dispatch_quality_event_false():
     )
 
     with (
-        patch("backend.api.routes_simulation.factory_client.inject_anomaly", return_value=sync_result) as mock_factory,
+        patch(
+            "backend.api.routes_simulation.factory_client.inject_anomaly", return_value=sync_result
+        ) as mock_factory,
         patch.object(orchestrator, "start_incident", return_value=True) as mock_start,
-        patch.object(type(orchestrator), "is_running", new_callable=PropertyMock, return_value=False),
+        patch.object(
+            type(orchestrator), "is_running", new_callable=PropertyMock, return_value=False
+        ),
     ):
         resp = client.post(
             "/api/simulation/inject",
@@ -69,7 +77,9 @@ def test_simulation_inject_409_does_not_call_factory():
 
     with (
         patch("backend.api.routes_simulation.factory_client.inject_anomaly") as mock_factory,
-        patch.object(type(orchestrator), "is_running", new_callable=PropertyMock, return_value=True),
+        patch.object(
+            type(orchestrator), "is_running", new_callable=PropertyMock, return_value=True
+        ),
     ):
         resp = client.post(
             "/api/simulation/inject",
@@ -93,9 +103,13 @@ def test_simulation_inject_resilient_when_factory_is_down():
     )
 
     with (
-        patch("backend.api.routes_simulation.factory_client.inject_anomaly", return_value=sync_result) as mock_factory,
+        patch(
+            "backend.api.routes_simulation.factory_client.inject_anomaly", return_value=sync_result
+        ) as mock_factory,
         patch.object(orchestrator, "start_incident", return_value=True) as mock_start,
-        patch.object(type(orchestrator), "is_running", new_callable=PropertyMock, return_value=False),
+        patch.object(
+            type(orchestrator), "is_running", new_callable=PropertyMock, return_value=False
+        ),
     ):
         resp = client.post(
             "/api/simulation/inject",
@@ -110,6 +124,64 @@ def test_simulation_inject_resilient_when_factory_is_down():
         mock_start.assert_called_once()
 
 
+@pytest.mark.asyncio
+async def test_simulation_inject_concurrent_double_trigger_race():
+    """Verify two concurrent /inject requests result in exactly one 200, one 409,
+    factory inject called exactly once, and start_incident succeeded once."""
+    factory_calls = 0
+
+    async def mock_factory_handler(request: httpx.Request) -> httpx.Response:
+        nonlocal factory_calls
+        if request.url.path == "/api/factory/inject":
+            factory_calls += 1
+            await asyncio.sleep(0.5)
+            return httpx.Response(200, json={"status": "ok", "injected": True})
+        return httpx.Response(404)
+
+    test_factory_client = FactorySimulatorClient(
+        base_url="http://mock-factory:8080",
+        transport=httpx.MockTransport(mock_factory_handler),
+    )
+
+    async def fake_run_incident(trigger, abort=None):
+        try:
+            await asyncio.sleep(5.0)
+        except asyncio.CancelledError:
+            pass
+
+    await orchestrator.reset()
+
+    start_calls: list[bool] = []
+    real_start_incident = orchestrator.start_incident
+
+    def spy_start_incident(trigger):
+        res = real_start_incident(trigger)
+        start_calls.append(res)
+        return res
+
+    transport = ASGITransport(app=app)
+    try:
+        with (
+            patch("backend.api.routes_simulation.factory_client", test_factory_client),
+            patch.object(orchestrator, "run_incident", fake_run_incident),
+            patch.object(orchestrator, "start_incident", side_effect=spy_start_incident),
+        ):
+            async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as ac:
+                res1, res2 = await asyncio.gather(
+                    ac.post("/api/simulation/inject", json={"scenario": "cnc_tool_wear"}),
+                    ac.post("/api/simulation/inject", json={"scenario": "cnc_tool_wear"}),
+                )
+
+        status_codes = sorted([res1.status_code, res2.status_code])
+        assert status_codes == [200, 409], f"Expected [200, 409], got {status_codes}"
+        assert factory_calls == 1, f"Expected factory called once, got {factory_calls}"
+        assert start_calls.count(True) == 1, (
+            f"Expected start_incident succeeded once, got {start_calls}"
+        )
+    finally:
+        await orchestrator.reset()
+
+
 def test_simulation_reset_calls_factory_reset():
     """Verify POST /api/simulation/reset invokes orchestrator.reset, reset_buffers, and factory_client.reset_factory."""
     client = TestClient(app)
@@ -122,8 +194,12 @@ def test_simulation_reset_calls_factory_reset():
     )
 
     with (
-        patch("backend.api.routes_simulation.factory_client.reset_factory", return_value=sync_result) as mock_factory,
-        patch("backend.api.routes_simulation.reset_buffers", return_value={"cleared": True}) as mock_buffers,
+        patch(
+            "backend.api.routes_simulation.factory_client.reset_factory", return_value=sync_result
+        ) as mock_factory,
+        patch(
+            "backend.api.routes_simulation.reset_buffers", return_value={"cleared": True}
+        ) as mock_buffers,
         patch.object(orchestrator, "reset", return_value={"status": "idle"}) as mock_reset,
     ):
         resp = client.post("/api/simulation/reset")
@@ -150,7 +226,9 @@ def test_pubsub_quality_event_deduplication():
 
     with (
         patch.object(orchestrator, "start_incident", return_value=True) as mock_start,
-        patch.object(type(orchestrator), "is_running", new_callable=PropertyMock, return_value=False),
+        patch.object(
+            type(orchestrator), "is_running", new_callable=PropertyMock, return_value=False
+        ),
     ):
         # First message: processed
         pubsub_manager._handle_quality_event_message(msg1)
@@ -163,16 +241,75 @@ def test_pubsub_quality_event_deduplication():
         assert mock_start.call_count == 1  # Not incremented
 
 
+def test_pubsub_quality_event_redelivery_after_failure_not_dropped():
+    """Verify that if orchestrator dispatch raises an exception, the message is nacked,
+    and subsequent redelivery of the same event_id is NOT dropped as duplicate."""
+    event_id = str(uuid.uuid4())
+    event = QualityEventPayload(event_id=event_id)
+    msg_data = event.model_dump_json().encode("utf-8")
+
+    msg_fail = MagicMock()
+    msg_fail.data = msg_data
+
+    msg_retry = MagicMock()
+    msg_retry.data = msg_data
+
+    msg_dupe = MagicMock()
+    msg_dupe.data = msg_data
+
+    # Attempt 1: start_incident raises an error -> nack, event_id NOT kept in _seen_events
+    with (
+        patch.object(
+            orchestrator, "start_incident", side_effect=RuntimeError("Transient dispatch failure")
+        ),
+        patch.object(
+            type(orchestrator), "is_running", new_callable=PropertyMock, return_value=False
+        ),
+    ):
+        pubsub_manager._handle_quality_event_message(msg_fail)
+        msg_fail.nack.assert_called_once()
+        msg_fail.ack.assert_not_called()
+        assert event_id not in pubsub_manager._seen_events
+
+    # Attempt 2 (redelivery): start_incident succeeds -> ack, event_id now recorded in _seen_events
+    with (
+        patch.object(orchestrator, "start_incident", return_value=True) as mock_start_retry,
+        patch.object(
+            type(orchestrator), "is_running", new_callable=PropertyMock, return_value=False
+        ),
+    ):
+        pubsub_manager._handle_quality_event_message(msg_retry)
+        msg_retry.ack.assert_called_once()
+        msg_retry.nack.assert_not_called()
+        mock_start_retry.assert_called_once()
+        assert event_id in pubsub_manager._seen_events
+
+    # Attempt 3 (duplicate delivery after successful ack): dropped as duplicate
+    with (
+        patch.object(orchestrator, "start_incident", return_value=True) as mock_start_dupe,
+        patch.object(
+            type(orchestrator), "is_running", new_callable=PropertyMock, return_value=False
+        ),
+    ):
+        pubsub_manager._handle_quality_event_message(msg_dupe)
+        msg_dupe.ack.assert_called_once()
+        mock_start_dupe.assert_not_called()
+
+
 def test_pubsub_stale_quality_event_dropped():
     """Verify quality event older than quality_event_max_age_seconds is dropped and acked."""
-    old_time = datetime.now(timezone.utc) - timedelta(seconds=settings.quality_event_max_age_seconds + 30)
+    old_time = datetime.now(timezone.utc) - timedelta(
+        seconds=settings.quality_event_max_age_seconds + 30
+    )
     event = QualityEventPayload(timestamp=old_time.isoformat())
     msg = MagicMock()
     msg.data = event.model_dump_json().encode("utf-8")
 
     with (
         patch.object(orchestrator, "start_incident", return_value=True) as mock_start,
-        patch.object(type(orchestrator), "is_running", new_callable=PropertyMock, return_value=False),
+        patch.object(
+            type(orchestrator), "is_running", new_callable=PropertyMock, return_value=False
+        ),
     ):
         pubsub_manager._handle_quality_event_message(msg)
         msg.ack.assert_called_once()
@@ -184,6 +321,7 @@ def test_pubsub_unparsable_timestamp_logs_warning_and_processes():
     event_dict = QualityEventPayload().model_dump()
     event_dict["timestamp"] = "invalid-non-iso-timestamp-format"
     import json
+
     msg_data = json.dumps(event_dict).encode("utf-8")
 
     msg = MagicMock()
@@ -191,7 +329,9 @@ def test_pubsub_unparsable_timestamp_logs_warning_and_processes():
 
     with (
         patch.object(orchestrator, "start_incident", return_value=True) as mock_start,
-        patch.object(type(orchestrator), "is_running", new_callable=PropertyMock, return_value=False),
+        patch.object(
+            type(orchestrator), "is_running", new_callable=PropertyMock, return_value=False
+        ),
     ):
         pubsub_manager._handle_quality_event_message(msg)
         msg.ack.assert_called_once()

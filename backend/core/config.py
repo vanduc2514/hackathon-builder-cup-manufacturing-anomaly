@@ -104,6 +104,8 @@ class Settings(BaseSettings):
 
     # Pause between simulated conveyor verification batches (seconds)
     simulation_step_delay: float = 0.4
+    # Maximum seconds to await physical/preset visual evidence before timeout
+    evidence_wait_seconds: float = 90.0
 
     # Factory Simulator service integration
     factory_service_url: str | None = None

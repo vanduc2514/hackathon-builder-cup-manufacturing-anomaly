@@ -195,7 +195,7 @@ def test_analyze_visual_evidence_frame():
 
 
 def test_blackboard_attach_field_evidence():
-    """attach_field_evidence updates blackboard, clears diagnostic_request, and sets status to analyzing."""
+    """attach_field_evidence updates blackboard, clears diagnostic_request, and preserves awaiting_evidence status."""
     blackboard.update_status("awaiting_evidence", diagnostic_request="Cần chụp ảnh mũi dao.")
     assert blackboard.get_state().status == "awaiting_evidence"
     assert blackboard.get_state().diagnostic_request is not None
@@ -220,7 +220,7 @@ def test_blackboard_attach_field_evidence():
 
     new_state = blackboard.attach_field_evidence(finding, evidence)
 
-    assert new_state.status == "analyzing"
+    assert new_state.status == "awaiting_evidence"
     assert new_state.diagnostic_request is None
     assert new_state.visual_evidence is not None
     assert new_state.visual_evidence.wear_measurement_mm == 0.35
@@ -259,10 +259,10 @@ def test_upload_evidence_gemini_live_rest_endpoint():
     data = response.json()
     assert data["status"] == "success"
     assert data["evidence"]["defect_detected"] is True
-    assert data["incident_status"] == "analyzing"
+    assert data["incident_status"] == "awaiting_evidence"
 
     state = blackboard.get_state()
-    assert state.status == "analyzing"
+    assert state.status == "awaiting_evidence"
     assert state.visual_evidence is not None
     assert state.visual_evidence.filename == "insert_t07.jpg"
 
@@ -282,10 +282,10 @@ def test_upload_evidence_incidents_rest_endpoint():
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
-    assert data["incident_status"] == "analyzing"
+    assert data["incident_status"] == "awaiting_evidence"
 
     state = blackboard.get_state()
-    assert state.status == "analyzing"
+    assert state.status == "awaiting_evidence"
     assert state.visual_evidence is not None
 
 
@@ -310,7 +310,7 @@ def test_gemini_live_websocket_binary_image_frame():
 
         # Check that visual evidence was attached to blackboard
         state = blackboard.get_state()
-        assert state.status == "analyzing"
+        assert state.status == "awaiting_evidence"
         assert state.visual_evidence is not None
         assert state.visual_evidence.filename == "mobile_camera_frame.jpg"
 
@@ -341,7 +341,7 @@ def test_gemini_live_websocket_realtime_media_chunks():
 
         # Blackboard updated
         state = blackboard.get_state()
-        assert state.status == "analyzing"
+        assert state.status == "awaiting_evidence"
         assert state.visual_evidence is not None
 
 

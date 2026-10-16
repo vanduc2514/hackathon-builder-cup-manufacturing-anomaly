@@ -1,0 +1,72 @@
+[
+  {
+    "id": "preset-im05-normal",
+    "title": "IM-05 Molded Tray Nominal Baseline",
+    "category": "normal",
+    "machine_id": "IM-05",
+    "tool_id": "MOLD-03",
+    "description": "Intact molded plastic tray with uniform surface finish and structural integrity matching nominal CAD specifications.",
+    "analysis": "Visual metrology confirms molded plastic tray is structurally intact and within nominal tolerances. No surface scratches, cracking, or edge separation detected.",
+    "thumbnail_url": "/presets/evidence/preset_im05_normal.jpg",
+    "image_url": "/presets/evidence/preset_im05_normal.jpg",
+    "expected_defect_detected": false,
+    "expected_wear_mm": null,
+    "suggested_sop_code": null
+  },
+  {
+    "id": "preset-im05-surface-scratch",
+    "title": "IM-05 Housing Surface Scratching",
+    "category": "surface_scratch",
+    "machine_id": "IM-05",
+    "tool_id": "MOLD-03",
+    "description": "Linear abrasive scratches and scuff marks across the molded component face.",
+    "analysis": "Visual metrology reveals distinct linear surface scratches along the molded exterior. Possible cause includes mechanical friction during mold ejection or tray transfer.",
+    "thumbnail_url": "/presets/evidence/preset_im05_surface_scratch.jpg",
+    "image_url": "/presets/evidence/preset_im05_surface_scratch.jpg",
+    "expected_defect_detected": true,
+    "expected_wear_mm": null,
+    "suggested_sop_code": 209
+  },
+  {
+    "id": "preset-im05-crack",
+    "title": "IM-05 Housing Structural Wall Crack",
+    "category": "crack",
+    "machine_id": "IM-05",
+    "tool_id": "MOLD-03",
+    "description": "Visible longitudinal surface crack along the molded housing wall section.",
+    "analysis": "Visual metrology detects structural surface cracking along the molded sidewall. Possible cause includes localized embrittlement from damp resin feedstock under injection pressure.",
+    "thumbnail_url": "/presets/evidence/preset_im05_crack.jpg",
+    "image_url": "/presets/evidence/preset_im05_crack.jpg",
+    "expected_defect_detected": true,
+    "expected_wear_mm": null,
+    "suggested_sop_code": 209
+  },
+  {
+    "id": "preset-im05-fracture",
+    "title": "IM-05 Housing Severe Brittle Fracture",
+    "category": "fracture",
+    "machine_id": "IM-05",
+    "tool_id": "MOLD-03",
+    "description": "Through-thickness fracture and corner breakage on molded plastic housing.",
+    "analysis": "Visual metrology identifies severe brittle fracture with material failure at the corner perimeter. Possible cause includes severe matrix degradation caused by moisture in un-dried resin pellets.",
+    "thumbnail_url": "/presets/evidence/preset_im05_fracture.jpg",
+    "image_url": "/presets/evidence/preset_im05_fracture.jpg",
+    "expected_defect_detected": true,
+    "expected_wear_mm": null,
+    "suggested_sop_code": 209
+  },
+  {
+    "id": "preset-im05-assembly-gap",
+    "title": "IM-05 Housing Edge Assembly Gap",
+    "category": "assembly_gap",
+    "machine_id": "IM-05",
+    "tool_id": "MOLD-03",
+    "description": "Seam gap and perimeter parting line misalignment from uneven thermal shrinkage.",
+    "analysis": "Visual metrology detects an uneven assembly gap along the component mating seam. Possible cause includes differential cooling warpage or uneven cavity pack pressure.",
+    "thumbnail_url": "/presets/evidence/preset_im05_assembly_gap.jpg",
+    "image_url": "/presets/evidence/preset_im05_assembly_gap.jpg",
+    "expected_defect_detected": true,
+    "expected_wear_mm": null,
+    "suggested_sop_code": 209
+  }
+]

@@ -229,7 +229,9 @@ def test_incident_handover_endpoint() -> None:
     """Verifies that POST /api/incidents/handover records a note on the incident via Orchestrator."""
     client = TestClient(app)
 
-    response = client.post("/api/incidents/handover", json={"note": "Shift 1 completed insert swap on CNC-01"})
+    response = client.post(
+        "/api/incidents/handover", json={"note": "Shift 1 completed insert swap on CNC-01"}
+    )
     assert response.status_code == 200, response.text
     data = response.json()
     assert data["note"] == "Shift 1 completed insert swap on CNC-01"
@@ -265,11 +267,13 @@ def test_incident_evidence_routes_through_orchestrator(monkeypatch: pytest.Monke
         return blackboard.attach_field_evidence(finding, visual_evidence)
 
     monkeypatch.setattr(orchestrator, "attach_evidence", mock_attach_evidence)
+    blackboard.update_status("awaiting_evidence")
 
     client = TestClient(app)
     file_content = b"fake-jpeg-data"
     files = {"file": ("test.jpg", io.BytesIO(file_content), "image/jpeg")}
-    response = client.post("/api/incidents/evidence", files=files, data={"notes": "Visual check confirmed"})
+    response = client.post(
+        "/api/incidents/evidence", files=files, data={"notes": "Visual check confirmed"}
+    )
     assert response.status_code == 200
     assert called is True
-

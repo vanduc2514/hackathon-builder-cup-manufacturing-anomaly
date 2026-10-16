@@ -23,6 +23,7 @@ from backend.agents.agent_technician_copilot import (
     analyze_visual_evidence_frame_async,
     build_contextual_diagnostic_probe_vi,
 )
+from backend.agents.orchestrator import orchestrator
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
 from backend.core.models import (
@@ -452,6 +453,7 @@ async def gemini_live_websocket(
                         citation=ev_payload.citation,
                     )
                     blackboard.attach_field_evidence(finding, ev_payload)
+                    orchestrator.notify_evidence()
                     resp = await generate_live_guidance_async("ảnh camera kiểm định", session)
                 else:
                     resp = await generate_live_guidance_async("bị gì", session)
@@ -557,6 +559,7 @@ async def gemini_live_websocket(
                                     citation=ev_payload.citation,
                                 )
                                 blackboard.attach_field_evidence(finding, ev_payload)
+                                orchestrator.notify_evidence()
                                 break
                         user_text = "ảnh camera kiểm định"
                     else:
@@ -631,6 +634,7 @@ async def upload_gemini_live_evidence(
         citation=ev_payload.citation,
     )
     new_state = blackboard.attach_field_evidence(finding, ev_payload)
+    orchestrator.notify_evidence()
     return {
         "status": "success",
         "evidence": ev_payload.model_dump(),

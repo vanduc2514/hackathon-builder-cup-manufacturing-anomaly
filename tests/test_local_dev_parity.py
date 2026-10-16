@@ -46,6 +46,7 @@ def test_zero_credential_orchestrator_mock_workflow():
             machine_id="CNC-02",
             tool_id="T07",
             spindle_vibration=3.82,
+            mode="fast",
         )
 
         state = asyncio.run(orch.run_incident(req))

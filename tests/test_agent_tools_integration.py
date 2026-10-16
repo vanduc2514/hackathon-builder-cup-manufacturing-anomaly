@@ -279,6 +279,7 @@ async def test_orchestrator_workflow_with_bound_tools():
         request = DefectInjectionRequest(
             defect_type="scratch_vertical",
             suspect_machine="CNC-02",
+            mode="fast",
         )
         final_state = await orchestrator.run_incident(request)
 

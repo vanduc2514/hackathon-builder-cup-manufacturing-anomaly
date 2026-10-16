@@ -115,9 +115,8 @@ class Blackboard:
         finding: AgentFinding,
         visual_evidence: VisualEvidencePayload | None = None,
     ) -> IncidentState:
-        """Attaches technician diagnostic field evidence and optional visual payload, transitioning to analyzing."""
+        """Attaches technician diagnostic field evidence and optional visual payload without clobbering status."""
         update_dict = self._state.model_dump()
-        update_dict["status"] = "analyzing"
         if visual_evidence:
             update_dict["visual_evidence"] = visual_evidence.model_dump()
         update_dict["diagnostic_request"] = None

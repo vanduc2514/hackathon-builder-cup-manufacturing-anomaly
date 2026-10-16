@@ -47,6 +47,7 @@ from backend.agents.workflow_nodes import (
     trace_topology,
     verification_gate,
     verify_repair,
+    wait_for_evidence_node,
 )
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
@@ -130,11 +131,16 @@ incident_workflow = Workflow(
             rca_gate,
             {
                 "CONFIDENT": (agent_technician_copilot.agent, agent_incident_scribe.agent),
-                "NEED_EVIDENCE": agent_technician_copilot.diagnostic_agent,
+                "NEED_EVIDENCE": wait_for_evidence_node,
                 "ESCALATE": escalate_incident,
             },
         ),
-        (agent_technician_copilot.diagnostic_agent, record_field_evidence, agent_root_cause.agent),
+        (
+            wait_for_evidence_node,
+            agent_technician_copilot.diagnostic_agent,
+            record_field_evidence,
+            agent_root_cause.agent,
+        ),
         (
             (agent_technician_copilot.agent, agent_incident_scribe.agent),
             resolution_join,
@@ -184,6 +190,11 @@ def dump_crash(
         return None
 
 
+class EvidenceNotAwaitedError(Exception):
+    """Raised when field or preset evidence is attached outside the awaiting_evidence state."""
+    pass
+
+
 class Orchestrator:
     """Single input/output boundary: starts, approves and resets incidents; one at a time."""
 
@@ -191,6 +202,7 @@ class Orchestrator:
         self._step_delay = step_delay
         self._task: Any = None
         self._abort: asyncio.Event | None = None
+        self._evidence_event: asyncio.Event = asyncio.Event()
         self._trigger: DefectInjectionRequest | None = None
         self._started_at: float | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -204,6 +216,7 @@ class Orchestrator:
         if self.is_running:
             return False
         self._abort = asyncio.Event()
+        self._evidence_event = asyncio.Event()
         self._trigger = trigger
         self._started_at = time.monotonic()
 
@@ -231,6 +244,10 @@ class Orchestrator:
         self, trigger: DefectInjectionRequest, abort: asyncio.Event | None = None
     ) -> IncidentState:
         """Runs the incident workflow to completion; failures land on the Blackboard as `error`."""
+        if self._trigger is None:
+            self._trigger = trigger
+        if self._evidence_event is None:
+            self._evidence_event = asyncio.Event()
         runner = InMemoryRunner(node=incident_workflow, app_name=APP_NAME)
         try:
             session_kwargs = {}
@@ -270,6 +287,8 @@ class Orchestrator:
     async def cancel(self) -> None:
         """Aborts the running workflow (ADK abort_signal) and waits for it to stop."""
         try:
+            if self._evidence_event is not None:
+                self._evidence_event.set()
             if self.is_running:
                 self._abort.set()
                 await self._task
@@ -281,6 +300,8 @@ class Orchestrator:
 
     def stop_simulation(self) -> None:
         """Synchronously cancels any running incident workflow (test/backward compatibility)."""
+        if self._evidence_event is not None:
+            self._evidence_event.set()
         if self._task and not self._task.done():
             self._task.cancel()
             self._task = None
@@ -320,17 +341,52 @@ class Orchestrator:
         """Dispatches a technician handover note addition through the workflow node."""
         return record_handover_note(author=author, note=note)
 
+    def notify_evidence(self) -> None:
+        """Signals that technician visual evidence has been attached."""
+        if self._evidence_event is not None:
+            self._evidence_event.set()
+
+    def arm_evidence_wait(self) -> None:
+        """Arms or resets the evidence event for an awaiting_evidence round."""
+        if self._evidence_event is None:
+            self._evidence_event = asyncio.Event()
+        else:
+            self._evidence_event.clear()
+
+    async def wait_for_evidence(self, timeout: float = 0.0) -> bool:
+        """Awaits technician visual evidence up to timeout seconds.
+
+        Returns True if evidence arrived, False if timed out.
+        """
+        if self._evidence_event is None:
+            self._evidence_event = asyncio.Event()
+
+        if timeout <= 0:
+            return self._evidence_event.is_set()
+
+        try:
+            await asyncio.wait_for(self._evidence_event.wait(), timeout=timeout)
+            return True
+        except asyncio.TimeoutError:
+            return False
+
     def attach_evidence(
         self,
         finding: AgentFinding,
         visual_evidence: VisualEvidencePayload | None = None,
     ) -> IncidentState:
         """Dispatches technician field evidence through the workflow node (Key Invariant 2)."""
-        return record_field_evidence_payload(finding=finding, visual_evidence=visual_evidence)
+        cur_st = blackboard.get_state()
+        if cur_st.status != "awaiting_evidence":
+            raise EvidenceNotAwaitedError("The AI is not waiting for evidence right now")
+        state = record_field_evidence_payload(finding=finding, visual_evidence=visual_evidence)
+        self.notify_evidence()
+        return state
 
     async def reset(self) -> IncidentState:
         """Cancels any running workflow and restores the baseline Blackboard."""
         await self.cancel()
+        self._evidence_event = asyncio.Event()
         return blackboard.reset()
 
 

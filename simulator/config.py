@@ -16,7 +16,19 @@ class SimulatorSettings(BaseSettings):
 
     app_env: str = os.getenv("APP_ENV", "development")
     factory_api_key: Optional[str] = os.getenv("FACTORY_API_KEY", None)
-    auth_secret: Optional[str] = os.getenv("AUTH_SECRET", None)
+
+    # TKT-073 / #288: factory app shares the central backend's AUTH_SECRET so
+    # tokens minted by /api/auth/login are accepted here. The factory service
+    # never mints tokens itself. ``factory_auth_secret`` may also be set via
+    # AUTH_SECRET (matches the backend's env name) for symmetry with deploy
+    # manifests, but the canonical field is ``FACTORY_AUTH_SECRET``.
+    factory_auth_secret: Optional[str] = (
+        os.getenv("FACTORY_AUTH_SECRET") or os.getenv("AUTH_SECRET") or None
+    )
+    factory_auth_token_ttl_hours: int = int(os.getenv("FACTORY_AUTH_TOKEN_TTL_HOURS", "12"))
+    auth_secret: Optional[str] = (
+        os.getenv("AUTH_SECRET") or os.getenv("FACTORY_AUTH_SECRET") or None
+    )
     auth_users: Optional[str] = os.getenv("AUTH_USERS", None)
 
     mqtt_broker_host: str = os.getenv("MQTT_BROKER_HOST", "broker.emqx.io")

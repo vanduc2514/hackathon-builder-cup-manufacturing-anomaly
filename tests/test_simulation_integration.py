@@ -138,9 +138,13 @@ async def test_simulation_inject_concurrent_double_trigger_race():
             return httpx.Response(200, json={"status": "ok", "injected": True})
         return httpx.Response(404)
 
+    async def fake_bearer() -> str | None:
+        return "test-races-jwt"
+
     test_factory_client = FactorySimulatorClient(
         base_url="http://mock-factory:8080",
         transport=httpx.MockTransport(mock_factory_handler),
+        bearer_provider=fake_bearer,
     )
 
     async def fake_run_incident(trigger, abort=None):

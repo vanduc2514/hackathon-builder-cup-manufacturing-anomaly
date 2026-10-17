@@ -139,3 +139,22 @@ variable "auth_users" {
     error_message = "auth_users must be a JSON list of account objects."
   }
 }
+
+# TKT-073 / #288: dedicated backend->factory operator credentials. Must be an
+# entry present in `auth_users` (the factory gate reuses the central backend
+# JWT). Set TF_VAR_factory_operator_account / TF_VAR_factory_operator_password
+# in mise.local.toml so the backend can mint a Bearer token at runtime without
+# exposing the operator's password to anyone but Terraform + deploy.
+variable "factory_operator_account" {
+  description = "Username of the service account the backend uses to mint a JWT for /api/auth/login before calling the factory service. Must exist in auth_users."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "factory_operator_password" {
+  description = "Password of the service account the backend uses to mint a JWT for /api/auth/login before calling the factory service. Must match auth_users."
+  type        = string
+  sensitive   = true
+  default     = ""
+}

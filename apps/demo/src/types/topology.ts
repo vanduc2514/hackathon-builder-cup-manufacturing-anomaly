@@ -9,11 +9,11 @@ export type NodeShape =
   | 'database'
   | 'cloud'
   | 'hub'
-  | 'agents'
+  | 'agent'
   | 'phone'
   | 'monitor';
 
-export type ZoneId = 'onprem' | 'cloud' | 'people';
+export type ZoneId = 'onprem' | 'cloud' | 'people' | 'team';
 
 export interface TopologyNode {
   id: string;
@@ -33,6 +33,8 @@ export interface TopologyEdge {
   to: string;
   label: string;
   bidir?: boolean;
+  /** Corner choice of the L-shaped route: x-first by default, `'zx'` goes z-first. */
+  route?: 'zx';
 }
 
 export interface Zone {
@@ -40,4 +42,6 @@ export interface Zone {
   label: string;
   /** Floor rectangle `[x0, z0, x1, z1]`. */
   rect: [number, number, number, number];
+  /** Floor `[x, z]` anchor of the zone chip. */
+  chip: [number, number];
 }

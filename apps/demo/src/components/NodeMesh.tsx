@@ -2,8 +2,8 @@
 import React, { useRef } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Edges, Html, Outlines } from '@react-three/drei';
-import type { Group } from 'three';
-import { APP_LINKS } from '../data/topology';
+import type { Group, Mesh, MeshStandardMaterial } from 'three';
+import { AGENT_SEQUENCE, AGENT_STEP_SECONDS, APP_LINKS } from '../data/topology';
 import type { NodeShape, TopologyNode } from '../types/topology';
 
 type Vec3 = [number, number, number];
@@ -40,11 +40,12 @@ function shapeParts(shape: NodeShape): ShapePart[] {
       ];
     case 'hub':
       return [box([2.6, 1.6, 2.0], [0, 0.8, 0])];
-    case 'agents': {
-      const back = [-1.05, -0.35, 0.35, 1.05].map((x) => box([0.5, 0.5, 0.5], [x, 0.25, -0.35]));
-      const front = [-0.7, 0, 0.7].map((x) => box([0.5, 0.5, 0.5], [x, 0.25, 0.35]));
-      return [...back, ...front];
-    }
+    case 'agent':
+      return [
+        box([0.8, 0.7, 0.6], [0, 0.5, 0]),
+        box([0.6, 0.4, 0.5], [0, 1.05, 0]),
+        box([0.06, 0.3, 0.06], [0, 1.4, 0]),
+      ];
     case 'phone':
       return [box([0.7, 1.3, 0.12], [0, 0.75, 0])];
     case 'monitor':
@@ -61,13 +62,20 @@ interface NodeMeshProps {
 
 export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshProps): React.ReactElement {
   const group = useRef<Group>(null);
+  const ring = useRef<Mesh>(null);
   const [x, z] = node.position;
   const lineColor = hovered || node.shape === 'hub' ? ACCENT : LINE;
 
-  useFrame(() => {
+  useFrame(({ clock }) => {
     if (!group.current) return;
     const y = group.current.position.y;
     group.current.position.y = y + ((hovered ? HOVER_LIFT : 0) - y) * 0.15;
+    if (ring.current) {
+      const step = Math.floor(clock.elapsedTime / AGENT_STEP_SECONDS) % AGENT_SEQUENCE.length;
+      const active = AGENT_SEQUENCE[step].includes(node.id);
+      const m = ring.current.material as MeshStandardMaterial;
+      m.opacity += ((active ? 0.95 : 0.15) - m.opacity) * 0.2;
+    }
   });
 
   const handleOver = (e: ThreeEvent<PointerEvent>): void => {
@@ -102,6 +110,18 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
           )}
         </mesh>
       ))}
+      {node.shape === 'agent' && (
+        <mesh ref={ring} position={[0, 0.03, 0]}>
+          <cylinderGeometry args={[0.75, 0.75, 0.04, 32]} />
+          <meshStandardMaterial
+            color="#5b5bf0"
+            emissive="#5b5bf0"
+            emissiveIntensity={0.8}
+            transparent
+            opacity={0.15}
+          />
+        </mesh>
+      )}
       <Html position={[0, 2.2, 0]} center style={{ pointerEvents: 'none' }}>
         <div className={hovered ? 'node-label is-hovered' : 'node-label'}>
           <span className="node-label__head">

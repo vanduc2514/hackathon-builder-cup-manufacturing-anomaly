@@ -25,20 +25,17 @@ interface Route {
   total: number;
 }
 
-function buildRoute(from: TopologyNode, to: TopologyNode): Route {
+function buildRoute(from: TopologyNode, to: TopologyNode, via: TopologyEdge['route']): Route {
   const [fx, fz] = from.position;
   const [tx, tz] = to.position;
+  const corner: Point = via === 'zx' ? [fx, FLOOR_Y, tz] : [tx, FLOOR_Y, fz];
   const points: Point[] =
     fx === tx || fz === tz
       ? [
           [fx, FLOOR_Y, fz],
           [tx, FLOOR_Y, tz],
         ]
-      : [
-          [fx, FLOOR_Y, fz],
-          [tx, FLOOR_Y, fz],
-          [tx, FLOOR_Y, tz],
-        ];
+      : [[fx, FLOOR_Y, fz], corner, [tx, FLOOR_Y, tz]];
   const cumulative = [0];
   for (let i = 1; i < points.length; i += 1) {
     const [ax, , az] = points[i - 1];
@@ -60,7 +57,7 @@ function placeAt(mesh: Mesh, route: Route, distance: number): void {
 }
 
 export default function EdgeFlow({ edge, from, to, hoveredId }: EdgeFlowProps): React.ReactElement {
-  const route = useMemo(() => buildRoute(from, to), [from, to]);
+  const route = useMemo(() => buildRoute(from, to, edge.route), [from, to, edge.route]);
   const forward = useRef<Mesh>(null);
   const backward = useRef<Mesh>(null);
 

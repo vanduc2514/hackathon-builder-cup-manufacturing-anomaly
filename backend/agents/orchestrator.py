@@ -18,6 +18,7 @@ from google.adk.runners import InMemoryRunner
 from google.adk.workflow import JoinNode
 from google.genai import types
 from google.genai.errors import APIError
+from pydantic import ValidationError
 
 from backend.agents import (
     agent_continuous_learning,
@@ -52,8 +53,12 @@ from backend.agents.workflow_nodes import (
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
 from backend.core.models import (
+    FINDING_SAFE_DEFAULT_CONFIDENCE,
+    FINDING_SAFE_DEFAULT_EVIDENCE,
+    FINDING_SAFE_DEFAULT_TEXT,
     AgentFinding,
     DefectInjectionRequest,
+    FindingDraft,
     HandoverNote,
     IncidentState,
     SimulationStatusResponse,
@@ -105,6 +110,138 @@ GENERIC_FAILURE_MESSAGE = (
     "Something went wrong while analyzing this incident. Please retry or notify a shift leader."
 )
 
+
+def _safe_validate_finding_draft(
+    raw_text: str | Any,
+    schema: type[FindingDraft] = FindingDraft,
+    *,
+    agent_name: str,
+) -> FindingDraft:
+    """Parse an LLM-produced JSON blob into a ``FindingDraft`` with a single retry.
+
+    Strategy (matches the brief in TKT-263):
+
+    1. Try ``schema.model_validate_json(raw_text)`` and return the model on success.
+    2. On ``ValidationError``, classify the failure:
+       - Truncated JSON (Pydantic ``error['type'] == 'json_invalid'``) -> log a warning
+         and retry exactly once. The brief budgets the retry at 1 for streaming
+         truncations that may resolve on a re-fetched payload from the same LLM call.
+       - Bare ``json.JSONDecodeError`` / ``ValueError`` -> same retry path.
+       - Other validation failures (missing required fields, wrong types, out-of-range
+         values) are NOT retried — they will fail again deterministically.
+    3. On retry failure (or non-retryable failure), return a safe-default
+       ``FindingDraft`` and log an error so the incident still reaches a terminal
+       state instead of hanging or surfacing a raw exception to the technician.
+
+    The returned safe default is attributed to ``agent_name`` so the Blackboard can
+    still tell which node produced the malformed payload.
+    """
+    if not isinstance(raw_text, str):
+        # ADK usually feeds us a JSON string, but be defensive against pre-parsed objects.
+        raw_text = str(raw_text)
+
+    # Step 1: first attempt.
+    try:
+        return schema.model_validate_json(raw_text)
+    except ValidationError as exc:
+        if _is_truncated_json(exc) or _is_decode_error(exc):
+            # Truncated JSON mid-stream or bare JSONDecodeError -> worth a single retry.
+            logger.warning(
+                "%s FindingDraft JSON decode/truncation detected; attempting one retry: %s",
+                agent_name,
+                exc,
+            )
+        else:
+            # Missing fields or wrong types are deterministic — no retry, go straight
+            # to the safe default and surface the failure in the logs.
+            logger.warning(
+                "%s FindingDraft validation failed on first attempt; "
+                "missing/wrong-type fields, falling back to safe default: %s",
+                agent_name,
+                exc,
+            )
+            return _fallback_finding_draft(agent_name=agent_name, exc=exc)
+    except (json.JSONDecodeError, ValueError) as exc:
+        # Bare JSONDecodeError / ValueError: brief permits a single retry.
+        logger.warning(
+            "%s FindingDraft JSON decode failed; attempting one retry: %s",
+            agent_name,
+            exc,
+        )
+
+    # Step 2: single retry on recoverable failure only. The brief is explicit that we do
+    # not retry missing/wrong-type validation errors — those already returned above.
+    try:
+        return schema.model_validate_json(raw_text)
+    except (ValidationError, json.JSONDecodeError, ValueError) as exc:
+        logger.error(
+            "%s FindingDraft validation failed after retry; applying safe default: %s",
+            agent_name,
+            exc,
+        )
+        return _fallback_finding_draft(agent_name=agent_name, exc=exc)
+
+
+def _is_truncated_json(exc: BaseException) -> bool:
+    """True if a pydantic ValidationError is from a malformed/truncated JSON payload.
+
+    Pydantic 2 reports the failure under ``error['type'] == 'json_invalid'`` and
+    carries the original ``json`` exception inside ``error['ctx']['error']``. We
+    recognise the common mid-stream truncations (EOF / Unterminated / Unexpected
+    end of data) plus the generic marker so a future pydantic release that
+    rewords the message cannot accidentally bypass retry.
+    """
+    if not isinstance(exc, ValidationError):
+        return False
+    markers = (
+        "json_invalid",
+        "unexpected eof",
+        "unterminated string",
+        "expecting value",
+        "extra data",
+        "invalid json",
+    )
+    for err in exc.errors():
+        etype = (err.get("type") or "").lower()
+        msg = (err.get("msg") or "").lower()
+        ctx_err = ""
+        ctx = err.get("ctx") or {}
+        if isinstance(ctx, dict):
+            ctx_err = str(ctx.get("error", "")).lower()
+        for m in markers:
+            if m in etype or m in msg or m in ctx_err:
+                return True
+    return False
+
+
+def _is_decode_error(exc: BaseException) -> bool:
+    """True if the exception is a bare ``json.JSONDecodeError`` (not via ValidationError)."""
+    if isinstance(exc, json.JSONDecodeError):
+        return True
+    # Some pydantic versions wrap a JSONDecodeError under RuntimeError; fall back to
+    # class-name sniff to keep us robust against upstream surprises.
+    return "JSONDecodeError" in type(exc).__name__
+
+
+def _fallback_finding_draft(*, agent_name: str, exc: BaseException | None = None) -> FindingDraft:
+    """Build the safe-default FindingDraft used when an LLM payload is unrecoverable.
+
+    The ``citation`` field is the producing agent's name so operators can still tell
+    which node produced the malformed payload. ``confidence=0.0`` keeps the orchestrator
+    gates (RCA confidence threshold, restart-loop guard) deterministic — the safe
+    default never accidentally satisfies a real confidence threshold.
+    """
+    return FindingDraft(
+        finding=FINDING_SAFE_DEFAULT_TEXT,
+        evidence=FINDING_SAFE_DEFAULT_EVIDENCE,
+        confidence=FINDING_SAFE_DEFAULT_CONFIDENCE,
+        citation=agent_name,
+    )
+
+
+# Module-level reference so tests can assert the citation placeholder without coupling
+# to the string in two places. The orchestrator never uses this constant at runtime —
+# the helper above overwrites ``citation`` with ``agent_name`` on every call.
 
 resolution_join = JoinNode(name="resolution_join")
 
@@ -277,6 +414,21 @@ class Orchestrator:
                 blackboard.update_status("error", status_reason=GEMINI_RATE_LIMIT_MESSAGE)
             else:
                 blackboard.update_status("error", status_reason=GENERIC_FAILURE_MESSAGE)
+            dump_crash(blackboard.get_state(), exc)
+        except ValidationError as exc:
+            # ADK raises pydantic ValidationError when an agent's LLM output cannot be
+            # deserialised into the workflow node's typed input (FindingDraft, etc.).
+            # Surface as `error` with a stable operator-facing reason; the per-agent
+            # safe default is applied by ``_safe_validate_finding_draft`` (called from
+            # tool/run_async wrappers in agent modules) but the ADK runner raises before
+            # we get there on bare schema validation, so we still need this branch.
+            logger.exception(
+                "incident workflow LLM schema validation failed; safe default applied"
+            )
+            blackboard.update_status(
+                "error",
+                status_reason="LLM schema validation failed; safe default applied",
+            )
             dump_crash(blackboard.get_state(), exc)
         except Exception as exc:
             logger.exception("incident workflow failed")

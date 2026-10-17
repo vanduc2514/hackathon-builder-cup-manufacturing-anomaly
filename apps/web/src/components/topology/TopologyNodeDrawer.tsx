@@ -55,15 +55,15 @@ function shortLabel(id: string): string {
   return node.label.split(/[·:(]/)[0].trim() || node.label;
 }
 
-/** Compose a one-liner from the JTBD. Trim at the first literal "." (decimal
- *  points excluded via the obvious split) and re-append a period so the
- *  result reads as a complete single sentence. Designed to satisfy the
- *  contract `text === split('.')[0] + '.'` which the regression test
- *  enforces, including JTBDs whose first sentence contains a decimal
- *  (e.g. "feed rate 0.28 mm/rev"). */
+/** Compose a one-liner from the JTBD. Trim at the first sentence terminator
+ *  ("." followed by whitespace or end-of-string) and re-append a period so
+ *  the result reads as a complete single sentence. Decimal points inside a
+ *  sentence (e.g. "feed rate 0.28 mm/rev") are preserved by the negative
+ *  lookahead `(?!\d)`, which only treats "." as a terminator when it is not
+ *  immediately followed by a digit. */
 function oneLiner(text: string | undefined): string {
   if (!text) return '';
-  const firstChunk = text.split('.')[0] ?? text;
+  const firstChunk = text.split(/\.(?!\d)(?:\s+|$)/)[0] ?? text;
   return firstChunk.endsWith('.') ? firstChunk : `${firstChunk}.`;
 }
 

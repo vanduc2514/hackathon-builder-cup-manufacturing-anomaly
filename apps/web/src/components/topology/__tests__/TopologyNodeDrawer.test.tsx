@@ -131,9 +131,49 @@ describe('TopologyNodeDrawer declutter (Issue #259 / TKT-067)', () => {
     expect(text.length).toBeGreaterThan(0);
     // First sentence stops at the first period.
     expect(text).toMatch(/\.$/);
-    expect(text.split('.')[0]).toBe(text.replace(/\.$/, ''));
-    // Must be strictly shorter than the source JTBD (one sentence not two).
-    expect((node.jtbd ?? '').length).toBeGreaterThan(text.length);
+    // The rendered one-liner must not exceed the source JTBD (no content is
+    // fabricated). Note: it can equal the source length when the source is
+    // a single sentence containing a `;`-separated subordinate clause (e.g.
+    // floor-machines), so we use `toBeLessThanOrEqual` rather than the prior
+    // buggy `toBeGreaterThan` (which only passed because the old oneLiner
+    // truncated at "0.28").
+    expect(text.length).toBeLessThanOrEqual((node.jtbd ?? '').length);
+    // Real preservation check (replaces the prior self-confirming
+    // split('.')[0] === replace(/\.$/, '') identity assertion that passed
+    // even when oneLiner() truncated a decimal mid-sentence).
+    // The floor-machines JTBD contains "feed rate 0.28 mm/rev"; the one-liner
+    // must keep that decimal intact instead of slicing at the "0." boundary.
+    expect(text).toContain('feed rate 0.28 mm/rev');
+    // The one-liner must also keep the second clause (separated by "; ")
+    // when the source JTBD has only one period (which terminates the
+    // sentence after "status.").
+    expect(text).toContain('broadcasts machine cycle status.');
+    // First sentence is a complete sentence: it ends at a sentence
+    // terminator (period not followed by a digit) rather than mid-decimal.
+    expect(text).toMatch(/^[^.]*\.28[^.]*\.$/);
+  });
+
+  it('does not truncate decimals mid-sentence (regression for feed rate 0.28 mm/rev)', () => {
+    const node = TOPOLOGY_NODES.find((n) => n.id === 'floor-machines')!;
+    const state = makeState('floor-machines', { summary: 'CNC-02', status: 'active' });
+
+    render(
+      <TopologyNodeDrawer node={node} state={state} incident={baseIncident} onClose={vi.fn()} />,
+    );
+
+    const jtbd = document.getElementById('drawer-jtbd');
+    expect(jtbd).not.toBeNull();
+    const rendered = jtbd?.textContent?.trim() ?? '';
+
+    // Regression assertions: the buggy oneLiner() used text.split('.')[0],
+    // which truncates at the decimal point in "0.28" and produces
+    // "...feed rate 0." — a sentence that is meaningless to the user.
+    // The fixed implementation must preserve the decimal and keep the
+    // full first sentence intact.
+    expect(rendered).toContain('feed rate 0.28 mm/rev');
+    expect(rendered).toContain('broadcasts machine cycle status.');
+    expect(rendered).not.toMatch(/feed rate 0\.$/);
+    expect(rendered.length).toBeGreaterThan('Executes high-precision machining cycles (spindle 3200 RPM, feed rate 0.'.length);
   });
 
   it('renders the preview surface and the .preview-specs badge row when payload exists', () => {

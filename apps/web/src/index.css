@@ -357,6 +357,27 @@ button:disabled {
   filter: brightness(0.97);
 }
 
+/* Dev-only chip — only rendered on ?state= demo deep-links, never on production load (TKT-075 / AC-05). */
+.chip-dev-only {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--glass-bg);
+  border: 1px dashed var(--hair-strong);
+  border-radius: var(--r-full);
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chip-dev-only:hover {
+  filter: brightness(0.97);
+  color: var(--ink);
+}
+
 .step-tag {
   display: inline-flex;
   align-items: center;

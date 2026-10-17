@@ -69,8 +69,8 @@ export default function TopologyCanvas({
       const x2 = (toRect.left + toRect.width / 2 - containerRect.left) / effectiveScale;
       const y2 = (toRect.top - containerRect.top) / effectiveScale;
 
-      const fromState = nodeStates[edge.from]?.status;
-      const toState = nodeStates[edge.to]?.status;
+      const fromState = nodeStates[edge.from as TopologyNodeId]?.status;
+      const toState = nodeStates[edge.to as TopologyNodeId]?.status;
 
       let edgeStatus: ComputedPath['status'] = 'idle';
 

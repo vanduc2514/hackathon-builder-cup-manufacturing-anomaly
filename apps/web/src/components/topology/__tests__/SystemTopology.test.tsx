@@ -262,22 +262,16 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     ).toBe('phase-c');
   });
 
-  it('validates recovery-handshake and gate-2-to-esg architectural edges (TKT-051 #226)', () => {
-    const handshakeEdge = TOPOLOGY_EDGES.find((e) => e.id === 'recovery-handshake');
-    expect(handshakeEdge).toBeDefined();
-    expect(handshakeEdge?.from).toBe('copilot-live');
-    expect(handshakeEdge?.to).toBe('floor-machines');
-    expect(handshakeEdge?.type).toBe('loopback-long');
-    expect(handshakeEdge?.label).toContain('Clear Interlock & Resume Feed');
-    expect(handshakeEdge?.activeScenarios).toEqual(['streak_verifying', 'approved']);
+  it('replaces the legacy recovery-handshake/gate-2-to-esg edges with the gate-block contract (#254)', () => {
+    const handshakeEdge = TOPOLOGY_EDGES.find((e) => e.from === 'copilot-live' && e.to === 'floor-machines');
+    expect(handshakeEdge).toBeUndefined();
 
-    const esgEdge = TOPOLOGY_EDGES.find((e) => e.id === 'gate-2-to-esg');
-    expect(esgEdge).toBeDefined();
-    expect(esgEdge?.from).toBe('decision-gate-2');
-    expect(esgEdge?.to).toBe('agent-learn');
-    expect(esgEdge?.type).toBe('branch-right');
-    expect(esgEdge?.label).toContain('50/50 Streak Verified');
-    expect(esgEdge?.activeScenarios).toEqual(['approved']);
+    const esgEdge = TOPOLOGY_EDGES.find((e) => e.from === 'decision-gate-2' && e.to === 'agent-learn');
+    expect(esgEdge).toBeUndefined();
+
+    const gate2YesToLearn = TOPOLOGY_EDGES.find((e) => e.from === 'gate2-yes' && e.to === 'agent-learn');
+    expect(gate2YesToLearn).toBeDefined();
+    expect(gate2YesToLearn?.tone).toBe('yes');
   });
 
   it('derives Tier 1 Glance Phase Stepper Info and Window 2 state across scenarios and incident lifecycle (TKT-052 #227)', () => {
@@ -455,26 +449,21 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     expect(handleScroll).toHaveBeenCalledWith('phase-5');
   });
 
-  it('verifies SVG path generation and active edge highlighting for recovery-handshake and gate-2-to-esg (TKT-053 #228)', () => {
+  it('verifies SVG path generation and node-state highlighting for the repair and closure flow (TKT-053 #228)', () => {
     const { container } = render(<SystemTopologyView incident={mockIncident} />);
 
     // SVG container exists
     const svgOverlay = container.querySelector('.topology-svg-overlay');
     expect(svgOverlay).not.toBeNull();
 
-    // Verify recovery-handshake edge exists in TOPOLOGY_EDGES and has correct configuration
-    const recoveryEdge = TOPOLOGY_EDGES.find((e) => e.id === 'recovery-handshake');
-    expect(recoveryEdge).toBeDefined();
-    expect(recoveryEdge?.from).toBe('copilot-live');
-    expect(recoveryEdge?.to).toBe('floor-machines');
-    expect(recoveryEdge?.type).toBe('loopback-long');
+    // Verify the gate-block edges that replaced recovery-handshake/gate-2-to-esg (#254)
+    const repairEdge = TOPOLOGY_EDGES.find((e) => e.from === 'gate1-yes' && e.to === 'copilot-live');
+    expect(repairEdge).toBeDefined();
+    expect(repairEdge?.tone).toBe('yes');
 
-    // Verify gate-2-to-esg edge exists in TOPOLOGY_EDGES and has correct configuration
-    const esgEdge = TOPOLOGY_EDGES.find((e) => e.id === 'gate-2-to-esg');
-    expect(esgEdge).toBeDefined();
-    expect(esgEdge?.from).toBe('decision-gate-2');
-    expect(esgEdge?.to).toBe('agent-learn');
-    expect(esgEdge?.type).toBe('branch-right');
+    const closureEdge = TOPOLOGY_EDGES.find((e) => e.from === 'gate2-yes' && e.to === 'agent-learn');
+    expect(closureEdge).toBeDefined();
+    expect(closureEdge?.tone).toBe('yes');
 
     // Check node states for streak_verifying: copilot-live and floor-machines
     const streakStates = deriveNodeStates(mockIncident, 'streak_verifying');

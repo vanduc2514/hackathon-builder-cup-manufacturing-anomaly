@@ -232,6 +232,8 @@ body,
   gap: 1px;
   /* drei <Html> wraps labels in a zero-width absolute box; size to content, not min-content. */
   width: max-content;
+  /* Bottom-anchored so the hover line grows upward and never covers the node (or a greeting robot). */
+  transform: translate(-50%, -100%);
   padding: 4px 12px 5px;
   border-radius: var(--radius-lg);
   background: var(--glass-bg-strong);

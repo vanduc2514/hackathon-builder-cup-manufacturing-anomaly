@@ -1,9 +1,10 @@
-// Animated robot figure for one agent; while the agent is working it moves faster, bobs, wobbles
-// and its eyes light up.
+// Animated robot figure for one agent: while working it hops, squashes, leans, shimmies and flaps
+// its arms with glowing eyes; on hover it waves its right hand with bright eyes and a small hop.
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useAnimations, useGLTF } from '@react-three/drei';
-import type { AnimationAction, Group, Mesh, MeshStandardMaterial } from 'three';
+import { Quaternion, Vector3 } from 'three';
+import type { AnimationAction, Group, Mesh, MeshStandardMaterial, Object3D } from 'three';
 import { isAgentWorking, scenarioNow } from '../data/topology';
 
 // "Futuristic flying animated Robot - Low Poly" by mshayan02 (Sketchfab), CC BY 4.0.
@@ -17,23 +18,41 @@ const BODY_MATERIAL = 'White_Glossy';
 const IDLE_GLOW = 0.6;
 const ACTIVE_GLOW = 4;
 
-interface AgentRobotProps {
-  agentId: string;
+/** Hand pivots sit at ear height; about -Y a positive angle swings the hand outward and up. */
+const HAND_AXIS = new Vector3(0, -1, 0);
+const handTurn = new Quaternion();
+const wavePose = new Quaternion();
+
+function turnHand(hand: Object3D | null, angle: number): void {
+  if (!hand) return;
+  hand.quaternion.multiply(handTurn.setFromAxisAngle(HAND_AXIS, angle));
 }
 
-export default function AgentRobot({ agentId }: AgentRobotProps): React.ReactElement {
+interface AgentRobotProps {
+  agentId: string;
+  hovered: boolean;
+  size: number;
+}
+
+export default function AgentRobot({ agentId, hovered, size }: AgentRobotProps): React.ReactElement {
   const { scene, animations } = useGLTF(MODEL_URL);
   const body = useRef<Group>(null);
   const root = useRef<Group>(null);
   const action = useRef<AnimationAction | null>(null);
   /** 0 idle .. 1 working, eased toward the scenario state each frame. */
   const work = useRef(0);
+  /** 0 idle .. 1 greeting, eased toward the hover state each frame. */
+  const greet = useRef(0);
+  const hover = useRef(hovered);
+  hover.current = hovered;
 
   // Per-instance copy with its own light materials so only this robot's eyes glow.
-  const { model, lights } = useMemo(() => {
+  const { model, lights, rightHand, rightRest, leftHand } = useMemo(() => {
     const copy = scene.clone(true);
     const glowing: MeshStandardMaterial[] = [];
+    const hands: Object3D[] = [];
     copy.traverse((obj) => {
+      if (obj.name.startsWith('Hand_origin')) hands.push(obj);
       const mesh = obj as Mesh;
       if (!mesh.isMesh) return;
       const material = (mesh.material as MeshStandardMaterial).clone();
@@ -44,7 +63,15 @@ export default function AgentRobot({ agentId }: AgentRobotProps): React.ReactEle
       if (material.name === BODY_MATERIAL) material.emissive.set('#ffffff').multiplyScalar(0.35);
       if (material.name === LIGHT_MATERIAL) glowing.push(material);
     });
-    return { model: copy, lights: glowing };
+    hands.sort((a, b) => b.position.x - a.position.x);
+    return {
+      model: copy,
+      lights: glowing,
+      rightHand: hands[0] ?? null,
+      /** Rest pose of the waving hand; the greeting replaces the clip pose rather than adding to it. */
+      rightRest: hands[0]?.quaternion.clone() ?? null,
+      leftHand: hands[1] ?? null,
+    };
   }, [scene]);
 
   const { actions } = useAnimations(animations, root);
@@ -57,24 +84,43 @@ export default function AgentRobot({ agentId }: AgentRobotProps): React.ReactEle
     };
   }, [actions]);
 
+  // Registered after useAnimations, so this runs after the mixer and adds on top of the clip pose.
   useFrame(() => {
     const t = scenarioNow();
-    const working = isAgentWorking(agentId, t);
-    work.current += ((working ? 1 : 0) - work.current) * 0.12;
+    work.current += ((isAgentWorking(agentId, t) ? 1 : 0) - work.current) * 0.12;
+    greet.current += ((hover.current ? 1 : 0) - greet.current) * 0.15;
     const w = work.current;
+    const g = greet.current;
     if (action.current) action.current.timeScale = 0.3 + 1.5 * w;
-    if (body.current) {
-      body.current.position.y = Math.sin(t * (1.5 + 5 * w)) * (0.03 + 0.1 * w);
-      body.current.rotation.y = Math.sin(t * 3) * 0.25 * w;
+
+    const b = body.current;
+    if (b) {
+      const h = Math.abs(Math.sin(t * 5));
+      b.position.y = Math.sin(t * 1.5) * 0.03 * (1 - w) + h * 0.45 * w + g * 0.15;
+      const sy = 1 + 0.12 * (h - 0.5) * w;
+      const sxz = 1 - 0.06 * (h - 0.5) * w;
+      b.scale.set(sxz, sy, sxz);
+      b.rotation.z = Math.sin(t * 5) * 0.18 * w;
+      b.rotation.y = Math.sin(t * 2.5) * 0.8 * w;
     }
-    const glow = IDLE_GLOW + (ACTIVE_GLOW - IDLE_GLOW) * w;
+
+    const flap = Math.sin(t * 12) * 0.7 * w;
+    turnHand(rightHand, flap);
+    turnHand(leftHand, flap * (1 - g));
+    if (rightHand && rightRest && g > 0.001) {
+      // 1.9..2.5 rad keeps the waving hand up beside the head; past ~2.7 the head hides it.
+      wavePose.copy(rightRest).multiply(handTurn.setFromAxisAngle(HAND_AXIS, 2.2 + Math.sin(t * 9) * 0.3));
+      rightHand.quaternion.slerp(wavePose, g);
+    }
+
+    const glow = IDLE_GLOW + (ACTIVE_GLOW - IDLE_GLOW) * Math.max(w, g);
     for (const m of lights) m.emissiveIntensity = glow;
   });
 
   // Face the isometric camera, which looks from +x/+z.
   return (
     <group ref={body}>
-      <group ref={root} scale={SCALE} rotation={[0, Math.PI / 4, 0]}>
+      <group ref={root} scale={SCALE * size} rotation={[0, Math.PI / 4, 0]}>
         <primitive object={model} />
       </group>
     </group>

@@ -1,4 +1,5 @@
-// Clickable line-art glass node: shape built from primitives (agents: robot model), floating label, hover lift.
+// Clickable line-art glass node: shape built from primitives (agents and orchestrator: robot model),
+// floating label, hover lift.
 import React, { Suspense, useRef } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Edges, Html, Outlines } from '@react-three/drei';
@@ -18,6 +19,11 @@ interface ShapePart {
 const HOVER_LIFT = 0.35;
 const LINE = '#334155';
 const ACCENT = '#5b5bf0';
+// Labels are bottom-anchored (styles.css) at these heights, so the hover line grows upward.
+/** Primitive nodes: just under the shape's top, as before. */
+const LABEL_BOTTOM = 0.85;
+/** Robots: clears a hovered, hopping, waving robot; scaled with the robot size. */
+const ROBOT_LABEL_BOTTOM = 2.9;
 
 function box(args: Vec3, position: Vec3): ShapePart {
   return { geometry: 'box', args, position };
@@ -40,7 +46,6 @@ function shapeParts(shape: NodeShape): ShapePart[] {
         { geometry: 'sphere', args: [0.55, 32, 16], position: [0.7, 0.75, 0] },
       ];
     case 'hub':
-      return [box([2.6, 1.6, 2.0], [0, 0.8, 0])];
     case 'agent':
       return [];
     case 'phone':
@@ -61,7 +66,9 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
   const group = useRef<Group>(null);
   const ring = useRef<Mesh>(null);
   const [x, z] = node.position;
-  const lineColor = hovered || node.shape === 'hub' ? ACCENT : LINE;
+  const isRobot = node.shape === 'agent' || node.shape === 'hub';
+  const robotSize = node.shape === 'hub' ? 1.4 : 1;
+  const lineColor = hovered ? ACCENT : LINE;
 
   useFrame(() => {
     if (!group.current) return;
@@ -105,14 +112,14 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
           )}
         </mesh>
       ))}
-      {node.shape === 'agent' && (
+      {isRobot && (
         <Suspense fallback={null}>
-          <AgentRobot agentId={node.id} />
+          <AgentRobot agentId={node.id} hovered={hovered} size={robotSize} />
         </Suspense>
       )}
-      {node.shape === 'agent' && (
+      {isRobot && (
         <mesh ref={ring} position={[0, 0.03, 0]}>
-          <cylinderGeometry args={[0.75, 0.75, 0.04, 32]} />
+          <cylinderGeometry args={[0.75 * robotSize, 0.75 * robotSize, 0.04, 32]} />
           <meshStandardMaterial
             color="#5b5bf0"
             emissive="#5b5bf0"
@@ -122,7 +129,10 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
           />
         </mesh>
       )}
-      <Html position={[0, node.shape === 'agent' ? 2.8 : 2.2, 0]} center style={{ pointerEvents: 'none' }}>
+      <Html
+        position={[0, isRobot ? ROBOT_LABEL_BOTTOM * robotSize : LABEL_BOTTOM, 0]}
+        style={{ pointerEvents: 'none' }}
+      >
         <div className={hovered ? 'node-label is-hovered' : 'node-label'}>
           <span className="node-label__head">
             <span className="material-symbols-outlined" aria-hidden="true">

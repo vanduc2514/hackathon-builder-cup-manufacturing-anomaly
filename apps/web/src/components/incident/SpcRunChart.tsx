@@ -74,7 +74,7 @@ export default function SpcRunChart({ machineId }: SpcRunChartProps): React.Reac
           {sourceLabel}
         </span>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H, display: 'block', overflow: 'visible' }}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H, display: 'block', overflow: 'hidden' }}>
         {oocIndices.length > 0 && (
           <rect
             x={bandStart}
@@ -106,19 +106,46 @@ export default function SpcRunChart({ machineId }: SpcRunChartProps): React.Reac
             strokeWidth='1.5'
           />
         ))}
-        {oocIndices.length > 0 && (
-          <text
-            x={x(peakIdx)}
-            y={y(points[peakIdx].defect_rate) - 12}
-            textAnchor='middle'
-            fontSize='12'
-            fontWeight='700'
-            fill='#c9343a'
-            fontFamily='var(--font-mono)'
-          >
-            UCL EXCURSION ({(peakRate * 100).toFixed(2)}%)
-          </text>
-        )}
+        {oocIndices.length > 0 && (() => {
+          // Pick a label anchor based on the peak's horizontal position so the text
+          // never overflows the chart card on either edge.
+          const peakX = x(peakIdx);
+          // Heuristic "label width" so we can keep it inside [pad.l, W-pad.r].
+          // Approx 7px per char at fontSize 12 mono; +4 px anchor padding per side.
+          const labelText = `UCL EXCURSION (${(peakRate * 100).toFixed(2)}%)`;
+          const approxHalf = labelText.length * 3.5 + 4;
+          let labelX = peakX;
+          let textAnchor: 'start' | 'middle' | 'end' = 'middle';
+          if (peakX < W * 0.18) {
+            // Left edge zone: anchor to start and nudge the text inside the left pad.
+            labelX = Math.max(pad.l, peakX);
+            textAnchor = 'start';
+          } else if (peakX > W * 0.82) {
+            // Right edge zone: anchor to end and pull the text inside the right pad.
+            labelX = Math.min(W - pad.r, peakX);
+            textAnchor = 'end';
+          }
+          // Final hard clamp: ensure the rendered string never escapes the chart bounds.
+          if (labelX - approxHalf < pad.l) labelX = pad.l + approxHalf;
+          if (labelX + approxHalf > W - pad.r) labelX = W - pad.r - approxHalf;
+          const peakY = y(points[peakIdx].defect_rate);
+          // Keep the label inside the chart vertically too: if it would clip the top, push
+          // it below the peak dot instead of above.
+          const labelY = peakY - 12 >= pad.t + 12 ? peakY - 12 : peakY + 18;
+          return (
+            <text
+              x={labelX}
+              y={labelY}
+              textAnchor={textAnchor}
+              fontSize='12'
+              fontWeight='700'
+              fill='#c9343a'
+              fontFamily='var(--font-mono)'
+            >
+              {labelText}
+            </text>
+          );
+        })()}
       </svg>
     </div>
   );

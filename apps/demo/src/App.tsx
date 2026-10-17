@@ -1,6 +1,7 @@
 // Root of the 3D topology demo: owns hover / reset state and opens each node's deployed app.
 import React, { useCallback, useState } from 'react';
 import NodeLegend from './components/NodeLegend';
+import SceneCaption from './components/SceneCaption';
 import SceneToolbar from './components/SceneToolbar';
 import TopologyScene from './components/TopologyScene';
 import { APP_LINKS } from './data/topology';
@@ -22,6 +23,7 @@ export default function App(): React.ReactElement {
       </main>
       <SceneToolbar onReset={() => setResetToken((t) => t + 1)} />
       <NodeLegend />
+      <SceneCaption />
     </>
   );
 }

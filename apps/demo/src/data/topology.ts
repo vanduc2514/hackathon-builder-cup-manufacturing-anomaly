@@ -1,5 +1,5 @@
 // Static topology of the Kaizen system: 17 nodes, their links and the deployed app each opens.
-import type { AppTarget, TopologyEdge, TopologyNode, Zone } from '../types/topology';
+import type { AppTarget, ScenarioStep, TopologyEdge, TopologyNode, Zone } from '../types/topology';
 
 export const APP_LINKS: Record<AppTarget, { url: string; title: string }> = {
   web: { url: 'https://kaizen-lab-web.web.app', title: 'Plant Ops Dashboard' },
@@ -209,23 +209,87 @@ export const EDGES: TopologyEdge[] = [
   { from: 'plant-ops', to: 'orchestrator', label: 'Shift-leader approval' },
 ];
 
-/** Agent workflow order (backend incident_workflow); copilot and doc run in parallel. */
-export const AGENT_SEQUENCE: string[][] = [
-  ['qa'],
-  ['tra'],
-  ['pa'],
-  ['rca'],
-  ['copilot', 'doc'],
-  ['qa'],
-  ['learn'],
+export const edgeKey = (e: TopologyEdge): string => `${e.from}->${e.to}`;
+
+/** Packets travel along `edges` (1.6 s). */
+const move = (caption: string, edges: string[]): ScenarioStep => ({
+  caption,
+  seconds: 1.6,
+  edges,
+  working: [],
+});
+
+/** `working` agents process data, optionally querying over `edges` (2.0 s). */
+const work = (caption: string, working: string[], edges: string[] = []): ScenarioStep => ({
+  caption,
+  seconds: 2.0,
+  edges,
+  working,
+});
+
+/** Looping incident scenario: each step lights its edges once (start -> end) and its agents. */
+export const SCENARIO: ScenarioStep[] = [
+  move('Camera frame + telemetry leave the machine', ['factory-floor->edge-gateway']),
+  move('Gemma flags a defect, event sent to Pub/Sub', ['edge-gateway->pubsub']),
+  move('Event reaches the orchestrator; raw data stored', [
+    'pubsub->orchestrator',
+    'pubsub->bigquery',
+  ]),
+  move('Orchestrator dispatches the agent team', ['orchestrator->qa']),
+  work('Quality Inspector confirms the defect', ['qa']),
+  move('Defect confirmed, passed to Traceability', ['qa->tra']),
+  work('Traceability queries lot genealogy', ['tra'], ['tra->bigquery']),
+  move('Suspect lots passed to Process Analyst', ['tra->pa']),
+  work('Process Analyst reads sensor data', ['pa']),
+  move('Sensor evidence passed to Root Cause', ['pa->rca']),
+  work('Root Cause searches 8D archives', ['rca'], ['rca->rag']),
+  move('Findings go to Copilot and Scribe', ['rca->copilot', 'rca->doc']),
+  work(
+    'Copilot guides the technician; Scribe drafts 8D',
+    ['copilot', 'doc'],
+    ['copilot->gemini', 'copilot->technician-app'],
+  ),
+  move('Technician repairs the machine', ['technician-app->factory-floor']),
+  move('Repair done, sent for verification', ['copilot->qa']),
+  work('Quality Inspector verifies on product evidence', ['qa']),
+  move('Verified result goes to Learning', ['qa->learn']),
+  work('Learning captures the knowledge', ['learn']),
+  move('Incident closed and shown on the dashboard', [
+    'orchestrator->firestore',
+    'firestore->plant-ops',
+  ]),
+  move('Shift leader approves', ['plant-ops->orchestrator']),
+  { caption: 'Incident resolved, restarting', seconds: 1.5, edges: [], working: [] },
 ];
 
-export const AGENT_STEP_SECONDS = 1.2;
+const SCENARIO_TOTAL = SCENARIO.reduce((s, x) => s + x.seconds, 0);
 
-/** Whether agent `id` is working at `seconds` into the looping workflow. */
-export function isAgentActive(id: string, seconds: number): boolean {
-  const step = Math.floor(seconds / AGENT_STEP_SECONDS) % AGENT_SEQUENCE.length;
-  return AGENT_SEQUENCE[step].includes(id);
+/** Seconds on the shared scenario clock (same source for edges, robots and caption). */
+export function scenarioNow(): number {
+  return performance.now() / 1000;
+}
+
+export interface ScenarioState {
+  index: number;
+  step: ScenarioStep;
+  progress: number;
+}
+
+/** Step active `seconds` into the endlessly looping scenario; progress is 0..1 within the step. */
+export function scenarioAt(seconds: number): ScenarioState {
+  let t = seconds % SCENARIO_TOTAL;
+  for (let index = 0; index < SCENARIO.length; index += 1) {
+    const step = SCENARIO[index];
+    if (t < step.seconds) return { index, step, progress: t / step.seconds };
+    t -= step.seconds;
+  }
+  const index = SCENARIO.length - 1;
+  return { index, step: SCENARIO[index], progress: 1 };
+}
+
+/** Whether agent `id` is working (processing data) `seconds` into the scenario. */
+export function isAgentWorking(id: string, seconds: number): boolean {
+  return scenarioAt(seconds).step.working.includes(id);
 }
 
 export const ZONES: Zone[] = [

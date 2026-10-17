@@ -32,9 +32,20 @@ export interface TopologyEdge {
   from: string;
   to: string;
   label: string;
+  /** Also draw an arrowhead at the start; packets always travel from -> to. */
   bidir?: boolean;
   /** Corner choice of the L-shaped route: x-first by default, `'zx'` goes z-first. */
   route?: 'zx';
+}
+
+/** One beat of the looping incident scenario. */
+export interface ScenarioStep {
+  caption: string;
+  seconds: number;
+  /** Edge keys `from->to` that carry a packet during this step (start -> end, once). */
+  edges: string[];
+  /** Agent node ids shown as working (processing data) during this step. */
+  working: string[];
 }
 
 export interface Zone {

@@ -1,9 +1,10 @@
-// Animated robot figure for one agent; its eyes light up while the agent is working.
+// Animated robot figure for one agent; while the agent is working it moves faster, bobs, wobbles
+// and its eyes light up.
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useAnimations, useGLTF } from '@react-three/drei';
-import type { Group, Mesh, MeshStandardMaterial } from 'three';
-import { isAgentActive } from '../data/topology';
+import type { AnimationAction, Group, Mesh, MeshStandardMaterial } from 'three';
+import { isAgentWorking, scenarioNow } from '../data/topology';
 
 // "Futuristic flying animated Robot - Low Poly" by mshayan02 (Sketchfab), CC BY 4.0.
 const MODEL_URL = '/models/agent-robot.glb';
@@ -22,7 +23,11 @@ interface AgentRobotProps {
 
 export default function AgentRobot({ agentId }: AgentRobotProps): React.ReactElement {
   const { scene, animations } = useGLTF(MODEL_URL);
+  const body = useRef<Group>(null);
   const root = useRef<Group>(null);
+  const action = useRef<AnimationAction | null>(null);
+  /** 0 idle .. 1 working, eased toward the scenario state each frame. */
+  const work = useRef(0);
 
   // Per-instance copy with its own light materials so only this robot's eyes glow.
   const { model, lights } = useMemo(() => {
@@ -46,20 +51,32 @@ export default function AgentRobot({ agentId }: AgentRobotProps): React.ReactEle
   useEffect(() => {
     const clip = Object.values(actions)[0];
     clip?.reset().play();
+    action.current = clip ?? null;
     return () => {
       clip?.stop();
     };
   }, [actions]);
 
-  useFrame(({ clock }) => {
-    const target = isAgentActive(agentId, clock.elapsedTime) ? ACTIVE_GLOW : IDLE_GLOW;
-    for (const m of lights) m.emissiveIntensity += (target - m.emissiveIntensity) * 0.2;
+  useFrame(() => {
+    const t = scenarioNow();
+    const working = isAgentWorking(agentId, t);
+    work.current += ((working ? 1 : 0) - work.current) * 0.12;
+    const w = work.current;
+    if (action.current) action.current.timeScale = 0.3 + 1.5 * w;
+    if (body.current) {
+      body.current.position.y = Math.sin(t * (1.5 + 5 * w)) * (0.03 + 0.1 * w);
+      body.current.rotation.y = Math.sin(t * 3) * 0.25 * w;
+    }
+    const glow = IDLE_GLOW + (ACTIVE_GLOW - IDLE_GLOW) * w;
+    for (const m of lights) m.emissiveIntensity = glow;
   });
 
   // Face the isometric camera, which looks from +x/+z.
   return (
-    <group ref={root} scale={SCALE} rotation={[0, Math.PI / 4, 0]}>
-      <primitive object={model} />
+    <group ref={body}>
+      <group ref={root} scale={SCALE} rotation={[0, Math.PI / 4, 0]}>
+        <primitive object={model} />
+      </group>
     </group>
   );
 }

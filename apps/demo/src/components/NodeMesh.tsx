@@ -3,7 +3,7 @@ import React, { Suspense, useRef } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Edges, Html, Outlines } from '@react-three/drei';
 import type { Group, Mesh, MeshStandardMaterial } from 'three';
-import { APP_LINKS, isAgentActive } from '../data/topology';
+import { APP_LINKS, isAgentWorking, scenarioNow } from '../data/topology';
 import type { NodeShape, TopologyNode } from '../types/topology';
 import AgentRobot from './AgentRobot';
 
@@ -63,13 +63,13 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
   const [x, z] = node.position;
   const lineColor = hovered || node.shape === 'hub' ? ACCENT : LINE;
 
-  useFrame(({ clock }) => {
+  useFrame(() => {
     if (!group.current) return;
     const y = group.current.position.y;
     group.current.position.y = y + ((hovered ? HOVER_LIFT : 0) - y) * 0.15;
     if (ring.current) {
       const m = ring.current.material as MeshStandardMaterial;
-      m.opacity += ((isAgentActive(node.id, clock.elapsedTime) ? 0.95 : 0.15) - m.opacity) * 0.2;
+      m.opacity += ((isAgentWorking(node.id, scenarioNow()) ? 0.95 : 0.15) - m.opacity) * 0.2;
     }
   });
 

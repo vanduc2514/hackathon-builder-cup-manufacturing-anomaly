@@ -1,13 +1,18 @@
-// One topology link routed as an L-shaped floor polyline, with packets flowing along it.
+// One topology link routed as an L-shaped floor polyline with arrowheads; it carries one packet
+// start -> end during the scenario steps that use it.
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Line } from '@react-three/drei';
-import type { Mesh } from 'three';
+import { Quaternion, Vector3, type Mesh, type MeshStandardMaterial } from 'three';
+import type { Line2, LineMaterial, LineSegments2 } from 'three-stdlib';
+import { SCENARIO, edgeKey, scenarioAt, scenarioNow } from '../data/topology';
 import type { TopologyEdge, TopologyNode } from '../types/topology';
 
 const FLOOR_Y = 0.05;
 const PACKET_Y = 0.16;
-const SPEED = 2.5;
+const ACTIVE = '#4338ca';
+const IDLE = '#64748b';
+const ARROW_INSET = 1.1;
 
 type Point = [number, number, number];
 
@@ -23,6 +28,11 @@ interface Route {
   /** cumulative[i] = arc length from points[0] to points[i]. */
   cumulative: number[];
   total: number;
+}
+
+interface ArrowPose {
+  position: Point;
+  quaternion: Quaternion;
 }
 
 function buildRoute(from: TopologyNode, to: TopologyNode, via: TopologyEdge['route']): Route {
@@ -56,41 +66,91 @@ function placeAt(mesh: Mesh, route: Route, distance: number): void {
   mesh.position.set(ax + (bx - ax) * t, PACKET_Y, az + (bz - az) * t);
 }
 
+/** Arrowhead inset from the route end, or from the start pointing back at the start node. */
+function arrowPose(route: Route, atEnd: boolean): ArrowPose {
+  const { points } = route;
+  const [ax, , az] = atEnd ? points[points.length - 2] : points[1];
+  const [bx, , bz] = atEnd ? points[points.length - 1] : points[0];
+  const length = Math.hypot(bx - ax, bz - az);
+  const d = new Vector3((bx - ax) / length, 0, (bz - az) / length);
+  const inset = Math.min(ARROW_INSET, length / 2);
+  return {
+    position: [bx - d.x * inset, FLOOR_Y + 0.02, bz - d.z * inset],
+    // The cone points +Y; turn it along the segment.
+    quaternion: new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), d),
+  };
+}
+
+const easeInOut = (p: number): number => p * p * (3 - 2 * p);
+
 export default function EdgeFlow({ edge, from, to, hoveredId }: EdgeFlowProps): React.ReactElement {
   const route = useMemo(() => buildRoute(from, to, edge.route), [from, to, edge.route]);
-  const forward = useRef<Mesh>(null);
-  const backward = useRef<Mesh>(null);
-
-  useFrame(({ clock }) => {
-    const travelled = clock.elapsedTime * SPEED;
-    if (forward.current) placeAt(forward.current, route, travelled % route.total);
-    if (backward.current) {
-      placeAt(backward.current, route, route.total - ((travelled + route.total / 2) % route.total));
-    }
-  });
+  const arrows = useMemo(
+    () => (edge.bidir ? [arrowPose(route, true), arrowPose(route, false)] : [arrowPose(route, true)]),
+    [route, edge.bidir],
+  );
+  const steps = useMemo(
+    () => SCENARIO.flatMap((s, i) => (s.edges.includes(edgeKey(edge)) ? [i] : [])),
+    [edge],
+  );
+  const line = useRef<Line2 | LineSegments2>(null);
+  const packet = useRef<Mesh>(null);
+  const arrowMaterials = useRef<(MeshStandardMaterial | null)[]>([]);
 
   const highlighted = hoveredId !== null && (hoveredId === edge.from || hoveredId === edge.to);
   const dimmed = hoveredId !== null && !highlighted;
+  const hover = useRef({ highlighted, dimmed });
+  hover.current = { highlighted, dimmed };
+
+  useFrame(() => {
+    const { index, progress } = scenarioAt(scenarioNow());
+    const active = steps.includes(index);
+    if (packet.current) {
+      packet.current.visible = active;
+      if (active) placeAt(packet.current, route, route.total * easeInOut(progress));
+    }
+    let color = active ? ACTIVE : IDLE;
+    let width = active ? 3 : 1.4;
+    let opacity = active ? 1 : 0.45;
+    if (hover.current.highlighted) {
+      color = ACTIVE;
+      width = 2.6;
+      opacity = 1;
+    } else if (hover.current.dimmed) {
+      opacity = 0.2;
+    }
+    if (line.current) {
+      const m = line.current.material as LineMaterial;
+      m.color.set(color);
+      m.linewidth = width;
+      m.opacity = opacity;
+    }
+    for (const m of arrowMaterials.current) {
+      if (!m) continue;
+      m.color.set(color);
+      m.opacity = opacity;
+    }
+  });
 
   return (
     <group>
-      <Line
-        points={route.points}
-        color={highlighted ? '#4338ca' : '#64748b'}
-        lineWidth={highlighted ? 2.6 : 1.6}
-        transparent
-        opacity={dimmed ? 0.28 : 1}
-      />
-      <mesh ref={forward}>
+      <Line ref={line} points={route.points} transparent />
+      {arrows.map((pose, i) => (
+        <mesh key={i} position={pose.position} quaternion={pose.quaternion} raycast={() => null}>
+          <coneGeometry args={[0.28, 0.7, 12]} />
+          <meshStandardMaterial
+            ref={(m) => {
+              arrowMaterials.current[i] = m;
+            }}
+            color={IDLE}
+            transparent
+          />
+        </mesh>
+      ))}
+      <mesh ref={packet} visible={false} raycast={() => null}>
         <sphereGeometry args={[0.14, 16, 12]} />
         <meshStandardMaterial color="#5b5bf0" emissive="#5b5bf0" emissiveIntensity={0.6} />
       </mesh>
-      {edge.bidir && (
-        <mesh ref={backward}>
-          <sphereGeometry args={[0.14, 16, 12]} />
-          <meshStandardMaterial color="#5b5bf0" emissive="#5b5bf0" emissiveIntensity={0.6} />
-        </mesh>
-      )}
     </group>
   );
 }

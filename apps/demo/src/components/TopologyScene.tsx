@@ -2,12 +2,24 @@
 import React, { useEffect, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { EDGES, NODES, ZONES } from '../data/topology';
+import { EDGES, NODES, SCENARIO, ZONES, edgeKey } from '../data/topology';
 import type { TopologyNode } from '../types/topology';
 import ControlsReset from './ControlsReset';
 import EdgeFlow from './EdgeFlow';
 import NodeMesh from './NodeMesh';
 import ZonePlate from './ZonePlate';
+
+// Fail fast when the scenario references an edge or agent that is not drawn.
+const EDGE_KEYS = new Set(EDGES.map(edgeKey));
+const NODE_IDS = new Set(NODES.map((n) => n.id));
+for (const step of SCENARIO) {
+  for (const key of step.edges) {
+    if (!EDGE_KEYS.has(key)) throw new Error(`Scenario edge ${key} is not in EDGES`);
+  }
+  for (const id of step.working) {
+    if (!NODE_IDS.has(id)) throw new Error(`Scenario agent ${id} is not in NODES`);
+  }
+}
 
 interface TopologySceneProps {
   hoveredId: string | null;
@@ -55,7 +67,7 @@ export default function TopologyScene({
         const to = nodeById.get(edge.to);
         if (!from || !to) throw new Error(`Edge ${edge.from}->${edge.to} references an unknown node`);
         return (
-          <EdgeFlow key={`${edge.from}->${edge.to}`} edge={edge} from={from} to={to} hoveredId={hoveredId} />
+          <EdgeFlow key={edgeKey(edge)} edge={edge} from={from} to={to} hoveredId={hoveredId} />
         );
       })}
       {NODES.map((node) => (

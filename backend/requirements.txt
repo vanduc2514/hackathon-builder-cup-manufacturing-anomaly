@@ -31,4 +31,8 @@ paho-mqtt>=2.1.0
 google-api-python-client>=2.100.0
 python-docx>=1.1.0
 openpyxl>=3.1.2
+# TKT-069 / Issue #267 — sync_gdrive_kb.py parses the competition OEM PDF.
+# ``cryptography`` is required for AES decryption of the owner-protected manual.
+pypdf>=5.0.0
+cryptography>=42.0.0
 

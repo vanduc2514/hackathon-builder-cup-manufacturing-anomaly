@@ -170,6 +170,11 @@ ASSET_HIERARCHIES: Dict[str, Dict[str, str]] = {
 }
 
 # Domain symptom synonym mappings
+# TKT-069 / Issue #267 — drive-ingested 8D cases map alarm codes to canonical symptoms:
+#   45 Fan Stop / 46 Motor Overheat / 50 Overload 1 / 51 Overload 2 -> tool_wear
+#   52 / 53 drive-side alarms -> spindle_vibration
+# We add the ``alarm_<code>`` / ``alarm <code>`` tokens so queries like
+# ``alarm 53 CNC-02`` resolve to the right symptom group.
 SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
     "scratch_vertical": {
         "scratch_vertical",
@@ -204,6 +209,13 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "temperature",
         "độ rung",
         "độ đảo",
+        # TKT-069 / Issue #267 — drive alarms that map to vibration/spindle drift.
+        "alarm_52",
+        "alarm_53",
+        "alarm 52",
+        "alarm 53",
+        "52",
+        "53",
     },
     "short_fill": {
         "short_fill",
@@ -266,6 +278,19 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "calendar",
         "sop-mnt-cnc-04",
         "mòn dao",
+        # TKT-069 / Issue #267 — drive alarms that map to tool-wear-style faults.
+        "alarm_45",
+        "alarm_46",
+        "alarm_50",
+        "alarm_51",
+        "alarm 45",
+        "alarm 46",
+        "alarm 50",
+        "alarm 51",
+        "45",
+        "46",
+        "50",
+        "51",
     },
 }
 
@@ -409,8 +434,13 @@ class LocalBM25Retriever:
 
         # 2. Parse Markdown documents
         for md_path in self.data_dir.rglob("*.md"):
-            if "drive" in md_path.parts or ".git" in md_path.parts:
+            if ".git" in md_path.parts:
                 continue
+            # ``data/knowledge_base/drive/`` now holds redacted competition docs
+            # produced by ``scripts/sync_gdrive_kb.py`` (TKT-069 / Issue #267).
+            # The retriever must include them so the RAG can answer "alarm 53 CNC-02"
+            # style queries. ``.cache/gdrive/`` lives outside ``data_dir`` so the
+            # raw artefacts never reach the indexer.
 
             rel_id = str(md_path.relative_to(self.data_dir))
             raw_text = md_path.read_text(encoding="utf-8")
@@ -637,7 +667,13 @@ class LocalBM25Retriever:
         if asset_family:
             chunk_text = f"{chunk.document_id} {chunk.title} {' '.join(chunk_machines)}".lower()
             for fam, members in MACHINE_FAMILIES.items():
-                if fam != asset_family and any(m in chunk_text for m in members):
+                # TKT-069 / Issue #292 — word-boundary match so an asset substring like
+                # ``cnc`` inside ``cnc_8d_case`` does not silently route the chunk out of
+                # a CNC query, while still blocking real cross-family contamination
+                # (CNC query vs. injection-molding manuals).
+                if fam != asset_family and any(
+                    re.search(rf"\b{re.escape(m)}\b", chunk_text) for m in members
+                ):
                     # Hard isolation: CNC query does not match injection molding manuals
                     return 0.0
 
@@ -946,9 +982,18 @@ def _resolve_dual_keys(
 
     symptom = defect_symptom
     if not symptom and query:
-        for s_key in SYMPTOM_SYNONYMS.keys():
-            if s_key in query.lower() or s_key.replace("_", " ") in query.lower():
-                symptom = s_key
+        ql = query.lower()
+        # TKT-069 / Issue #292 — flatten SYMPTOM_SYNONYMS to [(token, canonical_key)],
+        # longest first, so value-tokens like ``53`` are matched only after ``alarm 53``
+        # has been considered (substring containment then routes correctly).
+        candidates: List[Tuple[str, str]] = []
+        for canon_key, synonyms in SYMPTOM_SYNONYMS.items():
+            for tok in synonyms:
+                candidates.append((tok, canon_key))
+        candidates.sort(key=lambda item: len(item[0]), reverse=True)
+        for tok, canon_key in candidates:
+            if tok in ql or tok.replace("_", " ") in ql:
+                symptom = canon_key
                 break
 
     if not symptom or not asset:

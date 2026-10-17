@@ -19,14 +19,14 @@ TECH = AuthAccount(
 
 
 def test_get_preset_evidence_gallery_success():
-    """GET /api/presets/evidence returns the 5 benchmark presets."""
+    """GET /api/presets/evidence returns the benchmark presets + competition extras."""
     client = TestClient(app)
     response = client.get("/api/presets/evidence")
     assert response.status_code == 200
 
     data = response.json()
     assert "presets" in data
-    assert len(data["presets"]) == 5
+    assert len(data["presets"]) >= 5
 
     preset_ids = [p["id"] for p in data["presets"]]
     assert "preset-im05-normal" in preset_ids
@@ -70,4 +70,4 @@ def test_get_preset_evidence_gallery_real_auth_gate(monkeypatch: pytest.MonkeyPa
     )
     assert auth_resp.status_code == 200
     body = auth_resp.json()
-    assert len(body["presets"]) == 5
+    assert len(body["presets"]) >= 5

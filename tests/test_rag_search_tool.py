@@ -463,3 +463,184 @@ def test_multi_query_expansion():
     # Checks for OEM terminology and Vietnamese equivalent
     assert any("flank wear" in q for q in queries)
     assert any("xước" in q for q in queries)
+
+
+# =============================================================================
+# TKT-069 / Issue #267 — drive-ingested alarm-code coverage
+# =============================================================================
+
+
+def test_symptom_synonyms_advertise_drive_alarm_codes():
+    """SYMPTOM_SYNONYMS must include the 6 drive-alarm tokens (45/46/50/51/52/53)
+    so RAG queries like ``alarm 53 CNC-02`` map to a real symptom group (Tech Lead D4)."""
+
+    from backend.tools.rag_search_tool import SYMPTOM_SYNONYMS
+
+    drive_alarm_codes = ("45", "46", "50", "51", "52", "53")
+    for code in drive_alarm_codes:
+        token = f"alarm {code}"
+        assert token in SYMPTOM_SYNONYMS["tool_wear"] or token in SYMPTOM_SYNONYMS[
+            "spindle_vibration"
+        ], f"alarm token {token!r} missing from SYMPTOM_SYNONYMS"
+
+    # Verify the Tech Lead mapping.
+    assert SYMPTOM_SYNONYMS["tool_wear"] >= {"alarm_45", "alarm_46", "alarm_50", "alarm_51"}
+    assert SYMPTOM_SYNONYMS["spindle_vibration"] >= {"alarm_52", "alarm_53"}
+
+
+def test_local_bm25_retriever_includes_drive_documents(tmp_path, monkeypatch):
+    """After sync_gdrive_kb writes drive/* Markdown, the BM25 retriever must pick
+    them up so 'alarm 53' queries match the new 8D case citations (Tech Lead S4 AC)."""
+
+    from backend.tools.rag_search_tool import LocalBM25Retriever
+    from scripts.sync_gdrive_kb import (
+        EightDRecord,
+        Redactor,
+        render_8d_markdown,
+    )
+
+    # Stage a small knowledge_base under tmp_path with one drive/* 8D record.
+    kb_root = tmp_path / "kb"
+    manuals_dir = kb_root / "manuals"
+    drive_dir = kb_root / "drive" / "past_8d_reports"
+    manuals_dir.mkdir(parents=True)
+    drive_dir.mkdir(parents=True)
+
+    record = EightDRecord(
+        record_id="SYN-8D-001",
+        machine_id="CNC-SIM-02",
+        machine_model="drive_oem_a drive_series_a",
+        incident_timestamp="2026-09-04T09:15:00+07:00",
+        alarm_code=53,
+        fault_category="Drive Alarm 53",
+        operating_status="FAULT",
+        problem_description="Drive-side vibration alarm tripped on spindle.",
+        containment_action="Quarantine.",
+        root_cause_occurrence="Bearing wear.",
+        root_cause_escape="No trend review.",
+        evidence="Trend log.",
+        permanent_corrective_action="Replace bearing.",
+        action_owner="Maintenance engineer",
+        due_date="2026-09-09",
+        implementation_evidence="Bearing replaced.",
+        effectiveness_metric="Vibration < threshold.",
+        effectiveness_result="Stable.",
+        observation_window_days=7,
+        prevent_recurrence="Add trend review.",
+        closure_lessons="Lesson shared.",
+    )
+    redactor = Redactor()
+    md = render_8d_markdown(record, redactor=redactor)
+    (drive_dir / "8D_SYN-8D-001.md").write_text(md, encoding="utf-8")
+    # Seed a trivial manual so the retriever has at least 2 chunks to dedupe.
+    (manuals_dir / "blank.md").write_text(
+        "---\ntitle: blank\ncategory: manual\n---\n\nplaceholder body\n", encoding="utf-8"
+    )
+
+    retriever = LocalBM25Retriever(data_dir=kb_root)
+    retriever.index_corpus()
+
+    # Drive doc must appear in the chunk list now that the path filter is relaxed.
+    document_ids = {chunk.document_id for chunk in retriever.chunks}
+    assert any(doc_id.startswith("drive/past_8d_reports/") for doc_id in document_ids), (
+        "LocalBM25Retriever should index data/knowledge_base/drive/ after TKT-069"
+    )
+
+
+# =============================================================================
+# TKT-069 / Issue #292 — alarm-code value-token routing & cross-family substring isolation
+# =============================================================================
+
+
+def test_resolve_dual_keys_alarm_code_value_token_routes_to_spindle_vibration():
+    """A query containing the bare value-token ``53`` (no ``alarm`` prefix)
+    must still route to spindle_vibration, because ``alarm 53`` is present
+    in the SYMPTOM_SYNONYMS for spindle_vibration (Tech Lead D5 AC).
+    """
+
+    from backend.tools.rag_search_tool import _resolve_dual_keys
+
+    symptom, asset, resolved_query = _resolve_dual_keys(
+        suspect_asset="CNC-02",
+        query="Find the case for alarm 53 on the spindle drive.",
+    )
+
+    assert symptom == "spindle_vibration", (
+        f"alarm 53 must resolve to spindle_vibration, got {symptom!r}"
+    )
+    assert asset == "CNC-02"
+    assert resolved_query == "Find the case for alarm 53 on the spindle drive."
+
+
+def test_resolve_dual_keys_alarm_45_routes_to_tool_wear():
+    """``alarm 45`` is a Fan Stop / tool-wear drive alarm and must route to
+    tool_wear via the SYMPTOM_SYNONYMS entry, not collapse to a bare ``45``
+    value token (Tech Lead D5 AC).
+    """
+
+    from backend.tools.rag_search_tool import _resolve_dual_keys
+
+    symptom, asset, _ = _resolve_dual_keys(
+        suspect_asset="CNC-02",
+        query="alarm 45 trip on tool magazine — what is the SOP?",
+    )
+
+    assert symptom == "tool_wear", (
+        f"alarm 45 must resolve to tool_wear, got {symptom!r}"
+    )
+    assert asset == "CNC-02"
+
+
+def test_compute_asset_score_does_not_drop_drive_8d_for_cnc_queries():
+    """A drive-side 8D case chunk with machines=['CNC-02'] but an asset id like
+    ``cnc_8d_case_001`` (an external Drive filing id) must not be zero-scored by
+    the cross-family substring check. Only true cross-family membership (CNC
+    query against injection-molding manual) should still return 0.0 (Tech Lead
+    D5 AC + Regression S4).
+    """
+
+    from backend.tools.rag_search_tool import KnowledgeChunk, LocalBM25Retriever
+
+    retriever = LocalBM25Retriever()
+
+    drive_chunk = KnowledgeChunk(
+        chunk_id="drive_cnc_8d_case_001_sec_0",
+        document_id="drive/past_8d_reports/cnc_8d_case_001.md",
+        title="CNC-02 Drive 8D Case",
+        category="8d_report",
+        machines=["CNC-02"],
+        component="spindle_drive",
+        page_number=1,
+        section="Containment",
+        snippet="Drive-side vibration alarm tripped during machining.",
+        last_revised="2026-09-04",
+        tokens=["cnc-02", "drive", "vibration", "alarm"],
+    )
+
+    # CNC query against a CNC chunk with a Drive filing id containing ``cnc``
+    # as a substring of ``cnc_8d_case_001`` — must NOT return 0.0.
+    score = retriever._compute_asset_score(drive_chunk, "CNC-02", asset_family="cnc")
+    assert score > 0.0, (
+        f"asset_score should be >0 for a CNC chunk tagged to CNC-02, got {score}"
+    )
+
+    # And the negative case: an injection-molding manual must still hard-isolate
+    # from a CNC query (the original isolation invariant is preserved).
+    im_chunk = KnowledgeChunk(
+        chunk_id="im_manual_sec_0",
+        document_id="manuals/injection_molding_guide.md",
+        title="Polymer Injection Molding Processing Guide",
+        category="manual",
+        machines=["IM-05"],
+        component=None,
+        page_number=None,
+        section=None,
+        snippet="Resin drying guide.",
+        last_revised="2026-03-12",
+        tokens=["im-05", "resin", "dryer"],
+    )
+    im_score = retriever._compute_asset_score(im_chunk, "CNC-02", asset_family="cnc")
+    assert im_score == 0.0, (
+        f"cross-family incompatibility must still return 0.0 (got {im_score}) "
+        "so CNC queries never pick up IM-05 manuals"
+    )

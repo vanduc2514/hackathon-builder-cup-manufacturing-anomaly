@@ -109,19 +109,18 @@ class Settings(BaseSettings):
 
     # Factory Simulator service integration.
     # TKT-073 / #288: backend -> factory auth switched from shared X-API-Key to
-    # central JWT minted by /api/auth/login. ``factory_service_url`` stays; the
-    # bearer token is cached in :mod:`backend.tools.factory_client` and refreshed
-    # transparently on 401. Operator credentials are sourced from the matching
-    # env vars (set on backend Cloud Run by infra/terraform/cloud_run.tf).
+    # central HS256 JWT minted by /api/auth/login. ``factory_service_url`` stays;
+    # the bearer token is cached in :mod:`backend.tools.factory_client` and
+    # refreshed transparently on 401 (one re-login + retry per call).
+    # Service-account credentials are sourced from the matching env vars (set
+    # on backend Cloud Run by infra/terraform/cloud_run.tf). No backwards-compat
+    # shim for the dropped ``factory_api_key`` field.
     factory_service_url: str | None = None
     factory_timeout_seconds: float = 3.0
-    factory_operator_account: str | None = None
-    factory_operator_password: str | None = None
-    # Base URL the backend uses to call itself for the operator login.
-    # Defaults to ``backend_public_url``; falls back to ``backend_url`` (or empty
-    # string, which disables factory calls — see ``factory_client``).
-    backend_public_url: str | None = None
-    backend_url: str | None = None
+    factory_backend_base_url: str | None = None
+    factory_service_account_username: str = ""
+    factory_service_account_password: str = ""
+    factory_service_token_ttl_seconds: int = 3600
     quality_event_max_age_seconds: int = 60
     quality_event_dedup_ttl_seconds: int = 300
     quality_event_debounce_seconds: float = 10.0

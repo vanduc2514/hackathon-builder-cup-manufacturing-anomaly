@@ -236,6 +236,7 @@ export default function SystemTopologyView({
         <div
           className="cross-window-bridge"
           id="pubsub-cross-bridge"
+          data-node="pubsub-cross-bridge"
           role="group"
           aria-label="Google Cloud Pub/Sub bridge between Window 1 and Window 2"
         >

@@ -116,3 +116,42 @@ export function withToken(url: string): string {
   if (!session) return url;
   return `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(session.token)}`;
 }
+
+/**
+ * Pure parser that extracts password prefill only from `pwd` in a search query string and returns the cleaned search string.
+ * Strips only `pwd`, preserving all other query parameters.
+ */
+export function readPasswordParam(search: string): { password: string; cleanedSearch: string } {
+  const params = new URLSearchParams(search);
+  const password = params.get('pwd') || '';
+  params.delete('pwd');
+  const remaining = params.toString();
+  return {
+    password,
+    cleanedSearch: remaining ? `?${remaining}` : '',
+  };
+}
+
+let cachedPrefill: string | null = null;
+
+/**
+ * Reads initial password from window.location.search (`?pwd=...`) and immediately strips `pwd` via history.replaceState.
+ * Preserves other query params and the URL hash.
+ */
+export function takeLoginPrefill(): string {
+  if (typeof window === 'undefined' || !window.location) return '';
+  const search = window.location.search;
+  if (search) {
+    const { password, cleanedSearch } = readPasswordParam(search);
+    if (search !== cleanedSearch) {
+      const newUrl = `${window.location.pathname}${cleanedSearch}${window.location.hash}`;
+      window.history.replaceState(null, '', newUrl);
+      cachedPrefill = password;
+      return password;
+    }
+  }
+  if (cachedPrefill !== null) {
+    return cachedPrefill;
+  }
+  return '';
+}

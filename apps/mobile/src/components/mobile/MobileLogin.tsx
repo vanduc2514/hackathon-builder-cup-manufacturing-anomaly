@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ROLE_ICON, ROLE_LABEL, fetchDemoAccounts, login } from '../../api/auth';
+import React, { useEffect, useRef, useState } from 'react';
+import { ROLE_ICON, ROLE_LABEL, fetchDemoAccounts, login, takeLoginPrefill } from '../../api/auth';
 import type { AuthRole, DemoAccount } from '../../types';
 import './mobile.css';
 
@@ -9,7 +9,15 @@ const LOGIN_ROLE: AuthRole = 'technician';
 export default function MobileLogin(): React.ReactElement {
   // undefined while loading, null when the server offers no technician account.
   const [account, setAccount] = useState<DemoAccount | null | undefined>(undefined);
-  const [password, setPassword] = useState('');
+  const hasPrefill = useRef<boolean>(false);
+  const autoSubmitted = useRef<boolean>(false);
+  const [password, setPassword] = useState<string>(() => {
+    const initial = takeLoginPrefill();
+    if (initial) {
+      hasPrefill.current = true;
+    }
+    return initial;
+  });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +31,18 @@ export default function MobileLogin(): React.ReactElement {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (hasPrefill.current && account && password && !autoSubmitted.current) {
+      autoSubmitted.current = true;
+      // Auto-submit once the prefill password is in place and the account resolves.
+      setSubmitting(true);
+      void login(account.username, password).catch((err) => {
+        setError(err instanceof Error ? err.message : 'Sign-in failed');
+        setSubmitting(false);
+      });
+    }
+  }, [account, password]);
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -71,7 +91,7 @@ export default function MobileLogin(): React.ReactElement {
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  autoFocus
+                  autoFocus={!hasPrefill.current}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />

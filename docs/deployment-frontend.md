@@ -52,3 +52,13 @@ Configuration lives in `infra/terraform/cloud_run.tf` (backend Cloud Run) and `i
 The client caches the Bearer token in-process, reuses it across calls, and refreshes it exactly once on a 401 before failing (`backend/tools/factory_client.py`). Login failure or missing operator credentials are skipped gracefully — `factory_client` returns `FactorySyncResult(skipped=True, error="bearer_unavailable")` rather than raising, so callers degrade quietly.
 
 Deploy coordination (Risk #3 from issue #288): Terraform must be applied **before** the new backend image is rolled; otherwise the factory container still has `FACTORY_API_KEY` env-var while the backend no longer sends `X-API-Key`, and every backend → factory call 401s.
+
+## `?pwd=` prefill on login URLs
+
+All three deployed surfaces honour a one-shot `?pwd=<technician-password>` query parameter so operators can hand a deep link straight into the technician app on a phone:
+
+- Web (`kaizen-lab-web`) — `takeLoginPrefill()` in `apps/web/src/lib/auth.ts`.
+- Mobile (`kaizen-lab-mobile`) — `takeLoginPrefill()` in `apps/mobile/src/api/auth.ts`.
+- Factory demo (`kaizen-lab-demo`, planned in #288) — same parser.
+
+`takeLoginPrefill()` reads `?pwd=` once, immediately strips it via `history.replaceState`, and feeds it into the login form's initial password state. The prefill triggers an auto-submit once the technician account resolves. The password is consumed on read; `window.location.search` is rewritten before the URL is persisted anywhere (browser history, logs, referrers) and the value is never written to `localStorage` / `sessionStorage`. After submit, the user lands on the same screen with `window.location.search === ''`. Without `?pwd=` the screens behave exactly as before (empty password, manual submit).

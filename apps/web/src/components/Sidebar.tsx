@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { ROLE_ICON, ROLE_LABEL, useSession } from '../lib/auth';
 import { LINE_LABEL, shiftLabel } from '../lib/fleet';
 
-export type DashboardTab = 'overview' | 'topology' | 'incident-detail' | 'impact' | 'walkthroughs' | 'sops';
+export type DashboardTab = 'overview' | 'incident-detail' | 'impact' | 'walkthroughs' | 'sops';
 
 /** An incident opened from the overview; shown as a closable sub-tab under Incidents. */
 export interface IncidentTab {
@@ -157,19 +157,6 @@ export default function Sidebar({
         <div className="divider" />
 
         <div className="col" style={{ gap: '1.3rem' }}>
-          <div className="col" style={{ gap: 2 }}>
-            <div className="eyebrow" style={{ padding: '0 0.75rem 0.35rem' }}>
-              Architecture
-            </div>
-            <NavItem
-              id="nav-topology"
-              icon="account_tree"
-              label="System Topology"
-              active={currentTab === 'topology'}
-              onClick={() => onSelectTab('topology')}
-            />
-          </div>
-
           <div className="col" style={{ gap: 2 }}>
             <div className="eyebrow" style={{ padding: '0 0.75rem 0.35rem' }}>
               Operational Loop

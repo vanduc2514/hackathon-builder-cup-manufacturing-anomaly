@@ -26,7 +26,6 @@ const SOUND_KEY = 'kaizen.alertSound';
 
 const CRUMB: Record<DashboardTab, string> = {
   overview: 'Line Overview',
-  topology: 'System Topology',
   'incident-detail': 'Incidents',
   impact: 'Knowledge Base',
   sops: 'SOP Change Log',

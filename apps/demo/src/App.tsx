@@ -21,7 +21,7 @@ export default function App(): React.ReactElement {
         <TopologyScene hoveredId={hoveredId} onHover={setHoveredId} onOpen={openNode} resetToken={resetToken} />
       </main>
       <SceneToolbar onReset={() => setResetToken((t) => t + 1)} />
-      <NodeLegend hoveredId={hoveredId} onHover={setHoveredId} onOpen={openNode} />
+      <NodeLegend />
     </>
   );
 }

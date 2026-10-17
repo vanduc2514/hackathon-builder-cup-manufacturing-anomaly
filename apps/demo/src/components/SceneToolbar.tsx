@@ -10,7 +10,7 @@ export default function SceneToolbar({ onReset }: SceneToolbarProps): React.Reac
     <>
       <header className="header-crumb scene-crumb">
         <span className="brand-tile">K</span>
-        <b>System Topology</b>
+        <b>Kaizen System Topology</b>
       </header>
       <div className="scene-controls">
         <button type="button" className="ctrl-btn" aria-label="Reset view" title="Reset view" onClick={onReset}>

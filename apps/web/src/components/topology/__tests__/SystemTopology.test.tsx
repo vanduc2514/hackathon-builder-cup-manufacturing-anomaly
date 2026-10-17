@@ -76,10 +76,6 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
   it('renders all 5 architecture layers and key components in SystemTopologyView', () => {
     render(<SystemTopologyView incident={mockIncident} />);
 
-    // Header info
-    expect(screen.getByText('Cell Line 1')).toBeDefined();
-    expect(screen.getByText('System Topology')).toBeDefined();
-
     // 5 Layer titles
     expect(screen.getByText(/Layer 1: Factory Floor · Edge Data Sources/i)).toBeDefined();
     expect(screen.getByText(/Layer 2: On-Premises Gateway · Gemma Edge & Bridge/i)).toBeDefined();
@@ -613,13 +609,12 @@ describe('System Topology Production Polish Regression (Epic #238 / TKT-062)', (
 });
 
 describe('Window Containers, Contrast Hierarchy & Responsive Canvas Shell (TKT-064 #255)', () => {
-  it('1. crumb header: renders .header-crumb pill and hides all removed demo controls', () => {
+  it('1. no duplicate crumb: SystemTopologyView never renders its own .header-crumb (global TopHeader owns it, #271) and hides all removed demo controls', () => {
     render(<SystemTopologyView incident={null} />);
 
-    const crumb = document.querySelector('.header-crumb');
-    expect(crumb).not.toBeNull();
-    expect(crumb?.textContent).toContain('Cell Line 1');
-    expect(crumb?.textContent).toContain('System Topology');
+    // The breadcrumb pill is rendered once, globally, by TopHeader — never inside the page itself.
+    expect(document.querySelector('.header-crumb')).toBeNull();
+    expect(screen.queryByText('Cell Line 1')).toBeNull();
 
     expect(document.querySelector('h1')).toBeNull();
     expect(screen.queryByLabelText(/Simulation Scenario/i)).toBeNull();

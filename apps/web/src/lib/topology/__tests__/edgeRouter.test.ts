@@ -1,7 +1,7 @@
 // AC-TOP-28 / AC-TOP-30 / AC-TOP-31 verification suite for the deterministic
 // orthogonal edge router (issue #257 / TKT-066a).
-import { describe, it, expect } from 'vitest';
-import { TOPOLOGY_EDGES, TOPOLOGY_ROUTES, deriveEdgeStates } from '../../topology';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { TOPOLOGY_EDGES, TOPOLOGY_ROUTES, TOPOLOGY_NODE_LAYOUT, deriveEdgeStates } from '../../topology';
 import type { TopologyEdge } from '../../../types';
 import {
   DEFAULT_EDGE_GEOMETRY,
@@ -9,6 +9,7 @@ import {
   detectCrossings,
   detectSegmentOverlaps,
   EDGE_COLOR_TOKENS,
+  deriveGeometryFromDom,
   routeAllEdges,
   __test__,
   type EdgeGeometryConfig,
@@ -252,5 +253,132 @@ describe('edgeRouter — output type stability', () => {
       expect(r.points.length).toBeGreaterThanOrEqual(2);
       expect(r.points.length).toBeLessThanOrEqual(6);
     }
+  });
+});
+
+/**
+ * Regression suite for the cross-window bridge hotfix (#284 / TKT-068).
+ *
+ * Covers the AC-FIX-04 acceptance criterion: `deriveGeometryFromDom` must
+ * still resolve endpoints whose `data-node` attribute is missing by falling
+ * back to the `id="<endpointId>"` selector, and it must continue (not abort)
+ * when an endpoint matches neither selector so a single missing element no
+ * longer collapses the whole geometry pass and forces the router back to
+ * `DEFAULT_EDGE_GEOMETRY`.
+ */
+describe('edgeRouter — deriveGeometryFromDom selector resilience (AC-FIX-04)', () => {
+  // Default 35-endpoint fixture used by every test in this block. Each
+  // endpoint is rendered as a <div data-node="<id>" style="position:absolute;
+  // top:<y>px; left:<x>px; width:<w>px; height:<h>px;"> so jsdom surfaces a
+  // non-zero getBoundingClientRect that the function can measure.
+  function buildNodeFixture(opts: { bridgeAttr?: 'data-node' | 'id' | 'both' | 'none' } = {}): HTMLElement {
+    const container = document.createElement('div');
+    Object.defineProperty(container, 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: 0, right: 1200, bottom: 800, width: 1200, height: 800, x: 0, y: 0, toJSON: () => '' }),
+    });
+    let i = 0;
+    const cols = 8;
+    for (const endpointId of Object.keys(TOPOLOGY_NODE_LAYOUT)) {
+      i += 1;
+      if (endpointId === 'pubsub-cross-bridge') {
+        if (opts.bridgeAttr === 'both' || opts.bridgeAttr === undefined) {
+          const el = document.createElement('div');
+          el.id = endpointId;
+          el.setAttribute('data-node', endpointId);
+          el.style.position = 'absolute';
+          el.style.left = '500px';
+          el.style.top = '350px';
+          el.style.width = '200px';
+          el.style.height = '60px';
+          container.appendChild(el);
+        } else if (opts.bridgeAttr === 'id') {
+          const el = document.createElement('div');
+          el.id = endpointId;
+          el.style.position = 'absolute';
+          el.style.left = '500px';
+          el.style.top = '350px';
+          el.style.width = '200px';
+          el.style.height = '60px';
+          container.appendChild(el);
+        }
+        // bridgeAttr === 'none' → emit no element for the bridge; exercises
+        // the skip-and-continue path that used to return null.
+        continue;
+      }
+      const el = document.createElement('div');
+      el.setAttribute('data-node', endpointId);
+      const col = ((i - 1) % cols) + 1;
+      const row = Math.floor((i - 1) / cols) + 1;
+      el.style.position = 'absolute';
+      el.style.left = `${col * 80}px`;
+      el.style.top = `${row * 60}px`;
+      el.style.width = '70px';
+      el.style.height = '40px';
+      container.appendChild(el);
+    }
+    return container;
+  }
+
+  beforeEach(() => {
+    // The helper logs a dev-only warn when an endpoint cannot be located;
+    // silence it across the suite so the test runner output stays clean.
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns a complete geometry when every endpoint carries data-node (canonical contract)', () => {
+    const container = buildNodeFixture({ bridgeAttr: 'both' });
+    const geometry = deriveGeometryFromDom(container);
+    expect(geometry).not.toBeNull();
+    // Every layout entry is observed, including the bridge.
+    expect(geometry!.windowOrigins.bridge).toBeTypeOf('number');
+    // nodeHeight reflects the measured nodes, not the placeholder default.
+    expect(geometry!.nodeHeight).toBeGreaterThan(0);
+  });
+
+  it('falls back to #id when the bridge is missing data-node (issue #284 regression)', () => {
+    // Build the fixture, then strip the bridge's data-node attribute to
+    // reproduce the exact markup regression that QA observed in production.
+    const container = buildNodeFixture({ bridgeAttr: 'both' });
+    const bridgeEl = container.querySelector('[data-node="pubsub-cross-bridge"]') as HTMLElement | null;
+    expect(bridgeEl).not.toBeNull();
+    bridgeEl!.removeAttribute('data-node');
+    // The bridge must still be reachable via id="pubsub-cross-bridge".
+    const geometry = deriveGeometryFromDom(container);
+    expect(geometry).not.toBeNull();
+    // 34 nodes carry data-node and the bridge is recovered via #id → 35 observed.
+    expect(geometry!.nodeHeight).toBeGreaterThan(0);
+    expect(geometry!.windowOrigins.bridge).toBeTypeOf('number');
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('skips an unmatched endpoint without aborting the whole geometry pass', () => {
+    // Drop the bridge element entirely so neither selector matches it.
+    const container = buildNodeFixture({ bridgeAttr: 'none' });
+    const geometry = deriveGeometryFromDom(container);
+    expect(geometry).not.toBeNull();
+    // 34 endpoints observed; geometry is still populated for the rest.
+    expect(geometry!.nodeHeight).toBeGreaterThan(0);
+    // The dev-only warn fires for the missing bridge. deriveGeometryFromDom
+    // walks the layout twice (once for metrics, once for nodeHeight), so the
+    // warn may fire more than once — assert presence + message instead of
+    // exact count.
+    const warnMock = console.warn as ReturnType<typeof vi.fn>;
+    const calls = warnMock.mock.calls.map((args) => String(args[0]));
+    expect(calls.length).toBeGreaterThanOrEqual(1);
+    expect(calls.some((c) => c.includes('pubsub-cross-bridge'))).toBe(true);
+  });
+
+  it('returns null only when the DOM is genuinely empty (zero endpoints observed)', () => {
+    const container = document.createElement('div');
+    Object.defineProperty(container, 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => '' }),
+    });
+    // No children — every layout entry will fail to resolve.
+    const geometry = deriveGeometryFromDom(container);
+    expect(geometry).toBeNull();
   });
 });

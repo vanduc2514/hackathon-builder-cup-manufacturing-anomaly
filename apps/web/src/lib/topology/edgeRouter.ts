@@ -795,13 +795,50 @@ export const __test__ = {
 };
 
 /**
+ * Locate the DOM element backing a topology endpoint.
+ *
+ * Prefers the explicit `data-node="<id>"` attribute (the canonical marker on
+ * {@link TopologyNode}, decision gates, phase-lane blocks, and the bridge
+ * conduit) and falls back to `id="<id>"` so a missing or renamed attribute
+ * on a single element does not silently invalidate the whole router.
+ *
+ * Returns `null` when neither selector matches; the caller decides how to
+ * react (the geometry derivation skips the endpoint and continues, so one
+ * missing element never collapses the entire routing pass).
+ */
+function findEndpointElement(
+  container: HTMLElement,
+  endpointId: string,
+): HTMLElement | null {
+  const byAttr = container.querySelector(`[data-node="${endpointId}"]`);
+  if (byAttr) return byAttr as HTMLElement;
+  if (typeof container.querySelector === 'function') {
+    const byId = container.querySelector(`#${CSS.escape(endpointId)}`);
+    if (byId) return byId as HTMLElement;
+  }
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console -- dev-only diagnostic for the topology hotfix (#284).
+    console.warn(
+      `[topology/edgeRouter] endpoint "${endpointId}" matched neither [data-node] nor #id; skipping it for this geometry pass.`,
+    );
+  }
+  return null;
+}
+
+/**
  * Derive the {@link EdgeGeometryConfig} from the live DOM so the router's
  * pure algorithm produces paths that align with the rendered CSS grid
  * regardless of viewport width. The function walks every endpoint in
  * {@link TOPOLOGY_NODE_LAYOUT}, reads its `getBoundingClientRect()`, and
  * collapses the measured coordinates into a per-window geometry record.
  *
- * Returns `null` when the DOM is not ready (any endpoint missing).
+ * Returns `null` only when **no** endpoints were observed — i.e. the DOM is
+ * not ready at all (e.g. the page just mounted and the canvas is empty).
+ * A single missing endpoint is logged once in dev mode and skipped so the
+ * remaining endpoints can still drive a correct geometry; this prevents
+ * the regression where a missing `data-node` attribute on the cross-window
+ * bridge forced the router to fall back to {@link DEFAULT_EDGE_GEOMETRY}
+ * (issue #284 / TKT-068).
  */
 export function deriveGeometryFromDom(
   container: HTMLElement,
@@ -826,12 +863,15 @@ export function deriveGeometryFromDom(
 
   const layerYOffsets: Record<string, number> = { ...base.layerYOffsets };
 
+  let observedEndpoints = 0;
+
   for (const [endpointId, layout] of layoutEntries) {
-    const el = container.querySelector(`[data-node="${endpointId}"]`) as HTMLElement | null;
-    if (!el) return null;
+    const el = findEndpointElement(container, endpointId);
+    if (!el) continue; // skip-and-continue: a single missing endpoint no longer nukes the geometry.
     const rect = el.getBoundingClientRect();
     const w = windowMetrics[layout.container];
-    if (!w) return null;
+    if (!w) continue;
+    observedEndpoints += 1;
     w.leftMost = Math.min(w.leftMost, rect.left - containerRect.left);
     w.rightMost = Math.max(w.rightMost, rect.right - containerRect.left);
     w.topMost = Math.min(w.topMost, rect.top - containerRect.top);
@@ -843,6 +883,11 @@ export function deriveGeometryFromDom(
       layerYOffsets[layout.layer] = Math.min(layerYOffsets[layout.layer] ?? Infinity, rect.top - containerRect.top);
     }
   }
+
+  // Bail only when the DOM is genuinely not ready — no endpoints observed
+  // means the canvas hasn't rendered yet, so falling back to DEFAULT would
+  // be no worse than fabricating a measurement.
+  if (observedEndpoints === 0) return null;
 
   const windowWidths: Record<'window-1' | 'window-2' | 'bridge', number> = {
     'window-1': 0,
@@ -875,7 +920,7 @@ export function deriveGeometryFromDom(
   const nodeHeight = (() => {
     let max = 0;
     for (const [endpointId] of layoutEntries) {
-      const el = container.querySelector(`[data-node="${endpointId}"]`) as HTMLElement | null;
+      const el = findEndpointElement(container, endpointId);
       if (!el) continue;
       const rect = el.getBoundingClientRect();
       if (rect.height > max) max = rect.height;

@@ -119,28 +119,6 @@ export default function LoginScreen(): React.ReactElement {
             </div>
           </div>
 
-          {/* Account/Role toggle tabs if accounts are available or by default */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.25rem' }}>
-            <div className="mode-tabs" style={{ padding: '3px' }}>
-              <button
-                type="button"
-                className={`tab-btn ${selectedRole === 'technician' ? 'active' : ''}`}
-                onClick={() => { setSelectedRole('technician'); setError(null); }}
-                style={{ padding: '6px 14px', fontSize: '12px' }}
-              >
-                Plant Operator
-              </button>
-              <button
-                type="button"
-                className={`tab-btn ${selectedRole === 'shift_leader' ? 'active' : ''}`}
-                onClick={() => { setSelectedRole('shift_leader'); setError(null); }}
-                style={{ padding: '6px 14px', fontSize: '12px' }}
-              >
-                Shift Leader
-              </button>
-            </div>
-          </div>
-
           <form style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }} onSubmit={submit}>
             {/* Hidden username lets the browser save and fill the password for this account */}
             <input

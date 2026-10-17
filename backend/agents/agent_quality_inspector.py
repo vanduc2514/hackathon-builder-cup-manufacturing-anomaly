@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 from collections.abc import AsyncIterator, Callable
 from datetime import datetime, timezone
 
@@ -26,6 +27,8 @@ from backend.tools.spc_calculator import (
     StreakGatekeeper,
     evaluate_defect_rate,
 )
+
+logger = logging.getLogger(__name__)
 
 AGENT_ID = "QA"
 AGENT_NAME = "Quality Inspector"
@@ -73,6 +76,21 @@ def check_spc_control_limits(
     ucl_override: float | None = None,
 ) -> SpcEvaluationResult:
     """ADK Tool: Calculates Shewhart p-chart control limits and evaluates defect rate for SPC breach."""
+    # TKT-070 S11 — log which baseline source the inspector consumed so an
+    # operator can spot when the warehouse was empty (hardcoded fallback)
+    # vs when the per-machine distribution from competition_telemetry was
+    # the active baseline. Wrapped in try/except so a BigQuery outage
+    # never blocks the SPC evaluation itself.
+    try:
+        from backend.tools.bigquery_tool import query_competition_telemetry_distribution
+
+        distribution = query_competition_telemetry_distribution()
+        if distribution.get("sample_count", 0) > 0:
+            logger.info("baseline source: competition_telemetry")
+        else:
+            logger.info("baseline source: hardcoded fallback")
+    except Exception as exc:
+        logger.info("baseline source: hardcoded fallback (%s)", exc)
     return evaluate_defect_rate(
         defect_count=defect_count,
         sample_size=sample_size,

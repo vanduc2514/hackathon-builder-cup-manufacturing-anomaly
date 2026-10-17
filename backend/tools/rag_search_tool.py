@@ -170,6 +170,11 @@ ASSET_HIERARCHIES: Dict[str, Dict[str, str]] = {
 }
 
 # Domain symptom synonym mappings
+# TKT-069 / Issue #267 — drive-ingested 8D cases map alarm codes to canonical symptoms:
+#   45 Fan Stop / 46 Motor Overheat / 50 Overload 1 / 51 Overload 2 -> tool_wear
+#   52 / 53 drive-side alarms -> spindle_vibration
+# We add the ``alarm_<code>`` / ``alarm <code>`` tokens so queries like
+# ``alarm 53 CNC-02`` resolve to the right symptom group.
 SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
     "scratch_vertical": {
         "scratch_vertical",
@@ -204,6 +209,13 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "temperature",
         "độ rung",
         "độ đảo",
+        # TKT-069 / Issue #267 — drive alarms that map to vibration/spindle drift.
+        "alarm_52",
+        "alarm_53",
+        "alarm 52",
+        "alarm 53",
+        "52",
+        "53",
     },
     "short_fill": {
         "short_fill",
@@ -266,6 +278,19 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "calendar",
         "sop-mnt-cnc-04",
         "mòn dao",
+        # TKT-069 / Issue #267 — drive alarms that map to tool-wear-style faults.
+        "alarm_45",
+        "alarm_46",
+        "alarm_50",
+        "alarm_51",
+        "alarm 45",
+        "alarm 46",
+        "alarm 50",
+        "alarm 51",
+        "45",
+        "46",
+        "50",
+        "51",
     },
 }
 
@@ -409,8 +434,13 @@ class LocalBM25Retriever:
 
         # 2. Parse Markdown documents
         for md_path in self.data_dir.rglob("*.md"):
-            if "drive" in md_path.parts or ".git" in md_path.parts:
+            if ".git" in md_path.parts:
                 continue
+            # ``data/knowledge_base/drive/`` now holds redacted competition docs
+            # produced by ``scripts/sync_gdrive_kb.py`` (TKT-069 / Issue #267).
+            # The retriever must include them so the RAG can answer "alarm 53 CNC-02"
+            # style queries. ``.cache/gdrive/`` lives outside ``data_dir`` so the
+            # raw artefacts never reach the indexer.
 
             rel_id = str(md_path.relative_to(self.data_dir))
             raw_text = md_path.read_text(encoding="utf-8")

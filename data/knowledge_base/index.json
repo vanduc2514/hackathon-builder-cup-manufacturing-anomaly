@@ -6,7 +6,11 @@
       "document_id": "manuals/cnc_operating_manual.md",
       "title": "CNC Vertical Machining Center Operating & Maintenance Manual",
       "category": "manual",
-      "machines": ["CNC-01", "CNC-02", "CNC-03"],
+      "machines": [
+        "CNC-01",
+        "CNC-02",
+        "CNC-03"
+      ],
       "total_pages": 128,
       "key_topics": [
         "spindle_runout",
@@ -44,7 +48,9 @@
       "document_id": "maint_logs/cnc_tool_t07_maintenance.md",
       "title": "CNC-02 Tool Station T07 Maintenance & Inspection Log",
       "category": "maint_log",
-      "machines": ["CNC-02"],
+      "machines": [
+        "CNC-02"
+      ],
       "total_pages": 3,
       "key_topics": [
         "tool_installation_history",
@@ -75,7 +81,9 @@
       "document_id": "past_8d_reports/8D_2026_03_12_spindle_vibration.md",
       "title": "8D Incident Report: CNC-02 Spindle Vibration Spike & Machined Face Scratching",
       "category": "8d_report",
-      "machines": ["CNC-02"],
+      "machines": [
+        "CNC-02"
+      ],
       "total_pages": 5,
       "key_topics": [
         "8d_methodology",
@@ -109,7 +117,10 @@
       "document_id": "manuals/injection_molding_guide.md",
       "title": "Industrial Injection Molding Machine & Polymer Processing Guide",
       "category": "manual",
-      "machines": ["IM-05", "IM-06"],
+      "machines": [
+        "IM-05",
+        "IM-06"
+      ],
       "total_pages": 94,
       "key_topics": [
         "abs_resin",
@@ -143,7 +154,9 @@
       "document_id": "manuals/mold_spec_im05_4cavity.md",
       "title": "Tooling Specification & Rheological Analysis: 4-Cavity Enclosure Mold (MOLD-E4C-05)",
       "category": "spec",
-      "machines": ["IM-05"],
+      "machines": [
+        "IM-05"
+      ],
       "total_pages": 24,
       "key_topics": [
         "mold_cavity_3",
@@ -175,7 +188,9 @@
       "document_id": "maint_logs/dehumidifier_dryer_maintenance.md",
       "title": "Auxiliary Equipment Maintenance Log: Dehumidifier Dryer-03",
       "category": "maint_log",
-      "machines": ["IM-05"],
+      "machines": [
+        "IM-05"
+      ],
       "total_pages": 3,
       "key_topics": [
         "dryer_03",
@@ -206,7 +221,9 @@
       "document_id": "past_8d_reports/8D_2026_03_12_dryer_filter_dewpoint.md",
       "title": "8D Incident Report: IM-05 Cavity 3 Sink Marks & Clogged Dryer Intake Filter",
       "category": "8d_report",
-      "machines": ["IM-05"],
+      "machines": [
+        "IM-05"
+      ],
       "total_pages": 5,
       "key_topics": [
         "8d_methodology",
@@ -233,6 +250,822 @@
           "page_number": 3,
           "section": "D4: Root Cause Analysis (5-Whys)",
           "snippet": "Root cause: Clogged intake filter on Dryer-03 choked airflow -> dew point climbed to -18 °C -> ABS resin pellet moisture reached 0.045% (> 0.02% threshold) -> Cavity #3 runner length (285 mm) suffered localized pressure drop."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/past_8d_reports/8D_SYN-8D-001.md",
+      "title": "8D Incident Report (Drive): Fan Stop on CNC-SIM-01",
+      "category": "8d_report",
+      "machines": [
+        "CNC-SIM-01"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "8d_report",
+        "drive_ingest",
+        "alarm_45",
+        "fan_stop",
+        "tool_wear"
+      ],
+      "page_anchors": {
+        "1": "D2 Problem Description -> D8 Closure"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "D2: Problem Description",
+          "snippet": "Fan stopped; temperature increased during operation. This is a fictional training scenario, not an actual historical incident.",
+          "alarm_code": "45",
+          "symptom_key": "tool_wear"
+        }
+      ]
+    },
+    {
+      "document_id": "drive/past_8d_reports/8D_SYN-8D-002.md",
+      "title": "8D Incident Report (Drive): Motor Overheat on CNC-SIM-02",
+      "category": "8d_report",
+      "machines": [
+        "CNC-SIM-02"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "8d_report",
+        "drive_ingest",
+        "alarm_46",
+        "motor_overheat",
+        "tool_wear"
+      ],
+      "page_anchors": {
+        "1": "D2 Problem Description -> D8 Closure"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "D2: Problem Description",
+          "snippet": "Motor/spindle temperature rose abnormally during operation; thermal alarm occurred. This is a fictional training scenario, not an actual historical incident.",
+          "alarm_code": "46",
+          "symptom_key": "tool_wear"
+        }
+      ]
+    },
+    {
+      "document_id": "drive/past_8d_reports/8D_SYN-8D-003.md",
+      "title": "8D Incident Report (Drive): Overload 1 on CNC-SIM-03",
+      "category": "8d_report",
+      "machines": [
+        "CNC-SIM-03"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "8d_report",
+        "drive_ingest",
+        "alarm_50",
+        "overload_1",
+        "tool_wear"
+      ],
+      "page_anchors": {
+        "1": "D2 Problem Description -> D8 Closure"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "D2: Problem Description",
+          "snippet": "Drive reported Overload 1 while spindle/motor was operating; load/overload trend elevated. This is a fictional training scenario, not an actual historical incident.",
+          "alarm_code": "50",
+          "symptom_key": "tool_wear"
+        }
+      ]
+    },
+    {
+      "document_id": "drive/past_8d_reports/8D_SYN-8D-004.md",
+      "title": "8D Incident Report (Drive): Overload 2 on CNC-SIM-04",
+      "category": "8d_report",
+      "machines": [
+        "CNC-SIM-04"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "8d_report",
+        "drive_ingest",
+        "alarm_51",
+        "overload_2",
+        "tool_wear"
+      ],
+      "page_anchors": {
+        "1": "D2 Problem Description -> D8 Closure"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "D2: Problem Description",
+          "snippet": "High current condition triggered Overload 2 during operation. This is a fictional training scenario, not an actual historical incident.",
+          "alarm_code": "51",
+          "symptom_key": "tool_wear"
+        }
+      ]
+    },
+    {
+      "document_id": "drive/past_8d_reports/8D_SYN-8D-005.md",
+      "title": "8D Incident Report (Drive): Excessive Error 1 on CNC-SIM-05",
+      "category": "8d_report",
+      "machines": [
+        "CNC-SIM-05"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "8d_report",
+        "drive_ingest",
+        "alarm_52",
+        "excessive_error_1",
+        "spindle_vibration"
+      ],
+      "page_anchors": {
+        "1": "D2 Problem Description -> D8 Closure"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "D2: Problem Description",
+          "snippet": "Position deviation exceeded the configured threshold while servo was ON. This is a fictional training scenario, not an actual historical incident.",
+          "alarm_code": "52",
+          "symptom_key": "spindle_vibration"
+        }
+      ]
+    },
+    {
+      "document_id": "drive/past_8d_reports/8D_SYN-8D-006.md",
+      "title": "8D Incident Report (Drive): Excessive Error 2 on CNC-SIM-06",
+      "category": "8d_report",
+      "machines": [
+        "CNC-SIM-06"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "8d_report",
+        "drive_ingest",
+        "alarm_53",
+        "excessive_error_2",
+        "spindle_vibration"
+      ],
+      "page_anchors": {
+        "1": "D2 Problem Description -> D8 Closure"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "D2: Problem Description",
+          "snippet": "Position deviation exceeded the configured threshold while servo was OFF. This is a fictional training scenario, not an actual historical incident.",
+          "alarm_code": "53",
+          "symptom_key": "spindle_vibration"
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0001.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-01",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-01"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Routine fan and air path inspection due."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0002.md",
+      "title": "Maintenance Log (Drive): CORRECTIVE on CNC-SIM-02",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-02"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "corrective"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Fan stop alarm; cooling fan reported stopped."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0003.md",
+      "title": "Maintenance Log (Drive): CORRECTIVE on CNC-SIM-03",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-03"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "corrective"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Motor/spindle thermal alarm during operation."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0004.md",
+      "title": "Maintenance Log (Drive): CORRECTIVE on CNC-SIM-01",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-01"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "corrective"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Overload 1 alarm with elevated load/overload trend."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0005.md",
+      "title": "Maintenance Log (Drive): CORRECTIVE on CNC-SIM-02",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-02"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "corrective"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Overload 2 / high-current alarm."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0006.md",
+      "title": "Maintenance Log (Drive): CORRECTIVE on CNC-SIM-03",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-03"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "corrective"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Excessive error 1 while servo ON."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0007.md",
+      "title": "Maintenance Log (Drive): CORRECTIVE on CNC-SIM-01",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-01"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "corrective"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Excessive error 2 while servo OFF."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0008.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-02",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-02"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Inspect coupling, lubrication and axis travel for abnormal noise/play."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0009.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-03",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-03"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Inspect cabinet airflow and electrical connections."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0010.md",
+      "title": "Maintenance Log (Drive): INSPECTION on CNC-SIM-01",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-01"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "inspection"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Check unusual vibration/noise during operation."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0011.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-02",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-02"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Check fan status, airflow and dust build-up."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0012.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-03",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-03"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Inspect coupling, lubrication and axis travel for abnormal noise/play."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0013.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-01",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-01"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Inspect cabinet airflow and electrical connections."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0014.md",
+      "title": "Maintenance Log (Drive): INSPECTION on CNC-SIM-02",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-02"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "inspection"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Check unusual vibration/noise during operation."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0015.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-03",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-03"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Check fan status, airflow and dust build-up."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0016.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-01",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-01"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Inspect coupling, lubrication and axis travel for abnormal noise/play."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0017.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-02",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-02"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Inspect cabinet airflow and electrical connections."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0018.md",
+      "title": "Maintenance Log (Drive): INSPECTION on CNC-SIM-03",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-03"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "inspection"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Check unusual vibration/noise during operation."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0019.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-01",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-01"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Check fan status, airflow and dust build-up."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0020.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-02",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-02"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Inspect coupling, lubrication and axis travel for abnormal noise/play."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0021.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-03",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-03"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Inspect cabinet airflow and electrical connections."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0022.md",
+      "title": "Maintenance Log (Drive): INSPECTION on CNC-SIM-01",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-01"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "inspection"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Check unusual vibration/noise during operation."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0023.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-02",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-02"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Check fan status, airflow and dust build-up."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0024.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-03",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-03"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Inspect coupling, lubrication and axis travel for abnormal noise/play."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0025.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-01",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-01"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Inspect cabinet airflow and electrical connections."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0026.md",
+      "title": "Maintenance Log (Drive): INSPECTION on CNC-SIM-02",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-02"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "inspection"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Check unusual vibration/noise during operation."
+        }
+      ]
+    },
+    {
+      "document_id": "drive/maint_logs/ML-SYN-0027.md",
+      "title": "Maintenance Log (Drive): PREVENTIVE on CNC-SIM-03",
+      "category": "maint_log",
+      "machines": [
+        "CNC-SIM-03"
+      ],
+      "total_pages": 1,
+      "key_topics": [
+        "maint_log",
+        "drive_ingest",
+        "preventive"
+      ],
+      "page_anchors": {
+        "1": "Reported Symptom -> Follow-up"
+      },
+      "critical_citations": [
+        {
+          "page_number": 1,
+          "section": "Reported Symptom",
+          "snippet": "Check fan status, airflow and dust build-up."
         }
       ]
     }

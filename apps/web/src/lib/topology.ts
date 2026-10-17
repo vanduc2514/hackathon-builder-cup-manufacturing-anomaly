@@ -1,8 +1,13 @@
-// System Topology & 5-Layer Multi-Agent Architecture (Issue #205 & Issue #211)
+// System Topology & 5-Layer Multi-Agent Architecture (Issue #205, #211, #254 / TKT-063)
 import type {
+  EdgeVisualState,
+  GateConditionBlock,
   IncidentState,
   IncidentStatus,
-  TopologyEdgeDefinition,
+  NodeLayout,
+  PhaseLane,
+  TopologyEdge,
+  TopologyEndpointId,
   TopologyLayerDefinition,
   TopologyNodeDefinition,
   TopologyNodeId,
@@ -12,6 +17,7 @@ import type {
   TopologyPhaseState,
   TopologyScenarioId,
   TopologyWindowId,
+  WaypointRoute,
 } from '../types';
 import { matchesAgentRole } from './incident';
 
@@ -1186,125 +1192,329 @@ export const TOPOLOGY_NODES: TopologyNodeDefinition[] = [
     },
   },
 
-  // ==========================================
-  // BACKWARD-COMPATIBILITY ALIASES (Issue #205)
-  // ==========================================
+];
+
+/** Edge-id key for a {@link TopologyEdge}: `${from}>${to}`. Matches the AC-TOP-31 §5.1c contract. */
+export function getEdgeId(edge: { from: TopologyEndpointId; to: TopologyEndpointId }): string {
+  return `${edge.from}>${edge.to}`;
+}
+
+export const TOPOLOGY_EDGES: TopologyEdge[] = [
+  // Phase A: Ingest — Factory Floor ──> Edge Gateway ──> Cloud Platform ──> Orchestrator
+  { from: 'floor-cameras', to: 'edge-gemma', label: '60 FPS Defect Feed' },
+  { from: 'floor-mics', to: 'edge-gemma', label: 'Acoustic Feed' },
+  { from: 'floor-machines', to: 'edge-bridge', label: 'PLC Telemetry' },
+  { from: 'floor-sensors', to: 'edge-bridge', label: '100 Hz Sensors' },
+  { from: 'floor-tags', to: 'pubsub-cross-bridge', label: 'Traceability Stream' },
+  { from: 'edge-bridge', to: 'edge-gemma', label: 'OPC-UA / MQTT Buffer' },
+  { from: 'edge-gemma', to: 'pubsub-cross-bridge', label: 'Anomalous Defect Frames' },
+  { from: 'edge-bridge', to: 'pubsub-cross-bridge', label: 'Sensor Telemetry Buffer' },
+  { from: 'pubsub-cross-bridge', to: 'gcp-pubsub', label: 'Factory Floor Event Stream' },
+  { from: 'gcp-pubsub', to: 'gcp-bigquery', label: 'Batch Telemetry Archive' },
+  { from: 'gcp-pubsub', to: 'adk-orch', label: 'Defect / SPC Event Stream' },
+  { from: 'gcp-firestore', to: 'adk-orch', label: 'Shared Reactive Blackboard', bidirectional: true },
+  { from: 'adk-orch', to: 'gcp-rag', label: 'SOP Defect-Cause-Fix Lookup' },
+
+  // Phase B: Trace & Diagnose — Multi-Agent Root-Cause Swarm
+  { from: 'adk-orch', to: 'agent-qa', label: '0. Classify Defect / SPC' },
+  { from: 'agent-qa', to: 'agent-tra', label: '1. Trace Suspects' },
+  { from: 'agent-tra', to: 'agent-pa', label: '2. Analyze Telemetry Window' },
+  { from: 'agent-pa', to: 'agent-rca', label: 'Spindle Vibration Drift' },
+  { from: 'agent-rca', to: 'decision-gate-1', label: 'Causal Confidence Score' },
+  { from: 'decision-gate-1', to: 'gate1-yes', tone: 'yes', label: 'Confidence >= 0.70' },
+  { from: 'decision-gate-1', to: 'gate1-no', tone: 'warning', label: 'Confidence < 0.70' },
+  { from: 'gate1-no', to: 'technician-photo', tone: 'warning', label: 'Field Photo Request' },
+  { from: 'technician-photo', to: 'diagnostic-agent', tone: 'warning', label: 'Evidence Upload' },
+  { from: 'diagnostic-agent', to: 'agent-rca', tone: 'warning', label: 'Gemini Vision Re-eval' },
+  { from: 'gate1-yes', to: 'copilot-live', tone: 'yes', label: 'Guided Repair Dispatch' },
+  { from: 'gate1-yes', to: 'agent-scribe', tone: 'yes', label: 'Draft 8D Dossier' },
+
+  // Phase C: Repair — Technician Copilot & Verification
+  { from: 'copilot-live', to: 'human-tech', label: 'Hands-free Live Guidance', bidirectional: true },
+  { from: 'human-tech', to: 'verify-camera', label: '[Confirm Repair Done] CTA' },
+  { from: 'verify-camera', to: 'decision-gate-2', label: 'Continuous Optical Stream' },
+  { from: 'decision-gate-2', to: 'gate2-no', tone: 'danger', label: 'Defect Still Present' },
+  { from: 'decision-gate-2', to: 'gate2-yes', tone: 'yes', label: 'Streak >= 50 Clean Parts' },
+  { from: 'gate2-no', to: 'streak-reset', tone: 'danger', label: 'Reset Streak Counter & Siren' },
+  { from: 'streak-reset', to: 'agent-tra', tone: 'danger', label: 'Re-trace Suspects' },
+
+  // Phase D: Close — Continuous Learning & Shift-Leader Approval
+  { from: 'gate2-yes', to: 'agent-learn', tone: 'yes', label: 'Record Scrap & Carbon Ledger' },
+  { from: 'agent-learn', to: 'gcp-bigquery', label: 'Continuous Learning Archive' },
+  { from: 'gate2-yes', to: 'human-lead', tone: 'yes', label: 'Unlock Approval' },
+  { from: 'human-lead', to: 'output-docs', label: 'Certified E-Signature' },
+  { from: 'gcp-firestore', to: 'human-dash', label: 'Real-time Streak Progress' },
+];
+
+export const TOPOLOGY_GATE_BLOCKS: GateConditionBlock[] = [
   {
-    id: 'cloud-ingest',
+    id: 'gate1-yes',
+    gateId: 'decision-gate-1',
+    kind: 'yes',
+    label: 'YES (>= 0.70): Guided Repair',
+    tone: 'yes',
+    targetIds: ['copilot-live', 'agent-scribe'],
+  },
+  {
+    id: 'gate1-no',
+    gateId: 'decision-gate-1',
+    kind: 'no',
+    label: 'NO (< 0.70): Awaiting Evidence',
+    tone: 'warning',
+    targetIds: ['technician-photo'],
+  },
+  {
+    id: 'gate2-no',
+    gateId: 'decision-gate-2',
+    kind: 'no',
+    label: 'NO (Defect): Reset 0/50 & Siren',
+    tone: 'danger',
+    targetIds: ['streak-reset'],
+  },
+  {
+    id: 'gate2-yes',
+    gateId: 'decision-gate-2',
+    kind: 'yes',
+    label: 'YES (Streak >= 50): Unlock Approval',
+    tone: 'yes',
+    targetIds: ['agent-learn', 'human-lead'],
+  },
+];
+
+export const TOPOLOGY_PHASE_LANES: PhaseLane[] = [
+  {
+    id: 'a',
     phase: 'phase-a',
-    window: 'window-2',
-    order: 91,
-    label: 'Pub/Sub & Orchestrator',
-    sublabel: 'Data Plane Ingestion',
-    tier: 'Tier 3 & 4',
-    tierDescription: 'Cloud message streaming and incident workflow dispatch',
-    icon: 'cloud_sync',
-    techStack: ['Cloud Pub/Sub', 'ADK Orchestrator', 'Firestore Blackboard'],
-    jtbd: 'Ingest anomaly events from edge gateway and dispatch multi-agent workflow via reactive shared blackboard.',
+    name: 'Ingest & Classify',
+    tone: 'danger',
+    nodeIds: ['agent-qa'],
   },
   {
-    id: 'gatekeeper-qa',
+    id: 'b',
+    phase: 'phase-b',
+    name: 'Trace & Diagnose',
+    tone: 'warning',
+    nodeIds: [
+      'agent-tra',
+      'agent-pa',
+      'agent-rca',
+      'decision-gate-1',
+      'gate1-yes',
+      'gate1-no',
+      'diagnostic-agent',
+      'technician-photo',
+    ],
+  },
+  {
+    id: 'c',
     phase: 'phase-c',
-    window: 'window-2',
-    order: 92,
-    label: 'Quality Gatekeeper',
-    sublabel: 'Conveyor Streak Verification',
-    tier: 'Tier 4',
-    tierDescription: 'Key Invariant #3 verification engine',
-    icon: 'verified',
-    techStack: ['Conveyor Vision', 'Streak Gatekeeper', 'Invariant #3', 'Deterministic Counter'],
-    jtbd: 'Enforce Invariant #3: certify 50 consecutive clean workpieces on the conveyor before unlocking closure approval.',
+    name: 'Guided Repair',
+    tone: 'info',
+    nodeIds: ['copilot-live', 'agent-scribe'],
   },
   {
-    id: 'human-approval',
+    id: 'd-learn',
     phase: 'phase-d',
-    window: 'window-2',
-    order: 93,
-    label: 'Shift Leader Approval',
-    sublabel: 'Human-in-the-Loop Governance',
-    tier: 'Tier 5',
-    tierDescription: 'Final human governance gate with cryptographic sign-off',
-    icon: 'gavel',
-    techStack: ['Human Operator', 'Digital Signature', 'Audit Trail', 'Blackboard Gate'],
-    jtbd: 'Review validated 8D dossier, verify post-repair conveyor certification, and apply formal shift-leader sign-off.',
+    name: 'Continuous Learning',
+    tone: 'success',
+    nodeIds: ['agent-learn'],
+  },
+  {
+    id: 'd',
+    phase: 'phase-d',
+    name: 'Verify & Close',
+    tone: 'success',
+    nodeIds: [
+      'human-tech',
+      'verify-camera',
+      'decision-gate-2',
+      'gate2-no',
+      'gate2-yes',
+      'streak-reset',
+      'human-lead',
+      'output-docs',
+    ],
   },
 ];
 
-export const TOPOLOGY_EDGES: TopologyEdgeDefinition[] = [
-  // Layer 1 (Factory Floor) ──> Layer 2 (On-Premises Gateway)
-  { from: 'floor-cameras', to: 'edge-gemma', type: 'vertical', label: '60 FPS Defect Feed' },
-  { from: 'floor-sensors', to: 'edge-bridge', type: 'vertical', label: '100 Hz Sensors' },
-  { from: 'floor-mics', to: 'edge-gemma', type: 'vertical', label: 'Acoustic Feed' },
-  { from: 'floor-machines', to: 'edge-bridge', type: 'vertical', label: 'PLC Telemetry' },
-  { from: 'floor-tags', to: 'gcp-pubsub', type: 'gutter-right', label: 'Traceability Stream' },
+export const TOPOLOGY_NODE_LAYOUT: Record<string, NodeLayout> = {
+  'floor-machines': { container: 'window-1', layer: 'layer-1', row: 1, col: 1 },
+  'floor-cameras': { container: 'window-1', layer: 'layer-1', row: 1, col: 2 },
+  'floor-sensors': { container: 'window-1', layer: 'layer-1', row: 1, col: 3 },
+  'floor-mics': { container: 'window-1', layer: 'layer-1', row: 1, col: 4 },
+  'floor-tags': { container: 'window-1', layer: 'layer-1', row: 1, col: 5 },
+  'edge-gemma': { container: 'window-1', layer: 'layer-2', row: 1, col: 1 },
+  'edge-bridge': { container: 'window-1', layer: 'layer-2', row: 1, col: 2 },
+  'pubsub-cross-bridge': { container: 'bridge', layer: 'conduit', row: 1, col: 1 },
+  'gcp-pubsub': { container: 'window-2', layer: 'layer-3', row: 1, col: 1 },
+  'gcp-bigquery': { container: 'window-2', layer: 'layer-3', row: 1, col: 2 },
+  'gcp-firestore': { container: 'window-2', layer: 'layer-3', row: 1, col: 3 },
+  'gcp-rag': { container: 'window-2', layer: 'layer-3', row: 1, col: 4 },
+  'gcp-gemini': { container: 'window-2', layer: 'layer-3', row: 1, col: 5 },
+  'adk-orch': { container: 'window-2', layer: 'layer-4', row: 1, col: 1 },
+  'agent-qa': { container: 'window-2', layer: 'layer-4', row: 1, col: 2 },
+  'agent-tra': { container: 'window-2', layer: 'layer-4', row: 1, col: 3 },
+  'agent-pa': { container: 'window-2', layer: 'layer-4', row: 1, col: 4 },
+  'agent-rca': { container: 'window-2', layer: 'layer-4', row: 1, col: 5 },
+  'decision-gate-1': { container: 'window-2', layer: 'layer-4', row: 1, col: 6 },
+  'gate1-yes': { container: 'window-2', layer: 'layer-4', row: 1, col: 7 },
+  'gate1-no': { container: 'window-2', layer: 'layer-4', row: 1, col: 8 },
+  'diagnostic-agent': { container: 'window-2', layer: 'layer-4', row: 1, col: 9 },
+  'technician-photo': { container: 'window-2', layer: 'layer-4', row: 1, col: 10 },
+  'copilot-live': { container: 'window-2', layer: 'layer-4', row: 1, col: 11 },
+  'agent-scribe': { container: 'window-2', layer: 'layer-4', row: 1, col: 12 },
+  'agent-learn': { container: 'window-2', layer: 'layer-4', row: 1, col: 13 },
+  'human-tech': { container: 'window-2', layer: 'layer-5', row: 1, col: 1 },
+  'verify-camera': { container: 'window-2', layer: 'layer-5', row: 1, col: 2 },
+  'decision-gate-2': { container: 'window-2', layer: 'layer-5', row: 1, col: 3 },
+  'gate2-no': { container: 'window-2', layer: 'layer-5', row: 1, col: 4 },
+  'gate2-yes': { container: 'window-2', layer: 'layer-5', row: 1, col: 5 },
+  'streak-reset': { container: 'window-2', layer: 'layer-5', row: 1, col: 6 },
+  'human-dash': { container: 'window-2', layer: 'layer-5', row: 1, col: 7 },
+  'human-lead': { container: 'window-2', layer: 'layer-5', row: 1, col: 8 },
+  'output-docs': { container: 'window-2', layer: 'layer-5', row: 1, col: 9 },
+};
 
-  // Layer 2 (On-Premises Gateway) ──> Layer 3 (Google Cloud Platform)
-  { from: 'edge-gemma', to: 'gcp-pubsub', type: 'vertical', label: 'Anomalous Defect Frames' },
-  { from: 'edge-bridge', to: 'gcp-pubsub', type: 'vertical', label: 'OPC-UA / MQTT Buffer' },
+export const TOPOLOGY_ROUTES: Record<string, WaypointRoute> = {
+  'floor-cameras>edge-gemma': { fromPort: 'left', toPort: 'top', lane: 'L2' },
+  'floor-mics>edge-gemma': { fromPort: 'left', toPort: 'top', lane: 'L1' },
+  'floor-machines>edge-bridge': { fromPort: 'bottom', toPort: 'top' },
+  'floor-sensors>edge-bridge': { fromPort: 'bottom', toPort: 'top' },
+  'floor-tags>pubsub-cross-bridge': { fromPort: 'right', toPort: 'left', lane: 'R1' },
+  'edge-bridge>edge-gemma': { fromPort: 'left', toPort: 'right' },
+  'edge-gemma>pubsub-cross-bridge': { fromPort: 'bottom', toPort: 'top' },
+  'edge-bridge>pubsub-cross-bridge': { fromPort: 'bottom', toPort: 'top' },
+  'pubsub-cross-bridge>gcp-pubsub': { fromPort: 'bottom', toPort: 'top' },
+  'gcp-pubsub>gcp-bigquery': { fromPort: 'right', toPort: 'left' },
+  'gcp-pubsub>adk-orch': { fromPort: 'bottom', toPort: 'top' },
+  'gcp-firestore>adk-orch': { fromPort: 'bottom', toPort: 'top' },
+  'adk-orch>gcp-rag': { fromPort: 'left', toPort: 'right', lane: 'L1' },
+  'adk-orch>agent-qa': { fromPort: 'bottom', toPort: 'top' },
+  'agent-qa>agent-tra': { fromPort: 'bottom', toPort: 'top' },
+  'agent-tra>agent-pa': { fromPort: 'bottom', toPort: 'top' },
+  'agent-pa>agent-rca': { fromPort: 'bottom', toPort: 'top' },
+  'agent-rca>decision-gate-1': { fromPort: 'bottom', toPort: 'top' },
+  'decision-gate-1>gate1-yes': { fromPort: 'bottom', toPort: 'top' },
+  'decision-gate-1>gate1-no': { fromPort: 'bottom', toPort: 'top' },
+  'gate1-no>technician-photo': { fromPort: 'bottom', toPort: 'top' },
+  'technician-photo>diagnostic-agent': { fromPort: 'bottom', toPort: 'top' },
+  'diagnostic-agent>agent-rca': { fromPort: 'right', toPort: 'left', lane: 'R1' },
+  'gate1-yes>copilot-live': { fromPort: 'bottom', toPort: 'top' },
+  'gate1-yes>agent-scribe': { fromPort: 'bottom', toPort: 'top' },
+  'copilot-live>human-tech': { fromPort: 'left', toPort: 'right', lane: 'L1' },
+  'human-tech>verify-camera': { fromPort: 'bottom', toPort: 'top' },
+  'verify-camera>decision-gate-2': { fromPort: 'bottom', toPort: 'top' },
+  'decision-gate-2>gate2-no': { fromPort: 'bottom', toPort: 'top' },
+  'decision-gate-2>gate2-yes': { fromPort: 'bottom', toPort: 'top' },
+  'gate2-no>streak-reset': { fromPort: 'bottom', toPort: 'top' },
+  'streak-reset>agent-tra': { fromPort: 'left', toPort: 'right', lane: 'L2' },
+  'gate2-yes>agent-learn': { fromPort: 'right', toPort: 'left', lane: 'R1' },
+  'agent-learn>gcp-bigquery': { fromPort: 'right', toPort: 'left', lane: 'R2' },
+  'gate2-yes>human-lead': { fromPort: 'bottom', toPort: 'top' },
+  'human-lead>output-docs': { fromPort: 'bottom', toPort: 'top' },
+  'gcp-firestore>human-dash': { fromPort: 'left', toPort: 'right', lane: 'L3' },
+};
 
-  // Layer 3 (Google Cloud Platform) ──> Layer 4 (ADK Agent Team)
-  { from: 'gcp-pubsub', to: 'adk-orch', type: 'vertical', label: 'Defect / SPC Event Stream' },
-  { from: 'gcp-pubsub', to: 'gcp-bigquery', type: 'vertical', label: 'Batch Telemetry Archive' },
-  { from: 'gcp-firestore', to: 'adk-orch', type: 'vertical', label: 'Shared Reactive Blackboard' },
-  { from: 'adk-orch', to: 'agent-qa', type: 'vertical', label: '0. Classify Defect / SPC' },
-
-  // Layer 4: Multi-Agent Swarm Execution
-  { from: 'agent-qa', to: 'agent-tra', type: 'vertical', label: '1. Trace Suspects' },
-  { from: 'agent-qa', to: 'agent-pa', type: 'vertical', label: '2. Analyze Telemetry Window' },
-  { from: 'agent-tra', to: 'agent-rca', type: 'vertical', label: 'Lot Genealogy Graph' },
-  { from: 'agent-pa', to: 'agent-rca', type: 'vertical', label: 'Spindle Vibration Drift' },
-  { from: 'gcp-rag', to: 'agent-rca', type: 'vertical', label: 'SOP Defect-Cause-Fix' },
-  { from: 'gcp-gemini', to: 'agent-rca', type: 'vertical', label: '5-Whys Causal Hypothesis' },
-  { from: 'agent-rca', to: 'decision-gate-1', type: 'vertical', label: 'Causal Confidence Score' },
-
-  // Layer 4: Gate 1 Low Confidence (<0.70) Diagnostic Loop
-  { from: 'decision-gate-1', to: 'diagnostic-agent', type: 'branch-left', label: 'NO (< 0.70): Awaiting Evidence' },
-  { from: 'diagnostic-agent', to: 'technician-photo', type: 'vertical', label: 'Field Photo Request' },
-  { from: 'technician-photo', to: 'agent-rca', type: 'loop-left', label: 'Gemini Vision Re-eval' },
-
-  // Layer 4: Gate 1 High Confidence (>=0.70) Forward to Phase C
-  { from: 'decision-gate-1', to: 'copilot-live', type: 'vertical', label: 'YES (>= 0.70): Guided Repair' },
-  { from: 'decision-gate-1', to: 'agent-scribe', type: 'branch-right', label: 'Draft 8D Dossier' },
-  { from: 'copilot-live', to: 'agent-learn', type: 'vertical', label: 'Repair Recording' },
-
-  // Layer 4 ──> Layer 5 (Human-in-the-Loop & Verification)
-  { from: 'copilot-live', to: 'human-tech', type: 'vertical', label: 'Hands-free Live Guidance' },
-  { from: 'human-tech', to: 'verify-camera', type: 'vertical', label: '[Confirm Repair Done] CTA' },
-  { from: 'verify-camera', to: 'decision-gate-2', type: 'vertical', label: 'Continuous Optical Stream' },
-
-  // Layer 5: Gate 2 (Invariant #3) Verification & Penalty Reset
-  { from: 'decision-gate-2', to: 'streak-reset', type: 'branch-left', label: 'NO (Defect): Reset 0/50 & Siren' },
-  { from: 'streak-reset', to: 'copilot-live', type: 'loop-left', label: 'Re-inspect & Calibrate' },
-  { from: 'decision-gate-2', to: 'human-lead', type: 'vertical', label: 'YES (Streak >= 50): Unlock Approval' },
-  { from: 'decision-gate-2', to: 'human-dash', type: 'branch-left', label: 'Real-time Streak Progress' },
-  { from: 'human-lead', to: 'output-docs', type: 'vertical', label: 'Certified E-Signature' },
-
-  // Operational Handshake & Verification Feedback Edges (TKT-051 #226)
-  {
-    id: 'recovery-handshake',
-    from: 'copilot-live',
-    to: 'floor-machines',
-    type: 'loopback-long',
-    label: 'Clear Interlock & Resume Feed (PLC Handshake)',
-    activeScenarios: ['streak_verifying', 'approved'],
-  },
-  {
-    id: 'gate-2-to-esg',
-    from: 'decision-gate-2',
-    to: 'agent-learn',
-    type: 'branch-right',
-    label: '50/50 Streak Verified -> Record Scrap & Carbon Ledger',
-    activeScenarios: ['approved'],
-  },
-
-  // Backward-compatibility edges for legacy tests
-  { from: 'edge-gemma', to: 'cloud-ingest', label: 'MQTT Telemetry' },
-  { from: 'cloud-ingest', to: 'agent-qa', label: 'Event Stream' },
-  { from: 'copilot-live', to: 'gatekeeper-qa', label: 'Repair Complete' },
-  { from: 'agent-scribe', to: 'gatekeeper-qa', label: '8D Draft' },
-  { from: 'gatekeeper-qa', to: 'agent-learn', label: '50 Clean Parts Verified' },
-  { from: 'agent-learn', to: 'human-approval', label: 'Dossier Ready' },
+const INGEST_EDGES: readonly string[] = [
+  'floor-cameras>edge-gemma',
+  'floor-mics>edge-gemma',
+  'floor-machines>edge-bridge',
+  'floor-sensors>edge-bridge',
+  'floor-tags>pubsub-cross-bridge',
+  'edge-bridge>edge-gemma',
+  'edge-gemma>pubsub-cross-bridge',
+  'edge-bridge>pubsub-cross-bridge',
+  'pubsub-cross-bridge>gcp-pubsub',
+  'gcp-pubsub>gcp-bigquery',
+  'gcp-pubsub>adk-orch',
+  'gcp-firestore>adk-orch',
+  'adk-orch>agent-qa',
 ];
+
+const TRACE_EDGES: readonly string[] = [
+  'agent-qa>agent-tra',
+  'agent-tra>agent-pa',
+  'agent-pa>agent-rca',
+  'agent-rca>decision-gate-1',
+];
+
+const REPAIR_EDGES: readonly string[] = [
+  'decision-gate-1>gate1-yes',
+  'gate1-yes>copilot-live',
+  'gate1-yes>agent-scribe',
+  'copilot-live>human-tech',
+  'human-tech>verify-camera',
+];
+
+const EVIDENCE_EDGES: readonly string[] = [
+  'decision-gate-1>gate1-no',
+  'gate1-no>technician-photo',
+  'technician-photo>diagnostic-agent',
+  'diagnostic-agent>agent-rca',
+];
+
+const RESET_EDGES: readonly string[] = [
+  'decision-gate-2>gate2-no',
+  'gate2-no>streak-reset',
+  'streak-reset>agent-tra',
+];
+
+const CLOSE_EDGES: readonly string[] = [
+  'verify-camera>decision-gate-2',
+  'decision-gate-2>gate2-yes',
+  'gate2-yes>agent-learn',
+  'agent-learn>gcp-bigquery',
+  'adk-orch>gcp-rag',
+  'gate2-yes>human-lead',
+  'human-lead>output-docs',
+  'gcp-firestore>human-dash',
+];
+
+const STATE_EDGES: readonly string[] = TOPOLOGY_EDGES.map(getEdgeId);
+
+/**
+ * Pure function deriving the visual state of every topology edge for a given scenario.
+ * Never mutates {@link TOPOLOGY_EDGES}; always returns a fresh record keyed by edge id.
+ */
+export function deriveEdgeStates(scenario: TopologyScenarioId): Record<string, EdgeVisualState> {
+  const states: Record<string, EdgeVisualState> = {};
+  for (const id of STATE_EDGES) {
+    states[id] = 'idle';
+  }
+
+  switch (scenario) {
+    case 'nominal':
+      break;
+    case 'detecting':
+      for (const id of INGEST_EDGES) states[id] = 'active';
+      break;
+    case 'low_confidence':
+      for (const id of [...INGEST_EDGES, ...TRACE_EDGES]) states[id] = 'completed';
+      states[EVIDENCE_EDGES[0]] = 'warning';
+      states[EVIDENCE_EDGES[1]] = 'warning';
+      states[EVIDENCE_EDGES[2]] = 'active';
+      states[EVIDENCE_EDGES[3]] = 'active';
+      break;
+    case 'streak_verifying':
+      for (const id of [...INGEST_EDGES, ...TRACE_EDGES, ...REPAIR_EDGES]) states[id] = 'completed';
+      states['gcp-firestore>human-dash'] = 'active';
+      states['verify-camera>decision-gate-2'] = 'active';
+      break;
+    case 'streak_reset':
+      for (const id of [...INGEST_EDGES, ...TRACE_EDGES, ...REPAIR_EDGES]) states[id] = 'completed';
+      states['verify-camera>decision-gate-2'] = 'completed';
+      states['gcp-firestore>human-dash'] = 'completed';
+      for (const id of RESET_EDGES) states[id] = 'danger';
+      break;
+    case 'approved':
+      for (const id of [...INGEST_EDGES, ...TRACE_EDGES, ...REPAIR_EDGES, ...CLOSE_EDGES]) {
+        states[id] = 'completed';
+      }
+      break;
+  }
+
+  return states;
+}
 
 /**
  * Pure function deriving runtime status, summaries, and extracted details for each of the 28 topology nodes
@@ -1791,41 +2001,6 @@ export function deriveNodeStates(
       details: {
         dossier: '8D-2026-B42',
         compliance: 'IATF 16949 / ISO 9001',
-      },
-    },
-
-    // Backward-compatibility aliases for legacy tests (Issue #205)
-    'cloud-ingest': {
-      id: 'cloud-ingest',
-      status: l3PubsubStatus,
-      summary: 'Pub/Sub listener connected · Blackboard dispatcher ready',
-      isInferred: true,
-      details: {
-        service: 'Google Cloud Pub/Sub + Cloud Run',
-        active_incident: incident?.incident_id ?? null,
-      },
-    },
-    'gatekeeper-qa': {
-      id: 'gatekeeper-qa',
-      status: l5Gate2Status,
-      summary: `Invariant #3 verified: ${currentStreak} / ${targetStreak} clean parts`,
-      isInferred: false,
-      details: {
-        invariant: 'Key Invariant #3: Product-evidence streak verification',
-        verification_count: currentStreak,
-        verification_target: targetStreak,
-        target_met: currentStreak >= targetStreak,
-      },
-    },
-    'human-approval': {
-      id: 'human-approval',
-      status: l5LeadStatus,
-      summary: incident?.approved ? 'Approved by Shift Leader' : 'Conveyor verified — awaiting shift-leader sign-off',
-      isInferred: false,
-      details: {
-        role: 'Shift Leader',
-        approved: incident?.approved ?? false,
-        closure_unlocked: currentStreak >= targetStreak,
       },
     },
   };

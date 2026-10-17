@@ -21,12 +21,17 @@ from starlette.testclient import TestClient
 
 import backend.agents.orchestrator as orchestrator_module
 from backend.api.main import app as backend_app
+from backend.api.routes_simulation import DEV_INJECT_HEADER, DEV_INJECT_VALUE
 from backend.core.blackboard import blackboard
 from backend.core.models import QualityEventPayload
 from backend.core.pubsub_manager import pubsub_manager
 from simulator.injection_engine import injection_engine
 from simulator.server import app as factory_app
 from simulator.server import service as factory_service
+
+# Local tests run with APP_ENV != production; the dev-inject header is required
+# since the gate introduced in #309 to reach the legacy happy path.
+DEV_INJECT_HEADERS = {DEV_INJECT_HEADER: DEV_INJECT_VALUE}
 
 
 @pytest.fixture(autouse=True)
@@ -287,6 +292,7 @@ def test_legacy_simulation_inject_contract_deprecation():
         resp = client.post(
             "/api/simulation/inject",
             json={"scenario": "cnc_tool_wear", "mode": "fast"},
+            headers=DEV_INJECT_HEADERS,
         )
         assert resp.status_code == 200
         assert resp.headers.get("Deprecation") == "true"

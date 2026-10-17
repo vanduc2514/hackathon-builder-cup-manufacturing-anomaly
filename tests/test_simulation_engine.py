@@ -10,10 +10,16 @@ from fastapi.testclient import TestClient
 
 from backend.agents.orchestrator import orchestrator
 from backend.api.main import app
+from backend.api.routes_simulation import DEV_INJECT_HEADER, DEV_INJECT_VALUE
 from backend.core.blackboard import blackboard
 from backend.core.models import DefectInjectionRequest, SimulationStatusResponse
 from simulator.conveyor_simulator import ConveyorSimulator
 from simulator.injection_engine import DefectInjectionEngine, injection_engine
+
+# Local tests run with APP_ENV != production, so the dev-inject header is the only
+# thing that keeps /api/simulation/inject callable in the legacy happy-path suite
+# after the gate introduced in #309.
+DEV_INJECT_HEADERS = {DEV_INJECT_HEADER: DEV_INJECT_VALUE}
 
 
 @pytest.fixture(autouse=True)
@@ -144,6 +150,7 @@ def test_api_simulation_inject_scenario_1() -> None:
     response = client.post(
         "/api/simulation/inject",
         json={"scenario": "cnc_tool_wear", "mode": "fast", "machine_id": "CNC-02"},
+        headers=DEV_INJECT_HEADERS,
     )
     assert response.status_code == 200
     data = response.json()
@@ -159,6 +166,7 @@ def test_api_simulation_inject_scenario_2() -> None:
     response = client.post(
         "/api/simulation/inject",
         json={"scenario": "im_damp_material", "mode": "fast"},
+        headers=DEV_INJECT_HEADERS,
     )
     assert response.status_code == 200
     data = response.json()
@@ -173,7 +181,11 @@ def test_api_simulation_reset() -> None:
     client = TestClient(app)
 
     # First inject to dirty the state
-    client.post("/api/simulation/inject", json={"scenario": "cnc_tool_wear", "mode": "fast"})
+    client.post(
+        "/api/simulation/inject",
+        json={"scenario": "cnc_tool_wear", "mode": "fast"},
+        headers=DEV_INJECT_HEADERS,
+    )
 
     # Reset
     response = client.post("/api/simulation/reset")
@@ -199,10 +211,15 @@ def test_api_inject_scenario_2_opens_incident_with_im05_trigger(
 ) -> None:
     """Scenario 2 fills IM-05 defaults the caller left unset, but keeps explicit overrides."""
     client = TestClient(app)
-    client.post("/api/simulation/inject", json={"scenario": "im_damp_material", "mode": "fast"})
+    client.post(
+        "/api/simulation/inject",
+        json={"scenario": "im_damp_material", "mode": "fast"},
+        headers=DEV_INJECT_HEADERS,
+    )
     client.post(
         "/api/simulation/inject",
         json={"scenario": "im_damp_material", "machine_id": "IM-07", "defect_rate": 0.05},
+        headers=DEV_INJECT_HEADERS,
     )
 
     default, override = clean_state
@@ -215,7 +232,11 @@ def test_api_inject_rejected_while_workflow_running(monkeypatch: pytest.MonkeyPa
     """A second inject must not disturb the simulator while an incident is in flight."""
     monkeypatch.setattr(type(orchestrator), "is_running", property(lambda self: True))
     client = TestClient(app)
-    response = client.post("/api/simulation/inject", json={"scenario": "cnc_tool_wear"})
+    response = client.post(
+        "/api/simulation/inject",
+        json={"scenario": "cnc_tool_wear"},
+        headers=DEV_INJECT_HEADERS,
+    )
     assert response.status_code == 409
     assert injection_engine.get_status()["active_scenario"] is None
 

@@ -14,10 +14,15 @@ from starlette.testclient import TestClient
 
 from backend.agents.orchestrator import orchestrator
 from backend.api.main import app
+from backend.api.routes_simulation import DEV_INJECT_HEADER, DEV_INJECT_VALUE
 from backend.core.config import settings
 from backend.core.models import FactorySyncResult, QualityEventPayload
 from backend.core.pubsub_manager import pubsub_manager
 from backend.tools.factory_client import FactorySimulatorClient
+
+# Local tests run with APP_ENV != production; the dev-inject header is required
+# since the gate introduced in #309 to reach the legacy happy path.
+DEV_INJECT_HEADERS = {DEV_INJECT_HEADER: DEV_INJECT_VALUE}
 
 
 @pytest.fixture(autouse=True)
@@ -51,6 +56,7 @@ def test_simulation_inject_calls_factory_with_dispatch_quality_event_false():
         resp = client.post(
             "/api/simulation/inject",
             json={"scenario": "cnc_tool_wear", "mode": "fast"},
+            headers=DEV_INJECT_HEADERS,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -84,6 +90,7 @@ def test_simulation_inject_409_does_not_call_factory():
         resp = client.post(
             "/api/simulation/inject",
             json={"scenario": "cnc_tool_wear"},
+            headers=DEV_INJECT_HEADERS,
         )
         assert resp.status_code == 409
         assert "already running" in resp.json()["detail"].lower()
@@ -114,6 +121,7 @@ def test_simulation_inject_resilient_when_factory_is_down():
         resp = client.post(
             "/api/simulation/inject",
             json={"scenario": "cnc_tool_wear", "mode": "fast"},
+            headers=DEV_INJECT_HEADERS,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -172,8 +180,16 @@ async def test_simulation_inject_concurrent_double_trigger_race():
         ):
             async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as ac:
                 res1, res2 = await asyncio.gather(
-                    ac.post("/api/simulation/inject", json={"scenario": "cnc_tool_wear"}),
-                    ac.post("/api/simulation/inject", json={"scenario": "cnc_tool_wear"}),
+                    ac.post(
+                        "/api/simulation/inject",
+                        json={"scenario": "cnc_tool_wear"},
+                        headers=DEV_INJECT_HEADERS,
+                    ),
+                    ac.post(
+                        "/api/simulation/inject",
+                        json={"scenario": "cnc_tool_wear"},
+                        headers=DEV_INJECT_HEADERS,
+                    ),
                 )
 
         status_codes = sorted([res1.status_code, res2.status_code])

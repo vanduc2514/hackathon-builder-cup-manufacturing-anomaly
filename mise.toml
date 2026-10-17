@@ -192,19 +192,19 @@ run = "uvicorn backend.api.main:app --host $API_HOST --port $API_PORT"
 
 [tasks.demo]
 description = "Inject Scenario 1 (CNC-02 Tool Wear) for deterministic 90-second multi-agent demo"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'Content-Type: application/json' -d '{\"scenario\":\"cnc_tool_wear\",\"mode\":\"demo\"}' | python -m json.tool"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'X-Kaizen-Dev-Inject: 1' -H 'Content-Type: application/json' -d '{\"scenario\":\"cnc_tool_wear\",\"mode\":\"demo\"}' | python -m json.tool"
 
 [tasks."demo:fast"]
 description = "Fast-forward injection of Scenario 1 (~8 seconds)"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'Content-Type: application/json' -d '{\"scenario\":\"cnc_tool_wear\",\"mode\":\"fast\"}' | python -m json.tool"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'X-Kaizen-Dev-Inject: 1' -H 'Content-Type: application/json' -d '{\"scenario\":\"cnc_tool_wear\",\"mode\":\"fast\"}' | python -m json.tool"
 
 [tasks."demo:scenario2"]
 description = "Inject Scenario 2 (IM-05 Damp Material) for 90-second demo"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'Content-Type: application/json' -d '{\"scenario\":\"im_damp_material\",\"mode\":\"demo\",\"require_evidence\":true}' | python -m json.tool"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'X-Kaizen-Dev-Inject: 1' -H 'Content-Type: application/json' -d '{\"scenario\":\"im_damp_material\",\"mode\":\"demo\",\"require_evidence\":true}' | python -m json.tool"
 
 [tasks."demo:scenario2:fast"]
 description = "Fast-forward injection of Scenario 2 (~8 seconds)"
-run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'Content-Type: application/json' -d '{\"scenario\":\"im_damp_material\",\"mode\":\"fast\",\"require_evidence\":true}' | python -m json.tool"
+run = "curl -s -X POST http://localhost:$API_PORT/api/simulation/inject -H \"Authorization: Bearer $(python scripts/dev_token.py)\" -H 'X-Kaizen-Dev-Inject: 1' -H 'Content-Type: application/json' -d '{\"scenario\":\"im_damp_material\",\"mode\":\"fast\",\"require_evidence\":true}' | python -m json.tool"
 
 [tasks."sim:reset"]
 description = "Reset simulation state, blackboard, and BigQuery buffers to baseline"

@@ -21,10 +21,15 @@ from google.adk.agents import LlmAgent
 
 from backend.agents.orchestrator import Orchestrator, orchestrator
 from backend.api.main import app
+from backend.api.routes_simulation import DEV_INJECT_HEADER, DEV_INJECT_VALUE
 from backend.core.blackboard import blackboard
 from backend.core.models import DefectInjectionRequest, SimulationStatusResponse
 from backend.tools.spc_calculator import StreakGatekeeper
 from tests.test_orchestrator import MOCK_TOPOLOGY, FakeLlm
+
+# Local tests run with APP_ENV != production; the dev-inject header is required
+# since the gate introduced in #309 to reach the legacy happy path.
+DEV_INJECT_HEADERS = {DEV_INJECT_HEADER: DEV_INJECT_VALUE}
 
 
 @pytest.fixture(autouse=True)
@@ -59,7 +64,7 @@ def test_scenario_1_cnc_injection_fast_mode() -> None:
         "machine_id": "CNC-02",
         "tool_id": "T07",
     }
-    response = client.post("/api/simulation/inject", json=payload)
+    response = client.post("/api/simulation/inject", json=payload, headers=DEV_INJECT_HEADERS)
     assert response.status_code == 200
 
     data = response.json()
@@ -81,7 +86,7 @@ def test_scenario_2_im_injection_demo_mode() -> None:
         "machine_id": "IM-05",
         "tool_id": "MOLD-03",
     }
-    response = client.post("/api/simulation/inject", json=payload)
+    response = client.post("/api/simulation/inject", json=payload, headers=DEV_INJECT_HEADERS)
     assert response.status_code == 200
 
     data = response.json()
@@ -104,6 +109,7 @@ def test_simulation_reset_restores_baseline() -> None:
     client.post(
         "/api/simulation/inject",
         json={"scenario": "cnc_tool_wear", "mode": "fast"},
+        headers=DEV_INJECT_HEADERS,
     )
 
     # Now reset

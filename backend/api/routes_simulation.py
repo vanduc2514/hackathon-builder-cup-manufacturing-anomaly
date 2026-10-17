@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, Header, HTTPException, Response, status
 
 from backend.agents.orchestrator import orchestrator
 from backend.core.config import settings
@@ -17,6 +17,13 @@ from backend.core.models import (
 )
 from backend.tools.bigquery_tool import reset_buffers
 from backend.tools.factory_client import factory_client
+
+# Name of the debug header that opts a caller into the legacy HTTP inject path.
+# It exists so the route can stay callable from local developer tooling and the
+# existing pytest suite while remaining inert against any anonymous caller in
+# production. Production deploys simply never set this header (see #309).
+DEV_INJECT_HEADER = "X-Kaizen-Dev-Inject"
+DEV_INJECT_VALUE = "1"
 
 logger = logging.getLogger(__name__)
 
@@ -43,13 +50,57 @@ def _resolve_trigger(req: DefectInjectionRequest) -> DefectInjectionRequest:
 async def inject_defect(
     req: DefectInjectionRequest = DefectInjectionRequest(),
     response: Response = Response(),
+    x_kaizen_dev_inject: str | None = Header(default=None, alias=DEV_INJECT_HEADER),
 ) -> SimulationInjectResponse:
     """Injects the scenario's defect burst into the simulator and starts the incident workflow.
 
     DEPRECATED: Direct HTTP defect injection via /api/simulation/inject is deprecated in favor of
     the event-driven Google Cloud Pub/Sub ingestion pipeline (topic: kaizen-quality-events) and
     the factory simulator ingress (/api/factory/inject).
+
+    Dev-only gating (#309): this route is a back door that calls
+    ``orchestrator.start_incident()`` directly, bypassing the Pub/Sub data plane that
+    production traffic follows. Any caller with a valid user token could otherwise fabricate
+    an incident from a single REST call, which is a footgun for both reviewers and future
+    contributors. To keep the route callable from the local dev tooling and the existing
+    pytest suite while making it inert against any anonymous caller in production, every
+    request must satisfy **both** of the following:
+
+    1. Send the debug header ``X-Kaizen-Dev-Inject: 1``.
+    2. Originate from a non-production environment (``APP_ENV != production``).
+
+    When either condition is missing, the endpoint responds with ``410 Gone`` and a body
+    explaining the rationale. Production deploys therefore cannot trigger an incident via
+    this route even if a valid JWT is presented; the canonical production path remains
+    the Pub/Sub quality-events topic (or the factory simulator's ``/api/factory/inject``).
     """
+    if x_kaizen_dev_inject != DEV_INJECT_VALUE or settings.is_production:
+        logger.warning(
+            "BLOCKED dev-inject attempt: POST /api/simulation/inject requires header %s=%s and APP_ENV!=production "
+            "(received header=%r, app_env=%r). Use the Pub/Sub quality-events pipeline or /api/factory/inject.",
+            DEV_INJECT_HEADER,
+            DEV_INJECT_VALUE,
+            x_kaizen_dev_inject,
+            settings.app_env,
+            extra={
+                "endpoint": "/api/simulation/inject",
+                "header_present": x_kaizen_dev_inject is not None,
+                "header_value": x_kaizen_dev_inject,
+                "app_env": settings.app_env,
+                "is_production": settings.is_production,
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail=(
+                "Endpoint /api/simulation/inject is dev-only and gated by header "
+                f"'{DEV_INJECT_HEADER}: {DEV_INJECT_VALUE}' together with APP_ENV!=production. "
+                "Production traffic must use the Pub/Sub quality-events pipeline (topic: "
+                f"{settings.pubsub_quality_events_topic}) or POST /api/factory/inject. "
+                "See issue #309 for the rationale."
+            ),
+        )
+
     logger.warning(
         "DEPRECATED ENDPOINT ACCESSED: POST /api/simulation/inject is deprecated and will be removed in a future release. "
         "Production defect triggers must be published via Google Cloud Pub/Sub pipeline (topic: %s) "
@@ -61,6 +112,7 @@ async def inject_defect(
             "pubsub_topic": settings.pubsub_quality_events_topic,
             "scenario": req.scenario,
             "machine_id": req.machine_id,
+            "app_env": settings.app_env,
         },
     )
     response.headers["Deprecation"] = "true"

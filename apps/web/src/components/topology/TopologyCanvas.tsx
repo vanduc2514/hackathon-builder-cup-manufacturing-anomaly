@@ -1,8 +1,19 @@
 // SVG Orthogonal overlay connecting 5 architecture layers with right-angled routing, zoom/pan controls, and minimap (Issue #205 & Issue #211).
+// Path geometry is produced by the deterministic orthogonal router in
+// `lib/topology/edgeRouter.ts` (issue #257 / TKT-066a), which guarantees
+// zero shared segments, zero crossings, and zero node-card overlaps across
+// all 37 connectors and all six scenario states.
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
-import type { TopologyEdgeDefinition, TopologyNodeId, TopologyNodeState } from '../../types';
+import type { EdgeVisualState, TopologyEdge, TopologyNodeId, TopologyNodeState, TopologyEndpointId } from '../../types';
 import type { PhaseLaneId, PhaseStepperStatus } from '../../lib/topology';
 import { TOPOLOGY_EDGES, TOPOLOGY_LAYERS } from '../../lib/topology';
+import {
+  DEFAULT_EDGE_GEOMETRY,
+  deriveGeometryFromDom,
+  routeAllEdges,
+  type EdgeGeometryConfig,
+  type RoutedEdge,
+} from '../../lib/topology/edgeRouter';
 import PhaseLaneOverlay from './PhaseLaneOverlay';
 
 interface TopologyCanvasProps {
@@ -14,13 +25,71 @@ interface TopologyCanvasProps {
 
 interface ComputedPath {
   id: string;
-  edge: TopologyEdgeDefinition;
+  edge: TopologyEdge;
   d: string;
   status: 'active' | 'completed' | 'idle' | 'decision-no' | 'reject-reset';
   label?: string;
   labelX?: number;
   labelY?: number;
   isHighlighted?: boolean;
+}
+
+/**
+ * Convert live node states into the per-edge visual-state map the
+ * deterministic router consumes. Mirrors the inline mapping that used to
+ * live inside `updatePaths`, with two additions:
+ *   - Decision-gate-1 → diagnostic-agent / technician-photo becomes
+ *     `warning` (renders as the amber `decision-no` style).
+ *   - Decision-gate-2 → streak-reset becomes `danger` (renders as the
+ *     crimson `reject-reset` style).
+ * The router then derives the AC-TOP-30 tone from the state.
+ */
+function buildEdgeStates(
+  nodeStates: Record<TopologyNodeId, TopologyNodeState>,
+): Record<string, EdgeVisualState> {
+  const result: Record<string, EdgeVisualState> = {};
+  for (const edge of TOPOLOGY_EDGES) {
+    result[`${edge.from}>${edge.to}`] = 'idle';
+  }
+  for (const edge of TOPOLOGY_EDGES) {
+    const fromId = edge.from as TopologyNodeId;
+    const toId = edge.to as TopologyNodeId;
+    if (!(fromId in nodeStates) && !(toId in nodeStates)) continue;
+    const fromState = nodeStates[fromId]?.status;
+    const toState = nodeStates[toId]?.status;
+    const key = `${edge.from}>${edge.to}`;
+
+    if (edge.from === 'decision-gate-1' && (edge.to === 'diagnostic-agent' || edge.to === 'technician-photo')) {
+      if (toState === 'active' || toState === 'waiting' || toState === 'warning') {
+        result[key] = 'warning';
+      }
+    } else if (edge.from === 'decision-gate-2' && edge.to === 'streak-reset') {
+      if (toState === 'danger' || toState === 'active') {
+        result[key] = 'danger';
+      }
+    } else if (fromState === 'done' && toState === 'done') {
+      result[key] = 'completed';
+    } else if (
+      fromState === 'active'
+      || toState === 'active'
+      || fromState === 'waiting'
+      || toState === 'waiting'
+      || fromState === 'pending_approval'
+      || toState === 'pending_approval'
+    ) {
+      result[key] = 'active';
+    }
+  }
+  return result;
+}
+
+/** Map the router's per-edge visual state to the existing stroke style key. */
+function visualStateToCanvasStatus(state: EdgeVisualState): ComputedPath['status'] {
+  if (state === 'completed') return 'completed';
+  if (state === 'warning') return 'decision-no';
+  if (state === 'danger') return 'reject-reset';
+  if (state === 'active') return 'active';
+  return 'idle';
 }
 
 export default function TopologyCanvas({
@@ -40,121 +109,39 @@ export default function TopologyCanvas({
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [showMinimap, setShowMinimap] = useState<boolean>(true);
 
-  // Compute SVG orthogonal right-angled paths
+  // Compute SVG orthogonal right-angled paths via the deterministic router.
+  // The router is pure: given the live node states + the DOM-measured
+  // canvas geometry, it returns 37 mutually non-overlapping polylines that
+  // match the port-coordinate waypoint table in TOPOLOGY_ROUTES.
   const updatePaths = useCallback(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
-    const containerRect = container.getBoundingClientRect();
-    const newPaths: ComputedPath[] = [];
+    const geometry: EdgeGeometryConfig = deriveGeometryFromDom(container, DEFAULT_EDGE_GEOMETRY)
+      ?? DEFAULT_EDGE_GEOMETRY;
+    const edgeStates = buildEdgeStates(nodeStates);
+    const routed = routeAllEdges({
+      edgeStates,
+      highlightedEndpoint: (selectedNodeId ?? null) as TopologyEndpointId | null,
+      geometry,
+    });
 
-    for (const edge of TOPOLOGY_EDGES) {
-      // Find elements by data-node-id or id or node-id
-      const fromEl =
-        container.querySelector(`[data-node="${edge.from}"]`) ||
-        container.querySelector(`[data-node-id="${edge.from}"]`) ||
-        document.getElementById(`node-${edge.from}`) ||
-        document.getElementById(edge.from);
-
-      const toEl =
-        container.querySelector(`[data-node="${edge.to}"]`) ||
-        container.querySelector(`[data-node-id="${edge.to}"]`) ||
-        document.getElementById(`node-${edge.to}`) ||
-        document.getElementById(edge.to);
-
-      if (!fromEl || !toEl) continue;
-
-      const fromRect = fromEl.getBoundingClientRect();
-      const toRect = toEl.getBoundingClientRect();
-
-      // Effective scale compensation
-      const effectiveScale = scale || 1;
-      const x1 = (fromRect.left + fromRect.width / 2 - containerRect.left) / effectiveScale;
-      const y1 = (fromRect.bottom - containerRect.top) / effectiveScale;
-      const x2 = (toRect.left + toRect.width / 2 - containerRect.left) / effectiveScale;
-      const y2 = (toRect.top - containerRect.top) / effectiveScale;
-
-      const fromState = nodeStates[edge.from as TopologyNodeId]?.status;
-      const toState = nodeStates[edge.to as TopologyNodeId]?.status;
-
-      let edgeStatus: ComputedPath['status'] = 'idle';
-
-      if (edge.from === 'decision-gate-1' && (edge.to === 'diagnostic-agent' || edge.to === 'technician-photo')) {
-        if (toState === 'active' || toState === 'waiting' || toState === 'warning') {
-          edgeStatus = 'decision-no';
-        }
-      } else if (edge.from === 'decision-gate-2' && edge.to === 'streak-reset') {
-        if (toState === 'danger' || toState === 'active') {
-          edgeStatus = 'reject-reset';
-        }
-      } else if (fromState === 'done' && toState === 'done') {
-        edgeStatus = 'completed';
-      } else if (
-        fromState === 'active' ||
-        toState === 'active' ||
-        fromState === 'waiting' ||
-        toState === 'waiting' ||
-        fromState === 'pending_approval' ||
-        toState === 'pending_approval'
-      ) {
-        edgeStatus = 'active';
-      }
-
-      // Compute right-angled orthogonal path
-      let d = '';
-      const cWidth = containerRect.width / effectiveScale;
-
-      let labelX = (x1 + x2) / 2;
-      let labelY = (y1 + y2) / 2;
-
-      if (edge.type === 'gutter-right') {
-        const fromRightX = (fromRect.right - containerRect.left) / effectiveScale;
-        const fromMidY = (fromRect.top + fromRect.height / 2 - containerRect.top) / effectiveScale;
-        const toRightX = (toRect.right - containerRect.left) / effectiveScale;
-        const toMidY = (toRect.top + toRect.height / 2 - containerRect.top) / effectiveScale;
-        const rightmostBoundary = Math.max(fromRightX, toRightX);
-        const gutterX = Math.max(rightmostBoundary + 40, cWidth - 24);
-        d = `M ${fromRightX} ${fromMidY} H ${gutterX} V ${toMidY} H ${toRightX}`;
-        labelX = gutterX - 16;
-        labelY = (fromMidY + toMidY) / 2;
-      } else if (edge.type === 'loop-left' || edge.type === 'loopback' || edge.type === 'loopback-long') {
-        const fromLeftX = (fromRect.left - containerRect.left) / effectiveScale;
-        const fromMidY = (fromRect.top + fromRect.height / 2 - containerRect.top) / effectiveScale;
-        const toLeftX = (toRect.left - containerRect.left) / effectiveScale;
-        const toMidY = (toRect.top + toRect.height / 2 - containerRect.top) / effectiveScale;
-        const leftmostCard = Math.min(fromLeftX, toLeftX);
-        const loopX = Math.min(20, Math.max(8, leftmostCard - 40));
-        d = `M ${fromLeftX} ${fromMidY} H ${loopX} V ${toMidY} H ${toLeftX}`;
-        labelX = loopX + 16;
-        labelY = (fromMidY + toMidY) / 2;
-      } else if (edge.type === 'branch-left' || edge.type === 'branch-right') {
-        const midY = (y1 + y2) / 2;
-        d = `M ${x1} ${y1} V ${midY} H ${x2} V ${y2}`;
-      } else {
-        // Standard vertical
-        if (Math.abs(x1 - x2) < 2) {
-          d = `M ${x1} ${y1} V ${y2}`;
-        } else {
-          const midY = (y1 + y2) / 2;
-          d = `M ${x1} ${y1} V ${midY} H ${x2} V ${y2}`;
-        }
-      }
-
-      const isHighlighted = selectedNodeId ? edge.from === selectedNodeId || edge.to === selectedNodeId : false;
-
-      newPaths.push({
-        id: `${edge.from}->${edge.to}`,
-        edge,
-        d,
-        status: edgeStatus,
-        label: edge.label,
-        labelX,
-        labelY,
-        isHighlighted,
-      });
-    }
-
+    const newPaths: ComputedPath[] = routed.map((r: RoutedEdge) => {
+      // Label is anchored at the polyline's midpoint vertex.
+      const labelIndex = Math.floor(r.points.length / 2);
+      const labelPoint = r.points[labelIndex];
+      return {
+        id: `${r.edge.from}->${r.edge.to}`,
+        edge: r.edge,
+        d: r.d,
+        status: visualStateToCanvasStatus(r.state),
+        label: r.edge.label,
+        labelX: labelPoint?.x,
+        labelY: labelPoint?.y,
+        isHighlighted: r.isHighlighted,
+      };
+    });
     setPaths(newPaths);
-  }, [nodeStates, scale, selectedNodeId]);
+  }, [nodeStates, selectedNodeId]);
 
   useLayoutEffect(() => {
     updatePaths();

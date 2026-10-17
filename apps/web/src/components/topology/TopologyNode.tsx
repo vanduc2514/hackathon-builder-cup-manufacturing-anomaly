@@ -15,7 +15,7 @@ const STATUS_CONFIG: Record<
   { label: string; chipClass: string; dotClass?: string; borderColor?: string; ringColor?: string }
 > = {
   idle: {
-    label: 'Standby',
+    label: 'Nominal',
     chipClass: 'chip-neutral',
     borderColor: 'var(--glass-border)',
   },
@@ -94,6 +94,9 @@ export default function TopologyNode({
   }
 
   const cfg = STATUS_CONFIG[state.status] || STATUS_CONFIG.idle;
+  // AC-TOP-33: no status chip for idle nodes without a real reading; badgeText always wins.
+  const showStatusBadge = state.status !== 'idle' || Boolean(state.badgeText);
+  const badgeLabel = state.badgeText ?? cfg.label;
 
   return (
     <div
@@ -104,7 +107,7 @@ export default function TopologyNode({
       data-selected={selected ? 'true' : 'false'}
       role="button"
       tabIndex={0}
-      aria-label={`${node.label} (${node.tier}) - Status: ${cfg.label}. Click to inspect details.`}
+      aria-label={`${node.label} (${node.tier})${showStatusBadge ? ` - Status: ${badgeLabel}.` : '.'} Click to inspect details.`}
       aria-expanded={selected}
       className={`node-card topology-node-card ${selected ? 'selected topology-node-selected' : ''}`}
       onClick={() => onSelect(node.id)}
@@ -130,13 +133,15 @@ export default function TopologyNode({
             </div>
           </div>
         </div>
-        <span
-          className={`chip chip-sm ${cfg.chipClass} status-badge`}
-          title={`Status: ${state.badgeText ?? cfg.label}`}
-        >
-          {cfg.dotClass && <span className={`dot ${cfg.dotClass}`} style={{ width: 6, height: 6 }} />}
-          <span className="status-badge-text">{state.badgeText ?? cfg.label}</span>
-        </span>
+        {showStatusBadge && (
+          <span
+            className={`chip chip-sm ${cfg.chipClass} status-badge`}
+            title={`Status: ${badgeLabel}`}
+          >
+            {cfg.dotClass && <span className={`dot ${cfg.dotClass}`} style={{ width: 6, height: 6 }} />}
+            <span className="status-badge-text">{badgeLabel}</span>
+          </span>
+        )}
       </div>
 
       {/* JTBD / Summary */}

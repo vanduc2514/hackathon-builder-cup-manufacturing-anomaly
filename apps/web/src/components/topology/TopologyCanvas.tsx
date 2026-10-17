@@ -209,6 +209,7 @@ export default function TopologyCanvas({
     <div
       ref={viewportRef}
       className="canvas-wrapper topology-canvas-container"
+      data-testid="topology-canvas"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -276,11 +277,11 @@ export default function TopologyCanvas({
             bottom: 16,
             right: 16,
             width: 140,
-            background: 'rgba(15,23,42,0.85)',
-            border: '1px solid rgba(255,255,255,0.12)',
+            background: 'var(--glass-bg-strong)',
+            border: '1px solid var(--glass-border)',
             borderRadius: 8,
             padding: 8,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            boxShadow: 'var(--glass-shadow)',
             backdropFilter: 'blur(10px)',
             zIndex: 10,
             pointerEvents: 'none',
@@ -291,7 +292,7 @@ export default function TopologyCanvas({
             style={{
               fontSize: '10px',
               fontFamily: 'var(--font-mono)',
-              color: '#94a3b8',
+              color: 'var(--muted)',
               marginBottom: 6,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
@@ -306,7 +307,7 @@ export default function TopologyCanvas({
               flexDirection: 'column',
               gap: 4,
               height: 100,
-              background: '#090d16',
+              background: 'var(--depth-layer)',
               borderRadius: 4,
               padding: 4,
               position: 'relative',

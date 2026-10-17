@@ -49,6 +49,12 @@
   --r-md: 16px;
   --r-sm: 12px;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Depth hierarchy tokens: Shell (Window) > Layer container > Card (TKT-064 AC-TOP-33) */
+  --depth-shell-w1: rgba(71, 85, 105, 0.08);
+  --depth-shell-w2: rgba(99, 102, 241, 0.06);
+  --depth-layer: rgba(15, 23, 42, 0.04);
+  --surface-card: #ffffff;
 }
 
 * {
@@ -3229,6 +3235,7 @@ button.incident-chip:hover {
 
 .topology-swimlane-card {
   min-height: 520px;
+  background: var(--depth-layer);
 }
 
 .topology-node-card {
@@ -3424,7 +3431,7 @@ button.incident-chip:hover {
   gap: 0.55rem;
   padding: 0.85rem 0.95rem;
   border-radius: var(--r-md);
-  background: rgba(255, 255, 255, 0.75);
+  background: var(--surface-card);
   border: 1px solid var(--glass-border);
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
   cursor: pointer;
@@ -3802,7 +3809,7 @@ button.incident-chip:hover {
 
 /* Window 1: Factory Floor (On-Premises Edge) */
 .window-1-boundary {
-  background: rgba(248, 250, 252, 0.72);
+  background: var(--depth-shell-w1);
   border: 1.5px solid rgba(71, 85, 105, 0.45);
   box-shadow: 0 4px 20px -4px rgba(71, 85, 105, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
   padding: 1.25rem 1.5rem;
@@ -3814,7 +3821,7 @@ button.incident-chip:hover {
 
 /* Window 2: Cloud Control Plane (Multi-Agent Swarm) */
 .window-2-boundary {
-  background: rgba(240, 244, 255, 0.62);
+  background: var(--depth-shell-w2);
   border: 1.5px solid rgba(99, 102, 241, 0.38);
   box-shadow: 0 6px 24px -4px rgba(99, 102, 241, 0.10), 0 1px 3px rgba(0, 0, 0, 0.04);
   padding: 1.25rem 1.5rem;
@@ -3882,13 +3889,6 @@ button.incident-chip:hover {
   font-weight: 600;
 }
 
-.window-badges-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-}
-
 /* Quick-Launch CTA button for Window 1 (:3002) */
 .btn-quick-launch {
   display: inline-flex;
@@ -3925,7 +3925,7 @@ button.incident-chip:hover {
   max-width: 960px;
   position: relative;
   z-index: 3;
-  margin: -0.5rem auto;
+  margin: 24px auto;
 }
 
 .bridge-card {

@@ -545,3 +545,102 @@ def test_local_bm25_retriever_includes_drive_documents(tmp_path, monkeypatch):
     assert any(doc_id.startswith("drive/past_8d_reports/") for doc_id in document_ids), (
         "LocalBM25Retriever should index data/knowledge_base/drive/ after TKT-069"
     )
+
+
+# =============================================================================
+# TKT-069 / Issue #292 — alarm-code value-token routing & cross-family substring isolation
+# =============================================================================
+
+
+def test_resolve_dual_keys_alarm_code_value_token_routes_to_spindle_vibration():
+    """A query containing the bare value-token ``53`` (no ``alarm`` prefix)
+    must still route to spindle_vibration, because ``alarm 53`` is present
+    in the SYMPTOM_SYNONYMS for spindle_vibration (Tech Lead D5 AC).
+    """
+
+    from backend.tools.rag_search_tool import _resolve_dual_keys
+
+    symptom, asset, resolved_query = _resolve_dual_keys(
+        suspect_asset="CNC-02",
+        query="Find the case for alarm 53 on the spindle drive.",
+    )
+
+    assert symptom == "spindle_vibration", (
+        f"alarm 53 must resolve to spindle_vibration, got {symptom!r}"
+    )
+    assert asset == "CNC-02"
+    assert resolved_query == "Find the case for alarm 53 on the spindle drive."
+
+
+def test_resolve_dual_keys_alarm_45_routes_to_tool_wear():
+    """``alarm 45`` is a Fan Stop / tool-wear drive alarm and must route to
+    tool_wear via the SYMPTOM_SYNONYMS entry, not collapse to a bare ``45``
+    value token (Tech Lead D5 AC).
+    """
+
+    from backend.tools.rag_search_tool import _resolve_dual_keys
+
+    symptom, asset, _ = _resolve_dual_keys(
+        suspect_asset="CNC-02",
+        query="alarm 45 trip on tool magazine — what is the SOP?",
+    )
+
+    assert symptom == "tool_wear", (
+        f"alarm 45 must resolve to tool_wear, got {symptom!r}"
+    )
+    assert asset == "CNC-02"
+
+
+def test_compute_asset_score_does_not_drop_drive_8d_for_cnc_queries():
+    """A drive-side 8D case chunk with machines=['CNC-02'] but an asset id like
+    ``cnc_8d_case_001`` (an external Drive filing id) must not be zero-scored by
+    the cross-family substring check. Only true cross-family membership (CNC
+    query against injection-molding manual) should still return 0.0 (Tech Lead
+    D5 AC + Regression S4).
+    """
+
+    from backend.tools.rag_search_tool import KnowledgeChunk, LocalBM25Retriever
+
+    retriever = LocalBM25Retriever()
+
+    drive_chunk = KnowledgeChunk(
+        chunk_id="drive_cnc_8d_case_001_sec_0",
+        document_id="drive/past_8d_reports/cnc_8d_case_001.md",
+        title="CNC-02 Drive 8D Case",
+        category="8d_report",
+        machines=["CNC-02"],
+        component="spindle_drive",
+        page_number=1,
+        section="Containment",
+        snippet="Drive-side vibration alarm tripped during machining.",
+        last_revised="2026-09-04",
+        tokens=["cnc-02", "drive", "vibration", "alarm"],
+    )
+
+    # CNC query against a CNC chunk with a Drive filing id containing ``cnc``
+    # as a substring of ``cnc_8d_case_001`` — must NOT return 0.0.
+    score = retriever._compute_asset_score(drive_chunk, "CNC-02", asset_family="cnc")
+    assert score > 0.0, (
+        f"asset_score should be >0 for a CNC chunk tagged to CNC-02, got {score}"
+    )
+
+    # And the negative case: an injection-molding manual must still hard-isolate
+    # from a CNC query (the original isolation invariant is preserved).
+    im_chunk = KnowledgeChunk(
+        chunk_id="im_manual_sec_0",
+        document_id="manuals/injection_molding_guide.md",
+        title="Polymer Injection Molding Processing Guide",
+        category="manual",
+        machines=["IM-05"],
+        component=None,
+        page_number=None,
+        section=None,
+        snippet="Resin drying guide.",
+        last_revised="2026-03-12",
+        tokens=["im-05", "resin", "dryer"],
+    )
+    im_score = retriever._compute_asset_score(im_chunk, "CNC-02", asset_family="cnc")
+    assert im_score == 0.0, (
+        f"cross-family incompatibility must still return 0.0 (got {im_score}) "
+        "so CNC queries never pick up IM-05 manuals"
+    )

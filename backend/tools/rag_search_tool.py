@@ -667,7 +667,13 @@ class LocalBM25Retriever:
         if asset_family:
             chunk_text = f"{chunk.document_id} {chunk.title} {' '.join(chunk_machines)}".lower()
             for fam, members in MACHINE_FAMILIES.items():
-                if fam != asset_family and any(m in chunk_text for m in members):
+                # TKT-069 / Issue #292 — word-boundary match so an asset substring like
+                # ``cnc`` inside ``cnc_8d_case`` does not silently route the chunk out of
+                # a CNC query, while still blocking real cross-family contamination
+                # (CNC query vs. injection-molding manuals).
+                if fam != asset_family and any(
+                    re.search(rf"\b{re.escape(m)}\b", chunk_text) for m in members
+                ):
                     # Hard isolation: CNC query does not match injection molding manuals
                     return 0.0
 
@@ -976,9 +982,18 @@ def _resolve_dual_keys(
 
     symptom = defect_symptom
     if not symptom and query:
-        for s_key in SYMPTOM_SYNONYMS.keys():
-            if s_key in query.lower() or s_key.replace("_", " ") in query.lower():
-                symptom = s_key
+        ql = query.lower()
+        # TKT-069 / Issue #292 — flatten SYMPTOM_SYNONYMS to [(token, canonical_key)],
+        # longest first, so value-tokens like ``53`` are matched only after ``alarm 53``
+        # has been considered (substring containment then routes correctly).
+        candidates: List[Tuple[str, str]] = []
+        for canon_key, synonyms in SYMPTOM_SYNONYMS.items():
+            for tok in synonyms:
+                candidates.append((tok, canon_key))
+        candidates.sort(key=lambda item: len(item[0]), reverse=True)
+        for tok, canon_key in candidates:
+            if tok in ql or tok.replace("_", " ") in ql:
+                symptom = canon_key
                 break
 
     if not symptom or not asset:

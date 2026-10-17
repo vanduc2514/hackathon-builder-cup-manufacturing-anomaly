@@ -76,9 +76,7 @@ def decode_token(token: str) -> AuthenticatedUser:
         # working. Production above already returned 503.
         if not token:
             raise invalid
-        return AuthenticatedUser(
-            sub="dev", ttl_hours=settings.factory_auth_token_ttl_hours
-        )
+        return AuthenticatedUser(sub="dev", ttl_hours=settings.factory_auth_token_ttl_hours)
     try:
         claims = jwt.decode(token, secret, algorithms=[_ALGORITHM])
     except jwt.PyJWTError as exc:

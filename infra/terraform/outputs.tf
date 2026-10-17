@@ -50,9 +50,3 @@ output "hosting_sites" {
 output "hosting_urls" {
   value = local.hosting_urls
 }
-
-output "factory_api_key" {
-  description = "Shared API key for factory simulator mutating endpoints (/inject, /reset)."
-  value       = random_password.factory_api_key.result
-  sensitive   = true
-}

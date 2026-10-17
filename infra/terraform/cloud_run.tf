@@ -136,6 +136,26 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "FACTORY_API_KEY"
         value = random_password.factory_api_key.result
       }
+
+      # TKT-073 / #288: backend -> factory auth via central JWT. Operator creds
+      # are sourced here so factory_client.py can mint a Bearer token by
+      # calling this service's own /api/auth/login. ``BACKEND_PUBLIC_URL`` is
+      # the deployed URL so the JWT is issued for the same origin that
+      # Firebase Hosting rewrites reach.
+      env {
+        name  = "BACKEND_PUBLIC_URL"
+        value = google_cloud_run_v2_service.backend.uri
+      }
+
+      env {
+        name  = "FACTORY_OPERATOR_ACCOUNT"
+        value = var.factory_operator_account
+      }
+
+      env {
+        name  = "FACTORY_OPERATOR_PASSWORD"
+        value = var.factory_operator_password
+      }
     }
   }
 

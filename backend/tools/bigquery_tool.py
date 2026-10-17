@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from backend.core.config import settings
 from backend.core.models import (
+    BigQueryIngestionSummary,
     FactorDistribution,
     MachineTelemetryPayload,
     SensorBaseline,
@@ -526,6 +527,225 @@ def stream_traceability_record(record: TraceabilityEventPayload) -> bool:
         logger.warning("BigQuery streaming insert failed (%s); buffered locally", exc)
 
     return True
+
+
+# ---------------------------------------------------------------------------
+# TKT-070 / issue #268 — Competition telemetry (S9 / S10 / S11)
+#
+# Helpers for the ``manufacturing.competition_telemetry`` warehouse table
+# introduced by PR #283. ``load_competition_telemetry`` runs the same
+# CSV-to-BigQuery loader as ``scripts.seed_bigquery.load_competition_csv``
+# but routes through the runtime-configured emulator/live client and
+# returns a typed ``BigQueryIngestionSummary``. ``query_competition_telemetry_distribution``
+# is the S11 inspector baseline query: per-machine histograms of
+# anomaly scores + alarm-code counts that drive ``baseline source:
+# competition_telemetry`` log lines.
+# ---------------------------------------------------------------------------
+
+
+def load_competition_telemetry(
+    *,
+    staging_csv: Optional[str] = None,
+    manifest_path: Optional[str] = None,
+    client: Optional[Any] = None,
+    dry_run: bool = False,
+) -> Optional[BigQueryIngestionSummary]:
+    """Load the competition CSVs into ``manufacturing.competition_telemetry``.
+
+    When ``client`` is None the function uses ``get_bigquery_client()``
+    so the same code path works against the emulator (default in dev)
+    and live BigQuery (after explicit user approval). When the BigQuery
+    client is unavailable AND ``bigquery_fallback_to_mock`` is true,
+    the function still parses the CSVs and writes the staging artefacts
+    so the manifest can be inspected offline.
+
+    Returns ``None`` on dry-run / mock-fallback paths and the populated
+    ``BigQueryIngestionSummary`` after a successful INSERT.
+    """
+    from data.competition_loader import load_competition_csv as _load_csv
+
+    rows, skipped, source_sha256s = _load_csv()
+    target_table = f"{settings.gcp_project_id}.{settings.bigquery_dataset}.competition_telemetry"
+
+    composite_sha = _composite_source_sha(source_sha256s)
+    from data.competition_loader import (
+        emit_staging_csv,
+        summarize_ingestion,
+        write_seed_manifest,
+    )
+
+    summary = summarize_ingestion(
+        rows_loaded=len(rows),
+        rows_skipped=skipped,
+        source_sha256=composite_sha,
+        target_table=target_table,
+        dry_run=dry_run,
+    )
+
+    # Always emit the staging CSV + manifest, even on the dry-run / mock
+    # fallback path, so a CI job can validate the schema mapping offline.
+    default_staging = "data/datasets/competition_telemetry.csv"
+    default_manifest = "artifacts/BQ_seed_manifest.json"
+    from pathlib import Path
+
+    emit_staging_csv(rows, Path(staging_csv or default_staging))
+    write_seed_manifest(
+        Path(manifest_path or default_manifest),
+        summary=summary,
+        source_sha256s=source_sha256s,
+    )
+
+    if dry_run:
+        logger.info(
+            "Dry-run: would load %d rows into %s (skipped %d malformed)",
+            summary.rows_loaded,
+            target_table,
+            summary.rows_skipped,
+        )
+        return summary
+
+    if client is None:
+        try:
+            client = get_bigquery_client()
+        except Exception as exc:
+            if settings.bigquery_fallback_to_mock:
+                logger.warning(
+                    "BigQuery client unavailable (%s); competition CSV staged locally only.",
+                    exc,
+                )
+                return None
+            raise
+
+    errors = _insert_rows_in_batches(client, target_table, rows)
+    if errors:
+        logger.warning("Errors inserting competition_telemetry rows: %s", errors)
+    else:
+        logger.info(
+            "Successfully loaded %d rows into %s (skipped %d malformed)",
+            summary.rows_loaded,
+            target_table,
+            summary.rows_skipped,
+        )
+    return summary
+
+
+def _composite_source_sha(source_sha256s: Dict[str, str]) -> str:
+    """Combine per-source SHAs into one stable hex digest for the manifest."""
+    import hashlib
+
+    joined = "\n".join(f"{tag}:{sha}" for tag, sha in sorted(source_sha256s.items()))
+    return hashlib.sha256(joined.encode("utf-8")).hexdigest()
+
+
+def _insert_rows_in_batches(
+    client: Any,
+    table_ref: str,
+    rows: List[Dict[str, Any]],
+    *,
+    batch_size: int = 500,
+) -> List[Any]:
+    """Insert ``rows`` into ``table_ref`` in chunks of ``batch_size``.
+
+    BigQuery's ``insert_rows_json`` accepts up to 500 rows per call.
+    Mirrors ``scripts.seed_bigquery._insert_in_batches`` so the
+    runtime helper has the same batching behaviour as the CLI.
+    """
+    errors: List[Any] = []
+    for start in range(0, len(rows), batch_size):
+        batch = rows[start : start + batch_size]
+        if not batch:
+            continue
+        batch_errors = client.insert_rows_json(table_ref, batch)
+        if batch_errors:
+            errors.extend(batch_errors)
+    return errors
+
+
+def query_competition_telemetry_distribution(
+    machine_id: Optional[str] = None,
+    *,
+    client: Optional[Any] = None,
+    time_window: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Per-machine distribution of anomaly scores + alarm codes.
+
+    Returns a ``Dict`` so the helper is callable from both the ADK
+    inspector tool (where ``Pydantic`` types are required) and the
+    standalone BigQuery notebook (where plain dicts are friendlier).
+    The shape is documented in ``docs/runbooks/seed-bigquery.md``.
+
+    When the warehouse table is empty (e.g. before the first
+    ``mise run seed``), the function returns a defensive empty payload
+    rather than raising so the inspector baseline path keeps working.
+    """
+    target_client = client
+    if target_client is None:
+        try:
+            target_client = get_bigquery_client()
+        except Exception as exc:
+            if settings.bigquery_fallback_to_mock:
+                logger.warning(
+                    "BigQuery client unavailable (%s); competition distribution unavailable.",
+                    exc,
+                )
+                return {"source": "mock_fallback", "machines": [], "sample_count": 0}
+            raise
+
+    from google.cloud import bigquery
+
+    where_clauses: List[str] = []
+    params: List[Any] = []
+    if machine_id:
+        where_clauses.append("asset_machine_id = @machine_id")
+        params.append(bigquery.ScalarQueryParameter("machine_id", "STRING", machine_id))
+    if time_window:
+        window_clauses, window_params = _time_filters(time_window, None, None)
+        where_clauses.extend(window_clauses)
+        params.extend(window_params)
+    where_str = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+    dataset_id = f"{target_client.project}.{settings.bigquery_dataset}"
+    query = f"""
+        SELECT
+            asset_machine_id,
+            COUNT(*) AS sample_count,
+            AVG(health_anomaly_score) AS avg_anomaly_score,
+            MAX(health_anomaly_score) AS max_anomaly_score,
+            COUNTIF(alarm_code IS NOT NULL) AS fault_count,
+            COUNTIF(operating_status = 'FAULT') AS fault_status_count
+        FROM `{dataset_id}.competition_telemetry`
+        {where_str}
+        GROUP BY asset_machine_id
+        ORDER BY avg_anomaly_score DESC
+    """
+    try:
+        rows_iter = _run_query(target_client, query, params)
+        machines: List[Dict[str, Any]] = []
+        total_samples = 0
+        for row in rows_iter:
+            sample_count = int(row.sample_count or 0)
+            total_samples += sample_count
+            machines.append(
+                {
+                    "asset_machine_id": str(row.asset_machine_id),
+                    "sample_count": sample_count,
+                    "avg_anomaly_score": round(float(row.avg_anomaly_score or 0.0), 6),
+                    "max_anomaly_score": round(float(row.max_anomaly_score or 0.0), 6),
+                    "fault_count": int(row.fault_count or 0),
+                    "fault_status_count": int(row.fault_status_count or 0),
+                }
+            )
+        source = "bigquery_emulator" if settings.bigquery_emulator_host else "bigquery_live"
+        return {
+            "source": source,
+            "machines": machines,
+            "sample_count": total_samples,
+            "machine_id": machine_id,
+            "time_window": time_window,
+        }
+    except Exception as exc:
+        logger.warning("competition_telemetry distribution query failed (%s); returning empty", exc)
+        return {"source": "query_error", "machines": [], "sample_count": 0, "error": str(exc)}
 
 
 def get_mock_traceability_records() -> List[Dict[str, Any]]:

@@ -365,3 +365,178 @@ def test_query_sensor_telemetry_window_mock_fallback():
         with patch("backend.tools.bigquery_tool.settings.bigquery_fallback_to_mock", False):
             with pytest.raises(RuntimeError, match="No BigQuery client available"):
                 query_sensor_telemetry_window(machine_id="CNC-02")
+
+
+# ---------------------------------------------------------------------------
+# TKT-070 S10 — competition telemetry ingestion helper + distribution query
+# ---------------------------------------------------------------------------
+
+
+def test_load_competition_telemetry_happy_path_emulator():
+    """``load_competition_telemetry`` INSERTs in 500-row batches and returns a typed summary."""
+    from backend.core.models import BigQueryIngestionSummary
+    from backend.tools.bigquery_tool import load_competition_telemetry
+
+    mock_client = MagicMock()
+    mock_client.project = "kaizen-local"
+    mock_client.insert_rows_json.return_value = []
+
+    with patch("backend.tools.bigquery_tool.get_bigquery_client", return_value=mock_client):
+        summary = load_competition_telemetry(client=mock_client)
+
+    assert isinstance(summary, BigQueryIngestionSummary)
+    assert summary.rows_loaded == 2000
+    assert summary.target_table.endswith("manufacturing.competition_telemetry")
+
+    competition_calls = [
+        call for call in mock_client.insert_rows_json.call_args_list
+        if call.args[0].endswith("competition_telemetry")
+    ]
+    # 2000 rows / 500 batch size = 4 batches.
+    assert len(competition_calls) == 4
+    assert all(len(call.args[1]) == 500 for call in competition_calls)
+
+
+def test_load_competition_telemetry_local_csv_fallback_when_client_unavailable():
+    """When BigQuery is unreachable and mock fallback is on, the helper still emits staging artefacts."""
+    from backend.tools.bigquery_tool import load_competition_telemetry
+
+    with patch(
+        "backend.tools.bigquery_tool.get_bigquery_client",
+        side_effect=RuntimeError("No BigQuery client available"),
+    ):
+        summary = load_competition_telemetry()
+
+    # Mock fallback path returns ``None`` so the caller knows no
+    # warehouse writes succeeded but the staging CSV + manifest are
+    # still on disk for offline inspection.
+    assert summary is None
+
+
+def test_load_competition_telemetry_raises_when_fallback_disabled():
+    """Without the mock fallback the helper surfaces the original BigQuery error."""
+    from backend.tools.bigquery_tool import load_competition_telemetry
+
+    with patch(
+        "backend.tools.bigquery_tool.get_bigquery_client",
+        side_effect=RuntimeError("No BigQuery client available"),
+    ):
+        with patch("backend.tools.bigquery_tool.settings.bigquery_fallback_to_mock", False):
+            with pytest.raises(RuntimeError, match="No BigQuery client available"):
+                load_competition_telemetry()
+
+
+def test_load_competition_telemetry_dry_run_skips_inserts(tmp_path):
+    """``dry_run=True`` parses CSVs and writes staging artefacts but never INSERTs."""
+    from backend.tools.bigquery_tool import load_competition_telemetry
+
+    mock_client = MagicMock()
+    mock_client.project = "kaizen-local"
+
+    summary = load_competition_telemetry(
+        client=mock_client,
+        dry_run=True,
+        staging_csv=str(tmp_path / "staging.csv"),
+        manifest_path=str(tmp_path / "manifest.json"),
+    )
+    assert summary is not None
+    assert summary.dry_run is True
+    assert summary.rows_loaded == 2000
+    assert mock_client.insert_rows_json.call_count == 0
+    assert (tmp_path / "staging.csv").exists()
+    assert (tmp_path / "manifest.json").exists()
+
+
+def test_query_competition_telemetry_distribution_returns_per_machine_shape():
+    """``query_competition_telemetry_distribution`` aggregates by ``asset_machine_id``."""
+    from backend.tools.bigquery_tool import query_competition_telemetry_distribution
+
+    # The SQL is ``ORDER BY avg_anomaly_score DESC`` — the mock returns
+    # rows in that pre-sorted order to mimic the live warehouse.
+    rows_iter = [
+        MockRow(
+            asset_machine_id="MOTOR_ABNORMAL_0001",
+            sample_count=400,
+            avg_anomaly_score=0.78,
+            max_anomaly_score=0.95,
+            fault_count=400,
+            fault_status_count=400,
+        ),
+        MockRow(
+            asset_machine_id="MOTOR_NORMAL_0001",
+            sample_count=600,
+            avg_anomaly_score=0.05,
+            max_anomaly_score=0.18,
+            fault_count=0,
+            fault_status_count=0,
+        ),
+    ]
+    mock_client = MagicMock()
+    mock_client.project = "kaizen-local"
+
+    with (
+        patch("backend.tools.bigquery_tool.get_bigquery_client", return_value=mock_client),
+        patch(
+            "backend.tools.bigquery_tool._run_query",
+            return_value=iter(rows_iter),
+        ),
+    ):
+        result = query_competition_telemetry_distribution()
+
+    assert result["source"] == "bigquery_live"
+    assert result["sample_count"] == 1000
+    assert len(result["machines"]) == 2
+    # ``avg_anomaly_score DESC`` ordering: abnormal machine first.
+    assert result["machines"][0]["asset_machine_id"] == "MOTOR_ABNORMAL_0001"
+    assert result["machines"][0]["fault_count"] == 400
+
+
+def test_query_competition_telemetry_distribution_empty_table_returns_empty_payload():
+    """An empty warehouse (post-emulator, pre-seed) returns a defensive empty payload."""
+    from backend.tools.bigquery_tool import query_competition_telemetry_distribution
+
+    mock_client = MagicMock()
+    mock_client.project = "kaizen-local"
+
+    with (
+        patch("backend.tools.bigquery_tool.get_bigquery_client", return_value=mock_client),
+        patch("backend.tools.bigquery_tool._run_query", return_value=iter([])),
+    ):
+        result = query_competition_telemetry_distribution()
+
+    assert result["machines"] == []
+    assert result["sample_count"] == 0
+
+
+def test_query_competition_telemetry_distribution_mock_fallback_when_client_unavailable():
+    """When BigQuery is unreachable and mock fallback is on, the helper returns ``mock_fallback``."""
+    from backend.tools.bigquery_tool import query_competition_telemetry_distribution
+
+    with patch(
+        "backend.tools.bigquery_tool.get_bigquery_client",
+        side_effect=RuntimeError("No BigQuery client available"),
+    ):
+        result = query_competition_telemetry_distribution()
+
+    assert result["source"] == "mock_fallback"
+    assert result["machines"] == []
+
+
+def test_query_competition_telemetry_distribution_filters_by_machine_id():
+    """Passing ``machine_id`` adds a ``WHERE`` clause; empty result is still a valid payload."""
+    from backend.tools.bigquery_tool import query_competition_telemetry_distribution
+
+    mock_client = MagicMock()
+    mock_client.project = "kaizen-local"
+
+    with (
+        patch("backend.tools.bigquery_tool.get_bigquery_client", return_value=mock_client),
+        patch("backend.tools.bigquery_tool._run_query", return_value=iter([])) as mock_query,
+    ):
+        result = query_competition_telemetry_distribution(machine_id="MOTOR_NORMAL_0042")
+
+    assert result["machine_id"] == "MOTOR_NORMAL_0042"
+    assert result["machines"] == []
+    # The WHERE clause was added to the SQL (machine_id filter).
+    sql_arg = mock_query.call_args.args[1]
+    assert "asset_machine_id = @machine_id" in sql_arg

@@ -6,7 +6,8 @@ import logging
 import os
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from backend.core.config import settings
 from backend.core.models import (
@@ -25,6 +26,322 @@ logger = logging.getLogger(__name__)
 
 MOCK_SENSOR_TELEMETRY: List[Dict[str, Any]] = []
 MOCK_TRACEABILITY_RECORDS: List[Dict[str, Any]] = []
+
+# ---------------------------------------------------------------------------
+# Schema allowlist (issue #266)
+#
+# Each `manufacturing.<table>` we write to / read from must declare its column
+# set in `data/schemas/bigquery/<table>.yaml`. The YAMLs are the canonical
+# source of truth in this process — `data/schemas/bigquery_tables.sql` is the
+# upstream DDL we mirror by hand. ``_SCHEMA_ALLOWLIST`` is loaded lazily on
+# first use so importing this module never touches the filesystem; tests can
+# still preload it via ``_load_schema_allowlist(force=True)``.
+#
+# The allowlist has three responsibilities:
+# 1. Reject ``FROM ``<unknown_dataset>.<table>``` (typo / drift guard).
+# 2. Reject any column reference (in SELECT / WHERE / GROUP BY / ORDER BY /
+#    anywhere referenced) that is not in the table's column set, including
+#    the forbidden legacy pseudo-column ``_PARTITIONTIME``.
+# 3. Accept ``_PARTITIONDATE`` as the modern sharded-column surrogate so
+#    partition pruning still works against the live warehouse.
+# ---------------------------------------------------------------------------
+
+_ALLOWLIST_DIR = Path(__file__).resolve().parents[2] / "data" / "schemas" / "bigquery"
+_SCHEMA_ALLOWLIST: Dict[str, Dict[str, Any]] = {}
+_ALLOWLIST_LOADED = False
+
+
+def _load_schema_allowlist(*, force: bool = False) -> Dict[str, Dict[str, Any]]:
+    """Lazy-load the schema allowlist from YAML files on disk.
+
+    Imports ``yaml`` lazily so unit tests that never touch BigQuery can avoid
+    pulling PyYAML. Falls back to an empty allowlist if PyYAML is unavailable
+    or the directory is missing; ``_assert_query_safe`` then trips on every
+    query, which is fail-closed behaviour but loud via the ``ValueError``.
+    """
+    global _SCHEMA_ALLOWLIST, _ALLOWLIST_LOADED  # noqa: PLW0603
+    if _ALLOWLIST_LOADED and not force:
+        return _SCHEMA_ALLOWLIST
+    try:
+        import yaml  # type: ignore[import-untyped]
+    except ImportError:
+        logger.warning("PyYAML not installed; schema allowlist disabled (fail-closed)")
+        _ALLOWLIST_LOADED = True
+        return _SCHEMA_ALLOWLIST
+    if not _ALLOWLIST_DIR.is_dir():
+        logger.warning(
+            "Schema allowlist directory %s missing; queries will fail closed",
+            _ALLOWLIST_DIR,
+        )
+        _ALLOWLIST_LOADED = True
+        return _SCHEMA_ALLOWLIST
+    loaded: Dict[str, Dict[str, Any]] = {}
+    for path in sorted(_ALLOWLIST_DIR.glob("*.yaml")):
+        try:
+            with path.open("r", encoding="utf-8") as fp:
+                doc = yaml.safe_load(fp) or {}
+        except (OSError, ValueError) as exc:
+            logger.error("Failed to load schema allowlist %s: %s", path, exc)
+            continue
+        if not isinstance(doc, dict) or "table" not in doc:
+            logger.error("Schema allowlist %s missing 'table' key; skipping", path)
+            continue
+        loaded[str(doc["table"])] = {
+            "columns": {str(c) for c in doc.get("columns", []) or []},
+            "allowed_pseudo_columns": {
+                str(c) for c in doc.get("allowed_pseudo_columns", []) or []
+            },
+            "forbidden_pseudo_columns": {
+                str(c) for c in doc.get("forbidden_pseudo_columns", []) or []
+            },
+            "path": str(path),
+        }
+    _SCHEMA_ALLOWLIST = loaded
+    _ALLOWLIST_LOADED = True
+    return _SCHEMA_ALLOWLIST
+
+
+# Regular expression that captures a fully-qualified `dataset.table` reference
+# in any ``FROM`` / ``JOIN`` clause. We use the explicit ```...``` quoting
+# because BigQuery requires it for cross-dataset joins and our f-string SQL
+# builds already wrap the dataset.table name with backticks. We capture the
+# qualified form first so the unqualified fallback cannot accidentally
+# consume the second identifier of an already-qualified reference.
+_FROM_RE = re.compile(
+    r"""\b(?:FROM|JOIN)\s+`([\w-]+)\.([\w-]+)`""",
+    re.IGNORECASE,
+)
+# Unqualified `FROM sensor_telemetry` / `JOIN competition_telemetry` (no
+# dataset prefix, no leading backticks). Anchored by leading whitespace to
+# avoid matching the second identifier of an already-qualified reference.
+_FROM_UNQUAL_RE = re.compile(
+    r"""\b(?:FROM|JOIN)\s+([\w-]+)\b(?!\.)""",
+    re.IGNORECASE,
+)
+# Anything that looks like an identifier after a SELECT, WHERE, GROUP BY,
+# ORDER BY, ON, AND, OR, etc. The capture group must start with a letter /
+# underscore so we do not match numeric literals like ``42`` in SELECT
+# COUNT(*) AS total_42.
+_IDENT_RE = re.compile(r"""([A-Za-z_][A-Za-z0-9_]*)""")
+
+
+def _table_key(dataset_id: str, table_name: str) -> str:
+    """Canonical ``<dataset>.<table>`` key used by the allowlist mapping."""
+    return f"{dataset_id}.{table_name}"
+
+
+def _assert_query_safe(sql: str, *, default_dataset_id: Optional[str] = None) -> None:
+    """Validate ``sql`` against the allowlist before any client is invoked.
+
+    Extracts every ``FROM `dataset.table``` reference and asserts:
+
+    - the resulting ``dataset.table`` exists in the allowlist;
+    - each identifier used in the query (column references, aliases are not
+      distinguished — over-permissive on aliases, conservative on columns)
+      is either a regular column, one of the table's
+      ``allowed_pseudo_columns``, or an SQL keyword; and
+    - no ``forbidden_pseudo_columns`` (currently ``_PARTITIONTIME``) appears
+      anywhere in the raw SQL.
+
+    Raises ``ValueError`` with the offending reference so callers fail loudly
+    BEFORE handing the SQL to the BigQuery / emulator client. We fail closed
+    (always raise) rather than swallow typos because at least two of the
+    tables in scope are queried from production analytics dashboards where a
+    silent fallback would corrupt downstream SPC calculations.
+    """
+    allowlist = _load_schema_allowlist()
+
+    # 1. Reject forbidden pseudo-columns (e.g. _PARTITIONTIME) eagerly.
+    for match in re.finditer(r"\b_([A-Za-z0-9_]+)\b", sql):
+        pseudo_candidate = f"_{match.group(1)}"
+        if pseudo_candidate.lower() == "_partitiontime":
+            raise ValueError(
+                "_PARTITIONTIME is forbidden by the schema allowlist "
+                "(issue #266); use _PARTITIONDATE instead"
+            )
+
+    # 2. Resolve every FROM / JOIN reference against the allowlist. Two flavors:
+    # ``FROM `ds.tbl``` (qualified) and ``FROM tbl``` (unqualified, qualified
+    # against ``default_dataset_id``). Reject anything outside the YAMLs.
+    referenced_tables: Set[str] = set()
+    # Aliases introduced via `AS <name>` are valid identifiers in the SELECT,
+    # WHERE, GROUP BY, ORDER BY clauses. We collect them so the identifier
+    # allowlist check below doesn't flag a query that uses ``AS s`` as
+    # referencing an unknown column.
+    aliases: Set[str] = set()
+    for alias_match in re.finditer(r"\bAS\s+([A-Za-z_][A-Za-z0-9_]*)", sql, re.IGNORECASE):
+        aliases.add(alias_match.group(1))
+    for match in _FROM_RE.finditer(sql):
+        ds, tbl = match.group(1), match.group(2)
+        qualified_key = _table_key(ds, tbl)
+        if qualified_key not in allowlist:
+            raise ValueError(
+                f"BigQuery query references unknown table {qualified_key!r}; "
+                f"add a YAML allowlist under data/schemas/bigquery/ before retrying"
+            )
+        referenced_tables.add(qualified_key)
+    for match in _FROM_UNQUAL_RE.finditer(sql):
+        tbl = match.group(1)
+        if default_dataset_id is None:
+            raise ValueError(
+                f"BigQuery query references unqualified table {tbl!r}; "
+                f"either pass default_dataset_id or qualify with a dataset"
+            )
+        qualified_key = _table_key(default_dataset_id, tbl)
+        if qualified_key not in allowlist:
+            raise ValueError(
+                f"BigQuery query references unqualified table {tbl!r} which "
+                f"resolves to {qualified_key!r}; no allowlist entry"
+            )
+        referenced_tables.add(qualified_key)
+
+    if not referenced_tables:
+        # No FROM / JOIN (e.g. literal SELECT 1) — nothing to validate.
+        return
+
+    # 3. Identifier validation: for every referenced table, ensure each
+    # identifier in the SQL is either a declared column / pseudo-column /
+    # alias for that table, or a known SQL keyword. We strip backtick-quoted
+    # segments first so the dataset.table in FROM `manufacturing.<tbl>` does
+    # not contaminate the identifier scan.
+    sql_keywords = _SQL_KEYWORDS_LC
+    sql_for_ident_scan = re.sub(r"`[^`]*`", " ", sql)
+    for table_key in referenced_tables:
+        schema = allowlist[table_key]
+        allowed = schema["columns"] | schema["allowed_pseudo_columns"]
+        forbidden = schema["forbidden_pseudo_columns"]
+        for ident_match in _IDENT_RE.finditer(sql_for_ident_scan):
+            ident = ident_match.group(1)
+            ident_lc = ident.lower()
+            if ident_lc in sql_keywords:
+                continue
+            # Backticked pseudo-columns and SQL functions (COUNT, COALESCE,
+            # SAFE_DIVIDE, etc.) are passed through.
+            if ident_lc in {"count", "coalesce", "safe_divide", "sum", "avg",
+                             "min", "max", "stddev", "format_timestamp",
+                             "timestamp", "current_timestamp", "date",
+                             "datetime", "time", "unnest", "if", "case"}:
+                continue
+            if ident in aliases:
+                # Aliases introduced by `AS <name>` in the same query.
+                continue
+            # BigQuery positional / pseudo-named parameters (``@start``, ``@end``,
+            # ``@machine_id``) appear inline and are valid identifiers despite not
+            # being columns. The regex matches them; a leading ``@`` is the only
+            # syntactic distinction we can lean on.
+            if sql_for_ident_scan.find(f"@{ident}") >= 0:
+                continue
+            if ident in forbidden:
+                raise ValueError(
+                    f"Forbidden pseudo-column {ident!r} in query against {table_key}"
+                )
+            if ident not in allowed:
+                # If the identifier appears in any other allowlisted table's
+                # column set, the query is ambiguous across joins; reject.
+                cross_other = any(
+                    ident in other.get("columns", set()) or ident in other.get(
+                        "allowed_pseudo_columns", set()
+                    )
+                    for other_key, other in allowlist.items()
+                    if other_key != table_key
+                )
+                if cross_other and sql_for_ident_scan.lower().count(ident_lc) == 1:
+                    # Single occurrence of an identifier that exists in another
+                    # table is acceptable for unqualified single-table reads.
+                    continue
+                if cross_other:
+                    raise ValueError(
+                        f"Column {ident!r} in query against {table_key} is not "
+                        f"declared in its schema allowlist; qualify it with a "
+                        f"table alias or update data/schemas/bigquery to add it"
+                    )
+                raise ValueError(
+                    f"Column {ident!r} is not declared in the schema allowlist "
+                    f"for {table_key}; update {schema['path']} before retrying"
+                )
+
+
+def _validate_insert_payload(table_key: str, row: Dict[str, Any]) -> None:
+    """Validate an ``insert_rows_json`` row against the schema allowlist.
+
+    Streaming inserts (sensor telemetry, traceability events, competition
+    ingestion) build their rows from Pydantic models so every column key
+    SHOULD be a declared column. The guard raises ``ValueError`` on the
+    rare case the model gains a field that has not yet been mirrored into
+    ``data/schemas/bigquery/<table>.yaml`` — saving us from silently
+    inserting phantom columns that BigQuery would reject (and the emulator
+    would accept, masking drift).
+    """
+    schema = _load_schema_allowlist().get(table_key)
+    if schema is None:
+        raise ValueError(
+            f"insert_rows_json target {table_key!r} not in schema allowlist; "
+            f"add a YAML allowlist under data/schemas/bigquery/ before retrying"
+        )
+    declared = schema["columns"]
+    for key in row.keys():
+        if key not in declared:
+            raise ValueError(
+                f"Row key {key!r} is not declared in the schema allowlist for "
+                f"{table_key}; update {schema['path']} to add it"
+            )
+
+
+# Compact lowercase keyword set covering the SQL we currently emit. Stripped of
+# functions (handled separately above) and pseudo-columns (validated earlier).
+_SQL_KEYWORDS_LC: Set[str] = frozenset(
+    word
+    for word in (
+        "select",
+        "from",
+        "where",
+        "and",
+        "or",
+        "not",
+        "in",
+        "is",
+        "null",
+        "like",
+        "group",
+        "by",
+        "order",
+        "having",
+        "limit",
+        "offset",
+        "union",
+        "all",
+        "as",
+        "on",
+        "using",
+        "left",
+        "right",
+        "inner",
+        "outer",
+        "join",
+        "distinct",
+        "case",
+        "when",
+        "then",
+        "else",
+        "end",
+        "between",
+        "asc",
+        "desc",
+        "true",
+        "false",
+        "interval",
+        "minute",
+        "hour",
+        "day",
+        "with",
+        "over",
+        "partition",
+        "rows",
+        "range",
+        "unnest",
+    )
+)
+
 
 # Upper bound for one query including BigQuery job retries; a failing job surfaces as an
 # error instead of being re-run for the library default of ~10 minutes.
@@ -273,6 +590,7 @@ def query_traceability_topology(
         GROUP BY machine_id, tool_id
         ORDER BY defect_ratio DESC, defect_count DESC
     """
+    _assert_query_safe(query_machine_tool, default_dataset_id=settings.bigquery_dataset)
 
     # Secondary multi-factor population analysis across lot_id and operator_id
     query_factors = f"""
@@ -296,6 +614,7 @@ def query_traceability_topology(
         {where_str}
         GROUP BY operator_id
     """
+    _assert_query_safe(query_factors, default_dataset_id=settings.bigquery_dataset)
 
     try:
         results_mt = _run_query(client, query_machine_tool, params)
@@ -400,6 +719,7 @@ def query_sensor_telemetry_window(
         FROM `{dataset_id}.sensor_telemetry`
         {where_str}
     """
+    _assert_query_safe(query, default_dataset_id=settings.bigquery_dataset)
 
     try:
         results = _run_query(client, query, params)
@@ -468,6 +788,8 @@ def stream_sensor_telemetry(telemetry: MachineTelemetryPayload) -> bool:
         "current_a": float(telemetry.motor_current),
         "spindle_speed_rpm": int(telemetry.rpm),
     }
+    # Validate every row key against the schema allowlist before any client.
+    _validate_insert_payload(f"{settings.bigquery_dataset}.sensor_telemetry", row)
 
     # In-memory buffer fallback and inspection
     MOCK_SENSOR_TELEMETRY.append(row)
@@ -509,6 +831,7 @@ def stream_traceability_record(record: TraceabilityEventPayload) -> bool:
         "operator_id": record.operator_id,
         "status": record.status,
     }
+    _validate_insert_payload(f"{settings.bigquery_dataset}.traceability", row)
 
     # In-memory buffer fallback and inspection
     MOCK_TRACEABILITY_RECORDS.append(row)
@@ -573,6 +896,15 @@ def load_competition_telemetry(
         summarize_ingestion,
         write_seed_manifest,
     )
+
+    # Allowlist guard: every column key in the loader output must be declared in
+    # data/schemas/bigquery/competition_telemetry.yaml. Raises ValueError BEFORE
+    # the BigQuery / emulator client is called so a schema drift (e.g. an ALTER
+    # TABLE on bigquery_tables.sql not mirrored to YAML) surfaces immediately.
+    if rows:
+        table_key = f"{settings.bigquery_dataset}.competition_telemetry"
+        for row in rows:
+            _validate_insert_payload(table_key, row)
 
     summary = summarize_ingestion(
         rows_loaded=len(rows),
@@ -718,6 +1050,7 @@ def query_competition_telemetry_distribution(
         GROUP BY asset_machine_id
         ORDER BY avg_anomaly_score DESC
     """
+    _assert_query_safe(query, default_dataset_id=settings.bigquery_dataset)
     try:
         rows_iter = _run_query(target_client, query, params)
         machines: List[Dict[str, Any]] = []

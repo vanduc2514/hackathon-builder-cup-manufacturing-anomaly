@@ -52,7 +52,11 @@ resource "google_cloud_run_v2_service" "backend" {
     session_affinity                 = true
 
     scaling {
-      min_instance_count = var.min_instances
+      # TKT-074 / #296: keep one backend instance always warm to eliminate
+      # cold-start latency (~2-6 s) on first hit. Cost ~$4-5 / mo at
+      # asia-southeast1 idle; gate by user approval in #296. Other Cloud Run
+      # services (factory, Vertex AI Search) keep var.min_instances (0).
+      min_instance_count = 1
       max_instance_count = var.max_instances
     }
 

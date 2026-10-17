@@ -38,10 +38,9 @@ def test_severity_mapping_values():
 @pytest.mark.asyncio
 async def test_client_url_unset_skips_network(monkeypatch):
     """Verify URL unset returns skipped=True, ok=False with zero network requests (Invariant #4)."""
-    monkeypatch.setattr(settings, "factory_operator_account", None)
-    monkeypatch.setattr(settings, "factory_operator_password", None)
-    monkeypatch.setattr(settings, "backend_public_url", None)
-    monkeypatch.setattr(settings, "backend_url", None)
+    monkeypatch.setattr(settings, "factory_service_account_username", None)
+    monkeypatch.setattr(settings, "factory_service_account_password", None)
+    monkeypatch.setattr(settings, "factory_backend_base_url", None)
     _bearer_cache.invalidate()
     client = FactorySimulatorClient(base_url="")
     assert not client.is_configured()
@@ -105,20 +104,28 @@ async def test_client_200_ok_responses(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_client_bearer_unavailable_skips_gracefully(monkeypatch):
-    """When login is not configured, factory_client skips with bearer_unavailable (no exception)."""
-    monkeypatch.setattr(settings, "factory_operator_account", None)
-    monkeypatch.setattr(settings, "factory_operator_password", None)
-    monkeypatch.setattr(settings, "backend_public_url", None)
-    monkeypatch.setattr(settings, "backend_url", None)
+async def test_client_bearer_mint_failure_surfaces_typed_auth_error(monkeypatch):
+    """When login credentials are missing, factory_client surfaces a FactoryAuthError result.
+
+    Per the brief-locked TKT-073 / #288 contract (no backwards-compat shim, "Raise typed
+    exception on persistent 401"), missing service-account credentials or an absent
+    factory_backend_base_url now produce a FactorySyncResult with
+    ``ok=False, skipped=False, error="FactoryAuthError: ..."`` instead of the legacy
+    ``bearer_unavailable`` silent-skip. The outer API can branch on the prefix to map
+    to a 502 Bad Gateway upstream.
+    """
+    monkeypatch.setattr(settings, "factory_service_account_username", None)
+    monkeypatch.setattr(settings, "factory_service_account_password", None)
+    monkeypatch.setattr(settings, "factory_backend_base_url", None)
     _bearer_cache.invalidate()
 
     client = FactorySimulatorClient(base_url="http://mock-factory:8080")
 
     res = await client.inject_anomaly()
-    assert res.skipped is True
     assert res.ok is False
-    assert res.error == "bearer_unavailable"
+    assert res.skipped is False
+    assert res.error is not None
+    assert res.error.startswith("FactoryAuthError:")
 
 
 @pytest.mark.asyncio
@@ -202,7 +209,10 @@ async def test_client_sends_bearer_header_no_api_key():
 
     Records all observed headers so we can assert the absence of X-API-Key and
     the presence of the JWT (whatever token the upstream mint function returns).
+    Invalidates the module-scoped bearer cache so earlier tests' cached tokens
+    cannot leak into this assertion.
     """
+    _bearer_cache.invalidate()
     recorded_headers: dict[str, str] = {}
 
     async def fake_bearer() -> str | None:
@@ -235,10 +245,9 @@ async def test_client_cached_token_reuse_single_login(monkeypatch):
     provider is invoked exactly once (mint), then the cache serves the next two.
     """
     _bearer_cache.invalidate()
-    monkeypatch.setattr(settings, "factory_operator_account", "op-1")
-    monkeypatch.setattr(settings, "factory_operator_password", "pw-1")
-    monkeypatch.setattr(settings, "backend_public_url", "http://mock-backend:8080")
-    monkeypatch.setattr(settings, "backend_url", None)
+    monkeypatch.setattr(settings, "factory_service_account_username", "op-1")
+    monkeypatch.setattr(settings, "factory_service_account_password", "pw-1")
+    monkeypatch.setattr(settings, "factory_backend_base_url", "http://mock-backend:8080")
 
     provider_calls = {"count": 0}
 

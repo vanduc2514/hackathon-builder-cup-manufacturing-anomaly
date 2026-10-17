@@ -15,8 +15,6 @@ export default function DecisionGateNode({
   selected,
   onSelect,
 }: DecisionGateNodeProps): React.ReactElement {
-  const isGate1 = node.id === 'decision-gate-1';
-
   return (
     <div className="decision-diamond-wrapper">
       <div
@@ -43,20 +41,6 @@ export default function DecisionGateNode({
         </div>
         <div className="diamond-title">{node.label}</div>
         <div className="diamond-sub">{node.sublabel}</div>
-
-        <div className="diamond-branches">
-          {isGate1 ? (
-            <>
-              <span className="diamond-branch-pill red">NO (&lt; 0.70): Diagnostic Evidence Request</span>
-              <span className="diamond-branch-pill green">YES (&ge; 0.70): Proceed to Copilot & 8D Scribe</span>
-            </>
-          ) : (
-            <>
-              <span className="diamond-branch-pill red">NO (Defect Detected): Reset Streak to 0/50 & Escalate Alarm</span>
-              <span className="diamond-branch-pill green">YES (Streak &ge; 50): Certified Clean &rarr; Unlock Approval</span>
-            </>
-          )}
-        </div>
       </div>
     </div>
   );

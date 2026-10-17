@@ -9,6 +9,10 @@ import {
   TOPOLOGY_ROUTES,
   TOPOLOGY_SCENARIOS,
   deriveEdgeStates,
+  deriveGateBlockStatus,
+  deriveNodeStates,
+  derivePhaseLaneStatuses,
+  derivePhaseStepperInfo,
   getEdgeId,
 } from '../topology';
 import type { TopologyScenarioId } from '../../types';
@@ -311,5 +315,69 @@ describe('deriveEdgeStates scenario maps (AC-TOP-25)', () => {
     const before = JSON.stringify(TOPOLOGY_EDGES);
     expect(deriveEdgeStates('approved')).toEqual(deriveEdgeStates('approved'));
     expect(JSON.stringify(TOPOLOGY_EDGES)).toBe(before);
+  });
+});
+
+describe('derivePhaseLaneStatuses (AC-TOP-23, #256)', () => {
+  it('returns a status for every lane id and agrees with the Tier-1 stepper bar', () => {
+    for (const scenario of TOPOLOGY_SCENARIOS.map((s) => s.id)) {
+      const steps = derivePhaseStepperInfo(null, scenario);
+      const lanes = derivePhaseLaneStatuses(null, scenario);
+
+      expect(Object.keys(lanes).sort()).toEqual(['a', 'b', 'c', 'd', 'd-learn'].sort());
+      expect(lanes.a).toBe(steps.find((s) => s.phaseId === 'phase-a')!.status);
+      expect(lanes.b).toBe(steps.find((s) => s.phaseId === 'phase-b')!.status);
+      expect(lanes.c).toBe(steps.find((s) => s.phaseId === 'phase-c')!.status);
+    }
+  });
+
+  it('mirrors Phase D status onto both the d-learn and d lanes', () => {
+    const lanes = derivePhaseLaneStatuses(null, 'approved');
+    const steps = derivePhaseStepperInfo(null, 'approved');
+    const stepD = steps.find((s) => s.phaseId === 'phase-d')!.status;
+
+    expect(lanes.d).toBe(stepD);
+    expect(lanes['d-learn']).toBe(stepD);
+    expect(stepD).toBe('completed');
+  });
+
+  it('flags Phase B as warning when confidence is low', () => {
+    const lanes = derivePhaseLaneStatuses(null, 'low_confidence');
+    expect(lanes.b).toBe('warning');
+  });
+
+  it('flags Phase D as danger when a defect resets the verification streak', () => {
+    const lanes = derivePhaseLaneStatuses(null, 'streak_reset');
+    expect(lanes.d).toBe('danger');
+    expect(lanes['d-learn']).toBe('danger');
+  });
+});
+
+describe('deriveGateBlockStatus (AC-TOP-26, #256)', () => {
+  const gate1Yes = TOPOLOGY_GATE_BLOCKS.find((b) => b.id === 'gate1-yes')!;
+  const gate1No = TOPOLOGY_GATE_BLOCKS.find((b) => b.id === 'gate1-no')!;
+  const gate2Yes = TOPOLOGY_GATE_BLOCKS.find((b) => b.id === 'gate2-yes')!;
+  const gate2No = TOPOLOGY_GATE_BLOCKS.find((b) => b.id === 'gate2-no')!;
+
+  it('is idle when none of its target nodes have fired', () => {
+    const nodeStates = deriveNodeStates(null, 'nominal');
+    expect(deriveGateBlockStatus(gate1Yes, nodeStates)).toBe('idle');
+    expect(deriveGateBlockStatus(gate1No, nodeStates)).toBe('idle');
+  });
+
+  it('is active for the branch whose target nodes are currently executing', () => {
+    const nodeStates = deriveNodeStates(null, 'low_confidence');
+    expect(deriveGateBlockStatus(gate1No, nodeStates)).toBe('active');
+    expect(deriveGateBlockStatus(gate1Yes, nodeStates)).not.toBe('active');
+  });
+
+  it('is taken for the branch whose target nodes already completed', () => {
+    const nodeStates = deriveNodeStates(null, 'approved');
+    expect(deriveGateBlockStatus(gate2Yes, nodeStates)).toBe('taken');
+  });
+
+  it('flags the reset branch active while the streak gate is rejecting a defect', () => {
+    const nodeStates = deriveNodeStates(null, 'streak_reset');
+    expect(deriveGateBlockStatus(gate2No, nodeStates)).toBe('active');
   });
 });

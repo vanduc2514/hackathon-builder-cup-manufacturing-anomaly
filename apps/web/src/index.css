@@ -3635,35 +3635,6 @@ button.incident-chip:hover {
   max-width: 480px;
 }
 
-.diamond-branches {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.35rem;
-}
-
-.diamond-branch-pill {
-  font-size: 0.72rem;
-  font-weight: 650;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-family: var(--font-mono);
-}
-
-.diamond-branch-pill.red {
-  background: rgba(220, 38, 38, 0.1);
-  color: #dc2626;
-  border: 1px solid rgba(220, 38, 38, 0.25);
-}
-
-.diamond-branch-pill.green {
-  background: rgba(22, 163, 74, 0.1);
-  color: #16a34a;
-  border: 1px solid rgba(22, 163, 74, 0.25);
-}
-
 /* Explicit Decision Gate Condition Blocks (AC-TOP-26, #256) */
 .node-row-gate-blocks {
   display: flex;

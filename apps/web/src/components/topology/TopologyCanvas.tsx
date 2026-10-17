@@ -5,6 +5,7 @@
 // all 37 connectors and all six scenario states.
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import type { EdgeVisualState, TopologyEdge, TopologyNodeId, TopologyNodeState, TopologyEndpointId } from '../../types';
+import type { PhaseLaneId, PhaseStepperStatus } from '../../lib/topology';
 import { TOPOLOGY_EDGES, TOPOLOGY_LAYERS } from '../../lib/topology';
 import {
   DEFAULT_EDGE_GEOMETRY,
@@ -13,10 +14,12 @@ import {
   type EdgeGeometryConfig,
   type RoutedEdge,
 } from '../../lib/topology/edgeRouter';
+import PhaseLaneOverlay from './PhaseLaneOverlay';
 
 interface TopologyCanvasProps {
   nodeStates: Record<TopologyNodeId, TopologyNodeState>;
   selectedNodeId: TopologyNodeId | null;
+  phaseLaneStatuses?: Record<PhaseLaneId, PhaseStepperStatus>;
   children: React.ReactNode;
 }
 
@@ -92,6 +95,7 @@ function visualStateToCanvasStatus(state: EdgeVisualState): ComputedPath['status
 export default function TopologyCanvas({
   nodeStates,
   selectedNodeId,
+  phaseLaneStatuses,
   children,
 }: TopologyCanvasProps): React.ReactElement {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -351,6 +355,15 @@ export default function TopologyCanvas({
           transition: isPanning ? 'none' : 'transform 0.15s ease-out',
         }}
       >
+        {/* Inline Phase Lane dashed-border overlay (AC-TOP-23, #256) */}
+        {phaseLaneStatuses && (
+          <PhaseLaneOverlay
+            containerRef={containerRef}
+            laneStatuses={phaseLaneStatuses}
+            scale={scale}
+          />
+        )}
+
         {/* SVG Orthogonal Edge Overlay */}
         <svg
           className="topology-svg-overlay"

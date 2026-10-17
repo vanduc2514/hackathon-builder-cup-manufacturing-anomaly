@@ -813,6 +813,16 @@ async def factory_stream(request: Request) -> EventSourceResponse:
     async def event_generator() -> AsyncIterator[dict[str, str]]:
         q: asyncio.Queue[FactoryTickPacket] = asyncio.Queue(maxsize=30)
         service.add_subscriber(q)
+        # Empty-queue stretch tracker. When the queue has been idle for at least
+        # ``PING_AFTER_EMPTY_SEC`` we send a single ``ping`` SSE comment to keep
+        # the connection warm; otherwise we go quiet and let the next real
+        # tick carry the cadence. Previous behaviour sent a ping every 2 s
+        # unconditionally, which — combined with reconnection storms from the
+        # client — filled Cloud Run's request-concurrency budget and triggered
+        # 429s on /api/factory/stream.
+        empty_started_at: float | None = None
+        PING_AFTER_EMPTY_SEC = 8.0
+        QUEUE_WAIT_TIMEOUT = 10.0  # wait_for timeout covers the longest realistic tick gap
         try:
             # Yield initial snapshot immediately upon connect
             initial = service.get_current_snapshot()
@@ -821,10 +831,20 @@ async def factory_stream(request: Request) -> EventSourceResponse:
                 if await request.is_disconnected():
                     break
                 try:
-                    packet = await asyncio.wait_for(q.get(), timeout=2.0)
+                    packet = await asyncio.wait_for(q.get(), timeout=QUEUE_WAIT_TIMEOUT)
                     yield {"event": "factory_tick", "data": packet.model_dump_json()}
+                    # Real traffic just arrived; reset the idle-emptiness tracker.
+                    empty_started_at = None
                 except asyncio.TimeoutError:
-                    yield {"event": "ping", "data": ""}
+                    # Only emit a ping if the queue has been empty for long enough.
+                    # A single ping every 8 s of dead air keeps heartbeat monitors
+                    # happy without flooding the wire.
+                    now = time.monotonic()
+                    if empty_started_at is None:
+                        empty_started_at = now
+                    elif now - empty_started_at >= PING_AFTER_EMPTY_SEC:
+                        yield {"event": "ping", "data": ""}
+                        empty_started_at = now  # restart the 8 s window
         finally:
             service.remove_subscriber(q)
 

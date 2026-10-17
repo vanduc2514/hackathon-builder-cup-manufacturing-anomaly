@@ -99,6 +99,8 @@ describe("FactoryDigitalTwin Component", () => {
       hasReceivedData: false,
       error: "Stream disconnected",
       lastTickAt: null,
+      state: "closed",
+      reconnectAttempt: 0,
       reconnect: vi.fn(),
     });
 
@@ -122,6 +124,8 @@ describe("FactoryDigitalTwin Component", () => {
       hasReceivedData: true,
       error: null,
       lastTickAt: now,
+      state: "open",
+      reconnectAttempt: 0,
       reconnect: vi.fn(),
     });
 
@@ -151,6 +155,8 @@ describe("FactoryDigitalTwin Component", () => {
       hasReceivedData: true,
       error: "Stream disconnected — attempting auto-reconnect...",
       lastTickAt: pastTimestamp,
+      state: "reconnecting",
+      reconnectAttempt: 1,
       reconnect: vi.fn(),
     });
 

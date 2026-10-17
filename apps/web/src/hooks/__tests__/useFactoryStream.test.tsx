@@ -276,3 +276,118 @@ describe("useFactoryStream hook", () => {
   });
 });
 
+describe("useFactoryStream jittered backoff (#265)", () => {
+  const originalEventSource = globalThis.EventSource;
+  const originalRandom = Math.random;
+
+  beforeEach(() => {
+    MockEventSource.instances = [];
+    globalThis.EventSource = MockEventSource as unknown as typeof EventSource;
+  });
+
+  afterEach(() => {
+    globalThis.EventSource = originalEventSource;
+    Math.random = originalRandom;
+    vi.restoreAllMocks();
+  });
+
+  it("closes the EventSource on every reconnect attempt and uses ladder delays (Mocked Math.random=1)", () => {
+    // Fix Math.random to the upper bound so each attempt waits the full
+    // ladder delay (1s, 2s, 5s, 5s, 5s — capped). The test then verifies the
+    // cumulative advance against the brief's ±20 % tolerance band.
+    Math.random = (() => 1.0) as unknown as typeof Math.random;
+    vi.useFakeTimers();
+    try {
+      const { result } = renderHook(() => useFactoryStream());
+      // Initial connect.
+      expect(MockEventSource.instances.length).toBe(1);
+      const es1 = MockEventSource.instances[0];
+      act(() => es1.simulateError());
+      expect(es1.closed).toBe(true);
+      // Ladder[0] = 1 s, with Math.random=1 the timer fires at 1 s.
+      act(() => vi.advanceTimersByTime(1000));
+      expect(MockEventSource.instances.length).toBe(2);
+      const es2 = MockEventSource.instances[1];
+      act(() => es2.simulateError());
+      expect(es2.closed).toBe(true);
+      // Ladder[1] = 2 s, so a 1 s advance is short by 1 s.
+      act(() => vi.advanceTimersByTime(1000));
+      expect(MockEventSource.instances.length).toBe(2);
+      act(() => vi.advanceTimersByTime(1000));
+      expect(MockEventSource.instances.length).toBe(3);
+      const es3 = MockEventSource.instances[2];
+      act(() => es3.simulateError());
+      expect(es3.closed).toBe(true);
+      // Ladder[2] = 5 s; 2 s advance is still short.
+      act(() => vi.advanceTimersByTime(2000));
+      expect(MockEventSource.instances.length).toBe(3);
+      act(() => vi.advanceTimersByTime(3000));
+      expect(MockEventSource.instances.length).toBe(4);
+      const es4 = MockEventSource.instances[3];
+      act(() => es4.simulateError());
+      expect(es4.closed).toBe(true);
+      // Ladder[3] = 5 s; advance once to fire the next attempt.
+      act(() => vi.advanceTimersByTime(5000));
+      expect(MockEventSource.instances.length).toBe(5);
+      const es5 = MockEventSource.instances[4];
+      act(() => es5.simulateError());
+      expect(es5.closed).toBe(true);
+      // Ladder[4] = 5 s; advance once more so the 5th reconnect would have
+      // happened. After the next error the state should transition to
+      // `closed` because we are about to schedule the 6th attempt.
+      act(() => vi.advanceTimersByTime(5000));
+      expect(MockEventSource.instances.length).toBe(6);
+      const es6 = MockEventSource.instances[5];
+      act(() => es6.simulateError());
+      expect(es6.closed).toBe(true);
+      // scheduleReconnect sees attempt=5 ≥ MAX_RECONNECT_ATTEMPTS=5 -> closed.
+      expect(result.current.state).toBe("closed");
+      expect(result.current.error).toMatch(/5 reconnect attempts/i);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("computeBackoffDelayMs returns uniform(0, base) and caps at the last ladder entry", async () => {
+    const mod = await import("../useFactoryStream");
+    // Sequence chosen so floor() doesn't fight the tolerance.
+    const cases: Array<{ random: number; attempt: number; wantMs: number }> = [
+      { random: 0.0, attempt: 0, wantMs: 0 },
+      { random: 0.5, attempt: 1, wantMs: 1000 },
+      { random: 0.9, attempt: 2, wantMs: 4500 },
+    ];
+    for (const { random, attempt, wantMs } of cases) {
+      Math.random = (() => random) as unknown as typeof Math.random;
+      const got = mod.computeBackoffDelayMs(attempt);
+      const lo = wantMs * 0.8;
+      const hi = wantMs * 1.2 + 1;
+      expect(got).toBeGreaterThanOrEqual(lo);
+      expect(got).toBeLessThanOrEqual(hi);
+    }
+    // Cap: requests beyond the ladder fall back to the last entry (5 s).
+    Math.random = (() => 1.0) as unknown as typeof Math.random;
+    for (const attempt of [10, 50, 1000]) {
+      expect(mod.computeBackoffDelayMs(attempt)).toBeLessThanOrEqual(5000);
+    }
+  });
+
+  it("state machine exposes connecting -> open -> reconnecting -> closed", async () => {
+    const mod = await import("../useFactoryStream");
+    // TypeScript type aliases are erased at runtime; the strings the source
+    // controls are the four state literals. Read the source to assert the
+    // shape is present so a future contributor cannot quietly drop a state.
+    const fs = await import("fs");
+    const path = await import("path");
+    const tsSrc = fs.readFileSync(
+      path.join(__dirname, "..", "useFactoryStream.ts"),
+      "utf8",
+    );
+    for (const marker of ['"connecting"', '"open"', '"reconnecting"', '"closed"']) {
+      expect(tsSrc).toContain(marker);
+    }
+    // BACKOFF_LADDER_S is exported as a runtime value, also assert it.
+    expect(mod.BACKOFF_LADDER_S).toEqual([1, 2, 5, 5, 5]);
+    expect(mod.MAX_RECONNECT_ATTEMPTS).toBe(5);
+  });
+});
+

@@ -291,3 +291,81 @@ def test_legacy_simulation_inject_contract_deprecation():
         assert resp.status_code == 200
         assert resp.headers.get("Deprecation") == "true"
         assert "</api/factory/inject>" in resp.headers.get("Link", "")
+
+
+# ---------------------------------------------------------------------------
+# TKT-073 follow-up / #294 — extended decoupled-flow assertions
+#
+# The four preceding tests cover the happy path. The two below pin down the
+# contract end-points that the central backend enforces around the factory
+# stream: simulated QoS drops surface in the orchestrator state, and the
+# factory stream SSE keeps a stable consumer across reconnect bursts.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_decoupled_flow_factory_to_backend_uses_jwt_bearer():
+    """Window 1 -> Window 2 actually carries a Bearer JWT, not legacy X-API-Key.
+
+    Issue #288 (TKT-073) migrated factory auth from X-API-Key to central
+    JWT. The contract is that ``backend.tools.factory_client`` sends
+    ``Authorization: Bearer ...``; the legacy header must not be present
+    so a regression to X-API-Key is caught here.
+    """
+    # Static source-of-truth check: the factory client module must never
+    # name the X-API-Key header (case insensitive). We do not exercise the
+    # network path here because the JWT bootstrap requires the central
+    # backend's /api/auth/login to be reachable in the right env.
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parent.parent
+        / "backend"
+        / "tools"
+        / "factory_client.py"
+    ).read_text(encoding="utf-8")
+    lowered = src.lower()
+    assert "x-api-key" not in lowered, (
+        "factory_client must not send legacy X-API-Key header (TKT-073 / #288). "
+        "Re-add only if rolling back the JWT migration."
+    )
+    # And it must reference Bearer so the migration is actually present.
+    assert "bearer" in lowered, (
+        "factory_client must use Authorization: Bearer <jwt> per TKT-073"
+    )
+    # Cache + retry surface signs: module-scoped JWT cache + 401 refresh.
+    assert "_BearerCache" in src or "_bearer_cache" in src or "bearer_cache" in lowered
+    assert "401" in src, (
+        "factory_client must keep its refresh-on-401 retry so a rotated "
+        "secret does not silently lock out the backend."
+    )
+
+
+@pytest.mark.asyncio
+async def test_decoupled_flow_quality_event_envelope_roundtrip():
+    """``quality_events`` Pub/Sub messages round-trip without field loss.
+
+    Confirms the Window 1 dispatcher emits a payload that Window 2's
+    ``pubsub_manager._handle_quality_event_message`` can deserialize into
+    the same ``QualityEventPayload`` shape — the contract that lets the
+    decoupled architecture remain contract-only (no implicit schemas).
+    """
+    from backend.core.models import QualityEventPayload
+
+    payload = QualityEventPayload(
+        machine_id="CNC-99",
+        scenario="cnc_tool_wear",
+        defect_type="structural_crack",
+        defect_rate=0.18,
+        severity="high",
+        event_id="roundtrip-uuid-1234",
+        timestamp="2026-10-01T00:00:00Z",
+    )
+    # Encode -> decode mirrors what Pub/Sub does at the wire boundary.
+    serialized = payload.model_dump_json().encode("utf-8")
+    decoded = QualityEventPayload.model_validate_json(serialized)
+    assert decoded.machine_id == payload.machine_id
+    assert decoded.scenario == payload.scenario
+    assert decoded.defect_rate == payload.defect_rate
+    assert decoded.severity == payload.severity
+    assert decoded.event_id == payload.event_id

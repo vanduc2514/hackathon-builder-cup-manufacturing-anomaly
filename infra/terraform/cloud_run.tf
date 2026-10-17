@@ -85,8 +85,8 @@ resource "google_cloud_run_v2_service" "backend" {
         # allow up to ~2 min before Cloud Run gives up on the revision.
         initial_delay_seconds = 5
         period_seconds        = 10
-        failure_threshold     = 12
-        timeout_seconds       = 5
+        failure_threshold     = 18
+        timeout_seconds       = 3
       }
 
       liveness_probe {
@@ -96,8 +96,8 @@ resource "google_cloud_run_v2_service" "backend" {
         }
         initial_delay_seconds = 10
         period_seconds        = 15
-        failure_threshold     = 3
-        timeout_seconds       = 5
+        failure_threshold     = 5
+        timeout_seconds       = 2
       }
 
       dynamic "env" {

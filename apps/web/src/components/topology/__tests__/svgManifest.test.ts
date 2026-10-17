@@ -1,8 +1,10 @@
 // Tests for the SVG preview manifest and the static preview components
-// (TKT-076 / Issue #277 — AC-TOP-28a/28b/28c).
+// (TKT-076 / Issue #277 — AC-TOP-28a/28b/28c, extended in TKT-067 / Issue #259
+// — AC-TOP-29 to assert the manifest covers every curated topology node id).
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
+import { TOPOLOGY_NODES } from '../../../lib/topology';
 import { PREVIEW_SVG_NODE_IDS, hasStaticSvg } from '../drawer-previews/svgManifest';
 import StaticPreviewSVG from '../drawer-previews/StaticPreviewSVG';
 import NoPreviewPlaceholder from '../drawer-previews/NoPreviewPlaceholder';
@@ -10,6 +12,14 @@ import NoPreviewPlaceholder from '../drawer-previews/NoPreviewPlaceholder';
 describe('PREVIEW_SVG_NODE_IDS (TKT-076 / AC-TOP-28a)', () => {
   it('contains exactly 30 topology node ids', () => {
     expect(PREVIEW_SVG_NODE_IDS.size).toBe(30);
+  });
+
+  it('covers every curated TOPOLOGY_NODES id (TKT-067 / AC-TOP-29)', () => {
+    const curated = new Set<string>(TOPOLOGY_NODES.map((n) => n.id));
+    expect(curated.size).toBe(30);
+    for (const id of curated) {
+      expect(hasStaticSvg(id)).toBe(true);
+    }
   });
 
   it('includes output-docs (the file Designer just shipped)', () => {

@@ -1,9 +1,18 @@
-// Side drawer presenting deep-dive JTBD, tech specifications, and realtime blackboard payloads (Issue #205 & Issue #211).
-import React, { useState } from 'react';
-import type { DashboardTab, IncidentState, TopologyNodeDefinition, TopologyNodeState } from '../../types';
+// Side drawer presenting deep-dive JTBD, tech specifications, and realtime
+// blackboard payloads (Issue #205 & #211 / TKT-067).
+// Issue #259: status chip row + decluttered How-it-works graph + preview specs
+// + single footer CTA — design authority `.stitch/designs/system_topology_workflow.html`
+// AC-TOP-27, AC-TOP-28, AC-TOP-29.
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type {
+  DashboardTab,
+  IncidentState,
+  TopologyNodeDefinition,
+  TopologyNodeId,
+  TopologyNodeState,
+} from '../../types';
 import SideDrawer from '../SideDrawer';
-import { TOPOLOGY_LAYERS, TOPOLOGY_PHASES } from '../../lib/topology';
-import { matchesAgentRole } from '../../lib/incident';
+import { TOPOLOGY_EDGES, TOPOLOGY_LAYERS, TOPOLOGY_NODES, TOPOLOGY_PHASES } from '../../lib/topology';
 import { getDrawerPreviewComponent } from './drawer-previews';
 import StaticPreviewSVG from './drawer-previews/StaticPreviewSVG';
 import NoPreviewPlaceholder from './drawer-previews/NoPreviewPlaceholder';
@@ -17,6 +26,99 @@ interface TopologyNodeDrawerProps {
   onNavigateToIncident?: () => void;
   onNavigateToTab?: (tab: DashboardTab) => void;
   onSimulateTrigger?: (nodeId: string) => void;
+  /** Issue #259: when the operator clicks a sibling-node reference inside the
+   *  How-it-works graph, the drawer swaps to that node. The host view owns the
+   *  selected-node state machine and re-renders the drawer with the new node. */
+  onSelectNode?: (nodeId: TopologyNodeId) => void;
+}
+
+/** Endpoints that the How-it-works graph must never surface as clickable siblings:
+ *  gate condition blocks (independent route handlers) and the pub/sub conduit
+ *  (a stretch label, not a node). */
+const NON_NODE_ENDPOINT_IDS: ReadonlySet<string> = new Set([
+  'pubsub-cross-bridge',
+  'gate1-yes',
+  'gate1-no',
+  'gate2-yes',
+  'gate2-no',
+]);
+
+function resolveNodeIcon(id: string): string {
+  const node = TOPOLOGY_NODES.find((n) => n.id === id);
+  return node?.icon ?? 'radio_button_unchecked';
+}
+
+function shortLabel(id: string): string {
+  // Mirror `.short` in design's node data; fall back to first label sentence.
+  const node = TOPOLOGY_NODES.find((n) => n.id === id);
+  if (!node) return id;
+  return node.label.split(/[·:(]/)[0].trim() || node.label;
+}
+
+/** Compose a one-liner from the JTBD. Trim at the first sentence terminator
+ *  ("." followed by whitespace or end-of-string) and re-append a period so
+ *  the result reads as a complete single sentence. Decimal points inside a
+ *  sentence (e.g. "feed rate 0.28 mm/rev") are preserved by the negative
+ *  lookahead `(?!\d)`, which only treats "." as a terminator when it is not
+ *  immediately followed by a digit. */
+function oneLiner(text: string | undefined): string {
+  if (!text) return '';
+  const firstChunk = text.split(/\.(?!\d)(?:\s+|$)/)[0] ?? text;
+  return firstChunk.endsWith('.') ? firstChunk : `${firstChunk}.`;
+}
+
+const SPEC_BADGE_FALLBACK_KEYS = new Set([
+  'machine_id',
+  'document_path',
+  'incident_id',
+  'agent_id',
+  'tool_id',
+  'workpiece_serial',
+]);
+
+/** Build the preview-spec badge list rendered under the visual preview.
+ *  Limits to at most three short string/number/boolean keys so the row stays compact. */
+function specBadges(details: Record<string, unknown> | undefined): { key: string; value: string }[] {
+  if (!details) return [];
+  const entries: { key: string; value: string }[] = [];
+  for (const [key, raw] of Object.entries(details)) {
+    if (entries.length >= 3) break;
+    const t = typeof raw;
+    if (t !== 'string' && t !== 'number' && t !== 'boolean') continue;
+    const value = String(raw);
+    if (value.length === 0 || value.length > 28) continue;
+    if (SPEC_BADGE_FALLBACK_KEYS.has(key) || !key.startsWith('_')) {
+      entries.push({ key, value });
+    }
+  }
+  return entries;
+}
+
+function humanizeKey(key: string): string {
+  const spaced = key.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+function statusChipClass(status: TopologyNodeState['status']): string {
+  switch (status) {
+    case 'danger':
+    case 'error':
+      return 'chip-red';
+    case 'warning':
+      return 'chip-amber';
+    case 'active':
+    case 'pending_approval':
+    case 'waiting':
+      return 'chip-blue';
+    case 'done':
+    case 'completed':
+    case 'nominal':
+      return 'chip-green';
+    case 'locked':
+    case 'idle':
+    default:
+      return 'chip-slate';
+  }
 }
 
 export default function TopologyNodeDrawer({
@@ -27,43 +129,143 @@ export default function TopologyNodeDrawer({
   onNavigateToIncident,
   onNavigateToTab,
   onSimulateTrigger,
+  onSelectNode,
 }: TopologyNodeDrawerProps): React.ReactElement | null {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [copiedPayload, setCopiedPayload] = useState(false);
-  const [showLogs, setShowLogs] = useState(false);
-  const [simulating, setSimulating] = useState(false);
+  const howFlowRef = useRef<HTMLDivElement>(null);
+
+  // Keep an explicit layer / phase resolution so the eyebrow chip stays in sync
+  // with the topology canvas's card status badge.
+  const layer = useMemo(
+    () => (node ? TOPOLOGY_LAYERS.find((l) => l.id === node.layer || l.id === node.phase) : undefined),
+    [node],
+  );
+  const phase = useMemo(
+    () => (node ? TOPOLOGY_PHASES.find((p) => p.id === node.phase) : undefined),
+    [node],
+  );
+
+  // Issue #259 / AC-TOP-27: derive How-it-works siblings from TOPOLOGY_EDGES.
+  // Inputs = edges arriving at this node (excluding non-clickable endpoints).
+  // Outputs = edges departing from this node (also excluding non-clickable).
+  const howSiblings = useMemo(() => {
+    const inputs: { id: string; label: string; icon: string }[] = [];
+    const outputs: { id: string; label: string; icon: string }[] = [];
+    if (!node) return { inputs, outputs };
+    const nodeIds = new Set<string>(TOPOLOGY_NODES.map((n) => n.id));
+
+    const collect = (
+      edge: { from: string; to: string },
+      targets: { id: string; label: string; icon: string }[],
+    ) => {
+      const other = targets === inputs ? edge.from : edge.to;
+      if (!nodeIds.has(other)) return;
+      if (NON_NODE_ENDPOINT_IDS.has(other)) return;
+      if (other === node.id) return;
+      targets.push({ id: other, label: shortLabel(other), icon: resolveNodeIcon(other) });
+    };
+
+    for (const edge of TOPOLOGY_EDGES) {
+      if (edge.to === node.id) collect(edge, inputs);
+      if (edge.from === node.id) collect(edge, outputs);
+    }
+
+    const dedupe = (items: { id: string; label: string; icon: string }[]) => {
+      const seen = new Set<string>();
+      return items.filter((item) => {
+        if (seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      });
+    };
+
+    return { inputs: dedupe(inputs), outputs: dedupe(outputs) };
+  }, [node]);
+
+  // Reset focus to the first focusable flow-node when the drawer swaps to a
+  // new node, so keyboard arrow nav has a usable anchor immediately.
+  useEffect(() => {
+    const root = howFlowRef.current;
+    if (!root) return;
+    const firstFlow = root.querySelector<HTMLElement>('.how-node[data-flow-sibling]');
+    firstFlow?.focus({ preventScroll: true });
+  }, [node?.id]);
+
+  const handleFlowKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (
+      event.key !== 'ArrowDown' &&
+      event.key !== 'ArrowUp' &&
+      event.key !== 'ArrowRight' &&
+      event.key !== 'ArrowLeft' &&
+      event.key !== 'Home' &&
+      event.key !== 'End'
+    ) {
+      return;
+    }
+    const root = howFlowRef.current;
+    if (!root) return;
+    const focusables = Array.from(
+      root.querySelectorAll<HTMLElement>('.how-node[data-flow-sibling]'),
+    );
+    if (focusables.length === 0) return;
+    const currentIndex = focusables.findIndex((el) => el === document.activeElement);
+    let nextIndex = currentIndex;
+    if (currentIndex < 0) {
+      // No chip focused yet — start at the first chip for Home/ArrowDown, or
+      // the last chip for End/ArrowUp. Treats ArrowDown on a freshly-focused
+      // graph as "advance into the list" so the user always moves forward.
+      if (event.key === 'End' || event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+        nextIndex = focusables.length - 1;
+      } else {
+        nextIndex = 0;
+      }
+      event.preventDefault();
+      focusables[nextIndex]?.focus();
+      return;
+    }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+      nextIndex = (currentIndex + 1) % focusables.length;
+    } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+      nextIndex = (currentIndex - 1 + focusables.length) % focusables.length;
+    } else if (event.key === 'Home') {
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      nextIndex = focusables.length - 1;
+    }
+    event.preventDefault();
+    focusables[nextIndex]?.focus();
+  }, []);
+
+  const handleSiblingClick = useCallback(
+    (nodeId: string) => {
+      if (!onSelectNode) return;
+      onSelectNode(nodeId as TopologyNodeId);
+    },
+    [onSelectNode],
+  );
 
   if (!node || !state) return null;
 
-  const layer = TOPOLOGY_LAYERS.find((l) => l.id === node.layer || l.id === node.phase);
-  const phase = TOPOLOGY_PHASES.find((p) => p.id === node.phase);
-
-  const findings = incident?.findings?.filter((f) => {
-    if (node.id === 'agent-qa') return matchesAgentRole(f, 'quality_inspector');
-    if (node.id === 'agent-tra') return matchesAgentRole(f, 'traceability');
-    if (node.id === 'agent-pa') return matchesAgentRole(f, 'process_analyst');
-    if (node.id === 'agent-rca') return matchesAgentRole(f, 'root_cause');
-    if (node.id === 'copilot-live') return matchesAgentRole(f, 'technician_copilot');
-    if (node.id === 'agent-scribe') return matchesAgentRole(f, 'incident_scribe');
-    if (node.id === 'agent-learn') return matchesAgentRole(f, 'continuous_learning');
-    return false;
-  }) ?? [];
-
-  const handleCopyPayload = () => {
-    const jsonStr = JSON.stringify(node.payload ?? state.details, null, 2);
-    navigator.clipboard.writeText(jsonStr).then(() => {
-      setCopiedPayload(true);
-      setTimeout(() => setCopiedPayload(false), 2000);
-    });
-  };
-
-  const handleTrigger = () => {
-    setSimulating(true);
+  const triggerCta = () => {
+    if (node.uiRef?.targetTab && onNavigateToTab) {
+      onClose();
+      onNavigateToTab(node.uiRef.targetTab);
+      return;
+    }
+    if (onNavigateToIncident) {
+      onClose();
+      onNavigateToIncident();
+      return;
+    }
     if (onSimulateTrigger) {
       onSimulateTrigger(node.id);
     }
-    setTimeout(() => setSimulating(false), 1200);
   };
+
+  const ctaLabel = node.uiRef?.ctaLabel ?? 'Open in Production UI';
+  const previewComponent = getDrawerPreviewComponent(node, state, incident);
+  const oneLineJtbd = oneLiner(node.jtbd);
+  const specs = specBadges(node.payload ?? (state.details as Record<string, unknown> | undefined));
 
   const eyebrow = (
     <div className="row wrap" style={{ gap: 8, alignItems: 'center' }}>
@@ -76,7 +278,10 @@ export default function TopologyNodeDrawer({
           Phase {phase.letter} · {phase.name}
         </span>
       ) : null}
-      <span className="chip" style={{ fontSize: '0.72rem', padding: '2px 8px', background: 'rgba(15,23,42,0.06)' }}>
+      <span
+        className="chip"
+        style={{ fontSize: '0.72rem', padding: '2px 8px', background: 'rgba(15,23,42,0.06)' }}
+      >
         {node.tier}
       </span>
       {node.isDecisionGate && (
@@ -112,8 +317,6 @@ export default function TopologyNodeDrawer({
     </button>
   );
 
-  const previewComponent = getDrawerPreviewComponent(node, state, incident);
-
   return (
     <SideDrawer
       title={title}
@@ -123,327 +326,181 @@ export default function TopologyNodeDrawer({
       width={580}
       onClose={onClose}
       footer={
-        <div className="row between" style={{ width: '100%', gap: 12 }}>
-          {onNavigateToIncident && incident && (
-            <button
-              type="button"
-              className="btn btn-dark btn-sm"
-              onClick={() => {
-                onClose();
-                onNavigateToIncident();
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                warning
-              </span>
-              Jump to Incident #{incident.incident_id}
-            </button>
-          )}
-          <button type="button" className="btn btn-sm" onClick={onClose} style={{ marginLeft: 'auto' }}>
-            Done
+        <div className="drawer-cta-row">
+          <button type="button" className="btn btn-sm drawer-dismiss" onClick={onClose}>
+            Dismiss
+          </button>
+          <button
+            type="button"
+            id="drawer-ui-cta"
+            className="btn btn-primary drawer-cta"
+            onClick={triggerCta}
+            aria-label={ctaLabel}
+          >
+            <span>{ctaLabel}</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+              arrow_forward
+            </span>
           </button>
         </div>
       }
     >
       <div className="col" style={{ gap: '1.25rem' }}>
-        {/* Execution Status Badge Banner */}
-        <div
-          className="glass"
-          style={{
-            padding: '0.85rem 1rem',
-            borderRadius: 'var(--r-md)',
-            borderLeft: `4px solid ${
-              state.status === 'danger'
-                ? '#dc2626'
-                : state.status === 'warning'
-                ? '#d97706'
-                : state.status === 'active'
-                ? '#4f46e5'
-                : state.status === 'done'
-                ? '#16a34a'
-                : 'var(--muted)'
-            }`,
-          }}
-        >
-          <div className="row between" style={{ marginBottom: 4, alignItems: 'center' }}>
-            <span className="eyebrow" style={{ fontSize: '0.68rem' }}>
-              Realtime Node Execution State
-            </span>
-            <span
-              className={`chip chip-sm ${
-                state.status === 'danger'
-                  ? 'chip-red'
-                  : state.status === 'warning'
-                  ? 'chip-amber'
-                  : state.status === 'active'
-                  ? 'chip-blue'
-                  : state.status === 'done'
-                  ? 'chip-green'
-                  : 'chip-slate'
-              }`}
-            >
-              {state.status.toUpperCase()}
-            </span>
-          </div>
-          <div style={{ fontSize: '0.9rem', fontWeight: 650, color: 'var(--ink)' }}>
-            {state.summary}
-          </div>
+        {/* Status chip row (Issue #259 / AC-TOP-27): mirrors the canvas card
+            status badge so the operator doesn't need a separate "Realtime Node
+            Execution State" glass banner. */}
+        <div id="drawer-status-chips" className="drawer-status-row">
+          <span
+            id="drawer-status-chip"
+            className={`chip chip-sm ${statusChipClass(state.status)}`}
+          >
+            {state.status.toUpperCase()}
+          </span>
+          <span className="chip chip-sm chip-neutral">{state.summary || node.sublabel}</span>
           {state.badgeText && (
-            <div style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 2 }}>
-              {state.badgeText}
-            </div>
+            <span className="chip chip-sm chip-neutral mono">{state.badgeText}</span>
           )}
         </div>
 
-        {/* Embedded Live Component Preview (TKT-061 #246) + Designer schematic
-            fallback (TKT-076 / Issue #277 — AC-TOP-28b/28c). Hierarchy:
-            (1) custom React preview if registered, else
-            (2) static SVG from /previews/topology/<nodeId>.svg if a file
-                exists for this node, else
-            (3) "No preview" placeholder so the drawer layout never collapses. */}
-        {(previewComponent || hasStaticSvg(node.id)) && (
-          <div className="col" style={{ gap: '0.5rem' }}>
-            <div className="row between" style={{ alignItems: 'center' }}>
-              <div className="eyebrow">
-                {previewComponent
-                  ? 'Live Component Telemetry & Verification Preview'
-                  : 'Topology Schematic Preview'}
-              </div>
-              <span
-                className={`chip chip-sm mono ${previewComponent ? 'chip-blue' : 'chip-slate'}`}
-                style={{ fontSize: '0.68rem' }}
-              >
-                {previewComponent ? 'Interactive' : 'Static'}
-              </span>
-            </div>
-            {previewComponent ? previewComponent : <StaticPreviewSVG nodeId={node.id} />}
-          </div>
-        )}
-        {!previewComponent && !hasStaticSvg(node.id) && (
-          <div className="col" style={{ gap: '0.5rem' }}>
-            <div className="eyebrow">Topology Schematic Preview</div>
-            <NoPreviewPlaceholder nodeId={node.id} />
-          </div>
-        )}
-
-        {/* JTBD Section (Jobs-to-be-Done) */}
-        <div className="col" style={{ gap: '0.5rem' }}>
-          <div className="eyebrow">Architecture Role &amp; JTBD (Jobs To Be Done)</div>
+        {/* How-it-works graph (Issue #259 / AC-TOP-27): three-column flow
+            `inputs → this node → outputs`, each input/output is a clickable
+            sibling that swaps the drawer. Arrow / Home / End keys cycle focus. */}
+        <div className="drawer-section">
+          <div className="section-label">How it works</div>
           <div
-            className="glass"
-            style={{
-              padding: '0.9rem 1rem',
-              borderRadius: 'var(--r-md)',
-              fontSize: '0.86rem',
-              lineHeight: 1.5,
-              color: 'var(--ink)',
-            }}
+            id="drawer-how-flow"
+            className="how-wrap"
+            ref={howFlowRef}
+            onKeyDown={handleFlowKeyDown}
           >
-            {node.jtbd}
-          </div>
-        </div>
-
-        {/* Production UI Reference Deep Link Card (TKT-060 #245) */}
-        {node.uiRef && (
-          <div className="col" style={{ gap: '0.5rem' }}>
-            <div className="eyebrow">Production UI Surface Reference</div>
-            <div
-              className="glass"
-              style={{
-                padding: '1rem',
-                borderRadius: 'var(--r-md)',
-                border: '1px solid rgba(91,91,240,0.25)',
-                background: 'linear-gradient(180deg, rgba(244,246,255,0.7) 0%, rgba(255,255,255,0.9) 100%)',
-              }}
-            >
-              <div className="row between" style={{ marginBottom: 8, alignItems: 'center' }}>
-                <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 700 }}>
-                  {node.uiRef.surface}
-                </span>
-                <span className="chip chip-sm chip-blue" style={{ fontSize: '0.72rem', fontWeight: 600 }}>
-                  {node.uiRef.component}
-                </span>
-              </div>
-              <div className="mono" style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 12 }}>
-                Route: {node.uiRef.route}
-              </div>
-              <button
-                type="button"
-                className="btn btn-sm btn-primary"
-                style={{ width: '100%', justifyContent: 'center' }}
-                onClick={() => {
-                  if (node.uiRef?.targetTab && onNavigateToTab) {
-                    onClose();
-                    onNavigateToTab(node.uiRef.targetTab);
-                  } else if (onNavigateToIncident) {
-                    onClose();
-                    onNavigateToIncident();
-                  }
-                }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                  open_in_new
-                </span>
-                {node.uiRef.ctaLabel}
-              </button>
+            <div className="how-graph-head" aria-hidden="true">
+              <span>Inputs</span>
+              <span>This node</span>
+              <span>Outputs</span>
             </div>
-          </div>
-        )}
-
-        {/* Technical Architecture & Specifications */}
-        <div className="col" style={{ gap: '0.5rem' }}>
-          <div className="eyebrow">Technical Architecture &amp; Specifications</div>
-          <div className="glass" style={{ padding: '0.9rem 1rem', borderRadius: 'var(--r-md)' }}>
-            <div className="col" style={{ gap: '0.75rem' }}>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>
-                  Tier Responsibility
-                </div>
-                <div style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--ink)' }}>
-                  {node.tierDescription}
-                </div>
-              </div>
-
-              {node.sla && (
-                <div className="row between" style={{ borderTop: '1px solid var(--hair)', paddingTop: 6 }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Service Level Agreement (SLA)</span>
-                  <span className="mono" style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)' }}>
-                    {node.sla}
-                  </span>
-                </div>
-              )}
-
-              {node.channel && (
-                <div className="row between" style={{ borderTop: '1px solid var(--hair)', paddingTop: 6 }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Channel / Protocol</span>
-                  <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent)', maxWidth: '60%', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {node.channel}
-                  </span>
-                </div>
-              )}
-
-              {node.fallback && (
-                <div className="row between" style={{ borderTop: '1px solid var(--hair)', paddingTop: 6 }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Fallback Strategy</span>
-                  <span style={{ fontSize: '0.76rem', color: 'var(--ink-2)', maxWidth: '60%', textAlign: 'right' }}>
-                    {node.fallback}
-                  </span>
-                </div>
-              )}
-
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 6 }}>
-                  Frameworks &amp; Protocols
-                </div>
-                <div className="row wrap" style={{ gap: 6 }}>
-                  {node.techStack.map((tech) => (
-                    <span
-                      key={tech}
-                      className="chip"
-                      style={{
-                        fontSize: '0.74rem',
-                        padding: '3px 9px',
-                        background: 'rgba(15,23,42,0.06)',
-                        color: 'var(--ink-2)',
-                        fontWeight: 500,
-                      }}
+            <div className="how-graph">
+              <div className="how-col" data-col="in">
+                {howSiblings.inputs.length === 0 ? (
+                  <div className="how-slot">
+                    <div
+                      className="how-node how-node-empty"
+                      data-empty-reason="entry"
+                      aria-label="Entry point"
                     >
-                      {tech}
-                    </span>
-                  ))}
-                </div>
+                      <span className="material-symbols-outlined">login</span>
+                      <span>Entry point</span>
+                    </div>
+                  </div>
+                ) : (
+                  howSiblings.inputs.map((s) => (
+                    <div className="how-slot" key={`in-${s.id}`}>
+                      <button
+                        type="button"
+                        tabIndex={0}
+                        className="how-node"
+                        data-flow-sibling
+                        data-node-id={s.id}
+                        data-flow-kind="in"
+                        onClick={() => handleSiblingClick(s.id)}
+                        aria-label={`Input from ${s.label}`}
+                      >
+                        <span className="material-symbols-outlined">{s.icon}</span>
+                        <span>{s.label}</span>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="how-link" aria-hidden="true">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                  {howSiblings.inputs.length === 0 ? (
+                    <path d="M0 50 C50 50 50 50 100 50" />
+                  ) : (
+                    howSiblings.inputs.map((_s, i) => {
+                      const y = ((i + 0.5) / howSiblings.inputs.length) * 100;
+                      return <path key={i} d={`M0 ${y} C50 ${y} 50 50 100 50`} />;
+                    })
+                  )}
+                </svg>
+              </div>
+
+              <div
+                className="how-self"
+                role="group"
+                aria-label={`This node · ${node.label}`}
+              >
+                <span className="material-symbols-outlined">{node.icon}</span>
+                <span>{shortLabel(node.id)}</span>
+                <span className="how-self-tag">You are here</span>
+              </div>
+
+              <div className="how-link" aria-hidden="true">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                  {howSiblings.outputs.length === 0 ? (
+                    <path d="M0 50 C50 50 50 50 100 50" />
+                  ) : (
+                    howSiblings.outputs.map((_s, i) => {
+                      const y = ((i + 0.5) / howSiblings.outputs.length) * 100;
+                      return <path key={i} d={`M0 50 C50 50 50 ${y} 100 ${y}`} />;
+                    })
+                  )}
+                </svg>
+              </div>
+
+              <div className="how-col" data-col="out">
+                {howSiblings.outputs.length === 0 ? (
+                  <div className="how-slot">
+                    <div
+                      className="how-node how-node-empty how-node-out"
+                      data-empty-reason="exit"
+                      aria-label="End of flow"
+                    >
+                      <span className="material-symbols-outlined">flag</span>
+                      <span>End of flow</span>
+                    </div>
+                  </div>
+                ) : (
+                  howSiblings.outputs.map((s) => (
+                    <div className="how-slot" key={`out-${s.id}`}>
+                      <button
+                        type="button"
+                        tabIndex={0}
+                        className="how-node"
+                        data-flow-sibling
+                        data-node-id={s.id}
+                        data-flow-kind="out"
+                        onClick={() => handleSiblingClick(s.id)}
+                        aria-label={`Output to ${s.label}`}
+                      >
+                        <span className="material-symbols-outlined">{s.icon}</span>
+                        <span>{s.label}</span>
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
+          <p id="drawer-jtbd" className="how-oneliner">
+            {oneLineJtbd}
+          </p>
         </div>
 
-        {/* Live Payload & Action Controls */}
-        <div className="col" style={{ gap: '0.5rem' }}>
-          <div className="row between" style={{ alignItems: 'center' }}>
-            <span className="eyebrow">Component Runtime Payload</span>
-            <div className="row" style={{ gap: 6 }}>
-              <button
-                type="button"
-                className="btn btn-sm"
-                style={{ padding: '2px 8px', fontSize: '0.72rem' }}
-                onClick={handleCopyPayload}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-                  content_copy
-                </span>
-                {copiedPayload ? 'Copied!' : 'Copy JSON'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-sm btn-dark"
-                style={{ padding: '2px 8px', fontSize: '0.72rem' }}
-                onClick={handleTrigger}
-                disabled={simulating}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-                  bolt
-                </span>
-                {simulating ? 'Simulating...' : 'Simulate Trigger'}
-              </button>
-            </div>
+        {/* Preview (Issue #259 / AC-TOP-28): visual preview per node type with
+            a tiny spec badge row underneath. Resolution hierarchy:
+            custom React → static SVG → placeholder (defensive). */}
+        <div className="drawer-section">
+          <div className="section-label">Preview</div>
+          <div id="drawer-ui-preview" className="ui-ref-preview-box">
+            {previewComponent ?? (hasStaticSvg(node.id) ? <StaticPreviewSVG nodeId={node.id} /> : <NoPreviewPlaceholder nodeId={node.id} />)}
           </div>
-          <div
-            className="glass"
-            style={{
-              padding: '0.75rem',
-              borderRadius: 'var(--r-md)',
-              background: '#0f172a',
-              color: '#f8fafc',
-              maxHeight: 220,
-              overflowY: 'auto',
-            }}
-          >
-            <pre className="mono" style={{ margin: 0, fontSize: '0.74rem', lineHeight: 1.5 }}>
-              {JSON.stringify(node.payload ?? state.details, null, 2)}
-            </pre>
-          </div>
-        </div>
-
-        {/* Diagnostics Log Stream Toggle */}
-        <div className="col" style={{ gap: '0.5rem' }}>
-          <button
-            type="button"
-            className="btn btn-sm"
-            style={{ justifyContent: 'space-between', width: '100%' }}
-            onClick={() => setShowLogs(!showLogs)}
-          >
-            <span className="row" style={{ gap: 6, alignItems: 'center' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                terminal
-              </span>
-              View Live Diagnostics Log Stream
-            </span>
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-              {showLogs ? 'expand_less' : 'expand_more'}
-            </span>
-          </button>
-
-          {showLogs && (
-            <div
-              className="glass"
-              style={{
-                padding: '0.75rem',
-                borderRadius: 'var(--r-md)',
-                background: '#090d16',
-                color: '#94a3b8',
-                fontSize: '0.72rem',
-                fontFamily: 'var(--font-mono)',
-                maxHeight: 140,
-                overflowY: 'auto',
-              }}
-            >
-              <div>[10:42:01.120] INFO [topology] Component initialized: {node.id}</div>
-              <div>[10:42:01.134] INFO [blackboard] Subscription stream active: status={state.status}</div>
-              <div>[10:42:01.198] DEBUG [orchestrator] Route linked: {node.uiRef?.route ?? 'standalone'}</div>
-              {findings.map((f, i) => (
-                <div key={i} style={{ color: '#60a5fa' }}>
-                  [Finding {i + 1}] {f.finding}
-                </div>
+          {specs.length > 0 && (
+            <div id="drawer-preview-specs" className="preview-specs">
+              {specs.map(({ key, value }) => (
+                <span className="spec-badge" key={key}>
+                  {humanizeKey(key)} <b>{value}</b>
+                </span>
               ))}
             </div>
           )}

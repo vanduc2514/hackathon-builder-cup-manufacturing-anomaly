@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import hmac
 import logging
 import os
 import time
@@ -15,10 +14,11 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Optional
 
 import uvicorn
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
 
+from simulator.auth import AuthError, require_factory_user, token_from
 from simulator.config import settings
 from simulator.edge.pubsub_dispatcher import EdgePubSubDispatcher
 from simulator.injection_engine import DefectInjectionEngine
@@ -546,47 +546,29 @@ class FactoryServerService:
         )
 
 
-def require_api_key(
-    x_api_key: Optional[str] = Header(default=None, alias="X-API-Key"),
-) -> None:
-    """Enforces shared API key authentication on mutating simulator endpoints.
-
-    - Missing or invalid key -> 401 Unauthorized.
-    - Key unset with APP_ENV=production -> 503 Service Unavailable (fail closed).
-    - Key unset outside production -> allow request.
-    """
-    expected_key = settings.factory_api_key
-    app_env = getattr(settings, "app_env", os.getenv("APP_ENV", "development"))
-    if not expected_key:
-        if app_env == "production":
-            raise HTTPException(
-                status_code=503,
-                detail="Factory API key is not configured on production server",
-            )
-        return
-
-    if not x_api_key or not hmac.compare_digest(x_api_key, expected_key):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or missing X-API-Key header",
-        )
-
-
 # Global service coordinator
 service = FactoryServerService()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Manages background simulation worker across FastAPI application lifecycle."""
-    if not settings.factory_api_key:
-        if getattr(settings, "app_env", os.getenv("APP_ENV", "development")) == "production":
+    """Manages background simulation worker across FastAPI application lifecycle.
+
+    TKT-073 / #288: fail-closed startup check — if ``APP_ENV=production`` and
+    ``AUTH_SECRET`` is missing, log an ERROR and refuse to mutate. The auth
+    dependency itself returns 503 per-request; this log makes the misdeploy
+    visible in Cloud Run logs.
+    """
+    if not settings.factory_auth_secret:
+        if settings.app_env == "production":
             logger.error(
-                "FACTORY_API_KEY is not configured in production; mutating endpoints will return 503"
+                "AUTH_SECRET is not configured in production; /api/factory/inject, "
+                "/reset and /stream will return 503 until the secret is set"
             )
         else:
             logger.warning(
-                "FACTORY_API_KEY is unset; mutating endpoints (/inject, /reset) are unprotected in development"
+                "AUTH_SECRET is unset; /api/factory/inject, /reset and /stream "
+                "are accepting any non-empty token in development"
             )
     service.start()
     yield
@@ -622,7 +604,7 @@ async def get_factory_status() -> FactoryStatusResponse:
     return service.get_status()
 
 
-@app.post("/api/factory/inject", dependencies=[Depends(require_api_key)])
+@app.post("/api/factory/inject", dependencies=[Depends(require_factory_user)])
 async def inject_anomaly(req: InjectAnomalyRequest = InjectAnomalyRequest()) -> dict[str, Any]:
     """Triggers Scenario 1 (CNC Tool Wear) or Scenario 2 (IM Damp Material)."""
     return await service.inject(
@@ -634,7 +616,7 @@ async def inject_anomaly(req: InjectAnomalyRequest = InjectAnomalyRequest()) -> 
     )
 
 
-@app.post("/api/factory/reset", dependencies=[Depends(require_api_key)])
+@app.post("/api/factory/reset", dependencies=[Depends(require_factory_user)])
 async def reset_factory() -> dict[str, Any]:
     """Restores all machinery to nominal baseline."""
     service.reset()
@@ -644,7 +626,33 @@ async def reset_factory() -> dict[str, Any]:
 @app.get("/api/factory/stream")
 @app.get("/api/factory/events")
 async def factory_stream(request: Request) -> EventSourceResponse:
-    """Server-Sent Events (SSE) broadcasting real-time factory telemetry packets."""
+    """Server-Sent Events (SSE) broadcasting real-time factory telemetry packets.
+
+    TKT-073 / #288: the stream is gated by the same JWT dependency used for
+    mutating endpoints. EventSource cannot send headers, so callers pass the
+    token via ``?token=<jwt>`` (see ``simulator.auth.token_from``). Invalid
+    or missing tokens receive an immediate 401 SSE response before the
+    subscription is registered.
+    """
+
+    # Pre-flight auth: EventSource will not render an HTTP error, so reject
+    # the request eagerly with a real ``HTTPException`` so EventSource surfaces
+    # the failure to the client (browser console).
+    try:
+        token = token_from(request)
+        if token is None:
+            raise AuthError(401, "Missing token")
+        # decode_token raises AuthError on failure / 503 in prod without secret.
+        from simulator.auth import decode_token
+
+        decode_token(token)
+    except AuthError as exc:
+        logger.info("Rejecting /api/factory/stream: %s", exc.detail)
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail=exc.detail,
+            headers={"WWW-Authenticate": "Bearer"} if exc.status_code == 401 else None,
+        )
 
     async def event_generator() -> AsyncIterator[dict[str, str]]:
         q: asyncio.Queue[FactoryTickPacket] = asyncio.Queue(maxsize=30)

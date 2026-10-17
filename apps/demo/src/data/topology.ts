@@ -84,7 +84,7 @@ export const NODES: TopologyNode[] = [
     sublabel: 'Sole Blackboard Writer',
     shape: 'hub',
     zone: 'team',
-    position: [-6, -4],
+    position: [-7, -5],
     target: 'web',
     icon: 'account_tree',
   },
@@ -154,7 +154,7 @@ export const NODES: TopologyNode[] = [
     sublabel: 'Knowledge capture',
     shape: 'agent',
     zone: 'team',
-    position: [8, -11],
+    position: [9, -10],
     target: 'web',
     icon: 'school',
   },
@@ -186,7 +186,7 @@ export const EDGES: TopologyEdge[] = [
   { from: 'pubsub', to: 'bigquery', label: 'Raw telemetry storage', route: 'zx' },
   { from: 'pubsub', to: 'orchestrator', label: 'Defect / SPC event' },
   { from: 'orchestrator', to: 'firestore', label: 'Sole writer', bidir: true, route: 'zx' },
-  { from: 'orchestrator', to: 'qa', label: 'Dispatch' },
+  { from: 'orchestrator', to: 'qa', label: 'Dispatch', route: 'zx' },
   { from: 'qa', to: 'tra', label: 'Defect confirmed' },
   { from: 'tra', to: 'pa', label: 'Suspect lots' },
   { from: 'pa', to: 'rca', label: 'Sensor evidence' },
@@ -221,6 +221,12 @@ export const AGENT_SEQUENCE: string[][] = [
 ];
 
 export const AGENT_STEP_SECONDS = 1.2;
+
+/** Whether agent `id` is working at `seconds` into the looping workflow. */
+export function isAgentActive(id: string, seconds: number): boolean {
+  const step = Math.floor(seconds / AGENT_STEP_SECONDS) % AGENT_SEQUENCE.length;
+  return AGENT_SEQUENCE[step].includes(id);
+}
 
 export const ZONES: Zone[] = [
   // The on-prem chip sits above the plate's back corner; its front corner is under the legend.

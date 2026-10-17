@@ -318,4 +318,12 @@ body,
   outline: none;
   background: var(--accent-soft);
 }
+.legend-credit {
+  padding: 4px 12px 2px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.legend-credit a {
+  color: inherit;
+}
 

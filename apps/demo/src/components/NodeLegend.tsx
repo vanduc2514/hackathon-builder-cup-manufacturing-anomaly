@@ -22,6 +22,17 @@ export default function NodeLegend(): React.ReactElement {
           </span>
         </a>
       ))}
+      <p className="legend-credit">
+        Agent robot:{' '}
+        <a
+          href="https://sketchfab.com/3d-models/futuristic-flying-animated-robot-low-poly-c5b92c281dc444448e64c0607719c7a2"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          mshayan02
+        </a>
+        , CC BY 4.0
+      </p>
     </nav>
   );
 }

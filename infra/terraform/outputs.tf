@@ -43,7 +43,7 @@ output "kb_bucket" {
 }
 
 output "hosting_sites" {
-  description = "Firebase Hosting site ID per firebase.json target (web, mobile)."
+  description = "Firebase Hosting site ID per firebase.json target (web, mobile, factory, demo)."
   value       = { for target, site in google_firebase_hosting_site.apps : target => site.site_id }
 }
 

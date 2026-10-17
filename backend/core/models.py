@@ -1883,3 +1883,54 @@ class CompetitionTelemetryPayload(BaseModel):
     @classmethod
     def _coerce_optional_int(cls, value: Any) -> Any:
         return _coerce_competition_optional_int(value)
+
+
+# ---------------------------------------------------------------------------
+# TKT-070 / issue #268 — BigQuery ingestion summary (S9 / S10)
+#
+# Structured summary that ``scripts/seed_bigquery.load_competition_csv()``
+# and ``backend.tools.bigquery_tool.load_competition_telemetry()`` both
+# return. ``schema_version`` matches ``COMPETITION_SCHEMA_VERSION`` in
+# ``scripts/seed_bigquery.py``; ``redactor_version`` matches
+# ``data.redaction.REDACTION_VERSION``. Together they pin down which
+# version of the warehouse DDL and brand map produced a given manifest
+# row so an auditor can compare a re-run against the source CSV's sha256.
+# ---------------------------------------------------------------------------
+
+
+class BigQueryIngestionSummary(BaseModel):
+    """Typed return value for every competition-telemetry ingestion run.
+
+    Used by ``load_competition_csv()`` (CLI + library) and
+    ``load_competition_telemetry()`` (emulator ingestion helper) so both
+    code paths produce the same artefact that ``BQ_seed_manifest.json``
+    records.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    rows_loaded: int = Field(
+        ge=0,
+        description="Number of CSV rows successfully written to BigQuery (excludes malformed rows).",
+    )
+    rows_skipped: int = Field(
+        default=0,
+        ge=0,
+        description="Number of CSV rows skipped because they failed schema validation.",
+    )
+    source_sha256: str = Field(
+        description="Hex SHA-256 of the source CSV so re-runs can prove idempotency.",
+    )
+    schema_version: str = Field(
+        description="Version stamp of the warehouse DDL used for this run (e.g. '2026-10-18.v1').",
+    )
+    redactor_version: str = Field(
+        description="Version stamp of the BRAND_MAP / REDACTION_VERSION used for this run.",
+    )
+    target_table: str = Field(
+        description="Fully-qualified BigQuery table the rows landed in (e.g. 'project.manufacturing.competition_telemetry').",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="True when the loader parsed the CSV but did not insert into BigQuery.",
+    )

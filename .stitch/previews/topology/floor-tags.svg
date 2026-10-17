@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 150" role="img" aria-label="Serial tag QR code linked to lot and heat number"><style>
+:root, svg {
+  --ink: #0b1220;
+  --ink-2: #1e2638;
+  --text: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --hair: rgba(15, 23, 42, .07);
+  --hair-strong: rgba(15, 23, 42, .14);
+  --accent: #5b5bf0;
+  --accent-2: #7c6cff;
+  --accent-soft: rgba(91, 91, 240, .1);
+  --accent-ring: rgba(91, 91, 240, .28);
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, .12);
+  --warning: #f5a524;
+  --warning-soft: rgba(245, 165, 36, .14);
+  --success: #12a150;
+  --success-soft: rgba(18, 161, 80, .12);
+  --info: #3b82f6;
+  --info-soft: rgba(59, 130, 246, .12);
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+@keyframes pvScan { 0% { transform: translateY(0); } 100% { transform: translateY(140px); } }
+@keyframes pvPacket { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: .9; } 90% { opacity: .9; } 100% { transform: translateX(200px); opacity: 0; } }
+@keyframes pvPacketShort { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: .9; } 85% { opacity: .9; } 100% { transform: translateX(118px); opacity: 0; } }
+@keyframes pvBlink { 50% { opacity: .25; } }
+@keyframes pvBreathe { 50% { opacity: .55; } }
+@keyframes pvFlow { to { stroke-dashoffset: -20; } }
+.pv-scan { animation: pvScan 3.2s ease-in-out infinite alternate; }
+.pv-packet { animation: pvPacket 4.4s linear infinite; }
+.pv-packet-short { animation-name: pvPacketShort; animation-duration: 3.6s; }
+.pv-blink { animation: pvBlink 2s ease-in-out infinite; }
+.pv-breathe { animation: pvBreathe 2.8s ease-in-out infinite; }
+.pv-flow { animation: pvFlow 1.6s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .pv-scan, .pv-packet, .pv-blink, .pv-breathe, .pv-flow { animation: none; }
+  .pv-packet { opacity: .9; }
+}
+</style><defs><marker id="pv-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#334155"/></marker></defs>
+      <rect x="10" y="12" width="120" height="120" rx="8" fill="#fff" stroke="var(--hair-strong)" stroke-width="1"/><rect x="20" y="22" width="9" height="9" fill="var(--ink)"/><rect x="29" y="22" width="9" height="9" fill="var(--ink)"/><rect x="38" y="22" width="9" height="9" fill="var(--ink)"/><rect x="83" y="22" width="9" height="9" fill="var(--ink)"/><rect x="92" y="22" width="9" height="9" fill="var(--ink)"/><rect x="101" y="22" width="9" height="9" fill="var(--ink)"/><rect x="110" y="22" width="9" height="9" fill="var(--ink)"/><rect x="20" y="31" width="9" height="9" fill="var(--ink)"/><rect x="29" y="31" width="9" height="9" fill="var(--ink)"/><rect x="38" y="31" width="9" height="9" fill="var(--ink)"/><rect x="65" y="31" width="9" height="9" fill="var(--ink)"/><rect x="83" y="31" width="9" height="9" fill="var(--ink)"/><rect x="92" y="31" width="9" height="9" fill="var(--ink)"/><rect x="101" y="31" width="9" height="9" fill="var(--ink)"/><rect x="110" y="31" width="9" height="9" fill="var(--ink)"/><rect x="20" y="40" width="9" height="9" fill="var(--ink)"/><rect x="29" y="40" width="9" height="9" fill="var(--ink)"/><rect x="38" y="40" width="9" height="9" fill="var(--ink)"/><rect x="56" y="40" width="9" height="9" fill="var(--ink)"/><rect x="83" y="40" width="9" height="9" fill="var(--ink)"/><rect x="92" y="40" width="9" height="9" fill="var(--ink)"/><rect x="101" y="40" width="9" height="9" fill="var(--ink)"/><rect x="110" y="40" width="9" height="9" fill="var(--ink)"/><rect x="20" y="49" width="9" height="9" fill="var(--ink)"/><rect x="74" y="49" width="9" height="9" fill="var(--ink)"/><rect x="110" y="49" width="9" height="9" fill="var(--ink)"/><rect x="29" y="58" width="9" height="9" fill="var(--ink)"/><rect x="56" y="58" width="9" height="9" fill="var(--ink)"/><rect x="74" y="58" width="9" height="9" fill="var(--ink)"/><rect x="83" y="58" width="9" height="9" fill="var(--ink)"/><rect x="47" y="67" width="9" height="9" fill="var(--ink)"/><rect x="56" y="67" width="9" height="9" fill="var(--ink)"/><rect x="65" y="67" width="9" height="9" fill="var(--ink)"/><rect x="110" y="67" width="9" height="9" fill="var(--ink)"/><rect x="56" y="76" width="9" height="9" fill="var(--ink)"/><rect x="83" y="76" width="9" height="9" fill="var(--ink)"/><rect x="92" y="76" width="9" height="9" fill="var(--ink)"/><rect x="101" y="76" width="9" height="9" fill="var(--ink)"/><rect x="110" y="76" width="9" height="9" fill="var(--ink)"/><rect x="20" y="85" width="9" height="9" fill="var(--ink)"/><rect x="29" y="85" width="9" height="9" fill="var(--ink)"/><rect x="38" y="85" width="9" height="9" fill="var(--ink)"/><rect x="47" y="85" width="9" height="9" fill="var(--ink)"/><rect x="101" y="85" width="9" height="9" fill="var(--ink)"/><rect x="110" y="85" width="9" height="9" fill="var(--ink)"/><rect x="20" y="94" width="9" height="9" fill="var(--ink)"/><rect x="29" y="94" width="9" height="9" fill="var(--ink)"/><rect x="38" y="94" width="9" height="9" fill="var(--ink)"/><rect x="56" y="94" width="9" height="9" fill="var(--ink)"/><rect x="83" y="94" width="9" height="9" fill="var(--ink)"/><rect x="101" y="94" width="9" height="9" fill="var(--ink)"/><rect x="110" y="94" width="9" height="9" fill="var(--ink)"/><rect x="20" y="103" width="9" height="9" fill="var(--ink)"/><rect x="29" y="103" width="9" height="9" fill="var(--ink)"/><rect x="38" y="103" width="9" height="9" fill="var(--ink)"/><rect x="47" y="103" width="9" height="9" fill="var(--ink)"/><rect x="83" y="103" width="9" height="9" fill="var(--ink)"/><rect x="92" y="103" width="9" height="9" fill="var(--ink)"/><rect x="101" y="103" width="9" height="9" fill="var(--ink)"/><rect x="110" y="103" width="9" height="9" fill="var(--ink)"/><rect x="20" y="112" width="9" height="9" fill="var(--ink)"/><rect x="29" y="112" width="9" height="9" fill="var(--ink)"/><rect x="38" y="112" width="9" height="9" fill="var(--ink)"/><rect x="83" y="112" width="9" height="9" fill="var(--ink)"/><rect x="92" y="112" width="9" height="9" fill="var(--ink)"/>
+      <rect x="170" y="52" width="104" height="44" rx="8" fill="#fff" stroke="var(--hair-strong)" stroke-width="1"/><text x="222" y="70" font-size="10.5" fill="var(--muted)" text-anchor="middle" font-family="var(--font-main)">Serial</text><text x="222" y="88" font-size="9.5" fill="var(--ink)" text-anchor="middle" font-weight="700" font-family="var(--font-mono)">WP-2026-90412</text><rect x="286" y="52" width="104" height="44" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/><text x="338" y="70" font-size="10.5" fill="var(--muted)" text-anchor="middle" font-family="var(--font-main)">Lot</text><text x="338" y="88" font-size="9.5" fill="var(--ink)" text-anchor="middle" font-weight="700" font-family="var(--font-mono)">LOT-B42-0941</text><path d="M274 74 L284 74" fill="none" stroke="#334155" stroke-width="1.6" marker-end="url(#pv-arrow)"/><rect x="402" y="52" width="104" height="44" rx="8" fill="#fff" stroke="var(--hair-strong)" stroke-width="1"/><text x="454" y="70" font-size="10.5" fill="var(--muted)" text-anchor="middle" font-family="var(--font-main)">Heat</text><text x="454" y="88" font-size="9.5" fill="var(--ink)" text-anchor="middle" font-weight="700" font-family="var(--font-mono)">HEAT-8842</text><path d="M390 74 L400 74" fill="none" stroke="#334155" stroke-width="1.6" marker-end="url(#pv-arrow)"/>
+      <path d="M132 74 L168 74" fill="none" stroke="#334155" stroke-width="1.6" marker-end="url(#pv-arrow)"/>
+      <text x="344" y="124" font-size="10.5" fill="var(--muted)" text-anchor="middle" font-family="var(--font-main)">scan at BAY-4-ENTRY → genealogy key</text></svg>

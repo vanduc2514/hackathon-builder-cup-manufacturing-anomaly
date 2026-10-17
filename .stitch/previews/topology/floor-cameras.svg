@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 180" role="img" aria-label="Camera viewfinder: part on conveyor, defect bounding box, scan line"><style>
+:root, svg {
+  --ink: #0b1220;
+  --ink-2: #1e2638;
+  --text: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --hair: rgba(15, 23, 42, .07);
+  --hair-strong: rgba(15, 23, 42, .14);
+  --accent: #5b5bf0;
+  --accent-2: #7c6cff;
+  --accent-soft: rgba(91, 91, 240, .1);
+  --accent-ring: rgba(91, 91, 240, .28);
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, .12);
+  --warning: #f5a524;
+  --warning-soft: rgba(245, 165, 36, .14);
+  --success: #12a150;
+  --success-soft: rgba(18, 161, 80, .12);
+  --info: #3b82f6;
+  --info-soft: rgba(59, 130, 246, .12);
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+@keyframes pvScan { 0% { transform: translateY(0); } 100% { transform: translateY(140px); } }
+@keyframes pvPacket { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: .9; } 90% { opacity: .9; } 100% { transform: translateX(200px); opacity: 0; } }
+@keyframes pvPacketShort { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: .9; } 85% { opacity: .9; } 100% { transform: translateX(118px); opacity: 0; } }
+@keyframes pvBlink { 50% { opacity: .25; } }
+@keyframes pvBreathe { 50% { opacity: .55; } }
+@keyframes pvFlow { to { stroke-dashoffset: -20; } }
+.pv-scan { animation: pvScan 3.2s ease-in-out infinite alternate; }
+.pv-packet { animation: pvPacket 4.4s linear infinite; }
+.pv-packet-short { animation-name: pvPacketShort; animation-duration: 3.6s; }
+.pv-blink { animation: pvBlink 2s ease-in-out infinite; }
+.pv-breathe { animation: pvBreathe 2.8s ease-in-out infinite; }
+.pv-flow { animation: pvFlow 1.6s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .pv-scan, .pv-packet, .pv-blink, .pv-breathe, .pv-flow { animation: none; }
+  .pv-packet { opacity: .9; }
+}
+</style><defs><marker id="pv-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#334155"/></marker></defs>
+      <rect x="8" y="6" width="504" height="168" rx="12" fill="#f6f8fd" stroke="var(--hair-strong)" stroke-width="1"/>
+      <rect x="8" y="128" width="504" height="18" fill="rgba(15,23,42,.05)"/>
+      <path d="M150 128 L180 62 L340 62 L370 128 Z" fill="#dfe4f0" stroke="#94a3b8" stroke-width="1.4"/>
+      <path d="M180 62 L196 50 L324 50 L340 62 Z" fill="#eef1f8" stroke="#94a3b8" stroke-width="1.2"/>
+      <path d="M268 74 l8 10 l-5 4 l9 12" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round"/>
+      <rect x="252" y="66" width="44" height="44" rx="4" fill="rgba(229,72,77,.08)" stroke="var(--danger)" stroke-width="1.8" stroke-dasharray="5 3"/>
+      <rect x="296" y="66" width="146" height="20" rx="6" fill="var(--danger)"/>
+      <text x="304" y="80" font-size="11" fill="#fff" font-weight="600" font-family="var(--font-mono)">surface_tear · 0.96</text>
+      <g class="pv-scan"><rect x="16" y="20" width="488" height="2" fill="var(--accent)" opacity=".75"/><rect x="16" y="2" width="488" height="18" fill="url(#pv-scan-grad)"/></g>
+      <defs><linearGradient id="pv-scan-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity="0"/><stop offset="1" stop-color="var(--accent)" stop-opacity=".18"/></linearGradient></defs>
+      <path d="M16 36 L16 14 L38 14" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"/><path d="M504 36 L504 14 L482 14" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"/><path d="M16 144 L16 166 L38 166" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"/><path d="M504 144 L504 166 L482 166" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"/>
+      <circle cx="34" cy="34" r="4.5" fill="var(--danger)" class="pv-blink"/>
+      <text x="44" y="38" font-size="11" fill="var(--ink)" font-weight="600" font-family="var(--font-mono)">CAM-EOL-01 · LIVE</text>
+      <text x="496" y="38" font-size="11" fill="var(--muted)" text-anchor="end" font-family="var(--font-mono)">WP-2026-90412</text>
+      <path d="M260 154 L280 154 M270 149 L270 159" stroke="var(--faint)" stroke-width="1.2"/>
+      <text x="34" y="160" font-size="10.5" fill="var(--muted)" font-family="var(--font-mono)">→ conveyor 0.45 m/s</text></svg>

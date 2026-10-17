@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 160" role="img" aria-label="p-chart: defect rate crosses the 3% upper control limit"><style>
+:root, svg {
+  --ink: #0b1220;
+  --ink-2: #1e2638;
+  --text: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --hair: rgba(15, 23, 42, .07);
+  --hair-strong: rgba(15, 23, 42, .14);
+  --accent: #5b5bf0;
+  --accent-2: #7c6cff;
+  --accent-soft: rgba(91, 91, 240, .1);
+  --accent-ring: rgba(91, 91, 240, .28);
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, .12);
+  --warning: #f5a524;
+  --warning-soft: rgba(245, 165, 36, .14);
+  --success: #12a150;
+  --success-soft: rgba(18, 161, 80, .12);
+  --info: #3b82f6;
+  --info-soft: rgba(59, 130, 246, .12);
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+@keyframes pvScan { 0% { transform: translateY(0); } 100% { transform: translateY(140px); } }
+@keyframes pvPacket { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: .9; } 90% { opacity: .9; } 100% { transform: translateX(200px); opacity: 0; } }
+@keyframes pvPacketShort { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: .9; } 85% { opacity: .9; } 100% { transform: translateX(118px); opacity: 0; } }
+@keyframes pvBlink { 50% { opacity: .25; } }
+@keyframes pvBreathe { 50% { opacity: .55; } }
+@keyframes pvFlow { to { stroke-dashoffset: -20; } }
+.pv-scan { animation: pvScan 3.2s ease-in-out infinite alternate; }
+.pv-packet { animation: pvPacket 4.4s linear infinite; }
+.pv-packet-short { animation-name: pvPacketShort; animation-duration: 3.6s; }
+.pv-blink { animation: pvBlink 2s ease-in-out infinite; }
+.pv-breathe { animation: pvBreathe 2.8s ease-in-out infinite; }
+.pv-flow { animation: pvFlow 1.6s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .pv-scan, .pv-packet, .pv-blink, .pv-breathe, .pv-flow { animation: none; }
+  .pv-packet { opacity: .9; }
+}
+</style><defs><marker id="pv-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#334155"/></marker></defs>
+      <line x1="24" y1="64" x2="512" y2="64" stroke="var(--danger)" stroke-dasharray="4 4" stroke-width="1.2"/>
+      <text x="512" y="58" font-size="10.5" fill="var(--danger)" text-anchor="end" font-family="var(--font-mono)">UCL 3.00%</text>
+      <line x1="24" y1="83.8" x2="512" y2="83.8" stroke="var(--faint)" stroke-dasharray="2 4" stroke-width="1"/>
+      <text x="512" y="77.8" font-size="10" fill="var(--muted)" text-anchor="end" font-family="var(--font-mono)">CL</text>
+      <polyline points="30,90.4 70,83.8 110,94.8 150,79.4 190,88.2 230,77.2 270,86.0 310,72.8 350,81.6 390,68.4 430,55.2 470,32.8" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="30" cy="90.4" r="3.5" fill="var(--accent)" stroke="#fff" stroke-width="1.5"/><circle cx="70" cy="83.8" r="3.5" fill="var(--accent)" stroke="#fff" stroke-width="1.5"/><circle cx="110" cy="94.8" r="3.5" fill="var(--accent)" stroke="#fff" stroke-width="1.5"/><circle cx="150" cy="79.4" r="3.5" fill="var(--accent)" stroke="#fff" stroke-width="1.5"/><circle cx="190" cy="88.2" r="3.5" fill="var(--accent)" stroke="#fff" stroke-width="1.5"/><circle cx="230" cy="77.2" r="3.5" fill="var(--accent)" stroke="#fff" stroke-width="1.5"/><circle cx="270" cy="86.0" r="3.5" fill="var(--accent)" stroke="#fff" stroke-width="1.5"/><circle cx="310" cy="72.8" r="3.5" fill="var(--accent)" stroke="#fff" stroke-width="1.5"/><circle cx="350" cy="81.6" r="3.5" fill="var(--accent)" stroke="#fff" stroke-width="1.5"/><circle cx="390" cy="68.4" r="3.5" fill="var(--accent)" stroke="#fff" stroke-width="1.5"/><circle cx="430" cy="55.2" r="5" fill="var(--danger)" stroke="#fff" stroke-width="1.5"/><circle cx="470" cy="32.8" r="5" fill="var(--danger)" stroke="#fff" stroke-width="1.5"/>
+      <text x="458" y="30.760000000000005" font-size="11" fill="var(--danger)" text-anchor="end" font-weight="700" font-family="var(--font-mono)">4.42%</text>
+      <text x="24" y="154" font-size="10.5" fill="var(--muted)" font-family="var(--font-main)">defect rate per 50-part sample · surface_tear_bevel</text></svg>

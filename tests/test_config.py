@@ -41,3 +41,8 @@ def test_fallback_settings_default_true():
     settings = Settings()
     assert settings.bigquery_fallback_to_mock is True
     assert settings.rag_fallback_to_local is True
+
+
+def test_rate_limit_max_streams_default():
+    settings = Settings()
+    assert settings.rate_limit_max_streams == 100

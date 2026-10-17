@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from sse_starlette.sse import EventSourceResponse
 
 from backend.agents.agent_technician_copilot import (
@@ -51,14 +51,16 @@ async def get_incident_history(
 
 @router.get("/events")
 @router.get("/stream")
-async def incident_events():
+async def incident_events(request: Request):
     """Server-Sent Events (SSE) stream of blackboard updates in real time."""
 
     async def event_generator():
         async for state_json in blackboard.subscribe():
+            if await request.is_disconnected():
+                break
             yield {"event": "incident_update", "data": state_json}
 
-    return EventSourceResponse(event_generator())
+    return EventSourceResponse(event_generator(), ping=10, send_timeout=5.0)
 
 
 @router.post("/approve")

@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 300
     rate_limit_write_per_minute: int = 30
     # Concurrent SSE / Gemini Live WebSocket connections per caller.
-    rate_limit_max_streams: int = 10
+    rate_limit_max_streams: int = 100
 
     # BigQuery / Emulator settings
     bigquery_emulator_host: str | None = None

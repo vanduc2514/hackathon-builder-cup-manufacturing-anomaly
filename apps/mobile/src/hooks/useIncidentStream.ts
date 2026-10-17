@@ -99,12 +99,18 @@ export function useIncidentStream(): IncidentStream {
     };
 
     livenessTimer = setInterval(() => {
+      if (source?.readyState === EventSource.CLOSED) {
+        reconnect();
+        return;
+      }
       if (source?.readyState !== EventSource.OPEN) return;
       fetchCurrentIncident()
         .then((data) => {
           if (!disposed) setIncident(data);
         })
-        .catch(() => reconnect());
+        .catch((err: unknown) => {
+          console.warn('Incident snapshot liveness check failed:', err);
+        });
     }, LIVENESS_MS);
 
     refreshSnapshot();

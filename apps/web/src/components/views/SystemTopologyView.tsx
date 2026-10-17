@@ -88,53 +88,49 @@ export default function SystemTopologyView({
 
   return (
     <div className="page page-compact topology-view">
-      {/* Top Header: Breadcrumb & Active Incident Jump (TKT-064) */}
-      <header className="row between wrap" style={{ gap: 12 }}>
-        <div className="row header-crumb">
-          <span>Cell Line 1</span>
-          <span style={{ color: 'var(--faint)' }}>/</span>
-          <b>System Topology</b>
-        </div>
+      {/* Active Incident Jump & Live Reset controls (TKT-064). Breadcrumb lives only in the global TopHeader (#271). */}
+      {(isIncidentOpen || activeScenario !== 'live') && (
+        <header className="row wrap" style={{ gap: 12, justifyContent: 'flex-end' }}>
+          <div className="row wrap" style={{ gap: 8, alignItems: 'center' }}>
+            {/* Quick Jump to Active Incident (TKT-057 calm animation) */}
+            {isIncidentOpen && onOpenIncident && (
+              <button
+                id="topology-jump-incident"
+                type="button"
+                className="btn btn-dark btn-sm topology-jump-btn"
+                onClick={() => onOpenIncident(incident.incident_id)}
+                style={{ gap: 6 }}
+              >
+                <span className="status-dot red animate-gentle-pulse" style={{ width: 8, height: 8 }} />
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  warning
+                </span>
+                <span>
+                  Incident #{incident.incident_id} · {friendlyDefectName(incident.defect_type)} ({STATUS_LABEL[incident.status]})
+                </span>
+              </button>
+            )}
 
-        <div className="row wrap" style={{ gap: 8, alignItems: 'center' }}>
-          {/* Quick Jump to Active Incident (TKT-057 calm animation) */}
-          {isIncidentOpen && onOpenIncident && (
-            <button
-              id="topology-jump-incident"
-              type="button"
-              className="btn btn-dark btn-sm topology-jump-btn"
-              onClick={() => onOpenIncident(incident.incident_id)}
-              style={{ gap: 6 }}
-            >
-              <span className="status-dot red animate-gentle-pulse" style={{ width: 8, height: 8 }} />
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                warning
-              </span>
-              <span>
-                Incident #{incident.incident_id} · {friendlyDefectName(incident.defect_type)} ({STATUS_LABEL[incident.status]})
-              </span>
-            </button>
-          )}
-
-          {/* Reset to live blackboard state (only shown while a ?state= scenario deep-link is active) */}
-          {activeScenario !== 'live' && (
-            <button
-              type="button"
-              className="btn btn-sm"
-              onClick={() => {
-                setActiveScenario('live');
-                onNotify?.('Topology view reset to live Firestore blackboard state.', 'info');
-              }}
-              title="Reset to live blackboard state"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                refresh
-              </span>
-              Live
-            </button>
-          )}
-        </div>
-      </header>
+            {/* Reset to live blackboard state (only shown while a ?state= scenario deep-link is active) */}
+            {activeScenario !== 'live' && (
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => {
+                  setActiveScenario('live');
+                  onNotify?.('Topology view reset to live Firestore blackboard state.', 'info');
+                }}
+                title="Reset to live blackboard state"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  refresh
+                </span>
+                Live
+              </button>
+            )}
+          </div>
+        </header>
+      )}
 
       {/* Scenario Context Banner */}
       <div

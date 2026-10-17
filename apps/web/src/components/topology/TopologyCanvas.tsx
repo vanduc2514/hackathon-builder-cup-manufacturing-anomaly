@@ -1,11 +1,14 @@
 // SVG Orthogonal overlay connecting 5 architecture layers with right-angled routing, zoom/pan controls, and minimap (Issue #205 & Issue #211).
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import type { TopologyEdgeDefinition, TopologyNodeId, TopologyNodeState } from '../../types';
+import type { PhaseLaneId, PhaseStepperStatus } from '../../lib/topology';
 import { TOPOLOGY_EDGES, TOPOLOGY_LAYERS } from '../../lib/topology';
+import PhaseLaneOverlay from './PhaseLaneOverlay';
 
 interface TopologyCanvasProps {
   nodeStates: Record<TopologyNodeId, TopologyNodeState>;
   selectedNodeId: TopologyNodeId | null;
+  phaseLaneStatuses?: Record<PhaseLaneId, PhaseStepperStatus>;
   children: React.ReactNode;
 }
 
@@ -23,6 +26,7 @@ interface ComputedPath {
 export default function TopologyCanvas({
   nodeStates,
   selectedNodeId,
+  phaseLaneStatuses,
   children,
 }: TopologyCanvasProps): React.ReactElement {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -364,6 +368,15 @@ export default function TopologyCanvas({
           transition: isPanning ? 'none' : 'transform 0.15s ease-out',
         }}
       >
+        {/* Inline Phase Lane dashed-border overlay (AC-TOP-23, #256) */}
+        {phaseLaneStatuses && (
+          <PhaseLaneOverlay
+            containerRef={containerRef}
+            laneStatuses={phaseLaneStatuses}
+            scale={scale}
+          />
+        )}
+
         {/* SVG Orthogonal Edge Overlay */}
         <svg
           className="topology-svg-overlay"

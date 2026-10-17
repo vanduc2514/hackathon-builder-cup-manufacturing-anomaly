@@ -6,6 +6,7 @@ import type {
   IncidentStatus,
   NodeLayout,
   PhaseLane,
+  PhaseLaneId,
   TopologyEdge,
   TopologyEndpointId,
   TopologyLayerDefinition,
@@ -21,7 +22,7 @@ import type {
 } from '../types';
 import { matchesAgentRole } from './incident';
 
-export type { TopologyWindowId };
+export type { TopologyWindowId, PhaseLaneId };
 
 export interface TopologyScenarioConfig {
   id: TopologyScenarioId;
@@ -2404,6 +2405,63 @@ export function derivePhaseStepperInfo(
       targetLayerId: 'phase-5',
     },
   ];
+}
+
+/**
+ * Derives the dynamic status chip (idle/active/warning/danger/completed) for each inline
+ * Phase Lane (A-D) that wraps the nodes belonging to that phase on the canvas (AC-TOP-23, #256).
+ * Reuses {@link derivePhaseStepperInfo} so the Tier-1 stepper bar and the inline lanes never disagree.
+ */
+export function derivePhaseLaneStatuses(
+  incident: IncidentState | null,
+  scenario?: TopologyScenarioId | 'live',
+): Record<PhaseLaneId, PhaseStepperStatus> {
+  const steps = derivePhaseStepperInfo(incident, scenario);
+  const byPhase = new Map(steps.map((step) => [step.phaseId, step.status]));
+  const statusD = byPhase.get('phase-d') ?? 'idle';
+
+  return {
+    a: byPhase.get('phase-a') ?? 'idle',
+    b: byPhase.get('phase-b') ?? 'idle',
+    c: byPhase.get('phase-c') ?? 'idle',
+    'd-learn': statusD,
+    d: statusD,
+  };
+}
+
+export type GateBlockStatus = 'idle' | 'active' | 'taken';
+
+/**
+ * Derives whether an explicit Decision Gate condition block (AC-TOP-26, #256) is the branch
+ * currently being executed ('active'), the branch that already fired ('taken'), or untaken ('idle'),
+ * based on the live/scenario status of the nodes it routes to.
+ */
+export function deriveGateBlockStatus(
+  block: GateConditionBlock,
+  nodeStates: Record<TopologyNodeId, TopologyNodeState>,
+): GateBlockStatus {
+  let anyActive = false;
+  let anyDone = false;
+
+  for (const targetId of block.targetIds) {
+    const status = nodeStates[targetId]?.status;
+    if (
+      status === 'active' ||
+      status === 'waiting' ||
+      status === 'pending_approval' ||
+      status === 'warning' ||
+      status === 'danger'
+    ) {
+      anyActive = true;
+    }
+    if (status === 'done' || status === 'completed') {
+      anyDone = true;
+    }
+  }
+
+  if (anyActive) return 'active';
+  if (anyDone) return 'taken';
+  return 'idle';
 }
 
 /**

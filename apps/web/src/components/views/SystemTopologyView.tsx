@@ -3,15 +3,19 @@ import React, { useMemo, useState } from 'react';
 import type { DashboardTab, IncidentState, TopologyNodeId, TopologyScenarioId } from '../../types';
 import type { ToastTone } from '../../App';
 import {
+  TOPOLOGY_GATE_BLOCKS,
   TOPOLOGY_NODES,
   TOPOLOGY_SCENARIOS,
+  deriveGateBlockStatus,
   deriveNodeStates,
+  derivePhaseLaneStatuses,
   deriveWindow2State,
 } from '../../lib/topology';
 import PhaseStepperBar from '../topology/PhaseStepperBar';
 import TopologyCanvas from '../topology/TopologyCanvas';
 import TopologyNode from '../topology/TopologyNode';
 import DecisionGateNode from '../topology/DecisionGateNode';
+import GateConditionBlock from '../topology/GateConditionBlock';
 import TopologyNodeDrawer from '../topology/TopologyNodeDrawer';
 import { STATUS_LABEL, friendlyDefectName } from '../../lib/incident';
 
@@ -50,6 +54,12 @@ export default function SystemTopologyView({
 
   const window2State = useMemo(
     () => deriveWindow2State(incident, activeScenario),
+    [incident, activeScenario],
+  );
+
+  // Inline Phase Lane (A-D) dynamic status chips (AC-TOP-23, #256)
+  const phaseLaneStatuses = useMemo(
+    () => derivePhaseLaneStatuses(incident, activeScenario),
     [incident, activeScenario],
   );
 
@@ -181,7 +191,11 @@ export default function SystemTopologyView({
       />
 
       {/* 5-Layer Vertical Architecture Canvas */}
-      <TopologyCanvas nodeStates={nodeStates} selectedNodeId={selectedNodeId}>
+      <TopologyCanvas
+        nodeStates={nodeStates}
+        selectedNodeId={selectedNodeId}
+        phaseLaneStatuses={phaseLaneStatuses}
+      >
         <div className="vertical-pipeline topology-swimlanes-grid">
           {/* =================================================================
               WINDOW 1: FACTORY FLOOR (ON-PREMISES EDGE DATA & GATEWAY)
@@ -467,6 +481,17 @@ export default function SystemTopologyView({
               />
             )}
 
+            {/* Explicit Decision Gate 1 condition blocks: YES (left) -> Phase C, NO (right) -> diagnostic loop (AC-TOP-26, #256) */}
+            <div className="node-row-gate-blocks">
+              {TOPOLOGY_GATE_BLOCKS.filter((block) => block.gateId === 'decision-gate-1').map((block) => (
+                <GateConditionBlock
+                  key={block.id}
+                  block={block}
+                  status={deriveGateBlockStatus(block, nodeStates)}
+                />
+              ))}
+            </div>
+
             {/* Row 4: Diagnostic Loop Agents & Forward Resolution Agents */}
             <div className="node-row-5">
               {(['diagnostic-agent', 'technician-photo', 'copilot-live', 'agent-scribe', 'agent-learn'] as TopologyNodeId[]).map(
@@ -537,6 +562,17 @@ export default function SystemTopologyView({
                 onSelect={(id) => setSelectedNodeId(id)}
               />
             )}
+
+            {/* Explicit Decision Gate 2 condition blocks: NO (left) -> streak reset, YES (right) -> closure & learning (AC-TOP-26, #256) */}
+            <div className="node-row-gate-blocks">
+              {TOPOLOGY_GATE_BLOCKS.filter((block) => block.gateId === 'decision-gate-2').map((block) => (
+                <GateConditionBlock
+                  key={block.id}
+                  block={block}
+                  status={deriveGateBlockStatus(block, nodeStates)}
+                />
+              ))}
+            </div>
 
             {/* Row 3: Penalty Reset, Plant Dashboard, Shift Leader Approval Gate & Output Documents */}
             <div className="node-row-4">

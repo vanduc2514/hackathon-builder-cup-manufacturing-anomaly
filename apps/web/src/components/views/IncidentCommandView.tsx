@@ -37,7 +37,6 @@ interface IncidentCommandViewProps {
   incident: IncidentState;
   product: string;
   onNavigateHome: () => void;
-  onOpenTopology?: () => void;
   onNotify: (text: string, tone?: ToastTone) => void;
 }
 
@@ -61,7 +60,6 @@ export default function IncidentCommandView({
   incident,
   product,
   onNavigateHome,
-  onOpenTopology,
   onNotify,
 }: IncidentCommandViewProps): React.ReactElement {
   const [releasing, setReleasing] = useState<boolean>(false);
@@ -267,21 +265,7 @@ export default function IncidentCommandView({
                 <span>Chọn ảnh mẫu (IM-05)</span>
               </button>
             )}
-            {onOpenTopology && (
-              <button
-                id="incident-view-topology"
-                type="button"
-                className="btn btn-sm"
-                onClick={onOpenTopology}
-                style={{ gap: 6, fontWeight: 600 }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                  account_tree
-                </span>
-                <span>View Phase on Topology</span>
-              </button>
-            )}
-          </div>
+            </div>
           <h1 className="page-title" style={{ fontSize: '1.6rem' }}>
             {friendlyName}
             {machine ? ` on ${machine}` : ''}

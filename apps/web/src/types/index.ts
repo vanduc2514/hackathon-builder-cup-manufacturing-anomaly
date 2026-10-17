@@ -475,10 +475,7 @@ export interface EsgLedgerResponse {
   factory_type: string;
 }
 
-// System Topology & Realtime Execution Graph Types (Issue #205, #211, #254 / TKT-063)
-export * from './topology';
-
-export type DashboardTab = 'overview' | 'topology' | 'incident-detail' | 'impact' | 'walkthroughs' | 'sops';
+export type DashboardTab = 'overview' | 'incident-detail' | 'impact' | 'walkthroughs' | 'sops';
 export type PresetCategory =
   | "surface_scratch"
   | "crack"

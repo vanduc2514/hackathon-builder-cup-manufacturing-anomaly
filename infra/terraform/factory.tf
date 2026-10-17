@@ -94,6 +94,11 @@ resource "google_cloud_run_v2_service" "factory" {
         name  = "FACTORY_AUTH_TOKEN_TTL_HOURS"
         value = "12"
       }
+
+      env {
+        name  = "AUTH_USERS"
+        value = var.auth_users
+      }
     }
   }
 

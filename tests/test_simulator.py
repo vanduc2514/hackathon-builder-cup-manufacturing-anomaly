@@ -238,3 +238,93 @@ def test_server_replay_mode_integration():
         assert cnc01.rpm > 0
     finally:
         service.stop()
+
+
+# ---------------------------------------------------------------------------
+# Factory Server Auth & require_api_key tests
+# ---------------------------------------------------------------------------
+
+
+def test_require_api_key_valid_key(monkeypatch):
+    """X-API-Key matching settings.factory_api_key passes require_api_key."""
+    from simulator.config import settings
+    from simulator.server import require_api_key
+
+    monkeypatch.setattr(settings, "factory_api_key", "test-secret-key-123")
+    monkeypatch.setattr(settings, "app_env", "production")
+
+    # Should not raise
+    require_api_key(x_api_key="test-secret-key-123")
+
+
+def test_require_api_key_valid_jwt(monkeypatch):
+    """Valid Bearer JWT token passes require_api_key."""
+    from datetime import datetime, timedelta, timezone
+
+    import jwt
+
+    from simulator.config import settings
+    from simulator.server import require_api_key
+
+    monkeypatch.setattr(settings, "factory_api_key", "test-secret-key-123")
+    monkeypatch.setattr(settings, "auth_secret", "jwt-secret-456")
+    monkeypatch.setattr(settings, "app_env", "production")
+
+    token = jwt.encode(
+        {"sub": "technician", "exp": datetime.now(timezone.utc) + timedelta(hours=1)},
+        "jwt-secret-456",
+        algorithm="HS256",
+    )
+
+    # Should not raise with valid Bearer token even without X-API-Key
+    require_api_key(authorization=f"Bearer {token}")
+
+
+def test_require_api_key_unauthorized(monkeypatch):
+    """Missing or invalid credentials raise 401."""
+    import pytest
+    from fastapi import HTTPException
+
+    from simulator.config import settings
+    from simulator.server import require_api_key
+
+    monkeypatch.setattr(settings, "factory_api_key", "test-secret-key-123")
+    monkeypatch.setattr(settings, "auth_secret", "jwt-secret-456")
+    monkeypatch.setattr(settings, "app_env", "production")
+
+    with pytest.raises(HTTPException) as exc_info:
+        require_api_key(x_api_key="wrong-key")
+    assert exc_info.value.status_code == 401
+
+
+def test_simulator_auth_endpoints_fallback():
+    """Simulator app exposes /api/auth/accounts and /api/auth/login."""
+    from fastapi.testclient import TestClient
+
+    from simulator.server import app
+
+    client = TestClient(app)
+
+    # 1. Accounts list
+    acc_res = client.get("/api/auth/accounts")
+    assert acc_res.status_code == 200
+    accounts = acc_res.json()
+    assert isinstance(accounts, list)
+    assert any(a["username"] == "technician" for a in accounts)
+
+    # 2. Login with valid dev credentials
+    login_res = client.post(
+        "/api/auth/login",
+        json={"username": "technician", "password": "4NpqbcqiOB4v9Ry6"},
+    )
+    assert login_res.status_code == 200
+    data = login_res.json()
+    assert "token" in data
+    assert data["user"]["username"] == "technician"
+
+    # 3. Login with wrong password
+    bad_res = client.post(
+        "/api/auth/login",
+        json={"username": "technician", "password": "wrong-password"},
+    )
+    assert bad_res.status_code == 401

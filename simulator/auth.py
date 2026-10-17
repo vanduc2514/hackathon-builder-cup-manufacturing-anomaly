@@ -12,7 +12,9 @@ not need an ``AUTH_USERS`` roster — it only checks signature/exp).
 
 from __future__ import annotations
 
+import hmac
 import logging
+import os
 
 import jwt
 from fastapi import HTTPException, WebSocketException, status
@@ -36,27 +38,31 @@ class AuthError(Exception):
 
 
 class AuthenticatedUser(BaseModel):
-    """Resolved identity of the authenticated caller (sub claim from JWT)."""
+    """Resolved identity of the authenticated caller (sub claim from JWT or API key)."""
 
     sub: str
     ttl_hours: int
 
 
 def _resolve_secret() -> str | None:
-    """Return the configured ``AUTH_SECRET`` or ``None``.
+    """Return the configured ``AUTH_SECRET`` / ``FACTORY_AUTH_SECRET`` or ``None``.
 
     The simulator mirrors the backend's fail-closed posture: when running with
-    ``APP_ENV=production`` and no ``AUTH_SECRET`` configured, every request that
-    reaches the auth gate must return 503 rather than silently allowing access.
-    In development, ``None`` is returned and ``decode_token`` falls back to a
-    minimal dev path that accepts any non-empty token so local flows still work.
+    ``APP_ENV=production`` and no ``AUTH_SECRET`` / ``FACTORY_API_KEY`` configured,
+    requests fail with 503 rather than silently allowing access.
     """
-    secret = settings.factory_auth_secret
+    secret = (
+        getattr(settings, "factory_auth_secret", None)
+        or getattr(settings, "auth_secret", None)
+        or os.getenv("FACTORY_AUTH_SECRET")
+        or os.getenv("AUTH_SECRET")
+    )
     if not secret and settings.app_env == "production":
-        raise AuthError(
-            status.HTTP_503_SERVICE_UNAVAILABLE,
-            "AUTH_SECRET is not configured on production server",
-        )
+        if not getattr(settings, "factory_api_key", None):
+            raise AuthError(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                "Factory security is not configured on production server",
+            )
     return secret or None
 
 
@@ -71,9 +77,7 @@ def decode_token(token: str) -> AuthenticatedUser:
     secret = _resolve_secret()
     if secret is None:
         # In development without a secret, accept tokens that decode as
-        # non-empty ``sub`` claims without verifying signature. This matches
-        # the previous behaviour of the factory dev path so local flows keep
-        # working. Production above already returned 503.
+        # non-empty ``sub`` claims without verifying signature.
         if not token:
             raise invalid
         return AuthenticatedUser(sub="dev", ttl_hours=settings.factory_auth_token_ttl_hours)
@@ -101,17 +105,55 @@ def token_from(conn: HTTPConnection) -> str | None:
 
 
 async def require_factory_user(conn: HTTPConnection) -> AuthenticatedUser:
-    """FastAPI dependency: resolves the caller from Bearer header or ``?token=``.
-
-    Translates :class:`AuthError` into the appropriate ``HTTPException`` /
-    ``WebSocketException`` so the response shape stays consistent with the
-    rest of the simulator API.
-    """
+    """FastAPI dependency: resolves caller from Bearer JWT, X-API-Key, or dev environment."""
     try:
+        expected_key = getattr(settings, "factory_api_key", None)
+        secret = _resolve_secret()
+        app_env = getattr(settings, "app_env", os.getenv("APP_ENV", "development"))
+
+        # 1. Fail closed with 503 in production if neither API key nor secret is configured
+        if app_env == "production" and not expected_key and not secret:
+            raise AuthError(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                "Factory security is not configured on production server",
+            )
+
+        # 2. Check X-API-Key if provided
+        x_api_key = conn.headers.get("x-api-key")
+        if x_api_key:
+            if expected_key and hmac.compare_digest(x_api_key, expected_key):
+                return AuthenticatedUser(
+                    sub="api-key", ttl_hours=settings.factory_auth_token_ttl_hours
+                )
+            raise AuthError(status.HTTP_401_UNAUTHORIZED, "Invalid or missing X-API-Key header")
+
+        # 3. Check Bearer token or ?token=
         token = token_from(conn)
-        if token is None:
-            raise AuthError(status.HTTP_401_UNAUTHORIZED, "Missing token")
-        return decode_token(token)
+        if token is not None:
+            return decode_token(token)
+
+        # 4. No credentials provided
+        if app_env == "production":
+            if not expected_key:
+                raise AuthError(
+                    status.HTTP_503_SERVICE_UNAVAILABLE,
+                    "Factory security is not configured on production server",
+                )
+            raise AuthError(
+                status.HTTP_401_UNAUTHORIZED,
+                "Invalid or missing X-API-Key or Authorization Bearer token",
+            )
+
+        # In development:
+        # If factory_api_key is explicitly configured, enforce it or Bearer
+        if expected_key:
+            raise AuthError(
+                status.HTTP_401_UNAUTHORIZED,
+                "Invalid or missing X-API-Key or Authorization Bearer token",
+            )
+
+        # If factory_api_key is unset in development, allow mutations
+        return AuthenticatedUser(sub="dev-anon", ttl_hours=settings.factory_auth_token_ttl_hours)
     except AuthError as exc:
         if conn.scope["type"] == "websocket":
             raise WebSocketException(

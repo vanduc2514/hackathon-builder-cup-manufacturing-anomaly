@@ -1,10 +1,22 @@
 // Static topology of the Kaizen system: 17 nodes, their links and the deployed app each opens.
 import type { AppTarget, ScenarioStep, TopologyEdge, TopologyNode, Zone } from '../types/topology';
 
+// Each app's login screen prefills its password from ?pwd= for the role it signs in as.
+const LOGIN_ROLE: Record<AppTarget, string> = {
+  web: 'shift_leader',
+  mobile: 'technician',
+  factory: 'technician',
+};
+
+function appUrl(base: string, target: AppTarget): string {
+  const pwd = __APP_PASSWORDS__[LOGIN_ROLE[target]];
+  return pwd ? `${base}/?pwd=${encodeURIComponent(pwd)}` : base;
+}
+
 export const APP_LINKS: Record<AppTarget, { url: string; title: string }> = {
-  web: { url: 'https://kaizen-lab-web.web.app', title: 'Plant Ops Dashboard' },
-  mobile: { url: 'https://kaizen-lab-mobile.web.app', title: 'Technician App' },
-  factory: { url: 'https://kaizen-lab-factory.web.app', title: 'Factory Floor Console' },
+  web: { url: appUrl('https://kaizen-lab-web.web.app', 'web'), title: 'Plant Ops Dashboard' },
+  mobile: { url: appUrl('https://kaizen-lab-mobile.web.app', 'mobile'), title: 'Technician App' },
+  factory: { url: appUrl('https://kaizen-lab-factory.web.app', 'factory'), title: 'Factory Floor Console' },
 };
 
 export const NODES: TopologyNode[] = [

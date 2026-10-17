@@ -6,10 +6,12 @@ import argparse
 import asyncio
 import logging
 import signal
+from pathlib import Path
 from typing import Any, Optional
 
 from simulator.config import settings
 from simulator.conveyor_simulator import ConveyorSimulator
+from simulator.csv_replay import CSVTelemetrySource
 from simulator.edge import EdgeInspectionStation, EdgePubSubDispatcher
 from simulator.machine_simulator import MachineSimulator
 from simulator.models import QualityEventPayload, SimulatorTickSummary
@@ -33,6 +35,7 @@ class FactorySimulatorService:
         scenario: str = "cnc_tool_wear",
         seed: Optional[int] = None,
         pubsub: bool = False,
+        csv_replay_path: Optional[Path] = None,
     ) -> None:
         self.speed = max(0.1, speed)
         self.interval = settings.tick_interval_sec / self.speed
@@ -41,10 +44,39 @@ class FactorySimulatorService:
         self._stopped = False
         self.scenario = scenario
         self.pubsub = pubsub
+        # Resolve replay path: explicit CLI arg wins, otherwise env-driven settings.
+        replay_path: Optional[Path] = None
+        if csv_replay_path is not None:
+            replay_path = Path(csv_replay_path).expanduser()
+            if not replay_path.exists():
+                logger.warning(
+                    "CSV replay path does not exist (%s); running synthetic mode",
+                    replay_path,
+                )
+                replay_path = None
+        elif getattr(settings, "csv_replay_path", None):
+            replay_path = Path(settings.csv_replay_path).expanduser()
+        self.csv_replay_path = replay_path
 
         include_im = scenario == "im_damp_material"
         self.machine_sim = MachineSimulator(include_im=include_im, seed=seed)
         self.conveyor_sim = ConveyorSimulator(include_im=include_im, seed=seed)
+        if replay_path is not None:
+            try:
+                source = CSVTelemetrySource(replay_path)
+            except (FileNotFoundError, ValueError) as exc:
+                logger.warning(
+                    "Could not enable CSV replay mode from %s: %s",
+                    replay_path,
+                    exc,
+                )
+            else:
+                self.machine_sim.set_replay_source(source)
+                logger.info(
+                    "CSV replay mode enabled: %s (%d rows)",
+                    replay_path.name,
+                    len(source),
+                )
         self.edge_station = EdgeInspectionStation()
         self.publisher = MqttPublisher(dry_run=dry_run)
         self.pubsub_dispatcher = EdgePubSubDispatcher(dry_run=dry_run)
@@ -235,6 +267,12 @@ def main() -> None:
         action="store_true",
         help="Publish quality-events to Google Cloud Pub/Sub / emulator",
     )
+    parser.add_argument(
+        "--csv-replay",
+        dest="csv_replay",
+        default=None,
+        help="Path to a competition CSV file for telemetry replay mode",
+    )
     args = parser.parse_args()
 
     service = FactorySimulatorService(
@@ -244,6 +282,7 @@ def main() -> None:
         scenario=args.scenario,
         seed=args.seed,
         pubsub=args.pubsub,
+        csv_replay_path=Path(args.csv_replay).expanduser() if args.csv_replay else None,
     )
 
     loop = asyncio.new_event_loop()

@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import math
+from pathlib import Path
 
 from simulator.conveyor_simulator import ConveyorSimulator
+from simulator.csv_replay import CSVTelemetrySource, parse_competition_timestamp
 from simulator.machine_simulator import MachineSimulator
 from simulator.main import FactorySimulatorService
 from simulator.models import ConveyorPart, MachineTelemetry
+from simulator.server import FactoryServerService
 
 
 def test_machine_simulator_baseline() -> None:
@@ -100,3 +104,137 @@ def test_factory_service_step() -> None:
     assert len(summary.telemetry) == 3
     assert len(summary.parts) >= 1
     service.stop()
+
+
+# ---------------------------------------------------------------------------
+# TKT-071 / issue #269 — CSV telemetry replay (5 tests)
+# ---------------------------------------------------------------------------
+
+_COMP_DIR = Path(__file__).resolve().parents[1] / "data" / "datasets" / "competition"
+_NORMAL_CSV = _COMP_DIR / "normal_machine_operating_data_1000_with_timestamp.csv"
+_ABNORMAL_CSV = _COMP_DIR / "abnormal_machine_operating_data_1000.csv"
+
+
+def test_csv_replay_determinism():
+    """Two iterators over the same source produce identical rows in identical order."""
+    src_a = CSVTelemetrySource(_NORMAL_CSV)
+    src_b = CSVTelemetrySource(_NORMAL_CSV)
+
+    rows_a = [src_a.next() for _ in range(10)]
+    rows_b = [src_b.next() for _ in range(10)]
+
+    for ra, rb in zip(rows_a, rows_b):
+        assert ra.timestamp == rb.timestamp
+        assert math.isclose(ra.speed, rb.speed, rel_tol=1e-9)
+        assert math.isclose(ra.temperature, rb.temperature, rel_tol=1e-9)
+        assert math.isclose(ra.vibration, rb.vibration, rel_tol=1e-9)
+        assert math.isclose(ra.current_percent, rb.current_percent, rel_tol=1e-9)
+
+
+def test_csv_replay_timestamp_formats():
+    """Both competition timestamp formats parse without raising."""
+    # Short format from the normal CSV
+    short = _NORMAL_CSV.read_text(encoding="utf-8-sig").splitlines()[1].split(",")[0]
+    parsed_short = parse_competition_timestamp(short)
+    assert parsed_short.year == 2026
+    assert parsed_short.month == 10
+    assert parsed_short.day == 1
+    assert parsed_short.hour == 8
+
+    # Long format from the abnormal CSV
+    long_fmt = _ABNORMAL_CSV.read_text(encoding="utf-8-sig").splitlines()[1].split(",")[0]
+    parsed_long = parse_competition_timestamp(long_fmt)
+    assert parsed_long.year == 2026
+    assert parsed_long.month == 10
+    assert parsed_long.day == 1
+    assert parsed_long.hour == 9
+    assert parsed_long.minute == 0
+    assert parsed_long.second == 0
+
+
+def test_csv_replay_to_competition_payload():
+    """CSV row maps to the canonical nested competition JSON envelope."""
+    src = CSVTelemetrySource(_ABNORMAL_CSV)
+    # Abnormal CSV rows all have alarm_code populated and operating_status=FAULT
+    row = src.peek()
+    assert row is not None
+    # Force a known cursor position so runtime_hours is deterministic.
+    src._cursor = 120
+    row = src.next()
+    assert row is not None
+
+    payload = src.to_competition_payload(row, row_index=119)
+
+    # Structural assertions per AI-sensor-spec.md
+    assert set(payload.keys()) == {"timestamp", "asset", "operating", "sensor", "health"}
+    assert payload["asset"]["machine_id"] == "MOTOR_01"
+    assert payload["asset"]["factory_id"] == "FACTORY_01"
+    assert payload["asset"]["line_id"] == "LINE_01"
+
+    sensor = payload["sensor"]
+    assert math.isclose(sensor["rpm"]["value"], int(round(row.speed)))
+    assert math.isclose(sensor["temperature"]["value"], float(row.temperature))
+    assert math.isclose(sensor["current"]["value"], round(row.current_percent * 0.123, 3))
+    assert math.isclose(sensor["vibration"]["value"], float(row.vibration))
+
+    assert math.isclose(payload["operating"]["load_percent"], float(row.load_percent))
+    assert payload["operating"]["status"] == "FAULT"  # the row came from abnormal CSV
+    # runtime_hours = 1200 + row_index // 60 = 1200 + 119 // 60 = 1200 + 1 = 1201
+    assert payload["operating"]["runtime_hours"] == 1201
+
+    health = payload["health"]
+    assert health["status"] == "ANOMALY"
+    # alarm_code populated → 0.65 + min(alarm_code/100, 0.33)
+    if row.alarm_code is not None:
+        expected_score = round(0.65 + min(row.alarm_code / 100.0, 0.33), 3)
+        assert math.isclose(health["anomaly_score"], expected_score)
+
+
+def test_machine_simulator_replay_mode():
+    """MachineSimulator in replay mode emits one CSV-derived record per tick."""
+    sim = MachineSimulator()
+    sim.set_replay_source(CSVTelemetrySource(_ABNORMAL_CSV))
+    assert sim.is_replay_mode is True
+
+    first_tick = sim.tick()
+    assert len(first_tick) >= 1, "Replay tick must yield at least one MachineTelemetry"
+    by_id = {t.machine_id: t for t in first_tick}
+
+    assert "CNC-01" in by_id, "CNC-01 must be present in replay mode"
+    cnc01 = by_id["CNC-01"]
+    assert isinstance(cnc01, MachineTelemetry)
+    # Abnormal CSV rows have FAULT operating_status → health.status=ANOMALY → ALARM
+    assert cnc01.operating_status == "ALARM"
+    # speed (rpm) is a positive integer; vibration is positive mm/s
+    assert cnc01.rpm > 0
+    assert cnc01.spindle_vibration > 0
+    assert cnc01.motor_current > 0
+
+    # Clear replay and verify synthetic mode resumes unchanged.
+    sim.clear_replay_source()
+    assert sim.is_replay_mode is False
+    baseline = sim.tick()
+    cnc01_synth = next(t for t in baseline if t.machine_id == "CNC-01")
+    assert cnc01_synth.operating_status == "NORMAL"
+
+
+def test_server_replay_mode_integration():
+    """FactoryServerService with csv_replay_path exposes CSV-derived telemetry through step()."""
+    service = FactoryServerService(
+        interval_sec=0.05,
+        speed=10.0,
+        csv_replay_path=_NORMAL_CSV,
+    )
+    try:
+        assert service.csv_replay_path == _NORMAL_CSV
+        assert service.injection_engine.machine_sim.is_replay_mode
+
+        packet = asyncio.run(service.step())
+        by_id = {t.machine_id: t for t in packet.telemetry}
+        assert "CNC-01" in by_id
+        cnc01 = by_id["CNC-01"]
+        # Normal CSV rows have operating_status=RUNNING → health.status=NORMAL
+        assert cnc01.operating_status == "NORMAL"
+        assert cnc01.rpm > 0
+    finally:
+        service.stop()

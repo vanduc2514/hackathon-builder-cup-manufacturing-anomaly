@@ -11,6 +11,7 @@ import time
 from collections import deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, AsyncIterator, Optional
 
 import uvicorn
@@ -107,6 +108,7 @@ class FactoryServerService:
         speed: float = 1.0,
         pubsub_dispatcher: Optional[EdgePubSubDispatcher] = None,
         clock: Optional[Any] = None,
+        csv_replay_path: Optional["Path"] = None,
     ) -> None:
         self.interval_sec = interval_sec
         self.speed = max(0.1, speed)
@@ -121,6 +123,22 @@ class FactoryServerService:
         self.last_delivery_reports: list[PubSubDeliveryReport] = []
         self._clock = clock or time.monotonic
         self._last_telemetry_publish_time: float = self._clock()
+        # Resolve replay path: explicit constructor arg wins, otherwise fall
+        # back to whatever the simulator settings picked up at process start.
+        from pathlib import Path as _Path
+
+        resolved_replay: Optional[_Path] = None
+        if csv_replay_path is not None:
+            resolved_replay = _Path(csv_replay_path).expanduser()
+            if not resolved_replay.exists():
+                logger.warning(
+                    "CSV replay path does not exist (%s); replay mode disabled",
+                    resolved_replay,
+                )
+                resolved_replay = None
+        elif getattr(settings, "csv_replay_path", None):
+            resolved_replay = _Path(settings.csv_replay_path).expanduser()
+        self.csv_replay_path: Optional[_Path] = resolved_replay
 
         self.injection_engine = DefectInjectionEngine()
         # Always register IM-05 baseline so 4 machine bays (CNC-01..03, IM-05) are monitored
@@ -134,6 +152,25 @@ class FactoryServerService:
         if "IM-05" not in self.injection_engine.conveyor_sim.machines:
             self.injection_engine.conveyor_sim.include_im = True
             self.injection_engine.conveyor_sim.machines.append("IM-05")
+
+        if self.csv_replay_path is not None:
+            from simulator.csv_replay import CSVTelemetrySource
+
+            try:
+                source = CSVTelemetrySource(self.csv_replay_path)
+            except (FileNotFoundError, ValueError) as exc:
+                logger.warning(
+                    "Could not enable CSV replay mode from %s: %s",
+                    self.csv_replay_path,
+                    exc,
+                )
+            else:
+                self.injection_engine.machine_sim.set_replay_source(source)
+                logger.info(
+                    "CSV replay mode enabled: %s (%d rows)",
+                    self.csv_replay_path.name,
+                    len(source),
+                )
 
     @property
     def interval(self) -> float:

@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class CitationReference(BaseModel):
@@ -492,6 +492,101 @@ class MachineTelemetryPayload(BaseModel):
         description="Spindle rotational speed",
     )
     anomaly_score: float = Field(default=0.0, ge=0.0, le=1.0)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_nested_payload(cls, value: Any) -> Any:
+        """Adapt competition nested JSON payloads to the canonical flat schema.
+
+        The competition MQTT protocol (see ``AI-sensor-spec.md``) emits a nested
+        envelope with ``asset`` / ``operating`` / ``sensor`` / ``health`` keys. The
+        legacy internal bus and most existing tests use a flat shape keyed
+        directly on the field names. This pre-root validator reshapes a nested
+        payload into the flat schema expected by the field validators below,
+        leaving flat payloads untouched.
+        """
+        if not isinstance(value, dict):
+            return value
+
+        nested_keys = {"asset", "operating", "sensor", "health"}
+        if not nested_keys.intersection(value.keys()):
+            # Flat payload (or mixed) — let field validators resolve aliases.
+            return value
+
+        normalized: Dict[str, Any] = dict(value)
+
+        # --- asset ---------------------------------------------------------------
+        asset = value.get("asset") or {}
+        if isinstance(asset, dict):
+            machine_id = asset.get("machine_id") or "/".join(
+                filter(
+                    None,
+                    [
+                        str(asset.get("factory_id", "")),
+                        str(asset.get("line_id", "")),
+                        str(asset.get("machine_id", "")),
+                    ],
+                )
+            ).strip("/")
+            if machine_id:
+                normalized["machine_id"] = machine_id
+            tool_id = asset.get("machine_id")
+            if isinstance(tool_id, str) and tool_id:
+                normalized.setdefault("tool_id", tool_id)
+
+        # --- timestamp -----------------------------------------------------------
+        ts = value.get("timestamp")
+        if isinstance(ts, str):
+            normalized["timestamp"] = ts
+
+        # --- operating_status (health → operating → operating_status fallback chain)
+        health = value.get("health") or {}
+        operating = value.get("operating") or {}
+        raw_status: Any = None
+        if isinstance(health, dict):
+            raw_status = health.get("status")
+        if raw_status is None and isinstance(operating, dict):
+            raw_status = operating.get("status")
+        if raw_status is not None:
+            status_str = str(raw_status).strip().upper()
+            if status_str == "NORMAL":
+                mapped = "NORMAL"
+            elif status_str in {"ANOMALY", "ABNORMAL", "FAULT", "ALARM"}:
+                mapped = "ALARM"
+            else:
+                mapped = "WARNING"
+            normalized["operating_status"] = mapped
+
+        # --- sensor block --------------------------------------------------------
+        sensor = value.get("sensor") or {}
+        if isinstance(sensor, dict):
+            vibration = sensor.get("vibration") or {}
+            if isinstance(vibration, dict) and "value" in vibration:
+                normalized.setdefault("vibration_mm_s", vibration.get("value"))
+                normalized.setdefault("spindle_vibration", vibration.get("value"))
+            temperature = sensor.get("temperature") or {}
+            if isinstance(temperature, dict) and "value" in temperature:
+                normalized.setdefault("temperature_c", temperature.get("value"))
+                normalized.setdefault("spindle_temp", temperature.get("value"))
+            current = sensor.get("current") or {}
+            if isinstance(current, dict) and "value" in current:
+                normalized.setdefault("current_a", current.get("value"))
+                normalized.setdefault("motor_current", current.get("value"))
+            rpm = sensor.get("rpm") or {}
+            if isinstance(rpm, dict) and "value" in rpm:
+                normalized.setdefault("spindle_speed_rpm", rpm.get("value"))
+                normalized.setdefault("rpm", rpm.get("value"))
+
+        # --- health --------------------------------------------------------------
+        if isinstance(health, dict) and "anomaly_score" in health:
+            score = health.get("anomaly_score")
+            try:
+                normalized["anomaly_score"] = float(score)
+            except (TypeError, ValueError):
+                # Fallback to 0.0 when the value is not parseable.
+                normalized["anomaly_score"] = 0.0
+
+        return normalized
 
 
 class TelemetryAlert(BaseModel):

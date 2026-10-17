@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -28,6 +29,12 @@ class SimulatorSettings(BaseSettings):
         os.getenv("SIMULATOR_TELEMETRY_PUBLISH_SEC", "10.0")
     )
 
+    # CSV telemetry replay (TKT-071 / issue #269)
+    # When set, the factory service reads telemetry from this CSV file instead
+    # of generating synthetic Gaussian numbers. Activate via env var
+    # SIMULATOR_CSV_REPLAY_PATH=/abs/path/to/file.csv (or CLI --csv-replay).
+    csv_replay_path: Optional[Path] = None
+
     # Google Cloud Pub/Sub & Edge Dispatch
     gcp_project_id: str = os.getenv("GCP_PROJECT_ID", "kaizen-local")
     pubsub_emulator_host: str | None = os.getenv("PUBSUB_EMULATOR_HOST", None)
@@ -48,5 +55,16 @@ class SimulatorSettings(BaseSettings):
     # Logging
     log_level: str = os.getenv("LOG_LEVEL", "INFO")
 
+    @classmethod
+    def from_env(cls) -> "SimulatorSettings":
+        """Helper to construct an instance while honouring the SIMULATOR_CSV_REPLAY_PATH env var."""
+        raw_path = os.getenv("SIMULATOR_CSV_REPLAY_PATH")
+        path: Optional[Path] = None
+        if raw_path:
+            candidate = Path(raw_path).expanduser()
+            if candidate.exists():
+                path = candidate
+        return cls(csv_replay_path=path)
 
-settings = SimulatorSettings()
+
+settings = SimulatorSettings.from_env()

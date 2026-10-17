@@ -5,8 +5,12 @@ from __future__ import annotations
 import logging
 import random
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Optional
 
 from simulator.models import MachineTelemetry
+
+if TYPE_CHECKING:
+    from simulator.csv_replay import CSVTelemetrySource
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +18,12 @@ logger = logging.getLogger(__name__)
 class MachineSimulator:
     """Simulates real-time sensor streams across CNC-01, CNC-02, CNC-03, and optional IM-05."""
 
-    def __init__(self, include_im: bool = False, seed: int | None = None) -> None:
+    def __init__(
+        self,
+        include_im: bool = False,
+        seed: int | None = None,
+        replay_source: Optional["CSVTelemetrySource"] = None,
+    ) -> None:
         self.rng = random.Random(seed)
         self.include_im = include_im
         self.anomaly_active: dict[str, bool] = {
@@ -29,6 +38,7 @@ class MachineSimulator:
             "CNC-03": 0.0,
             "IM-05": 0.0,
         }
+        self.replay_source: Optional["CSVTelemetrySource"] = replay_source
         # Nominal baselines
         self.machines_meta = {
             "CNC-01": {"tool_id": "T04", "base_rpm": 1480, "type": "cnc"},
@@ -37,6 +47,21 @@ class MachineSimulator:
         }
         if self.include_im:
             self.machines_meta["IM-05"] = {"tool_id": "MOLD-03", "base_rpm": 0, "type": "im"}
+
+    # ------------------------------------------------------------------
+    # Replay source accessors
+    # ------------------------------------------------------------------
+    def set_replay_source(self, source: "CSVTelemetrySource") -> None:
+        """Activates CSV replay mode with the supplied source."""
+        self.replay_source = source
+
+    def clear_replay_source(self) -> None:
+        """Disables CSV replay mode and returns to synthetic generation."""
+        self.replay_source = None
+
+    @property
+    def is_replay_mode(self) -> bool:
+        return self.replay_source is not None
 
     def inject_anomaly(
         self,
@@ -74,14 +99,62 @@ class MachineSimulator:
     reset_baseline = reset
 
     def tick(self) -> list[MachineTelemetry]:
-        """Generates a synchronous telemetry snapshot for all machines."""
+        """Generates a synchronous telemetry snapshot for all machines.
+
+        Replay mode (when ``replay_source`` is set) replaces synthetic telemetry
+        for the canonical CNC-01 machine bay with one CSV row per tick. Other
+        machines keep their synthetic baseline so existing visualisations and
+        the conveyor part generation remain stable during replay dry-runs.
+        When the source runs out, the cursor wraps to row 0 with an INFO log.
+        """
         now = datetime.now(timezone.utc).isoformat()
         results: list[MachineTelemetry] = []
+        replay_row = None
+        if self.replay_source is not None:
+            replay_row = self.replay_source.next()
+            if replay_row is None:
+                # Source exhausted — log once, then wrap to the start.
+                logger.info(
+                    "CSV replay source exhausted; wrapping to row 0 (%s)",
+                    self.replay_source.csv_path.name,
+                )
+                self.replay_source.reset()
+                replay_row = self.replay_source.next()
 
         for machine_id, meta in self.machines_meta.items():
             is_anomalous = self.anomaly_active.get(machine_id, False)
             sev = self.anomaly_severity.get(machine_id, 0.0)
             m_type = meta.get("type", "cnc")
+
+            if replay_row is not None and machine_id == "CNC-01":
+                # ------------------------------------------------------------------
+                # Replay mode: CNC-01 receives one deterministic record per tick.
+                # ------------------------------------------------------------------
+                source = self.replay_source
+                assert source is not None
+                payload = source.to_competition_payload(
+                    replay_row,
+                    rng=self.rng,
+                    row_index=max(source.cursor - 1, 0),
+                )
+                sensor = payload["sensor"]
+                health = payload["health"]
+                motor_current = float(sensor["current"]["value"])
+                results.append(
+                    MachineTelemetry(
+                        machine_id=machine_id,
+                        timestamp=payload["timestamp"],
+                        tool_id=meta["tool_id"],
+                        spindle_vibration=round(float(sensor["vibration"]["value"]), 3),
+                        motor_current=round(motor_current, 2),
+                        spindle_temp=round(float(sensor["temperature"]["value"]), 1),
+                        rpm=int(sensor["rpm"]["value"]),
+                        operating_status="NORMAL" if health["status"] == "NORMAL" else "ALARM",
+                        anomaly_score=float(health["anomaly_score"]),
+                        dryer_dew_point=None,
+                    )
+                )
+                continue
 
             if m_type == "im":
                 # Injection Molding IM-05: machine parameters remain normal while dew point rises

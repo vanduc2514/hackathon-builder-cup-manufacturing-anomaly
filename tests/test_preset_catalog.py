@@ -8,9 +8,9 @@ from backend.tools.preset_catalog import CATALOG_FILE, get_preset, list_presets
 
 
 def test_list_presets_loads_all_five_im05_presets():
-    """list_presets must load all 5 curated IM-05 items with valid schemas."""
+    """list_presets must load the 5 curated IM-05 items (plus competition extras)."""
     presets = list_presets()
-    assert len(presets) == 5
+    assert len(presets) >= 5
 
     preset_ids = [p.id for p in presets]
     assert "preset-im05-normal" in preset_ids

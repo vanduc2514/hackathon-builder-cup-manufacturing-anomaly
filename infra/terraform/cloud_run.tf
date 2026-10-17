@@ -144,7 +144,7 @@ resource "google_cloud_run_v2_service" "backend" {
       # Firebase Hosting rewrites reach.
       env {
         name  = "BACKEND_PUBLIC_URL"
-        value = google_cloud_run_v2_service.backend.uri
+        value = local.hosting_urls.web
       }
 
       env {

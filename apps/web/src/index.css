@@ -2320,6 +2320,225 @@ button.incident-chip:hover {
   border-top: 1px solid var(--hair);
 }
 
+/* Drawer declutter (Issue #259 / TKT-067): status chip row + How-it-works
+   graph + preview-spec badges + single footer CTA. The tokens below mirror
+   the design authority `.stitch/designs/system_topology_workflow.html`. */
+.drawer-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.drawer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.section-label {
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint, var(--muted));
+}
+.drawer-cta-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+}
+.drawer-dismiss {
+  margin-right: auto;
+}
+.drawer-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+/* How-it-works graph (#259 / AC-TOP-27): three-column flow
+   inputs → this node → outputs; tap any input/output to swap the drawer. */
+.how-wrap {
+  padding: 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--hair);
+  background: rgba(255, 255, 255, 0.55);
+}
+.how-graph-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1.1fr) 34px minmax(0, 1fr);
+  margin-bottom: 6px;
+}
+.how-graph-head > span {
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint, var(--muted));
+}
+.how-graph-head > span:nth-child(2) {
+  grid-column: 3;
+  text-align: center;
+}
+.how-graph-head > span:nth-child(3) {
+  grid-column: 5;
+}
+.how-graph {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1.1fr) 34px minmax(0, 1fr);
+  align-items: stretch;
+}
+.how-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.how-slot {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+  min-width: 0;
+}
+.how-link {
+  position: relative;
+  min-height: 44px;
+}
+.how-link > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.how-link > svg > path {
+  fill: none;
+  stroke: #334155;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+.how-node {
+  position: relative;
+  width: 100%;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--hair-strong);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+.how-node > .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--accent);
+  flex: none;
+}
+.how-node:hover,
+.how-node:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.how-node-empty {
+  cursor: default;
+  border-style: dashed;
+  color: var(--faint, var(--muted));
+  background: transparent;
+  pointer-events: none;
+}
+.how-node-empty > .material-symbols-outlined {
+  color: var(--faint, var(--muted));
+}
+.how-self {
+  position: relative;
+  align-self: center;
+  min-height: 72px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: #fff;
+  border: 1.5px solid var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.how-self > .material-symbols-outlined {
+  font-size: 22px;
+  color: var(--accent);
+}
+.how-self-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.how-oneliner {
+  margin: 8px 2px 0;
+  font-size: 12.5px;
+  color: var(--ink-2, var(--text));
+  line-height: 1.45;
+}
+
+/* Preview specs (Issue #259 / AC-TOP-28): small chips under the preview, max
+   three, keeping noise low. */
+.preview-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.preview-specs:empty {
+  display: none;
+}
+.spec-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--hair);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.spec-badge > b {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Preview surface (Issue #259). Acts as the parent container for any nested
+   preview component (StaticPreviewSVG, TelemetryPreview, etc.). */
+.ui-ref-preview-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+  padding: 8px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--hair);
+  background: rgba(255, 255, 255, 0.55);
+}
+
 .drawer-facts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

@@ -88,7 +88,7 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     expect(screen.getByText(/Verification Gate \(Invariant #3\): Streak/i)).toBeDefined();
   });
 
-  it('opens side drawer when a node card is clicked and displays production UI reference', () => {
+  it('opens side drawer when a node card is clicked and routes the production-UI footer CTA to the right tab', () => {
     const handleNavigateTab = vi.fn();
     render(<SystemTopologyView incident={mockIncident} onNavigateToTab={handleNavigateTab} />);
 
@@ -96,14 +96,18 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     const machinesNode = screen.getByRole('button', { name: /CNC \/ Injection/i });
     fireEvent.click(machinesNode);
 
-    // Side drawer opens with specs
-    expect(screen.getByText(/Production UI Surface Reference/i)).toBeDefined();
-    expect(screen.getByText(/CNC Fleet Grid/i)).toBeDefined();
-    expect(screen.getByText(/Inspect Line 1 Fleet Table/i)).toBeDefined();
+    // Issue #259 / TKT-067: the legacy 'Production UI Surface Reference' card is
+    // gone; the same CTA now lives in the drawer footer as the single primary
+    // button labelled `node.uiRef.ctaLabel` (with arrow_forward icon). We still
+    // expect the host view to route through onNavigateToTab on click.
+    const ctaButton = document.getElementById('drawer-ui-cta');
+    expect(ctaButton).toBeDefined();
+    expect(ctaButton?.querySelector('span')?.textContent).toBe('Inspect Line 1 Fleet Table');
+    expect(ctaButton?.classList.contains('drawer-cta')).toBe(true);
+    expect(ctaButton?.classList.contains('btn-primary')).toBe(true);
+    expect(ctaButton?.querySelector('.material-symbols-outlined')?.textContent).toBe('arrow_forward');
 
-    // Test UI Reference navigation CTA
-    const ctaButton = screen.getByText(/Inspect Line 1 Fleet Table/i);
-    fireEvent.click(ctaButton);
+    fireEvent.click(ctaButton!);
     expect(handleNavigateTab).toHaveBeenCalledWith('overview');
   });
 
@@ -573,10 +577,17 @@ describe('System Topology Production Polish Regression (Epic #238 / TKT-062)', (
 
     // Embedded Telemetry Preview
     expect(screen.getByLabelText('Embedded Live Sensor Telemetry')).toBeDefined();
-    expect(screen.getAllByText(/Spindle Telemetry Stream/i).length).toBeGreaterThanOrEqual(1);
 
-    // Human-readable title in Production UI Surface Reference
-    expect(screen.getByText('High-Frequency Sensor Telemetry')).toBeDefined();
+    // Issue #259 / TKT-067: the legacy 'Production UI Surface Reference' card is
+    // gone. The same routing info now lives in the footer CTA and the
+    // .preview-specs badge row underneath the preview.
+    const footerCta = document.getElementById('drawer-ui-cta');
+    expect(footerCta).toBeDefined();
+    expect(footerCta?.querySelector('span')?.textContent).toBe('View Spindle Vibration FFT');
+
+    const specs = document.getElementById('drawer-preview-specs');
+    expect(specs).toBeDefined();
+    expect(specs?.querySelectorAll('.spec-badge').length ?? 0).toBeGreaterThanOrEqual(1);
 
     // Test Acoustic Waveform Preview for floor-mics
     const nodeMics = TOPOLOGY_NODES.find((n) => n.id === 'floor-mics')!;

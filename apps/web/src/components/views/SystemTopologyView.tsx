@@ -519,6 +519,7 @@ export default function SystemTopologyView({
         }
         onNavigateToTab={onNavigateToTab}
         onSimulateTrigger={(id) => handleSimulateRipple(id)}
+        onSelectNode={(id) => setSelectedNodeId(id)}
       />
     </div>
   );

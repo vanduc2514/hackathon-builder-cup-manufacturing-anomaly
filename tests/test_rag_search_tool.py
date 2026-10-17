@@ -492,12 +492,11 @@ def test_local_bm25_retriever_includes_drive_documents(tmp_path, monkeypatch):
     """After sync_gdrive_kb writes drive/* Markdown, the BM25 retriever must pick
     them up so 'alarm 53' queries match the new 8D case citations (Tech Lead S4 AC)."""
 
-    import shutil
     from backend.tools.rag_search_tool import LocalBM25Retriever
     from scripts.sync_gdrive_kb import (
+        EightDRecord,
         Redactor,
         render_8d_markdown,
-        EightDRecord,
     )
 
     # Stage a small knowledge_base under tmp_path with one drive/* 8D record.

@@ -9,7 +9,6 @@ pytest configuration (no ``emulator`` marker needed).
 from __future__ import annotations
 
 import json
-import os
 import shutil
 import sys
 from pathlib import Path
@@ -44,7 +43,6 @@ from scripts.sync_gdrive_kb import (  # noqa: E402  (path-based import after sys
     render_maintenance_markdown,
     update_index_json,
 )
-
 
 # =============================================================================
 # Fixtures

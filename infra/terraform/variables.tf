@@ -152,6 +152,11 @@ variable "factory_operator_account" {
   default     = ""
 }
 
+# ---------------------------------------------------------------------------
+# TKT-073 follow-up / Tech Lead deferred: removal of factory_operator_* vars
+# is **deliberately deferred** until the 7-day zero-read window (TL decision).
+# Do NOT remove in any follow-up PR without explicit TL sign-off. See
+# PR #294 / TKT-073 follow-up.
 variable "factory_operator_password" {
   description = "Password of the service account the backend uses to mint a JWT for /api/auth/login before calling the factory service. Must match auth_users."
   type        = string

@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from backend.core.models import AgentFinding, ImpactMetrics, IncidentState
+import json
+
+from backend.core.models import (
+    AgentFinding,
+    ImpactMetrics,
+    IncidentState,
+    MachineTelemetryPayload,
+)
 
 
 def test_agent_finding_schema():
@@ -199,3 +206,201 @@ def test_incident_summary_schema():
     assert dump["incident_id"] == "INC-0412"
     assert dump["closed_at"] == "2026-10-15T09:42:00Z"
 
+
+# ---------------------------------------------------------------------------
+# TKT-071 / issue #269 — Competition MQTT nested payload schema adapter
+# ---------------------------------------------------------------------------
+
+
+_NESTED_SPEC = {
+    "timestamp": "2026-10-01T09:00:00Z",
+    "asset": {
+        "factory_id": "FACTORY_01",
+        "line_id": "LINE_01",
+        "machine_id": "MOTOR_01",
+        "machine_type": "INDUCTION_MOTOR",
+    },
+    "operating": {"status": "RUNNING", "load_percent": 70, "runtime_hours": 1200},
+    "sensor": {
+        "temperature": {"value": 65.2, "unit": "C"},
+        "vibration": {"value": 2.1, "unit": "mm/s"},
+        "rpm": {"value": 1480, "unit": "rpm"},
+        "current": {"value": 12.3, "unit": "A"},
+    },
+    "health": {"status": "NORMAL", "anomaly_score": 0.12},
+}
+
+
+def test_nested_payload_validation():
+    """Exact nested JSON from AI-sensor-spec.md maps to canonical flat model."""
+    payload = MachineTelemetryPayload.model_validate(_NESTED_SPEC)
+    # asset.machine_id present → machine_id resolves to the asset leaf
+    assert payload.machine_id == "MOTOR_01"
+    assert payload.tool_id == "MOTOR_01"
+    assert payload.timestamp == "2026-10-01T09:00:00Z"
+    assert payload.operating_status == "NORMAL"
+    assert payload.spindle_vibration == pytest_approx(2.1)
+    assert payload.spindle_temp == pytest_approx(65.2)
+    assert payload.motor_current == pytest_approx(12.3)
+    assert payload.rpm == 1480
+    assert payload.anomaly_score == pytest_approx(0.12)
+
+
+def test_nested_payload_via_json_string():
+    """Accepts JSON-formatted nested payload (the actual wire format)."""
+    raw = json.dumps(_NESTED_SPEC)
+    payload = MachineTelemetryPayload.model_validate_json(raw)
+    assert payload.machine_id == "MOTOR_01"
+    assert payload.spindle_vibration == pytest_approx(2.1)
+    assert payload.rpm == 1480
+
+
+def test_flat_payload_still_validates():
+    """Backward compatibility — legacy flat schema still parses unchanged."""
+    flat = {
+        "machine_id": "CNC-02",
+        "tool_id": "T07",
+        "operating_status": "WARNING",
+        "spindle_vibration": 3.1,
+        "spindle_temp": 55.5,
+        "motor_current": 14.2,
+        "rpm": 1470,
+        "anomaly_score": 0.42,
+        "timestamp": "2026-10-15T11:00:00Z",
+    }
+    payload = MachineTelemetryPayload.model_validate(flat)
+    assert payload.machine_id == "CNC-02"
+    assert payload.operating_status == "WARNING"
+    assert payload.spindle_vibration == pytest_approx(3.1)
+    assert payload.spindle_temp == pytest_approx(55.5)
+    assert payload.motor_current == pytest_approx(14.2)
+    assert payload.rpm == 1470
+    assert payload.anomaly_score == pytest_approx(0.42)
+
+
+def test_nested_operating_status_mapping():
+    """NORMAL->NORMAL, ANOMALY/ABNORMAL->ALARM, anything else->WARNING.
+
+    Plan spec (Tech Lead): the validator only treats the canonical health
+    statuses ``ANOMALY``/``ABNORMAL`` as ALARM. ``FAULT``/``ALARM``/etc. fall
+    through to ``WARNING``. The forward ``to_competition_payload`` mapping
+    only ever emits ``NORMAL`` or ``ANOMALY`` health.status values, so the
+    validator branch is intentionally narrow.
+    """
+    cases = [
+        ("NORMAL", "NORMAL"),
+        (
+            "RUNNING",
+            "WARNING",
+        ),  # Tech Lead plan: only the canonical health statuses map; others → WARNING
+        ("FAULT", "WARNING"),
+        ("ALARM", "WARNING"),
+        ("ANOMALY", "ALARM"),
+        ("ABNORMAL", "ALARM"),
+        ("WARNING", "WARNING"),
+        ("DEGRADED", "WARNING"),
+        ("", "WARNING"),
+    ]
+    for raw, expected in cases:
+        nested = {
+            "asset": {"machine_id": "MOTOR_01"},
+            "health": {"status": raw},
+            "sensor": {
+                "temperature": {"value": 50.0},
+                "vibration": {"value": 1.0},
+                "rpm": {"value": 1000},
+                "current": {"value": 5.0},
+            },
+        }
+        payload = MachineTelemetryPayload.model_validate(nested)
+        assert payload.operating_status == expected, (
+            f"raw={raw!r} expected={expected!r} got={payload.operating_status!r}"
+        )
+
+
+def test_anomaly_score_fallback_when_missing():
+    """health.anomaly_score missing -> model default (0.0)."""
+    nested = {
+        "asset": {"machine_id": "MOTOR_01"},
+        "health": {"status": "NORMAL"},  # no anomaly_score key
+        "sensor": {
+            "temperature": {"value": 50.0},
+            "vibration": {"value": 1.0},
+            "rpm": {"value": 1000},
+            "current": {"value": 5.0},
+        },
+    }
+    payload = MachineTelemetryPayload.model_validate(nested)
+    assert payload.anomaly_score == 0.0
+
+
+def test_mixed_batch_mapping_invariant():
+    """Several nested payloads share consistent field mapping rules."""
+    rows = [
+        {
+            "asset": {"machine_id": "MOTOR_01"},
+            "health": {"status": "NORMAL", "anomaly_score": 0.05},
+            "sensor": {
+                "temperature": {"value": 42.0},
+                "vibration": {"value": 1.8},
+                "rpm": {"value": 1480},
+                "current": {"value": 12.0},
+            },
+        },
+        {
+            "asset": {"machine_id": "MOTOR_02"},
+            "health": {"status": "ANOMALY", "anomaly_score": 0.91},
+            "sensor": {
+                "temperature": {"value": 88.0},
+                "vibration": {"value": 5.5},
+                "rpm": {"value": 1320},
+                "current": {"value": 19.7},
+            },
+        },
+    ]
+    results = [MachineTelemetryPayload.model_validate(r) for r in rows]
+    assert results[0].operating_status == "NORMAL"
+    assert results[1].operating_status == "ALARM"
+    assert results[0].spindle_vibration == pytest_approx(1.8)
+    assert results[1].spindle_vibration == pytest_approx(5.5)
+    assert results[0].rpm == 1480
+    assert results[1].rpm == 1320
+    assert results[0].motor_current == pytest_approx(12.0)
+    assert results[1].motor_current == pytest_approx(19.7)
+
+
+def test_machine_id_fallback_from_factory_line_segments():
+    """machine_id falls back to asset.factory_id/line_id/asset.machine_id concatenation."""
+    nested = {
+        "asset": {
+            "factory_id": "FACTORY_02",
+            "line_id": "LINE_07",
+            # asset.machine_id deliberately missing
+        },
+        "sensor": {
+            "temperature": {"value": 50.0},
+            "vibration": {"value": 1.0},
+            "rpm": {"value": 1000},
+            "current": {"value": 5.0},
+        },
+        "health": {"status": "NORMAL"},
+    }
+    payload = MachineTelemetryPayload.model_validate(nested)
+    assert payload.machine_id == "FACTORY_02/LINE_07"
+
+
+# Tiny inline pytest.approx substitute so the suite does not depend on pytest
+# internals. Real pytest.approx would also work fine, but this keeps the test
+# file standalone-runnable.
+class _Approx:
+    def __init__(self, value: float) -> None:
+        self.value = value
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, (int, float)):
+            return False
+        return abs(float(other) - self.value) < 1e-6
+
+
+def pytest_approx(value: float) -> _Approx:
+    return _Approx(float(value))

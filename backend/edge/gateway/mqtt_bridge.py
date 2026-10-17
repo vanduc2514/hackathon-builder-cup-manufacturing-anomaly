@@ -154,6 +154,22 @@ class MQTTBridge:
             return None
 
         try:
+            import json as _json  # local alias so we can peek at structure cheaply
+
+            try:
+                _peek = _json.loads(payload_str)
+            except Exception:
+                _peek = None
+            if isinstance(_peek, dict) and "asset" in _peek:
+                logger.info(
+                    "Received nested competition telemetry on %s (asset=%s)",
+                    topic,
+                    _peek.get("asset", {}).get("machine_id"),
+                )
+        except Exception:
+            pass
+
+        try:
             telemetry = MachineTelemetryPayload.model_validate_json(payload_str)
         except Exception as exc:
             logger.warning(

@@ -94,10 +94,34 @@ app.include_router(fleet_router, dependencies=_auth)
 app.include_router(presets_router, dependencies=_auth)
 
 
-@app.get("/healthz", include_in_schema=False)
-@app.get("/health")
-@app.get("/healthz")
+@app.get("/health", include_in_schema=False)
 async def health_check():
+    """Liveness probe — must answer within Cloud Run's liveness timeout (2 s) under load.
+
+    No Pub/Sub, no Blackboard, no lazy imports. Cloud Run's liveness probe never
+    spins up Pub/Sub subscribers: a slow ``pubsub_manager.is_available()`` (which
+    does an admin API round-trip) used to push ``/health`` over the 2 s timeout
+    and trigger instance shutdowns that dropped in-flight requests.
+
+    Contract: returns ``{"status": "healthy", "app": <name>, "version": <ver>}``
+    with HTTP 200 in <50 ms. Backward-compatible with anything that already reads
+    ``.status``.
+    """
+    return {
+        "status": "healthy",
+        "app": settings.app_name,
+        "version": settings.version,
+    }
+
+
+@app.get("/healthz", include_in_schema=False)
+async def healthz():
+    """Startup probe — runs the full readiness check (Pub/Sub, Blackboard reload, ...).
+
+    Cloud Run polls ``/healthz`` for the startup probe (timeout 3 s, failure
+    threshold 18) and gates traffic until it returns 200. Once traffic flows,
+    the liveness probe switches to ``/health`` which is the cheap variant.
+    """
     from backend.core.pubsub_manager import pubsub_manager
 
     return {

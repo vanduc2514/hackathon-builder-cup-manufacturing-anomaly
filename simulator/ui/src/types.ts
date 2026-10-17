@@ -66,3 +66,24 @@ export interface FactoryTickPacket {
   active_anomaly?: ActiveAnomalyStatus | null;
   pubsub_delivery?: PubSubDeliveryReport[] | null;
 }
+
+export type AuthRole = 'technician' | 'shift_leader';
+
+export interface AuthUser {
+  username: string;
+  display_name: string;
+  role: AuthRole;
+}
+
+export interface AuthSession {
+  token: string;
+  expires_at: string;
+  user: AuthUser;
+}
+
+export interface DemoAccount {
+  username: string;
+  display_name: string;
+  role: AuthRole;
+}
+

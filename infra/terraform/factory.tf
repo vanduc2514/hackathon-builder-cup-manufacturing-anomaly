@@ -87,6 +87,16 @@ resource "google_cloud_run_v2_service" "factory" {
         name  = "FACTORY_API_KEY"
         value = random_password.factory_api_key.result
       }
+
+      env {
+        name  = "AUTH_SECRET"
+        value = random_password.auth_secret.result
+      }
+
+      env {
+        name  = "AUTH_USERS"
+        value = var.auth_users
+      }
     }
   }
 

@@ -16,6 +16,8 @@ class SimulatorSettings(BaseSettings):
 
     app_env: str = os.getenv("APP_ENV", "development")
     factory_api_key: Optional[str] = os.getenv("FACTORY_API_KEY", None)
+    auth_secret: Optional[str] = os.getenv("AUTH_SECRET", None)
+    auth_users: Optional[str] = os.getenv("AUTH_USERS", None)
 
     mqtt_broker_host: str = os.getenv("MQTT_BROKER_HOST", "broker.emqx.io")
     mqtt_broker_port: int = int(os.getenv("MQTT_BROKER_PORT", "1883"))

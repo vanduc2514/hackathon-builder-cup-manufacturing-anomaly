@@ -5,6 +5,9 @@ import SideDrawer from '../SideDrawer';
 import { TOPOLOGY_LAYERS, TOPOLOGY_PHASES } from '../../lib/topology';
 import { matchesAgentRole } from '../../lib/incident';
 import { getDrawerPreviewComponent } from './drawer-previews';
+import StaticPreviewSVG from './drawer-previews/StaticPreviewSVG';
+import NoPreviewPlaceholder from './drawer-previews/NoPreviewPlaceholder';
+import { hasStaticSvg } from './drawer-previews/svgManifest';
 
 interface TopologyNodeDrawerProps {
   node: TopologyNodeDefinition | null;
@@ -192,16 +195,34 @@ export default function TopologyNodeDrawer({
           )}
         </div>
 
-        {/* Embedded Live Component Preview (TKT-061 #246) */}
-        {previewComponent && (
+        {/* Embedded Live Component Preview (TKT-061 #246) + Designer schematic
+            fallback (TKT-076 / Issue #277 — AC-TOP-28b/28c). Hierarchy:
+            (1) custom React preview if registered, else
+            (2) static SVG from /previews/topology/<nodeId>.svg if a file
+                exists for this node, else
+            (3) "No preview" placeholder so the drawer layout never collapses. */}
+        {(previewComponent || hasStaticSvg(node.id)) && (
           <div className="col" style={{ gap: '0.5rem' }}>
             <div className="row between" style={{ alignItems: 'center' }}>
-              <div className="eyebrow">Live Component Telemetry &amp; Verification Preview</div>
-              <span className="chip chip-sm chip-blue mono" style={{ fontSize: '0.68rem' }}>
-                Interactive
+              <div className="eyebrow">
+                {previewComponent
+                  ? 'Live Component Telemetry & Verification Preview'
+                  : 'Topology Schematic Preview'}
+              </div>
+              <span
+                className={`chip chip-sm mono ${previewComponent ? 'chip-blue' : 'chip-slate'}`}
+                style={{ fontSize: '0.68rem' }}
+              >
+                {previewComponent ? 'Interactive' : 'Static'}
               </span>
             </div>
-            {previewComponent}
+            {previewComponent ? previewComponent : <StaticPreviewSVG nodeId={node.id} />}
+          </div>
+        )}
+        {!previewComponent && !hasStaticSvg(node.id) && (
+          <div className="col" style={{ gap: '0.5rem' }}>
+            <div className="eyebrow">Topology Schematic Preview</div>
+            <NoPreviewPlaceholder nodeId={node.id} />
           </div>
         )}
 

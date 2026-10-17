@@ -759,7 +759,7 @@ describe('Window Containers, Contrast Hierarchy & Responsive Canvas Shell (TKT-0
     expect(container.querySelector('[data-testid="topology-canvas"]')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Zoom In' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Zoom Out' })).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Reset View' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Reset View to 100%' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Toggle Minimap' })).toBeDefined();
 
     expect(TOPOLOGY_EDGES).toHaveLength(37);
@@ -770,5 +770,85 @@ describe('Window Containers, Contrast Hierarchy & Responsive Canvas Shell (TKT-0
     // their target nodes were not present in the test fixture.
     const edgePaths = container.querySelectorAll('svg.topology-svg-overlay path.edge-path');
     expect(edgePaths.length).toBe(TOPOLOGY_EDGES.length);
+  });
+});
+
+// TKT-076 / Issue #277 — REWORK ROUND 2 regression suite.
+// Guards the runtime ReferenceError introduced by the missing
+// `hasStaticSvg` import (20/30 topology nodes used to crash the drawer)
+// and verifies the SVG-only / NoPreviewPlaceholder fallback hierarchy
+// renders without throwing on unknown node ids.
+describe('TopologyNodeDrawer SVG schematic preview fallback (TKT-076 / AC-TOP-28a–c, round 2)', () => {
+  it('opens the drawer for an SVG-only node (output-docs) and renders StaticPreviewSVG without crashing', () => {
+    const outputDocs = TOPOLOGY_NODES.find((n) => n.id === 'output-docs')!;
+    expect(outputDocs).toBeDefined();
+
+    const state: TopologyNodeState = {
+      id: 'output-docs',
+      summary: '8D Report Composer',
+      status: 'done',
+      isInferred: false,
+      details: {},
+    };
+
+    // Render must not throw ReferenceError for missing hasStaticSvg import.
+    render(
+      <TopologyNodeDrawer
+        node={outputDocs}
+        state={state}
+        incident={mockIncident}
+        onClose={vi.fn()}
+      />,
+    );
+
+    // SideDrawer portals its body to `document.body`, so we query the global
+    // document — `container` from `render()` does not contain the portal.
+    // StaticPreviewSVG wrapper renders for nodes listed in PREVIEW_SVG_NODE_IDS.
+    const staticPreview = document.querySelector(
+      '[data-testid="static-preview-output-docs"]',
+    );
+    expect(staticPreview).not.toBeNull();
+    expect(screen.getByRole('img', { name: /output-docs/i })).toBeDefined();
+
+    // NoPreviewPlaceholder must NOT be present — we have a static SVG.
+    expect(document.querySelector('[data-testid="no-preview-output-docs"]')).toBeNull();
+  });
+
+  it('falls back to NoPreviewPlaceholder for an unknown node id without crashing', () => {
+    // We borrow a real node's structural fields but override `id` to a value
+    // that is NOT in PREVIEW_SVG_NODE_IDS, so the drawer must take the
+    // "No preview" fallback branch and never throw ReferenceError.
+    const syntheticNode = {
+      ...TOPOLOGY_NODES[0],
+      id: 'synthetic-unknown-node',
+      label: 'Synthetic Unknown Node',
+    } as unknown as Parameters<typeof TopologyNodeDrawer>[0]['node'];
+
+    const state = {
+      id: 'synthetic-unknown-node',
+      summary: 'No schematic available',
+      status: 'idle' as const,
+      isInferred: true,
+      details: {},
+    } as unknown as Parameters<typeof TopologyNodeDrawer>[0]['state'];
+
+    render(
+      <TopologyNodeDrawer
+        node={syntheticNode}
+        state={state}
+        incident={null}
+        onClose={vi.fn()}
+      />,
+    );
+
+    // SideDrawer portals to document.body — query globally.
+    const placeholder = document.querySelector(
+      '[data-testid="no-preview-synthetic-unknown-node"]',
+    );
+    expect(placeholder).not.toBeNull();
+    // Static SVG path must NOT be used for unknown nodes.
+    expect(
+      document.querySelector('[data-testid="static-preview-synthetic-unknown-node"]'),
+    ).toBeNull();
   });
 });

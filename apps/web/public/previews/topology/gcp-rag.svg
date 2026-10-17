@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 176" role="img" aria-label="RAG search query with SOP citations ranked by similarity"><style>
+:root, svg {
+  --ink: #0b1220;
+  --ink-2: #1e2638;
+  --text: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --hair: rgba(15, 23, 42, .07);
+  --hair-strong: rgba(15, 23, 42, .14);
+  --accent: #5b5bf0;
+  --accent-2: #7c6cff;
+  --accent-soft: rgba(91, 91, 240, .1);
+  --accent-ring: rgba(91, 91, 240, .28);
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, .12);
+  --warning: #f5a524;
+  --warning-soft: rgba(245, 165, 36, .14);
+  --success: #12a150;
+  --success-soft: rgba(18, 161, 80, .12);
+  --info: #3b82f6;
+  --info-soft: rgba(59, 130, 246, .12);
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+@keyframes pvScan { 0% { transform: translateY(0); } 100% { transform: translateY(140px); } }
+@keyframes pvPacket { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: .9; } 90% { opacity: .9; } 100% { transform: translateX(200px); opacity: 0; } }
+@keyframes pvPacketShort { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: .9; } 85% { opacity: .9; } 100% { transform: translateX(118px); opacity: 0; } }
+@keyframes pvBlink { 50% { opacity: .25; } }
+@keyframes pvBreathe { 50% { opacity: .55; } }
+@keyframes pvFlow { to { stroke-dashoffset: -20; } }
+.pv-scan { animation: pvScan 3.2s ease-in-out infinite alternate; }
+.pv-packet { animation: pvPacket 4.4s linear infinite; }
+.pv-packet-short { animation-name: pvPacketShort; animation-duration: 3.6s; }
+.pv-blink { animation: pvBlink 2s ease-in-out infinite; }
+.pv-breathe { animation: pvBreathe 2.8s ease-in-out infinite; }
+.pv-flow { animation: pvFlow 1.6s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .pv-scan, .pv-packet, .pv-blink, .pv-breathe, .pv-flow { animation: none; }
+  .pv-packet { opacity: .9; }
+}
+</style><defs><marker id="pv-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#334155"/></marker></defs>
+      <rect x="8" y="10" width="504" height="34" rx="17" fill="#fff" stroke="var(--hair-strong)" stroke-width="1"/>
+      <circle cx="30" cy="27" r="7" fill="none" stroke="var(--muted)" stroke-width="1.8"/><path d="M35 32 L40 37" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round"/>
+      <text x="48" y="31" font-size="11" fill="var(--ink)" font-family="var(--font-mono)">"spindle vibration + flank wear on T07"</text>
+      
+          <rect x="8" y="60" width="160" height="92" rx="8" fill="#fff" stroke="var(--accent)" stroke-width="1.8"/>
+          <path d="M22 74 h22 v28 h-22 z" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <rect x="52" y="76" width="100" height="4" rx="2" fill="rgba(15,23,42,.1)"/>
+          <rect x="52" y="86" width="74" height="4" rx="2" fill="rgba(15,23,42,.07)"/>
+          <rect x="52" y="96" width="60" height="4" rx="2" fill="var(--warning)"/>
+          <text x="22" y="122" font-size="9.5" fill="var(--ink)" font-weight="700" font-family="var(--font-mono)">SOP-CNC-TOOL-CALIB-v4</text>
+          <rect x="22" y="132" width="100" height="8" rx="4" fill="rgba(15,23,42,.06)"/>
+          <rect x="22" y="132" width="94.0" height="8" rx="4" fill="var(--accent)"/>
+          <text x="154" y="140" font-size="10.5" fill="var(--accent)" text-anchor="end" font-weight="700" font-family="var(--font-mono)">0.94</text>
+          <rect x="178" y="60" width="160" height="92" rx="8" fill="#fff" stroke="var(--hair-strong)" stroke-width="1"/>
+          <path d="M192 74 h22 v28 h-22 z" fill="#f1f4fa" stroke="var(--faint)"/>
+          <rect x="222" y="76" width="100" height="4" rx="2" fill="rgba(15,23,42,.1)"/>
+          <rect x="222" y="86" width="74" height="4" rx="2" fill="rgba(15,23,42,.07)"/>
+          <rect x="222" y="96" width="40" height="4" rx="2" fill="rgba(15,23,42,.07)"/>
+          <text x="192" y="122" font-size="9.5" fill="var(--ink)" font-family="var(--font-mono)">8D-2025-T07-wear</text>
+          <rect x="192" y="132" width="100" height="8" rx="4" fill="rgba(15,23,42,.06)"/>
+          <rect x="192" y="132" width="81.0" height="8" rx="4" fill="var(--hair-strong)"/>
+          <text x="324" y="140" font-size="10.5" fill="var(--muted)" text-anchor="end" font-weight="700" font-family="var(--font-mono)">0.81</text>
+          <rect x="348" y="60" width="160" height="92" rx="8" fill="#fff" stroke="var(--hair-strong)" stroke-width="1"/>
+          <path d="M362 74 h22 v28 h-22 z" fill="#f1f4fa" stroke="var(--faint)"/>
+          <rect x="392" y="76" width="100" height="4" rx="2" fill="rgba(15,23,42,.1)"/>
+          <rect x="392" y="86" width="74" height="4" rx="2" fill="rgba(15,23,42,.07)"/>
+          <rect x="392" y="96" width="40" height="4" rx="2" fill="rgba(15,23,42,.07)"/>
+          <text x="362" y="122" font-size="9.5" fill="var(--ink)" font-family="var(--font-mono)">MAINT-LOG-CNC02</text>
+          <rect x="362" y="132" width="100" height="8" rx="4" fill="rgba(15,23,42,.06)"/>
+          <rect x="362" y="132" width="66.0" height="8" rx="4" fill="var(--hair-strong)"/>
+          <text x="494" y="140" font-size="10.5" fill="var(--muted)" text-anchor="end" font-weight="700" font-family="var(--font-mono)">0.66</text>
+      <text x="8" y="170" font-size="10.5" fill="var(--muted)" font-family="var(--font-main)">top-3 citations handed to Root Cause agent</text></svg>

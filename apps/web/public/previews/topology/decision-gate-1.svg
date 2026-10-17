@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 312 70" role="img" aria-label="Confidence 0.89 above threshold 0.70"><style>
+:root, svg {
+  --ink: #0b1220;
+  --ink-2: #1e2638;
+  --text: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --hair: rgba(15, 23, 42, .07);
+  --hair-strong: rgba(15, 23, 42, .14);
+  --accent: #5b5bf0;
+  --accent-2: #7c6cff;
+  --accent-soft: rgba(91, 91, 240, .1);
+  --accent-ring: rgba(91, 91, 240, .28);
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, .12);
+  --warning: #f5a524;
+  --warning-soft: rgba(245, 165, 36, .14);
+  --success: #12a150;
+  --success-soft: rgba(18, 161, 80, .12);
+  --info: #3b82f6;
+  --info-soft: rgba(59, 130, 246, .12);
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+@keyframes pvScan { 0% { transform: translateY(0); } 100% { transform: translateY(140px); } }
+@keyframes pvPacket { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: .9; } 90% { opacity: .9; } 100% { transform: translateX(200px); opacity: 0; } }
+@keyframes pvPacketShort { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: .9; } 85% { opacity: .9; } 100% { transform: translateX(118px); opacity: 0; } }
+@keyframes pvBlink { 50% { opacity: .25; } }
+@keyframes pvBreathe { 50% { opacity: .55; } }
+@keyframes pvFlow { to { stroke-dashoffset: -20; } }
+.pv-scan { animation: pvScan 3.2s ease-in-out infinite alternate; }
+.pv-packet { animation: pvPacket 4.4s linear infinite; }
+.pv-packet-short { animation-name: pvPacketShort; animation-duration: 3.6s; }
+.pv-blink { animation: pvBlink 2s ease-in-out infinite; }
+.pv-breathe { animation: pvBreathe 2.8s ease-in-out infinite; }
+.pv-flow { animation: pvFlow 1.6s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .pv-scan, .pv-packet, .pv-blink, .pv-breathe, .pv-flow { animation: none; }
+  .pv-packet { opacity: .9; }
+}
+</style><defs><marker id="pv-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#334155"/></marker></defs>
+      <rect x="8" y="22" width="296" height="14" rx="7" fill="var(--warning-soft)"/>
+      <rect x="215" y="22" width="89" height="14" rx="7" fill="var(--success-soft)"/>
+      <line x1="215" y1="14" x2="215" y2="44" stroke="var(--ink)" stroke-width="1.5"/>
+      <text x="215" y="10" font-size="10" fill="var(--ink)" text-anchor="middle" font-family="var(--font-mono)">0.70</text>
+      <circle cx="271" cy="29" r="7" fill="var(--accent)" stroke="#fff" stroke-width="2"/>
+      <text x="8" y="60" font-size="10.5" fill="#b4710a" font-family="var(--font-mono)">< 0.70 → Diagnostic</text>
+      <text x="304" y="60" font-size="10.5" fill="#0e8a43" text-anchor="end" font-family="var(--font-mono)">0.89 → Phase C</text></svg>

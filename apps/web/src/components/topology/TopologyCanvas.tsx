@@ -15,6 +15,8 @@ import {
   type RoutedEdge,
 } from '../../lib/topology/edgeRouter';
 import PhaseLaneOverlay from './PhaseLaneOverlay';
+import { animateViewport, fitView, panToCenter } from './canvasControls';
+import { TOPOLOGY_NODES } from '../../lib/topology';
 
 interface TopologyCanvasProps {
   nodeStates: Record<TopologyNodeId, TopologyNodeState>;
@@ -189,11 +191,141 @@ export default function TopologyCanvas({
     setIsPanning(false);
   };
 
-  const handleZoomIn = () => setScale((s) => Math.min(1.6, Number((s + 0.1).toFixed(2))));
-  const handleZoomOut = () => setScale((s) => Math.max(0.6, Number((s - 0.1).toFixed(2))));
-  const handleZoomReset = () => {
-    setScale(1);
-    setPan({ x: 0, y: 0 });
+  const handleZoomIn = () =>
+    animateViewport(
+      { scale, pan },
+      { scale: Math.min(1.6, Number((scale + 0.1).toFixed(2))) },
+      ({ scale: nextScale }) => setScale(nextScale),
+    );
+  const handleZoomOut = () =>
+    animateViewport(
+      { scale, pan },
+      { scale: Math.max(0.6, Number((scale - 0.1).toFixed(2))) },
+      ({ scale: nextScale }) => setScale(nextScale),
+    );
+  const handleZoomReset = () =>
+    animateViewport(
+      { scale, pan },
+      { scale: 1, pan: { x: 0, y: 0 } },
+      (next) => {
+        setScale(next.scale);
+        setPan(next.pan);
+      },
+    );
+  const handleFitToScreen = () =>
+    fitView({ scale, pan }, (next) => {
+      setScale(next.scale);
+      setPan(next.pan);
+    });
+
+  // ----- Minimap schematic data (TKT-076 / Issue #277 — AC-TOP-30a) -----
+  // The minimap does not read absolute coordinates from the live DOM
+  // (jsdom cannot measure layout), so it derives a stable schematic from
+  // the static layer/node catalog. Layer bands stack vertically in the
+  // declared order; nodes inside a layer spread horizontally by index.
+  // Two `.mm-window` rectangles highlight the upper detection cluster and
+  // the lower verification cluster so the schematic matches the Stitch
+  // mock authority used by QA.
+  interface MinimapNode {
+    id: TopologyNodeId;
+    cx: number;
+    cy: number;
+    layerIndex: number;
+    isDecisionGate: boolean;
+  }
+  interface MinimapLayer {
+    id: string;
+    label: string;
+    y: number;
+    height: number;
+  }
+  const MINIMAP_W = 112;
+  const MINIMAP_H = 180;
+  const layerCount = TOPOLOGY_LAYERS.length;
+  const layerBandHeight = MINIMAP_H / layerCount;
+
+  const minimapLayers: MinimapLayer[] = TOPOLOGY_LAYERS.map((layer, idx) => ({
+    id: layer.id,
+    label: layer.tag ?? layer.name,
+    y: idx * layerBandHeight,
+    height: layerBandHeight,
+  }));
+
+  const minimapNodes: MinimapNode[] = (() => {
+    const items: MinimapNode[] = [];
+    TOPOLOGY_LAYERS.forEach((layer, layerIndex) => {
+      const nodesInLayer = TOPOLOGY_NODES.filter((n) => n.layer === layer.id);
+      const count = nodesInLayer.length || 1;
+      nodesInLayer.forEach((node, nodeIndex) => {
+        const ratio = (nodeIndex + 1) / (count + 1);
+        items.push({
+          id: node.id,
+          cx: ratio * MINIMAP_W,
+          cy: layerIndex * layerBandHeight + layerBandHeight / 2,
+          layerIndex,
+          isDecisionGate: Boolean(node.isDecisionGate),
+        });
+      });
+    });
+    return items;
+  })();
+
+  // Window rectangles: upper detection (layer 0 + layer 1) and lower
+  // verification (last layer). Each covers ~60% of the width centered.
+  const upperWindow = {
+    x: MINIMAP_W * 0.18,
+    y: 0,
+    width: MINIMAP_W * 0.64,
+    height: layerBandHeight * 2,
+  };
+  const lowerWindow = {
+    x: MINIMAP_W * 0.18,
+    y: layerBandHeight * (layerCount - 1),
+    width: MINIMAP_W * 0.64,
+    height: layerBandHeight,
+  };
+
+  // `.mm-viewport` mirrors the live pan/scale state so users can see which
+  // region of the canvas they are currently looking at. The minimap window
+  // (MINIMAP_W × MINIMAP_H) represents the full un-transformed canvas in
+  // world-coordinates; the overlay rectangle maps the visible viewport into
+  // that same world space, so:
+  //   x      = -pan.x / scale                 (world-coord of viewport's left edge)
+  //           scaled by (MINIMAP_W / contentRect.w) so the overlay stays
+  //           inside the minimap window even when the canvas is wider/narrower
+  //           than MINIMAP_W (e.g. responsive layouts).
+  //   width  = (viewport screen-px / scale)   = MINIMAP_W * (contentRect.w / scale) / contentRect.w
+  //           equivalently:  MINIMAP_W / scale  when contentRect.w == MINIMAP_W.
+  // Same logic for y / height. With pan=0, scale=1 this collapses to the
+  // full minimap window — exactly what users expect before any interaction.
+  const contentRect = viewportRef.current?.getBoundingClientRect();
+  const contentW = Math.max(contentRect?.width ?? MINIMAP_W, 1);
+  const contentH = Math.max(contentRect?.height ?? MINIMAP_H, 1);
+  const viewportRect = {
+    x: (-pan.x / scale) * (MINIMAP_W / contentW),
+    y: (-pan.y / scale) * (MINIMAP_H / contentH),
+    width: MINIMAP_W / scale,
+    height: MINIMAP_H / scale,
+  };
+
+  const handleMinimapNodeClick = (node: MinimapNode) => {
+    // Estimate the node's center in the un-transformed canvas space. The
+    // canvas is laid out as a vertical pipeline of 5 phase lanes; we
+    // approximate the node's y from its layer index and treat its x as the
+    // canvas center (which is where panning centers it after fit).
+    const layerIdx = node.layerIndex;
+    const canvasHeight = Math.max(viewportRef.current?.clientHeight ?? 850, 850);
+    const approxNodeY = (layerIdx + 0.5) * (canvasHeight / layerCount);
+    const approxNodeX = (viewportRef.current?.clientWidth ?? MINIMAP_W) / 2;
+    panToCenter(
+      { scale, pan },
+      { width: viewportRef.current?.clientWidth ?? MINIMAP_W, height: canvasHeight },
+      { x: approxNodeX, y: approxNodeY },
+      (next) => {
+        setScale(next.scale);
+        setPan(next.pan);
+      },
+    );
   };
 
   return (
@@ -215,7 +347,8 @@ export default function TopologyCanvas({
         borderRadius: 'var(--r-lg)',
       }}
     >
-      {/* Floating Canvas Navigation Toolbar */}
+      {/* Floating Canvas Navigation Toolbar
+          (TKT-076 / Issue #277 — AC-TOP-30c: order [+][-][zoom-btn][fit][map]) */}
       <div className="canvas-floating-controls" style={{ zIndex: 10 }}>
         <button
           type="button"
@@ -226,9 +359,6 @@ export default function TopologyCanvas({
         >
           <span className="material-symbols-outlined">zoom_in</span>
         </button>
-        <span className="ctrl-zoom-level" title="Current Zoom Scale">
-          {Math.round(scale * 100)}%
-        </span>
         <button
           type="button"
           className="ctrl-btn"
@@ -240,10 +370,19 @@ export default function TopologyCanvas({
         </button>
         <button
           type="button"
-          className="ctrl-btn"
+          className="ctrl-zoom-level"
           onClick={handleZoomReset}
-          title="Reset View (100%)"
-          aria-label="Reset View"
+          title="Reset View to 100%"
+          aria-label="Reset View to 100%"
+        >
+          {Math.round(scale * 100)}%
+        </button>
+        <button
+          type="button"
+          className="ctrl-btn"
+          onClick={handleFitToScreen}
+          title="Fit to Screen"
+          aria-label="Fit to Screen"
         >
           <span className="material-symbols-outlined">fit_screen</span>
         </button>
@@ -258,89 +397,117 @@ export default function TopologyCanvas({
         </button>
       </div>
 
-      {/* Floating Minimap Widget */}
+      {/* Floating Minimap Widget
+          (TKT-076 / Issue #277 — AC-TOP-30a: body-level fixed, SVG schematic). */}
       {showMinimap && (
         <aside
           aria-label="Topology Minimap"
           className="minimap-widget"
-          style={{
-            position: 'absolute',
-            bottom: 16,
-            right: 16,
-            width: 140,
-            background: 'var(--glass-bg-strong)',
-            border: '1px solid var(--glass-border)',
-            borderRadius: 8,
-            padding: 8,
-            boxShadow: 'var(--glass-shadow)',
-            backdropFilter: 'blur(10px)',
-            zIndex: 10,
-            pointerEvents: 'none',
-          }}
+          data-testid="topology-minimap"
         >
-          <div
-            className="minimap-title"
-            style={{
-              fontSize: '10px',
-              fontFamily: 'var(--font-mono)',
-              color: 'var(--muted)',
-              marginBottom: 6,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-            }}
+          <div className="minimap-title">Topology Minimap</div>
+          <svg
+            className="minimap-svg"
+            viewBox={`0 0 ${MINIMAP_W} ${MINIMAP_H}`}
+            role="img"
+            aria-label="Minimap schematic of all topology layers and nodes"
           >
-            Topology Minimap
-          </div>
-          <div
-            className="minimap-canvas"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 4,
-              height: 100,
-              background: 'var(--depth-layer)',
-              borderRadius: 4,
-              padding: 4,
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            {TOPOLOGY_LAYERS.map((layer) => (
-              <div
-                key={layer.id}
-                className="minimap-phase-bar"
-                style={{
-                  height: 16,
-                  borderRadius: 2,
-                  background: layer.badgeHex,
-                  opacity: 0.75,
-                  fontSize: '9px',
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  paddingLeft: 4,
-                  fontFamily: 'var(--font-mono)',
-                }}
-              >
-                L{layer.tag}
-              </div>
-            ))}
-            <div
-              className="minimap-viewport-box"
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: `${Math.min(100, Math.max(25, 100 / scale))}%`,
-                border: '1.5px solid #6366f1',
-                background: 'rgba(99,102,241,0.15)',
-                borderRadius: 3,
-                pointerEvents: 'none',
-              }}
+            {/* 2 cluster windows */}
+            <rect
+              className="mm-window"
+              x={upperWindow.x}
+              y={upperWindow.y}
+              width={upperWindow.width}
+              height={upperWindow.height}
+              rx={2}
             />
-          </div>
-        </aside>
+            <rect
+              className="mm-window"
+              x={lowerWindow.x}
+              y={lowerWindow.y}
+              width={lowerWindow.width}
+              height={lowerWindow.height}
+              rx={2}
+            />
+
+            {/* 5 layer bands */}
+            {minimapLayers.map((layer) => (
+              <rect
+                key={`layer-${layer.id}`}
+                className="mm-layer"
+                x={4}
+                y={layer.y + 2}
+                width={MINIMAP_W - 8}
+                height={layer.height - 4}
+                rx={2}
+              />
+            ))}
+
+            {/* dashed sub-zones per layer (3 zones each to keep schematic readable) */}
+            {minimapLayers.map((layer) =>
+              [0, 1, 2].map((zoneIdx) => {
+                const zoneWidth = (MINIMAP_W - 8) / 3;
+                return (
+                  <rect
+                    key={`zone-${layer.id}-${zoneIdx}`}
+                    className="mm-zone"
+                    x={4 + zoneIdx * zoneWidth}
+                    y={layer.y + 4}
+                    width={zoneWidth - 1}
+                    height={layer.height - 8}
+                    rx={1}
+                  />
+                );
+              }),
+            )}
+
+            {/* Node dots */}
+            {minimapNodes.map((n) => (
+              <circle
+                key={`node-${n.id}`}
+                className={`mm-node${selectedNodeId === n.id ? ' is-selected' : ''}`}
+                cx={n.cx}
+                cy={n.cy}
+                r={n.isDecisionGate ? 2.4 : 1.8}
+                data-testid={`mm-node-${n.id}`}
+                role="button"
+                aria-label={`Focus ${n.id}`}
+                tabIndex={0}
+                onClick={() => handleMinimapNodeClick(n)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleMinimapNodeClick(n);
+                  }
+                }}
+              />
+            ))}
+
+            {/* Gate accent dot (larger indigo ring) — drawn on top */}
+            {minimapNodes
+              .filter((n) => n.isDecisionGate)
+              .map((n) => (
+                <circle
+                  key={`gate-${n.id}`}
+                  className="mm-gate"
+                  cx={n.cx}
+                  cy={n.cy}
+                  r={3.2}
+                  data-testid={`mm-gate-${n.id}`}
+                />
+              ))}
+
+            {/* Live viewport overlay synced with pan/scale */}
+            <rect
+              className="mm-viewport"
+              x={Math.max(0, Math.min(MINIMAP_W - 4, viewportRect.x))}
+              y={Math.max(0, Math.min(MINIMAP_H - 4, viewportRect.y))}
+              width={Math.max(6, Math.min(MINIMAP_W, viewportRect.width))}
+              height={Math.max(6, Math.min(MINIMAP_H, viewportRect.height))}
+              rx={1.5}
+            />
+          </svg>
+          </aside>
       )}
 
       {/* Transformable Canvas Surface */}

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 150" role="img" aria-label="Gemma edge filter drops normal frames and forwards only defect frame"><style>
+:root, svg {
+  --ink: #0b1220;
+  --ink-2: #1e2638;
+  --text: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --hair: rgba(15, 23, 42, .07);
+  --hair-strong: rgba(15, 23, 42, .14);
+  --accent: #5b5bf0;
+  --accent-2: #7c6cff;
+  --accent-soft: rgba(91, 91, 240, .1);
+  --accent-ring: rgba(91, 91, 240, .28);
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, .12);
+  --warning: #f5a524;
+  --warning-soft: rgba(245, 165, 36, .14);
+  --success: #12a150;
+  --success-soft: rgba(18, 161, 80, .12);
+  --info: #3b82f6;
+  --info-soft: rgba(59, 130, 246, .12);
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+@keyframes pvScan { 0% { transform: translateY(0); } 100% { transform: translateY(140px); } }
+@keyframes pvPacket { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: .9; } 90% { opacity: .9; } 100% { transform: translateX(200px); opacity: 0; } }
+@keyframes pvPacketShort { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: .9; } 85% { opacity: .9; } 100% { transform: translateX(118px); opacity: 0; } }
+@keyframes pvBlink { 50% { opacity: .25; } }
+@keyframes pvBreathe { 50% { opacity: .55; } }
+@keyframes pvFlow { to { stroke-dashoffset: -20; } }
+.pv-scan { animation: pvScan 3.2s ease-in-out infinite alternate; }
+.pv-packet { animation: pvPacket 4.4s linear infinite; }
+.pv-packet-short { animation-name: pvPacketShort; animation-duration: 3.6s; }
+.pv-blink { animation: pvBlink 2s ease-in-out infinite; }
+.pv-breathe { animation: pvBreathe 2.8s ease-in-out infinite; }
+.pv-flow { animation: pvFlow 1.6s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .pv-scan, .pv-packet, .pv-blink, .pv-breathe, .pv-flow { animation: none; }
+  .pv-packet { opacity: .9; }
+}
+</style><defs><marker id="pv-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#334155"/></marker></defs>
+      <text x="8" y="16" font-size="10.5" fill="var(--muted)" font-family="var(--font-main)">camera frames</text><g opacity="0.45"><rect x="8" y="26" width="28" height="36" rx="4" fill="#eef1f8" stroke="var(--hair-strong)" stroke-width="1"/><path d="M14 56 L30 32" stroke="var(--faint)" stroke-width="1"/></g><g opacity="0.45"><rect x="42" y="26" width="28" height="36" rx="4" fill="#eef1f8" stroke="var(--hair-strong)" stroke-width="1"/><path d="M48 56 L64 32" stroke="var(--faint)" stroke-width="1"/></g><g opacity="0.45"><rect x="76" y="26" width="28" height="36" rx="4" fill="#eef1f8" stroke="var(--hair-strong)" stroke-width="1"/><path d="M82 56 L98 32" stroke="var(--faint)" stroke-width="1"/></g><g opacity="0.45"><rect x="110" y="26" width="28" height="36" rx="4" fill="#eef1f8" stroke="var(--hair-strong)" stroke-width="1"/><path d="M116 56 L132 32" stroke="var(--faint)" stroke-width="1"/></g><g opacity="0.45"><rect x="144" y="26" width="28" height="36" rx="4" fill="#eef1f8" stroke="var(--hair-strong)" stroke-width="1"/><path d="M150 56 L166 32" stroke="var(--faint)" stroke-width="1"/></g><g opacity="0.45"><rect x="178" y="26" width="28" height="36" rx="4" fill="#eef1f8" stroke="var(--hair-strong)" stroke-width="1"/><path d="M184 56 L200 32" stroke="var(--faint)" stroke-width="1"/></g><g opacity="1"><rect x="212" y="26" width="28" height="36" rx="4" fill="#fff" stroke="var(--danger)" stroke-width="1.8"/><rect x="218" y="34" width="12" height="12" fill="none" stroke="var(--danger)" stroke-dasharray="3 2"/></g><g opacity="0.45"><rect x="246" y="26" width="28" height="36" rx="4" fill="#eef1f8" stroke="var(--hair-strong)" stroke-width="1"/><path d="M252 56 L268 32" stroke="var(--faint)" stroke-width="1"/></g><g opacity="0.45"><rect x="280" y="26" width="28" height="36" rx="4" fill="#eef1f8" stroke="var(--hair-strong)" stroke-width="1"/><path d="M286 56 L302 32" stroke="var(--faint)" stroke-width="1"/></g><g opacity="0.45"><rect x="314" y="26" width="28" height="36" rx="4" fill="#eef1f8" stroke="var(--hair-strong)" stroke-width="1"/><path d="M320 56 L336 32" stroke="var(--faint)" stroke-width="1"/></g>
+      <path d="M182 64 C182 100 190 108 214 108" fill="none" stroke="var(--faint)" stroke-width="1.6" marker-end="url(#pv-arrow)"/>
+      <rect x="214" y="92" width="112" height="32" rx="8" fill="var(--success-soft)" stroke="rgba(18,161,80,.4)" stroke-width="1"/><text x="270" y="112" font-size="10.5" fill="#0e8a43" text-anchor="middle" font-weight="700" font-family="var(--font-mono)">dropped · 96.2%</text>
+      <path d="M226 62 C236 84 360 84 384 52" fill="none" stroke="#334155" stroke-width="1.6" marker-end="url(#pv-arrow)"/>
+      <rect x="386" y="26" width="126" height="36" rx="8" fill="#fff" stroke="var(--danger)" stroke-width="1.6"/><text x="449" y="48" font-size="11" fill="var(--ink)" text-anchor="middle" font-weight="650" font-family="var(--font-main)">defect → cloud</text>
+      <path d="M449 62 L449 92" fill="none" stroke="#334155" stroke-width="1.6" marker-end="url(#pv-arrow)"/>
+      <rect x="386" y="94" width="126" height="32" rx="8" fill="#fff" stroke="var(--hair-strong)" stroke-width="1"/><text x="449" y="114" font-size="10.5" fill="var(--ink)" text-anchor="middle" font-family="var(--font-mono)">diverter 38 ms</text>
+      <text x="8" y="144" font-size="10.5" fill="var(--muted)" font-family="var(--font-main)">on-prem inference · no raw video leaves the plant</text></svg>

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 170" role="img" aria-label="Operational output documents: certified 8D report, signed work order, and updated SOP"><style>
+:root, svg {
+  --ink: #0b1220;
+  --ink-2: #1e2638;
+  --text: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --hair: rgba(15, 23, 42, .07);
+  --hair-strong: rgba(15, 23, 42, .14);
+  --accent: #5b5bf0;
+  --accent-2: #7c6cff;
+  --accent-soft: rgba(91, 91, 240, .1);
+  --accent-ring: rgba(91, 91, 240, .28);
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, .12);
+  --warning: #f5a524;
+  --warning-soft: rgba(245, 165, 36, .14);
+  --success: #12a150;
+  --success-soft: rgba(18, 161, 80, .12);
+  --info: #3b82f6;
+  --info-soft: rgba(59, 130, 246, .12);
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+@keyframes pvScan { 0% { transform: translateY(0); } 100% { transform: translateY(140px); } }
+@keyframes pvPacket { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: .9; } 90% { opacity: .9; } 100% { transform: translateX(200px); opacity: 0; } }
+@keyframes pvPacketShort { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: .9; } 85% { opacity: .9; } 100% { transform: translateX(118px); opacity: 0; } }
+@keyframes pvBlink { 50% { opacity: .25; } }
+@keyframes pvBreathe { 50% { opacity: .55; } }
+@keyframes pvFlow { to { stroke-dashoffset: -20; } }
+.pv-scan { animation: pvScan 3.2s ease-in-out infinite alternate; }
+.pv-packet { animation: pvPacket 4.4s linear infinite; }
+.pv-packet-short { animation-name: pvPacketShort; animation-duration: 3.6s; }
+.pv-blink { animation: pvBlink 2s ease-in-out infinite; }
+.pv-breathe { animation: pvBreathe 2.8s ease-in-out infinite; }
+.pv-flow { animation: pvFlow 1.6s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .pv-scan, .pv-packet, .pv-blink, .pv-breathe, .pv-flow { animation: none; }
+  .pv-packet { opacity: .9; }
+}
+</style><defs><marker id="pv-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#334155"/></marker></defs>
+      <rect x="8" y="8" width="504" height="154" rx="12" fill="#f8fafd" stroke="var(--hair-strong)" stroke-width="1"/>
+      <text x="20" y="28" font-size="10.5" fill="var(--muted)" font-family="var(--font-mono)">gs://kaizen-records/2026/INC-B42</text>
+      <rect x="372" y="14" width="128" height="20" rx="6" fill="var(--success-soft)" stroke="rgba(18,161,80,.4)"/>
+      <circle cx="384" cy="24" r="3.5" fill="var(--success)"/>
+      <text x="394" y="28" font-size="9.5" fill="#0e8a43" font-weight="700" font-family="var(--font-mono)">APPROVED & LOCKED</text>
+      <rect x="16" y="46" width="156" height="72" rx="8" fill="#fff" stroke="var(--hair-strong)" stroke-width="1"/><rect x="26" y="56" width="22" height="20" rx="4" fill="var(--success)" opacity=".15"/><path d="M31 61 h12 v10 h-12 z" fill="none" stroke="var(--success)" stroke-width="1.6"/><text x="54" y="70" font-size="9.5" fill="var(--ink)" font-weight="700" font-family="var(--font-mono)">8d_report.pdf</text><text x="26" y="92" font-size="9.5" fill="var(--text)" font-family="var(--font-main)">IATF 16949 D1–D8</text><text x="26" y="106" font-size="9" fill="var(--muted)" font-family="var(--font-mono)">2.4 MB</text><rect x="180" y="46" width="156" height="72" rx="8" fill="#fff" stroke="var(--hair-strong)" stroke-width="1"/><rect x="190" y="56" width="22" height="20" rx="4" fill="var(--info)" opacity=".15"/><path d="M195 61 h12 v10 h-12 z" fill="none" stroke="var(--info)" stroke-width="1.6"/><text x="218" y="70" font-size="9.5" fill="var(--ink)" font-weight="700" font-family="var(--font-mono)">work_order_signed.pdf</text><text x="190" y="92" font-size="9.5" fill="var(--text)" font-family="var(--font-main)">CMMS WO-4481 · Signed</text><text x="190" y="106" font-size="9" fill="var(--muted)" font-family="var(--font-mono)">850 KB</text><rect x="344" y="46" width="156" height="72" rx="8" fill="#fff" stroke="var(--hair-strong)" stroke-width="1"/><rect x="354" y="56" width="22" height="20" rx="4" fill="var(--accent)" opacity=".15"/><path d="M359 61 h12 v10 h-12 z" fill="none" stroke="var(--accent)" stroke-width="1.6"/><text x="382" y="70" font-size="9.5" fill="var(--ink)" font-weight="700" font-family="var(--font-mono)">sop_v5.json</text><text x="354" y="92" font-size="9.5" fill="var(--text)" font-family="var(--font-main)">Machining SOP Rev 5</text><text x="354" y="106" font-size="9" fill="var(--muted)" font-family="var(--font-mono)">42 KB</text>
+      <line x1="16" y1="128" x2="504" y2="128" stroke="var(--hair)" stroke-width="1"/>
+      <text x="20" y="146" font-size="9.5" fill="var(--ink)" font-family="var(--font-mono)">Signed: David Vance (Shift Leader) · 2026-10-16 11:02:15 UTC</text>
+      <text x="500" y="146" font-size="9.5" fill="var(--muted)" text-anchor="end" font-family="var(--font-main)">Permanent Audit Archive · ISO 9001</text></svg>

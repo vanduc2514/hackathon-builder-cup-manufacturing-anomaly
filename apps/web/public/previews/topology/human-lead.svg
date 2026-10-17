@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 150" role="img" aria-label="Shift Leader approval unlocks only after 50 of 50 clean parts"><style>
+:root, svg {
+  --ink: #0b1220;
+  --ink-2: #1e2638;
+  --text: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --hair: rgba(15, 23, 42, .07);
+  --hair-strong: rgba(15, 23, 42, .14);
+  --accent: #5b5bf0;
+  --accent-2: #7c6cff;
+  --accent-soft: rgba(91, 91, 240, .1);
+  --accent-ring: rgba(91, 91, 240, .28);
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, .12);
+  --warning: #f5a524;
+  --warning-soft: rgba(245, 165, 36, .14);
+  --success: #12a150;
+  --success-soft: rgba(18, 161, 80, .12);
+  --info: #3b82f6;
+  --info-soft: rgba(59, 130, 246, .12);
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+@keyframes pvScan { 0% { transform: translateY(0); } 100% { transform: translateY(140px); } }
+@keyframes pvPacket { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: .9; } 90% { opacity: .9; } 100% { transform: translateX(200px); opacity: 0; } }
+@keyframes pvPacketShort { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: .9; } 85% { opacity: .9; } 100% { transform: translateX(118px); opacity: 0; } }
+@keyframes pvBlink { 50% { opacity: .25; } }
+@keyframes pvBreathe { 50% { opacity: .55; } }
+@keyframes pvFlow { to { stroke-dashoffset: -20; } }
+.pv-scan { animation: pvScan 3.2s ease-in-out infinite alternate; }
+.pv-packet { animation: pvPacket 4.4s linear infinite; }
+.pv-packet-short { animation-name: pvPacketShort; animation-duration: 3.6s; }
+.pv-blink { animation: pvBlink 2s ease-in-out infinite; }
+.pv-breathe { animation: pvBreathe 2.8s ease-in-out infinite; }
+.pv-flow { animation: pvFlow 1.6s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .pv-scan, .pv-packet, .pv-blink, .pv-breathe, .pv-flow { animation: none; }
+  .pv-packet { opacity: .9; }
+}
+</style><defs><marker id="pv-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#334155"/></marker></defs>
+      <rect x="8" y="10" width="504" height="130" rx="12" fill="#fff" stroke="var(--hair-strong)" stroke-width="1"/>
+      <text x="24" y="36" font-size="12" fill="var(--ink)" font-weight="700" font-family="var(--font-main)">8D-2026-B42 · release sign-off</text>
+      <rect x="24" y="50" width="300" height="10" rx="5" fill="var(--success)"/>
+      <text x="336" y="59" font-size="10.5" fill="#0e8a43" font-weight="700" font-family="var(--font-mono)">50 / 50 clean</text>
+      <path d="M28 104 c14 -18 22 8 34 -6 s16 -10 26 2 s14 4 22 -4" fill="none" stroke="var(--ink)" stroke-width="1.6"/>
+      <line x1="24" y1="112" x2="200" y2="112" stroke="var(--hair-strong)"/>
+      <text x="24" y="128" font-size="10.5" fill="var(--muted)" font-family="var(--font-main)">David Vance · e-sign</text>
+      <rect x="300" y="84" width="196" height="40" rx="12" fill="var(--ink)"/>
+      <text x="398" y="109" font-size="11" fill="#fff" text-anchor="middle" font-weight="650" font-family="var(--font-main)">Approve & close</text>
+      <text x="398" y="76" font-size="10" fill="var(--muted)" text-anchor="middle" font-family="var(--font-main)">unlocked at 50/50 only</text></svg>

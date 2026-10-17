@@ -22,17 +22,25 @@ resource "google_cloud_run_v2_service" "factory" {
   deletion_protection = false
 
   template {
-    service_account                  = google_service_account.backend.email
-    timeout                          = "3600s"
-    max_instance_request_concurrency = 80
+    service_account = google_service_account.backend.email
+    timeout         = "3600s"
+    # /api/factory/stream is a long-lived SSE consumer; the previous 80 rps
+    # budget collided with Cloud Run's "no available instance" 429s when the
+    # dashboard reconnect storm re-used the same instance too often. The brief
+    # for #265 lowers this to 40 so a single noisy SSE client cannot starve
+    # the burst capacity of non-stream endpoints.
+    max_instance_request_concurrency = 40
     execution_environment            = "EXECUTION_ENVIRONMENT_GEN2"
     session_affinity                 = true
 
     scaling {
       min_instance_count = var.min_instances
-      # 1 caused 429s under concurrent demo load (cold start + request-queue limit); session_affinity
-      # above keeps each client pinned to one instance so simulator state stays consistent per session.
-      max_instance_count = 3
+      # 1 caused 429s under concurrent demo load (cold start + request-queue limit);
+      # 3 was never actually reachable because max_instance_request_concurrency
+      # throttled growth first. The brief for #265 raises this to 5 with the
+      # tighter concurrency budget so a brief burst of reconnect storms can
+      # spill onto a fresh instance instead of saturating the existing one.
+      max_instance_count = 5
     }
 
     containers {

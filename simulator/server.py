@@ -21,6 +21,12 @@ from sse_starlette.sse import EventSourceResponse
 
 from simulator.config import settings
 from simulator.edge.pubsub_dispatcher import EdgePubSubDispatcher
+
+try:
+    import jwt
+except ImportError:
+    jwt = None
+
 from simulator.injection_engine import DefectInjectionEngine
 from simulator.models import (
     ActiveAnomalyStatus,
@@ -548,28 +554,49 @@ class FactoryServerService:
 
 def require_api_key(
     x_api_key: Optional[str] = Header(default=None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
 ) -> None:
-    """Enforces shared API key authentication on mutating simulator endpoints.
+    """Enforces shared API key or valid Bearer JWT on mutating simulator endpoints.
 
-    - Missing or invalid key -> 401 Unauthorized.
-    - Key unset with APP_ENV=production -> 503 Service Unavailable (fail closed).
-    - Key unset outside production -> allow request.
+    1. Checks X-API-Key header against settings.factory_api_key.
+    2. Checks Authorization: Bearer <token> against AUTH_SECRET if configured.
+    3. In development without keys configured, allows requests.
+    4. In production without valid credentials, raises 401 or 503.
     """
+    key_val = x_api_key if isinstance(x_api_key, str) else None
+    auth_val = authorization if isinstance(authorization, str) else None
+
+    # 1. Check X-API-Key
     expected_key = settings.factory_api_key
+    if key_val and expected_key and hmac.compare_digest(key_val, expected_key):
+        return
+
+    # 2. Check Authorization Bearer token
+    secret = getattr(settings, "auth_secret", None) or os.getenv("AUTH_SECRET")
+    if auth_val and auth_val.lower().startswith("bearer "):
+        token = auth_val[7:].strip()
+        if secret and jwt is not None:
+            try:
+                claims = jwt.decode(token, secret, algorithms=["HS256"])
+                if claims.get("sub"):
+                    return
+            except Exception as exc:
+                logger.debug("Bearer token validation failed: %s", exc)
+
+    # 3. Handle unset keys / environment checks
     app_env = getattr(settings, "app_env", os.getenv("APP_ENV", "development"))
-    if not expected_key:
+    if not expected_key and not secret:
         if app_env == "production":
             raise HTTPException(
                 status_code=503,
-                detail="Factory API key is not configured on production server",
+                detail="Factory security is not configured on production server",
             )
         return
 
-    if not x_api_key or not hmac.compare_digest(x_api_key, expected_key):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or missing X-API-Key header",
-        )
+    raise HTTPException(
+        status_code=401,
+        detail="Invalid or missing X-API-Key or Authorization Bearer token",
+    )
 
 
 # Global service coordinator
@@ -614,6 +641,95 @@ app.add_middleware(
 async def health() -> dict[str, str]:
     """Standard Cloud Run health probe."""
     return {"status": "healthy"}
+
+
+@app.get("/api/auth/accounts")
+async def list_auth_accounts() -> list[dict[str, Any]]:
+    """Lists accounts for the login screen (standalone fallback)."""
+    raw_users = getattr(settings, "auth_users", None) or os.getenv("AUTH_USERS")
+    if raw_users:
+        try:
+            import json
+
+            users = json.loads(raw_users)
+            return [
+                {
+                    "username": u["username"],
+                    "display_name": u.get("display_name", u["username"]),
+                    "role": u.get("role", "technician"),
+                }
+                for u in users
+            ]
+        except Exception:
+            pass
+    return [
+        {"username": "technician", "display_name": "Plant Operator", "role": "technician"},
+        {"username": "shiftleader", "display_name": "Shift Leader", "role": "shift_leader"},
+    ]
+
+
+@app.post("/api/auth/login")
+async def auth_login(req: Request) -> dict[str, Any]:
+    """Exchanges credentials for signed token (standalone fallback)."""
+    try:
+        body = await req.json()
+    except Exception:
+        raise HTTPException(400, "Invalid JSON body")
+    username = body.get("username", "").strip().lower()
+    password = body.get("password", "")
+
+    secret = getattr(settings, "auth_secret", None) or os.getenv("AUTH_SECRET")
+    raw_users = getattr(settings, "auth_users", None) or os.getenv("AUTH_USERS")
+
+    matched_user = None
+    if raw_users:
+        try:
+            import json
+
+            users = json.loads(raw_users)
+            for u in users:
+                if u.get("username", "").lower() == username and hmac.compare_digest(
+                    u.get("password", "").encode(), password.encode()
+                ):
+                    matched_user = u
+                    break
+        except Exception:
+            pass
+    else:
+        # Default dev fallback accounts matching mise.toml
+        dev_accounts = {
+            "technician": ("4NpqbcqiOB4v9Ry6", "Plant Operator", "technician"),
+            "shiftleader": ("REA5Dvx8VjGKdccg", "Shift Leader", "shift_leader"),
+        }
+        if username in dev_accounts:
+            expected_pw, d_name, role = dev_accounts[username]
+            if hmac.compare_digest(expected_pw.encode(), password.encode()):
+                matched_user = {"username": username, "display_name": d_name, "role": role}
+
+    if matched_user is None:
+        raise HTTPException(401, "Invalid username or password")
+
+    if not secret:
+        secret = "kaizen-factory-dev-secret"
+
+    from datetime import timedelta
+
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(hours=12)
+    token = jwt.encode(
+        {"sub": matched_user["username"], "iat": now, "exp": expires},
+        secret,
+        algorithm="HS256",
+    )
+    return {
+        "token": token,
+        "expires_at": expires.isoformat(),
+        "user": {
+            "username": matched_user["username"],
+            "display_name": matched_user.get("display_name", matched_user["username"]),
+            "role": matched_user.get("role", "technician"),
+        },
+    }
 
 
 @app.get("/api/factory/status", response_model=FactoryStatusResponse)

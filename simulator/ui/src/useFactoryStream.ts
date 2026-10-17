@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { FactoryTickPacket, InjectionResponse, MachineTelemetry, PubSubDeliveryReport } from './types';
+import { authFetch } from './lib/auth';
 
 const BASE_MACHINES: MachineTelemetry[] = [
   { machine_id: 'CNC-01', tool_id: 'T01', spindle_vibration: 1.18, motor_current: 13.8, spindle_temp: 41.5, rpm: 8000, operating_status: 'NORMAL' },
@@ -29,6 +30,8 @@ export function useFactoryStream() {
   });
   const [authError, setAuthError] = useState<string | null>(null);
 
+  const streamOrigin = (import.meta.env.VITE_STREAM_ORIGIN ?? '').replace(/\/$/, '');
+
   const setApiKey = useCallback((key: string) => {
     setApiKeyState(key);
     setAuthError(null);
@@ -47,7 +50,8 @@ export function useFactoryStream() {
     let es: EventSource | null = null;
     let timer: number;
     const connect = () => {
-      es = new EventSource('/api/factory/stream');
+      const streamUrl = `${streamOrigin}/api/factory/stream`;
+      es = new EventSource(streamUrl);
       es.onopen = () => setConnected(true);
       const handlePacket = (e: MessageEvent) => {
         try {
@@ -70,7 +74,7 @@ export function useFactoryStream() {
     };
     connect();
     return () => { es?.close(); clearTimeout(timer); };
-  }, []);
+  }, [streamOrigin]);
 
   const injectAnomaly = useCallback(async (scenario: string, machine_id?: string, severity = 1.0, mode = 'demo') => {
     try {
@@ -79,13 +83,13 @@ export function useFactoryStream() {
       if (apiKey.trim()) {
         headers['X-API-Key'] = apiKey.trim();
       }
-      const res = await fetch('/api/factory/inject', {
+      const res = await authFetch(`${streamOrigin}/api/factory/inject`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ scenario, machine_id, severity, mode }),
       });
       if (res.status === 401) {
-        setAuthError('Unauthorized: Missing or invalid Operator Key (401)');
+        setAuthError('Unauthorized: Missing or invalid Operator Key or Session (401)');
         return false;
       }
       if (res.status === 503) {
@@ -107,7 +111,7 @@ export function useFactoryStream() {
     } catch {
       return false;
     }
-  }, [apiKey]);
+  }, [apiKey, streamOrigin]);
 
   const resetFactory = useCallback(async () => {
     try {
@@ -116,9 +120,9 @@ export function useFactoryStream() {
       if (apiKey.trim()) {
         headers['X-API-Key'] = apiKey.trim();
       }
-      const res = await fetch('/api/factory/reset', { method: 'POST', headers });
+      const res = await authFetch(`${streamOrigin}/api/factory/reset`, { method: 'POST', headers });
       if (res.status === 401) {
-        setAuthError('Unauthorized: Missing or invalid Operator Key (401)');
+        setAuthError('Unauthorized: Missing or invalid Operator Key or Session (401)');
         return false;
       }
       if (res.status === 503) {
@@ -133,7 +137,8 @@ export function useFactoryStream() {
     } catch {
       return false;
     }
-  }, [apiKey]);
+  }, [apiKey, streamOrigin]);
 
   return { packet, connected, injectAnomaly, resetFactory, apiKey, setApiKey, authError, deliveryReports };
 }
+

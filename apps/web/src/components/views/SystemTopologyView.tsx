@@ -29,7 +29,12 @@ export default function SystemTopologyView({
   onNavigateToTab,
 }: SystemTopologyViewProps): React.ReactElement {
   const [selectedNodeId, setSelectedNodeId] = useState<TopologyNodeId | null>(null);
-  const [activeScenario, setActiveScenario] = useState<TopologyScenarioId | 'live'>('live');
+  const [activeScenario, setActiveScenario] = useState<TopologyScenarioId | 'live'>(() => {
+    if (typeof window === 'undefined') return 'live';
+    const stateParam = new URLSearchParams(window.location.search).get('state');
+    const isValidScenario = TOPOLOGY_SCENARIOS.some((s) => s.id === stateParam);
+    return isValidScenario ? (stateParam as TopologyScenarioId) : 'live';
+  });
 
   const factoryFloorUrl =
     (import.meta.env.VITE_FACTORY_FLOOR_URL as string | undefined) ||
@@ -66,7 +71,7 @@ export default function SystemTopologyView({
         label: incident ? `Live Incident #${incident.incident_id}` : 'Live Blackboard Stream (Nominal)',
         description: incident
           ? `Reactive blackboard stream bound to active incident #${incident.incident_id} (${STATUS_LABEL[incident.status]}).`
-          : 'Connected to live Firestore blackboard. All factory line components running in nominal standby.',
+          : 'Connected to live Firestore blackboard. All factory line components running nominal.',
       };
     }
     return TOPOLOGY_SCENARIOS.find((s) => s.id === activeScenario);
@@ -83,59 +88,15 @@ export default function SystemTopologyView({
 
   return (
     <div className="page page-compact topology-view">
-      {/* Top Header: Title, Description, Scenario Selector & Active Incident Jump */}
+      {/* Top Header: Breadcrumb & Active Incident Jump (TKT-064) */}
       <header className="row between wrap" style={{ gap: 12 }}>
-        <div className="col" style={{ gap: 4, minWidth: 0 }}>
-          <div className="row wrap" style={{ gap: 8, alignItems: 'center' }}>
-            <h1 className="page-title page-title-sm">System Architecture &amp; Execution Graph</h1>
-            <span
-              className="chip chip-blue"
-              style={{ fontSize: '0.74rem', padding: '2px 8px', fontWeight: 650 }}
-            >
-              28 Nodes · 5 Layers · Google ADK Swarm
-            </span>
-          </div>
-          <p style={{ fontSize: '0.84rem', color: 'var(--muted)', maxWidth: 880 }}>
-            5-Layer End-to-End Workflow: Factory Floor Data Sources &rarr; Gemma 3 2B On-Prem Gateway &rarr; Google Cloud Platform &rarr; ADK Multi-Agent Team with Causal Confidence Gate &rarr; Human-in-the-Loop &amp; Invariant #3 Verification.
-          </p>
+        <div className="row header-crumb">
+          <span>Cell Line 1</span>
+          <span style={{ color: 'var(--faint)' }}>/</span>
+          <b>System Topology</b>
         </div>
 
-        {/* Action Controls & Scenario Selector */}
         <div className="row wrap" style={{ gap: 8, alignItems: 'center' }}>
-          {/* Scenario Selector Dropdown */}
-          <div className="row" style={{ gap: 6, alignItems: 'center' }}>
-            <label htmlFor="scenario-select" className="eyebrow" style={{ color: 'var(--muted)', fontSize: '0.7rem' }}>
-              Scenario:
-            </label>
-            <select
-              id="scenario-select"
-              aria-label="Simulation Scenario"
-              className="select select-sm mono"
-              value={activeScenario}
-              onChange={(e) => {
-                const val = e.target.value as TopologyScenarioId | 'live';
-                setActiveScenario(val);
-                onNotify?.(`Switched execution view to: ${e.target.selectedOptions[0].text}`, 'info');
-              }}
-              style={{
-                fontSize: '0.76rem',
-                padding: '4px 28px 4px 10px',
-                borderRadius: 'var(--r-sm)',
-                background: 'rgba(255,255,255,0.85)',
-                fontWeight: 600,
-              }}
-            >
-              <option value="live">
-                {incident ? `⚡ Live Incident #${incident.incident_id}` : '⚡ Live Blackboard (Nominal)'}
-              </option>
-              {TOPOLOGY_SCENARIOS.map((sc) => (
-                <option key={sc.id} value={sc.id}>
-                  {sc.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Quick Jump to Active Incident (TKT-057 calm animation) */}
           {isIncidentOpen && onOpenIncident && (
             <button
@@ -155,33 +116,23 @@ export default function SystemTopologyView({
             </button>
           )}
 
-          {/* Ripple Simulation Button */}
-          <button
-            type="button"
-            className="btn btn-sm btn-dark"
-            onClick={() => handleSimulateRipple()}
-            title="Simulate Event Ripple across pipeline"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-              bolt
-            </span>
-            Simulate Ripple
-          </button>
-
-          {/* Refresh Topology State */}
-          <button
-            type="button"
-            className="btn btn-sm"
-            onClick={() => {
-              setActiveScenario('live');
-              onNotify?.('Topology view reset to live Firestore blackboard state.', 'info');
-            }}
-            title="Reset to live blackboard state"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-              refresh
-            </span>
-          </button>
+          {/* Reset to live blackboard state (only shown while a ?state= scenario deep-link is active) */}
+          {activeScenario !== 'live' && (
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => {
+                setActiveScenario('live');
+                onNotify?.('Topology view reset to live Firestore blackboard state.', 'info');
+              }}
+              title="Reset to live blackboard state"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                refresh
+              </span>
+              Live
+            </button>
+          )}
         </div>
       </header>
 
@@ -252,13 +203,6 @@ export default function SystemTopologyView({
                   <span className="window-tag">WINDOW 1</span>
                   <span className="window-separator">·</span>
                   <span className="window-name">Factory Floor (Edge &amp; On-Premises)</span>
-                </div>
-                <div className="window-badges-row">
-                  <span className="chip chip-sm chip-slate">
-                    <span className="status-dot green" />CNC-02 Spindle 3200 RPM
-                  </span>
-                  <span className="chip chip-sm chip-slate">OPC-UA / MQTT 100 Hz</span>
-                  <span className="chip chip-sm chip-slate">Gemma 3 2B IPC (&lt;50ms)</span>
                 </div>
               </div>
               <div className="window-actions">
@@ -366,7 +310,12 @@ export default function SystemTopologyView({
         {/* =================================================================
             CROSS-WINDOW EVENT CONDUIT: GOOGLE CLOUD PUB/SUB INGESTION BUS
             ================================================================= */}
-        <div className="cross-window-bridge" id="pubsub-cross-bridge">
+        <div
+          className="cross-window-bridge"
+          id="pubsub-cross-bridge"
+          role="group"
+          aria-label="Google Cloud Pub/Sub bridge between Window 1 and Window 2"
+        >
           <div className="bridge-card">
             <div className="bridge-icon-tile">
               <span className="material-symbols-outlined" aria-hidden="true">
@@ -383,7 +332,7 @@ export default function SystemTopologyView({
                 </span>
               </div>
               <div className="bridge-subtitle">
-                Decoupled 100 Hz OPC-UA telemetry buffer &amp; anomalous defect frames stream · Ingestion SLA &lt; 80ms
+                Decoupled 100 Hz OPC-UA telemetry buffer &amp; anomalous defect frames stream · Ingestion SLA &lt; 80 ms
               </div>
             </div>
             <div className="bridge-metric-tile">
@@ -413,19 +362,6 @@ export default function SystemTopologyView({
                 <span className="window-separator">·</span>
                 <span className="window-name">Cloud Control Plane (Google Cloud &amp; ADK Swarm)</span>
               </div>
-              <div className="window-badges-row">
-                <span className="chip chip-sm chip-blue">
-                  <span className="chip-dot blue" />GCP us-central1
-                </span>
-                <span className="chip chip-sm chip-blue">Cloud Run Orchestrator :8000</span>
-                <span className="chip chip-sm chip-blue">Firestore Shared Blackboard</span>
-                <span className="chip chip-sm chip-blue">BigQuery Lot Graph</span>
-              </div>
-            </div>
-            <div className="window-actions">
-              <span className="chip chip-sm chip-blue" id="window-2-status-chip">
-                {window2State.statusText}
-              </span>
             </div>
           </div>
 

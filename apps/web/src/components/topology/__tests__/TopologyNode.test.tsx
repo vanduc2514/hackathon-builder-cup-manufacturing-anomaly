@@ -205,4 +205,50 @@ describe('TopologyNode Header & Badge Layout (Issue #239 / TKT-054)', () => {
     fireEvent.keyDown(button, { key: ' ' });
     expect(handleSelect).toHaveBeenCalledTimes(3);
   });
+
+  it('8. idle nodes without a real reading render no status chip (AC-TOP-33)', () => {
+    const idleState: TopologyNodeState = {
+      id: 'floor-sensors',
+      status: 'idle',
+      summary: 'Awaiting telemetry',
+      isInferred: false,
+      details: {},
+    };
+
+    const { container, unmount } = render(
+      <TopologyNode node={sampleNode} state={idleState} selected={false} onSelect={vi.fn()} />,
+    );
+    expect(container.querySelector('.status-badge')).toBeNull();
+    unmount();
+
+    const activeState: TopologyNodeState = {
+      id: 'floor-sensors',
+      status: 'active',
+      summary: 'Investigating',
+      isInferred: false,
+      details: {},
+    };
+    const { container: activeContainer, unmount: unmountActive } = render(
+      <TopologyNode node={sampleNode} state={activeState} selected={false} onSelect={vi.fn()} />,
+    );
+    const activeBadge = activeContainer.querySelector('.status-badge');
+    expect(activeBadge).not.toBeNull();
+    expect(activeBadge?.textContent).toBe('Active');
+    unmountActive();
+
+    const idleWithBadgeText: TopologyNodeState = {
+      id: 'floor-sensors',
+      status: 'idle',
+      summary: 'Awaiting telemetry',
+      badgeText: '100 Hz',
+      isInferred: false,
+      details: {},
+    };
+    const { container: badgeContainer } = render(
+      <TopologyNode node={sampleNode} state={idleWithBadgeText} selected={false} onSelect={vi.fn()} />,
+    );
+    const badge = badgeContainer.querySelector('.status-badge');
+    expect(badge).not.toBeNull();
+    expect(badge?.textContent).toBe('100 Hz');
+  });
 });

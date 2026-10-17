@@ -33,7 +33,7 @@ export interface TopologyScenarioConfig {
 export const TOPOLOGY_SCENARIOS: TopologyScenarioConfig[] = [
   {
     id: 'nominal',
-    label: '1. Nominal Standby',
+    label: '1. Nominal',
     badgeDotClass: 'green',
     description: 'All 5 factory lines running nominally. Gemma edge filters >95% normal frames.',
   },
@@ -1870,7 +1870,7 @@ export function deriveNodeStates(
     'diagnostic-agent': {
       id: 'diagnostic-agent',
       status: l4DiagStatus,
-      badgeText: isAwaitingEvidence ? 'Photo Req Sent' : 'Standby',
+      badgeText: isAwaitingEvidence ? 'Photo Req Sent' : 'Nominal',
       summary: 'Dispatches targeted macro photo request to technician when confidence is low.',
       isInferred: false,
       details: {
@@ -1881,7 +1881,7 @@ export function deriveNodeStates(
     'technician-photo': {
       id: 'technician-photo',
       status: l4PhotoStatus,
-      badgeText: isAwaitingEvidence ? 'Awaiting Upload' : 'Standby',
+      badgeText: isAwaitingEvidence ? 'Awaiting Upload' : 'Nominal',
       summary: 'Technician captures photo of worn tool; Gemini Vision re-evaluates evidence.',
       isInferred: false,
       details: {
@@ -1915,7 +1915,7 @@ export function deriveNodeStates(
     'agent-learn': {
       id: 'agent-learn',
       status: l4LearnStatus,
-      badgeText: isClosed ? 'Indexed' : 'Standby',
+      badgeText: isClosed ? 'Indexed' : 'Nominal',
       summary: learnFinding?.finding ?? 'Indexes verified procedure into RAG and calculates ESG impact.',
       isInferred: false,
       details: {
@@ -1928,7 +1928,7 @@ export function deriveNodeStates(
     'human-tech': {
       id: 'human-tech',
       status: l5TechStatus,
-      badgeText: isRepairing ? 'Wrenching' : 'Standby',
+      badgeText: isRepairing ? 'Wrenching' : 'Nominal',
       summary: 'Field technician executes tool replacement and clicks [Confirm Repair Done].',
       isInferred: true,
       details: {
@@ -1962,7 +1962,7 @@ export function deriveNodeStates(
     'streak-reset': {
       id: 'streak-reset',
       status: l5ResetStatus,
-      badgeText: isEscalated ? 'Siren Alarm' : 'Standby',
+      badgeText: isEscalated ? 'Siren Alarm' : 'Nominal',
       summary: 'Defect detected during verification resets streak to 0/50 and sounds bay siren.',
       isInferred: true,
       details: {
@@ -2257,21 +2257,21 @@ export function derivePhaseStepperInfo(
   if (activeScenario) {
     switch (activeScenario) {
       case 'nominal':
-        stepA = { status: 'idle', text: 'Idle', icon: 'sensors' };
-        stepB = { status: 'idle', text: 'Idle', icon: 'psychology' };
-        stepC = { status: 'idle', text: 'Idle', icon: 'support_agent' };
-        stepD = { status: 'idle', text: 'Idle', icon: 'verified' };
+        stepA = { status: 'idle', text: 'Pending', icon: 'sensors' };
+        stepB = { status: 'idle', text: 'Pending', icon: 'psychology' };
+        stepC = { status: 'idle', text: 'Pending', icon: 'support_agent' };
+        stepD = { status: 'idle', text: 'Pending', icon: 'verified' };
         break;
       case 'detecting':
         stepA = { status: 'completed', text: 'Detected', icon: 'check_circle' };
         stepB = { status: 'active', text: 'RCA Active', icon: 'psychology' };
-        stepC = { status: 'idle', text: 'Queued', icon: 'support_agent' };
+        stepC = { status: 'idle', text: 'Pending', icon: 'support_agent' };
         stepD = { status: 'idle', text: 'Locked', icon: 'lock' };
         break;
       case 'low_confidence':
         stepA = { status: 'completed', text: 'Detected', icon: 'check_circle' };
         stepB = { status: 'warning', text: 'Evidence Req', icon: 'warning' };
-        stepC = { status: 'idle', text: 'Queued', icon: 'support_agent' };
+        stepC = { status: 'idle', text: 'Pending', icon: 'support_agent' };
         stepD = { status: 'idle', text: 'Locked', icon: 'lock' };
         break;
       case 'streak_verifying':
@@ -2293,10 +2293,10 @@ export function derivePhaseStepperInfo(
         stepD = { status: 'completed', text: '50/50 Certified', icon: 'verified' };
         break;
       default:
-        stepA = { status: 'idle', text: 'Idle', icon: 'sensors' };
-        stepB = { status: 'idle', text: 'Idle', icon: 'psychology' };
-        stepC = { status: 'idle', text: 'Idle', icon: 'support_agent' };
-        stepD = { status: 'idle', text: 'Idle', icon: 'verified' };
+        stepA = { status: 'idle', text: 'Pending', icon: 'sensors' };
+        stepB = { status: 'idle', text: 'Pending', icon: 'psychology' };
+        stepC = { status: 'idle', text: 'Pending', icon: 'support_agent' };
+        stepD = { status: 'idle', text: 'Pending', icon: 'verified' };
         break;
     }
   } else {
@@ -2306,24 +2306,24 @@ export function derivePhaseStepperInfo(
     const target = incident?.verification_target ?? 50;
 
     if (!incident || status === 'normal') {
-      stepA = { status: 'idle', text: 'Idle', icon: 'sensors' };
-      stepB = { status: 'idle', text: 'Idle', icon: 'psychology' };
-      stepC = { status: 'idle', text: 'Idle', icon: 'support_agent' };
-      stepD = { status: 'idle', text: 'Idle', icon: 'verified' };
+      stepA = { status: 'idle', text: 'Pending', icon: 'sensors' };
+      stepB = { status: 'idle', text: 'Pending', icon: 'psychology' };
+      stepC = { status: 'idle', text: 'Pending', icon: 'support_agent' };
+      stepD = { status: 'idle', text: 'Pending', icon: 'verified' };
     } else if (status === 'detecting') {
       stepA = { status: 'active', text: 'Detecting', icon: 'sensors' };
-      stepB = { status: 'idle', text: 'Queued', icon: 'psychology' };
-      stepC = { status: 'idle', text: 'Queued', icon: 'support_agent' };
+      stepB = { status: 'idle', text: 'Pending', icon: 'psychology' };
+      stepC = { status: 'idle', text: 'Pending', icon: 'support_agent' };
       stepD = { status: 'idle', text: 'Locked', icon: 'lock' };
     } else if (status === 'tracing' || status === 'investigating' || status === 'analyzing') {
       stepA = { status: 'completed', text: 'Detected', icon: 'check_circle' };
       stepB = { status: 'active', text: 'RCA Active', icon: 'psychology' };
-      stepC = { status: 'idle', text: 'Queued', icon: 'support_agent' };
+      stepC = { status: 'idle', text: 'Pending', icon: 'support_agent' };
       stepD = { status: 'idle', text: 'Locked', icon: 'lock' };
     } else if (status === 'awaiting_evidence') {
       stepA = { status: 'completed', text: 'Detected', icon: 'check_circle' };
       stepB = { status: 'warning', text: 'Evidence Req', icon: 'warning' };
-      stepC = { status: 'idle', text: 'Queued', icon: 'support_agent' };
+      stepC = { status: 'idle', text: 'Pending', icon: 'support_agent' };
       stepD = { status: 'idle', text: 'Locked', icon: 'lock' };
     } else if (status === 'repairing') {
       stepA = { status: 'completed', text: 'Resolved', icon: 'check_circle' };
@@ -2351,10 +2351,10 @@ export function derivePhaseStepperInfo(
       stepC = { status: 'completed', text: 'Repaired', icon: 'check_circle' };
       stepD = { status: 'danger', text: `${streak} / ${target} Reset`, icon: 'error' };
     } else {
-      stepA = { status: 'idle', text: 'Idle', icon: 'sensors' };
-      stepB = { status: 'idle', text: 'Idle', icon: 'psychology' };
-      stepC = { status: 'idle', text: 'Idle', icon: 'support_agent' };
-      stepD = { status: 'idle', text: 'Idle', icon: 'verified' };
+      stepA = { status: 'idle', text: 'Pending', icon: 'sensors' };
+      stepB = { status: 'idle', text: 'Pending', icon: 'psychology' };
+      stepC = { status: 'idle', text: 'Pending', icon: 'support_agent' };
+      stepD = { status: 'idle', text: 'Pending', icon: 'verified' };
     }
   }
 
@@ -2416,7 +2416,7 @@ export function deriveWindow2State(
   if (scenario && scenario !== 'live') {
     switch (scenario) {
       case 'nominal':
-        return { pulseClass: '', statusText: 'Standby Nominal' };
+        return { pulseClass: '', statusText: 'Nominal' };
       case 'detecting':
         return { pulseClass: 'calm-pulse-active', statusText: 'RCA In-Flight' };
       case 'low_confidence':
@@ -2434,7 +2434,7 @@ export function deriveWindow2State(
 
   const status = incident?.status ?? 'normal';
   if (!incident || status === 'normal') {
-    return { pulseClass: '', statusText: 'Standby Nominal' };
+    return { pulseClass: '', statusText: 'Nominal' };
   }
   if (status === 'detecting') {
     return { pulseClass: 'calm-pulse-active', statusText: 'Anomaly Ingest' };

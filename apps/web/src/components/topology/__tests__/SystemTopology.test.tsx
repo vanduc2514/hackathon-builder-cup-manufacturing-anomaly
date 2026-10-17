@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import SystemTopologyView from '../../views/SystemTopologyView';
@@ -15,6 +16,7 @@ import {
   getWindow2Nodes,
 } from '../../../lib/topology';
 import PhaseStepperBar from '../PhaseStepperBar';
+import TopologyCanvas from '../TopologyCanvas';
 import TopologyNodeDrawer from '../TopologyNodeDrawer';
 import type { IncidentState, TopologyNodeState } from '../../../types';
 
@@ -75,8 +77,8 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     render(<SystemTopologyView incident={mockIncident} />);
 
     // Header info
-    expect(screen.getByText(/System Architecture & Execution Graph/i)).toBeDefined();
-    expect(screen.getByText(/28 Nodes · 5 Layers · Google ADK Swarm/i)).toBeDefined();
+    expect(screen.getByText('Cell Line 1')).toBeDefined();
+    expect(screen.getByText('System Topology')).toBeDefined();
 
     // 5 Layer titles
     expect(screen.getByText(/Layer 1: Factory Floor · Edge Data Sources/i)).toBeDefined();
@@ -107,20 +109,6 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     const ctaButton = screen.getByText(/Inspect Line 1 Fleet Table/i);
     fireEvent.click(ctaButton);
     expect(handleNavigateTab).toHaveBeenCalledWith('overview');
-  });
-
-  it('switches simulation scenarios and updates state', () => {
-    const handleNotify = vi.fn();
-    render(<SystemTopologyView incident={mockIncident} onNotify={handleNotify} />);
-
-    const scenarioSelect = screen.getByLabelText(/Simulation Scenario/i) as HTMLSelectElement;
-    expect(scenarioSelect).toBeDefined();
-
-    // Switch to Scenario 5: Streak Defect Break (Reset to 0)
-    fireEvent.change(scenarioSelect, { target: { value: 'streak_reset' } });
-
-    expect(handleNotify).toHaveBeenCalled();
-    expect(screen.getByText(/Active Mode: 5. Streak Defect Break/i)).toBeDefined();
   });
 
   it('derives scenario-specific node states accurately', () => {
@@ -311,7 +299,7 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     expect(liveEscalated[3].statusText).toBe('0 / 50 Reset');
 
     // Window 2 States
-    expect(deriveWindow2State(null, 'nominal')).toEqual({ pulseClass: '', statusText: 'Standby Nominal' });
+    expect(deriveWindow2State(null, 'nominal')).toEqual({ pulseClass: '', statusText: 'Nominal' });
     expect(deriveWindow2State(null, 'detecting')).toEqual({ pulseClass: 'calm-pulse-active', statusText: 'RCA In-Flight' });
     expect(deriveWindow2State(null, 'low_confidence')).toEqual({ pulseClass: 'calm-pulse-warning', statusText: 'Diagnostic Loop (<0.70)' });
     expect(deriveWindow2State(null, 'streak_verifying')).toEqual({ pulseClass: 'calm-pulse-active', statusText: 'Verifying Streak (42/50)' });
@@ -372,8 +360,7 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     expect(window1Container?.className).toContain('window-1-boundary');
     expect(window1Container?.querySelector('.window-pill')?.getAttribute('aria-label')).toBe('Window 1 · Factory Floor (Edge & On-Premises)');
     expect(window1Container?.textContent).toContain('Factory Floor (Edge & On-Premises)');
-    expect(window1Container?.textContent).toContain('CNC-02 Spindle 3200 RPM');
-    expect(window1Container?.textContent).toContain('OPC-UA / MQTT 100 Hz');
+    expect(window1Container?.querySelector('.window-badges-row')).toBeNull();
 
     // Quick-Launch Button
     const quickLaunchBtn = screen.getByRole('link', { name: /factory floor console/i });
@@ -407,8 +394,7 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     expect(window2Container?.className).toContain('window-2-boundary');
     expect(window2Container?.querySelector('.window-pill')?.getAttribute('aria-label')).toBe('Window 2 · Cloud Control Plane (Google Cloud & ADK Swarm)');
     expect(window2Container?.textContent).toContain('Cloud Control Plane (Google Cloud & ADK Swarm)');
-    expect(window2Container?.textContent).toContain('Cloud Run Orchestrator :8000');
-    expect(window2Container?.textContent).toContain('Firestore Shared Blackboard');
+    expect(window2Container?.querySelector('.window-badges-row')).toBeNull();
 
     // Verify Window 2 contains Layer 3, 4, 5
     const layer3 = document.getElementById('phase-3');
@@ -417,10 +403,6 @@ describe('System Topology 5-Layer Workflow (Issue #211 / TKT-045)', () => {
     expect(window2Container?.contains(layer3)).toBe(true);
     expect(window2Container?.contains(layer4)).toBe(true);
     expect(window2Container?.contains(layer5)).toBe(true);
-
-    // Status chip in Window 2
-    const statusChip = document.getElementById('window-2-status-chip');
-    expect(statusChip).not.toBeNull();
   });
 
   it('verifies Phase Stepper Bar keyboard navigation with Space/Enter across all steps (TKT-053 #228)', () => {
@@ -627,5 +609,151 @@ describe('System Topology Production Polish Regression (Epic #238 / TKT-062)', (
       />,
     );
     expect(screen.getByLabelText('Embedded Invariant 3 Verification Streak')).toBeDefined();
+  });
+});
+
+describe('Window Containers, Contrast Hierarchy & Responsive Canvas Shell (TKT-064 #255)', () => {
+  it('1. crumb header: renders .header-crumb pill and hides all removed demo controls', () => {
+    render(<SystemTopologyView incident={null} />);
+
+    const crumb = document.querySelector('.header-crumb');
+    expect(crumb).not.toBeNull();
+    expect(crumb?.textContent).toContain('Cell Line 1');
+    expect(crumb?.textContent).toContain('System Topology');
+
+    expect(document.querySelector('h1')).toBeNull();
+    expect(screen.queryByLabelText(/Simulation Scenario/i)).toBeNull();
+    expect(screen.queryByText(/Simulate Ripple/i)).toBeNull();
+    expect(screen.queryByText(/^Incident #/i)).toBeNull();
+    expect(screen.queryByText(/28 Nodes/i)).toBeNull();
+  });
+
+  it('2. window 1 container: boundary classes, phase 1/2, pill aria-label, no badge row', () => {
+    render(<SystemTopologyView incident={mockIncident} />);
+
+    const window1Container = document.getElementById('window-1-container');
+    expect(window1Container).not.toBeNull();
+    expect(window1Container?.className).toContain('window-boundary-card');
+    expect(window1Container?.className).toContain('window-1-boundary');
+    expect(window1Container?.contains(document.getElementById('phase-1'))).toBe(true);
+    expect(window1Container?.contains(document.getElementById('phase-2'))).toBe(true);
+    expect(window1Container?.querySelector('.window-pill')?.getAttribute('aria-label')).toBe(
+      'Window 1 · Factory Floor (Edge & On-Premises)',
+    );
+    expect(window1Container?.querySelector('.window-badges-row')).toBeNull();
+  });
+
+  it('3. window 2 container: boundary classes, phase 3/4/5, no badge row, no status chip', () => {
+    render(<SystemTopologyView incident={mockIncident} />);
+
+    const window2Container = document.getElementById('window-2-container');
+    expect(window2Container).not.toBeNull();
+    expect(window2Container?.className).toContain('window-boundary-card');
+    expect(window2Container?.className).toContain('window-2-boundary');
+    expect(window2Container?.contains(document.getElementById('phase-3'))).toBe(true);
+    expect(window2Container?.contains(document.getElementById('phase-4'))).toBe(true);
+    expect(window2Container?.contains(document.getElementById('phase-5'))).toBe(true);
+    expect(window2Container?.querySelector('.window-badges-row')).toBeNull();
+    expect(document.getElementById('window-2-status-chip')).toBeNull();
+  });
+
+  it('4. quick-launch: factory floor console link lives inside Window 1 with correct a11y attrs', () => {
+    vi.stubEnv('VITE_FACTORY_FLOOR_URL', 'http://localhost:3002');
+    render(<SystemTopologyView incident={mockIncident} />);
+
+    const link = screen.getByRole('link', { name: /factory floor console/i });
+    expect(link.getAttribute('href')).toBe('http://localhost:3002');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(link.className).toContain('btn-quick-launch');
+
+    const window1Container = document.getElementById('window-1-container');
+    expect(window1Container?.contains(link)).toBe(true);
+    vi.unstubAllEnvs();
+  });
+
+  it('5. pub/sub bridge: a11y attrs, SLA text, DOM position between Window 1 and Window 2', () => {
+    const { container } = render(<SystemTopologyView incident={mockIncident} />);
+
+    const bridge = container.querySelector('#pubsub-cross-bridge');
+    expect(bridge).not.toBeNull();
+    expect(bridge?.getAttribute('role')).toBe('group');
+    expect(bridge?.getAttribute('aria-label')).toBe(
+      'Google Cloud Pub/Sub bridge between Window 1 and Window 2',
+    );
+    expect(bridge?.textContent).toContain('Pub/Sub');
+    expect(bridge?.textContent).toContain('< 80 ms');
+    expect(bridge?.textContent).toContain('100 Hz');
+
+    const w1 = container.querySelector('#window-1-container');
+    const w2 = container.querySelector('#window-2-container');
+    expect(w1!.compareDocumentPosition(bridge!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(bridge!.compareDocumentPosition(w2!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('6. contrast classes: depth tokens in index.css and layer/card structure in the DOM', () => {
+    const indexCss = readFileSync('src/index.css', 'utf-8');
+    expect(indexCss).toMatch(/--depth-shell-w1:\s*rgba\(71,\s*85,\s*105,\s*0?\.08\)/);
+    expect(indexCss).toMatch(/--depth-shell-w2:\s*rgba\(99,\s*102,\s*241,\s*0?\.06\)/);
+    expect(indexCss).toMatch(/--depth-layer:\s*rgba\(15,\s*23,\s*42,\s*0?\.04\)/);
+    expect(indexCss).toMatch(/--surface-card:\s*#fff/);
+
+    const { container } = render(<SystemTopologyView incident={mockIncident} />);
+    const window1Container = container.querySelector('#window-1-container');
+    const layer = window1Container?.querySelector('.topology-swimlane-card');
+    expect(layer).not.toBeNull();
+    const card = layer?.querySelector('.node-card');
+    expect(card).not.toBeNull();
+    // Shell > Layer container > Card nesting must hold
+    expect(window1Container?.contains(layer as Node)).toBe(true);
+    expect(layer?.contains(card as Node)).toBe(true);
+  });
+
+  it('7. no idle/standby/queued text for null incident or any scenario (AC-TOP-33)', () => {
+    const bannedPattern = /\b(idle|standby|queued)\b/i;
+    const scenarioIds: Array<string> = ['live', ...TOPOLOGY_SCENARIOS.map((s) => s.id)];
+
+    scenarioIds.forEach((scenarioId) => {
+      window.history.pushState({}, '', scenarioId === 'live' ? '/' : `/?state=${scenarioId}`);
+      const { container, unmount } = render(<SystemTopologyView incident={null} />);
+      expect(container.textContent).not.toMatch(bannedPattern);
+      unmount();
+    });
+
+    window.history.pushState({}, '', '/');
+  });
+
+  it('9. deriveWindow2State returns no Standby text for a null incident', () => {
+    expect(deriveWindow2State(null, 'nominal').statusText).not.toMatch(/standby/i);
+    expect(deriveWindow2State(null).statusText).not.toMatch(/standby/i);
+  });
+
+  it('10. canvas shell: zoom controls render and all resolvable edges compute a path (regression guard #254)', () => {
+    const nodeStates = deriveNodeStates(mockIncident);
+    const { container } = render(
+      <TopologyCanvas nodeStates={nodeStates} selectedNodeId={null}>
+        <div id="window-1-container">
+          {TOPOLOGY_NODES.map((n) => (
+            <div key={n.id} id={`node-${n.id}`} data-node={n.id} data-node-id={n.id} />
+          ))}
+        </div>
+        <div id="pubsub-cross-bridge" data-node="pubsub-cross-bridge" data-node-id="pubsub-cross-bridge" />
+      </TopologyCanvas>,
+    );
+
+    expect(container.querySelector('[data-testid="topology-canvas"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Zoom In' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Zoom Out' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Reset View' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Toggle Minimap' })).toBeDefined();
+
+    expect(TOPOLOGY_EDGES).toHaveLength(37);
+    // 10 of the 37 edges target gate1-yes/gate1-no/gate2-yes/gate2-no — labels on
+    // TOPOLOGY_GATE_BLOCKS used for highlight derivation, not standalone DOM nodes
+    // (pre-existing since #211/#254, unchanged by #255). Only the remaining 27 edges
+    // between real rendered nodes resolve to an SVG path.
+    const resolvableEdgeCount = TOPOLOGY_EDGES.length - 10;
+    const edgePaths = container.querySelectorAll('svg.topology-svg-overlay path.edge-path');
+    expect(edgePaths.length).toBe(resolvableEdgeCount);
   });
 });

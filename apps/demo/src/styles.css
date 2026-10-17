@@ -1,0 +1,422 @@
+/* 3D System Topology demo styles — Lumina Slate tokens per docs/DESIGN.md (copied from
+   .stitch/designs/system_topology_workflow.html). */
+:root {
+  --bg-app: #eef1fb;
+
+  --ink: #0b1220;
+  --ink-2: #1e2638;
+  --text: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+
+  --hair: rgba(15, 23, 42, .07);
+  --hair-strong: rgba(15, 23, 42, .14);
+
+  --accent: #5b5bf0;
+  --accent-2: #7c6cff;
+  --accent-soft: rgba(91, 91, 240, .1);
+  --accent-ring: rgba(91, 91, 240, .28);
+
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, .12);
+  --warning: #f5a524;
+  --warning-soft: rgba(245, 165, 36, .14);
+  --success: #12a150;
+  --success-soft: rgba(18, 161, 80, .12);
+  --info: #3b82f6;
+  --info-soft: rgba(59, 130, 246, .12);
+
+  --glass-bg: rgba(255, 255, 255, .65);
+  --glass-bg-strong: rgba(255, 255, 255, .82);
+  --glass-border: rgba(255, 255, 255, .78);
+  --glass-shadow: 0 1px 2px rgba(15, 23, 42, .03), 0 8px 24px -6px rgba(30, 41, 90, .08),
+    0 24px 48px -24px rgba(30, 41, 90, .12);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 0 0 1px rgba(255, 255, 255, .35);
+
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Geist', 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-full: 999px;
+
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --ease-spring: cubic-bezier(.34, 1.4, .5, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  position: relative;
+  min-height: 100vh;
+  font-family: var(--font-main);
+  font-feature-settings: 'cv11', 'ss01';
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* App Backdrop */
+.app-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 18% at 12% 4%, rgba(139, 132, 255, .28) 0%, transparent 70%),
+    radial-gradient(35% 16% at 88% 8%, rgba(96, 165, 250, .22) 0%, transparent 70%),
+    radial-gradient(45% 20% at 70% 55%, rgba(244, 170, 210, .2) 0%, transparent 70%),
+    radial-gradient(40% 18% at 25% 88%, rgba(125, 211, 252, .18) 0%, transparent 70%),
+    linear-gradient(180deg, #f4f6fd 0%, #eceffa 100%);
+}
+.app-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(15, 23, 42, .07) 1px, transparent 1px);
+  background-size: 24px 24px;
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, .7), rgba(0, 0, 0, .2));
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, .7), rgba(0, 0, 0, .2));
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: 20px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+.scene-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+/* Floating chrome */
+.brand-tile {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(91, 91, 240, .3);
+}
+
+.header-crumb {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.9rem;
+  color: var(--muted);
+  gap: 8px;
+  height: 44px;
+  padding: 0 1rem;
+  border-radius: 999px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  min-width: 0;
+  overflow: hidden;
+  pointer-events: auto;
+}
+.scene-crumb {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+  padding-left: 6px;
+  color: var(--ink);
+}
+.scene-crumb .brand-tile {
+  width: 32px;
+  height: 32px;
+}
+.scene-crumb b {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.scene-controls {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, .08);
+}
+.ctrl-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hair);
+  background: #fff;
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all .15s;
+}
+.ctrl-btn:hover {
+  background: var(--bg-app);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ctrl-btn.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Camera help */
+.help-panel {
+  position: fixed;
+  top: 16px;
+  right: 80px;
+  z-index: 10;
+  width: 260px;
+  padding: 12px 16px;
+  border-radius: var(--radius-xl);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.help-panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.help-panel li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 12px;
+  color: var(--ink);
+}
+.help-key {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Zone chips (window-pill look) */
+.zone-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+  pointer-events: none;
+  user-select: none;
+}
+.zone-pill--onprem {
+  background: rgba(51, 65, 85, .12);
+  color: #1e293b;
+  border: 1px solid rgba(71, 85, 105, .25);
+}
+.zone-pill--cloud {
+  background: rgba(99, 102, 241, .12);
+  color: #3730a3;
+  border: 1px solid rgba(99, 102, 241, .25);
+}
+.zone-pill--people {
+  background: var(--success-soft);
+  color: #0b6b35;
+  border: 1px solid rgba(18, 161, 80, .25);
+}
+.zone-pill--team {
+  background: rgba(124, 58, 237, .12);
+  color: #5b21b6;
+  border: 1px solid rgba(124, 58, 237, .3);
+}
+
+/* Node labels */
+.node-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  /* drei <Html> wraps labels in a zero-width absolute box; size to content, not min-content. */
+  width: max-content;
+  /* Bottom-anchored so the hover line grows upward and never covers the node (or a greeting robot). */
+  transform: translate(-50%, -100%);
+  padding: 3px 9px 4px;
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--hair-strong);
+  box-shadow: var(--glass-shadow);
+  font-family: var(--font-main);
+  font-size: 11px;
+  color: var(--ink);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
+}
+.node-label.is-hovered {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring), var(--glass-shadow);
+}
+.node-label__head {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+.node-label__head .material-symbols-outlined {
+  font-size: 14px;
+  color: var(--accent);
+}
+.node-label__sub {
+  /* Long sublabels wrap so neighbouring labels don't collide. */
+  max-width: 170px;
+  white-space: normal;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.node-label__open {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Legend */
+.legend-panel {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 10;
+  width: 248px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: var(--radius-xl);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+}
+.legend-heading,
+.legend-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-decoration: none;
+}
+.legend-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+.legend-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.legend-heading .material-symbols-outlined,
+.legend-toggle .material-symbols-outlined {
+  font-size: 16px;
+}
+.legend-heading:hover,
+.legend-heading:focus-visible,
+.legend-toggle:hover,
+.legend-toggle:focus-visible {
+  color: var(--accent);
+  outline: none;
+  background: var(--accent-soft);
+}
+.legend-credit {
+  padding: 4px 12px 2px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.legend-credit a {
+  color: inherit;
+}
+
+/* Scenario caption */
+.scene-caption {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-full);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.scene-caption__step {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+}
+

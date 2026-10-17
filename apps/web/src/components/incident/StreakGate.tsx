@@ -54,7 +54,12 @@ export default function StreakGate({ count, target, status }: StreakGateProps): 
         </span>
       </div>
 
-      <div role="img" aria-label={`${count} of ${target} consecutive good parts`} className="proof-grid">
+      <div
+        role="img"
+        aria-label={`${count} of ${target} consecutive good parts`}
+        className="proof-grid"
+        style={{ '--streak-target': target } as React.CSSProperties}
+      >
         {Array.from({ length: target }, (_, i) => (
           <span key={i} className={live && i === count ? 'streak-next' : undefined} style={{ background: i < count ? '#22b573' : 'rgba(118,128,160,0.16)' }} />
         ))}

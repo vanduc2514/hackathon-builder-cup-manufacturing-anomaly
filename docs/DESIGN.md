@@ -264,7 +264,7 @@ One component per concept; the surfaces differ only by size (desktop defaults to
 
 ### 3.8. Progress & Streak Gate
 - **`ProgressBar`:** 6px pill track with an accent gradient fill (tone `warning` gradient for evidence progress, `info` for verification).
-- **`StreakGate`:** 25-column proof grid; done cells `#22b573`; the next cell pulses with an accent outline; mono `count/target`; red reset notice when a defect resets the streak.
+- **`StreakGate`:** N-column proof grid, default 50 (driven by `--streak-target`); done cells `#22b573`; the next cell pulses with an accent outline; mono `count/target`; red reset notice when a defect resets the streak.
 - **`ProgressTimeline`** (mobile): milestones done `success`, current `info` with halo, todo grey.
 - **`ConfidenceRing`:** SVG ring, 64px; `warning` for evidence confidence, `success` for "AI sure", `info` for verification count.
 

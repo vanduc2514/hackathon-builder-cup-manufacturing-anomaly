@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import csv
 import json
+
+import pytest
 
 from backend.core.models import (
     AgentFinding,
@@ -387,6 +390,249 @@ def test_machine_id_fallback_from_factory_line_segments():
     }
     payload = MachineTelemetryPayload.model_validate(nested)
     assert payload.machine_id == "FACTORY_02/LINE_07"
+
+
+# ---------------------------------------------------------------------------
+# TKT-070 / issue #268 — Competition CSV telemetry payload (1-Hz CSV replay)
+# ---------------------------------------------------------------------------
+
+
+def _baseline_csv_row() -> dict:
+    """A representative RUNNING row from the normal competition CSV."""
+    return {
+        "asset_factory_id": "FACTORY_01",
+        "asset_line_id": "LINE_01",
+        "asset_machine_id": "MOTOR_01",
+        "operating_status": "RUNNING",
+        "operating_load_percent": 57.4,
+        "operating_runtime_hours": 1200.0,
+        "sensor_temperature": 62.0,
+        "sensor_vibration": 1.72,
+        "sensor_rpm": 1478,
+        "sensor_current": 12.3,
+        "health_anomaly_score": 0.05,
+        "alarm_code": "",
+        "warning_code": "",
+        "fan_status": "TRUE",
+        "timestamp": "10/1/2026 8:00",
+    }
+
+
+def _fault_csv_row() -> dict:
+    """A representative FAULT row from the abnormal competition CSV."""
+    return {
+        "asset_factory_id": "FACTORY_01",
+        "asset_line_id": "LINE_01",
+        "asset_machine_id": "MOTOR_01",
+        "operating_status": "FAULT",
+        "operating_load_percent": 81.3,
+        "operating_runtime_hours": 1205.5,
+        "sensor_temperature": 72.6,
+        "sensor_vibration": 6.55,
+        "sensor_rpm": 1592,
+        "sensor_current": 15.4,
+        "health_anomaly_score": 0.85,
+        "alarm_code": "53",
+        "warning_code": "",
+        "fan_status": "true",
+        "timestamp": "2026-10-01 09:00:00",
+    }
+
+
+def test_competition_payload_baseline_row():
+    """A baseline RUNNING row with US-style timestamp, TRUE fan, empty codes validates cleanly."""
+    from backend.core.models import CompetitionTelemetryPayload
+
+    payload = CompetitionTelemetryPayload.model_validate(_baseline_csv_row())
+
+    assert payload.asset_factory_id == "FACTORY_01"
+    assert payload.asset_machine_id == "MOTOR_01"
+    assert payload.operating_status == "RUNNING"
+    assert payload.timestamp == "2026-10-01 08:00:00"  # M/D/YYYY H:MM -> canonical
+    assert payload.fan_status is True  # "TRUE" string -> True
+    assert payload.alarm_code is None  # empty -> None (not 0)
+    assert payload.warning_code is None
+    assert payload.sensor_rpm == 1478
+    assert payload.sensor_vibration == pytest_approx(1.72)
+    assert payload.health_anomaly_score == pytest_approx(0.05)
+
+
+def test_competition_payload_fault_row_with_canonical_timestamp():
+    """A FAULT row with the canonical YYYY-MM-DD HH:MM:SS timestamp and lower-case 'true' fan validates."""
+    from backend.core.models import CompetitionTelemetryPayload
+
+    payload = CompetitionTelemetryPayload.model_validate(_fault_csv_row())
+
+    assert payload.operating_status == "FAULT"
+    assert payload.timestamp == "2026-10-01 09:00:00"
+    assert payload.fan_status is True
+    assert payload.alarm_code == 53  # numeric string -> int
+    assert payload.warning_code is None
+    assert payload.health_anomaly_score == pytest_approx(0.85)
+
+
+def test_competition_payload_iso_passthrough():
+    """Already-ISO timestamps (with 'Z' suffix) flow through untouched for BigQuery."""
+    from backend.core.models import CompetitionTelemetryPayload
+
+    row = _baseline_csv_row()
+    row["timestamp"] = "2026-10-01T08:00:00Z"
+    payload = CompetitionTelemetryPayload.model_validate(row)
+    assert payload.timestamp == "2026-10-01T08:00:00Z"
+
+
+def test_competition_payload_iso_with_offset_passthrough():
+    """ISO timestamps with an explicit +HH:MM offset also pass through untouched."""
+    from backend.core.models import CompetitionTelemetryPayload
+
+    row = _baseline_csv_row()
+    row["timestamp"] = "2026-10-01T08:00:00+07:00"
+    payload = CompetitionTelemetryPayload.model_validate(row)
+    assert payload.timestamp == "2026-10-01T08:00:00+07:00"
+
+
+def test_competition_payload_lowercase_status_uppercased():
+    """Lowercase operating_status is upper-cased before the Literal whitelist accepts it."""
+    from backend.core.models import CompetitionTelemetryPayload
+
+    row = _baseline_csv_row()
+    row["operating_status"] = "running"
+    payload = CompetitionTelemetryPayload.model_validate(row)
+    assert payload.operating_status == "RUNNING"
+
+
+def test_competition_payload_rejects_unknown_operating_status():
+    """Unknown operating_status values raise a ValidationError instead of silently passing through."""
+    import pydantic
+
+    from backend.core.models import CompetitionTelemetryPayload
+
+    row = _baseline_csv_row()
+    row["operating_status"] = "IDLE"
+    with pytest.raises(pydantic.ValidationError):
+        CompetitionTelemetryPayload.model_validate(row)
+
+
+def test_competition_payload_rejects_unknown_operating_status_post_uppercase():
+    """Even after upper-casing, statuses outside the whitelist are rejected."""
+    import pydantic
+
+    from backend.core.models import CompetitionTelemetryPayload
+
+    row = _baseline_csv_row()
+    row["operating_status"] = "OFFLINE"
+    with pytest.raises(pydantic.ValidationError):
+        CompetitionTelemetryPayload.model_validate(row)
+
+
+def test_competition_payload_rejects_malformed_timestamp():
+    """Unrecognised timestamp formats raise ValueError (surfaced via ValidationError)."""
+    import pydantic
+
+    from backend.core.models import CompetitionTelemetryPayload
+
+    row = _baseline_csv_row()
+    row["timestamp"] = "not-a-timestamp"
+    with pytest.raises(pydantic.ValidationError):
+        CompetitionTelemetryPayload.model_validate(row)
+
+
+def test_competition_payload_rejects_malformed_fan_status():
+    """Garbage fan_status values raise ValueError rather than silently coercing to False."""
+    import pydantic
+
+    from backend.core.models import CompetitionTelemetryPayload
+
+    row = _baseline_csv_row()
+    row["fan_status"] = "maybe"
+    with pytest.raises(pydantic.ValidationError):
+        CompetitionTelemetryPayload.model_validate(row)
+
+
+def test_competition_payload_rejects_non_integer_alarm_code():
+    """Non-numeric alarm_code strings raise ValueError instead of silently becoming 0."""
+    import pydantic
+
+    from backend.core.models import CompetitionTelemetryPayload
+
+    row = _baseline_csv_row()
+    row["alarm_code"] = "fifty-three"
+    with pytest.raises(pydantic.ValidationError):
+        CompetitionTelemetryPayload.model_validate(row)
+
+
+def test_competition_payload_round_trip_serialization():
+    """model_dump produces a dict that re-validates (round-trip)."""
+    from backend.core.models import CompetitionTelemetryPayload
+
+    original = CompetitionTelemetryPayload.model_validate(_fault_csv_row())
+    dumped = original.model_dump()
+    restored = CompetitionTelemetryPayload.model_validate(dumped)
+    assert restored == original
+    # Explicitly check the wire-format fields that survive the round-trip.
+    assert restored.timestamp == "2026-10-01 09:00:00"
+    assert restored.fan_status is True
+    assert restored.alarm_code == 53
+    assert restored.warning_code is None
+
+
+def test_competition_payload_handles_both_csv_files_end_to_end():
+    """End-to-end: every mapped warehouse-row validates cleanly with zero ValidationError.
+
+    The raw competition CSVs (``data/datasets/competition/*.csv``) carry only
+    sensor readings (speed, temperature, vibration, ...) and no asset hierarchy
+    columns. They are mapped to ``manufacturing.competition_telemetry`` warehouse
+    rows by ``S9`` (``load_competition_csv``), which assigns
+    ``asset_factory_id`` / ``asset_line_id`` / ``asset_machine_id`` from the
+    asset context (see ``simulator/csv_replay.py`` for the canonical mapping).
+    This test simulates that mapping on every CSV row and asserts each mapped
+    row validates against ``CompetitionTelemetryPayload`` — without touching
+    BigQuery or any I/O.
+    """
+    from pathlib import Path
+
+    from backend.core.models import CompetitionTelemetryPayload
+
+    csv_dir = Path(__file__).resolve().parents[1] / "data" / "datasets" / "competition"
+    csv_paths = [
+        csv_dir / "normal_machine_operating_data_1000_with_timestamp.csv",
+        csv_dir / "abnormal_machine_operating_data_1000.csv",
+    ]
+
+    total = 0
+    for csv_path in csv_paths:
+        assert csv_path.exists(), f"missing fixture: {csv_path}"
+        with csv_path.open("r", encoding="utf-8-sig", newline="") as fh:
+            reader = csv.DictReader(fh)
+            for idx, raw_row in enumerate(reader):
+                # The raw CSV columns (speed, temperature, ...) are mapped to
+                # the warehouse schema here. The S9 seeder does the same; this
+                # in-test mapping keeps S8 testable without S9.
+                mapped_row = {
+                    "asset_factory_id": "FACTORY_01",
+                    "asset_line_id": "LINE_01",
+                    "asset_machine_id": "MOTOR_01",
+                    "operating_status": raw_row["operating_status"],
+                    "operating_load_percent": float(raw_row["load_percent"]),
+                    "operating_runtime_hours": 1200 + (idx // 60),
+                    "sensor_temperature": float(raw_row["temperature"]),
+                    "sensor_vibration": float(raw_row["vibration"]),
+                    "sensor_rpm": int(round(float(raw_row["speed"]))),
+                    "sensor_current": round(float(raw_row["current_percent"]) * 0.123, 3),
+                    "health_anomaly_score": (
+                        0.02 + (idx % 100) * 0.0006
+                        if raw_row["alarm_code"] == ""
+                        else 0.65 + min(int(raw_row["alarm_code"]) / 100.0, 0.33)
+                    ),
+                    "alarm_code": raw_row["alarm_code"],
+                    "warning_code": raw_row["warning_code"],
+                    "fan_status": raw_row["fan_status"],
+                    "timestamp": raw_row["timestamp"],
+                }
+                CompetitionTelemetryPayload.model_validate(mapped_row)
+                total += 1
+
+    assert total == 2000  # 1000 rows from each source CSV
 
 
 # Tiny inline pytest.approx substitute so the suite does not depend on pytest

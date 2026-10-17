@@ -1660,3 +1660,226 @@ class FleetRegistryResponse(BaseModel):
         default_factory=list,
         description="Registered fleet assets in the production cell",
     )
+
+
+# ---------------------------------------------------------------------------
+# TKT-070 / issue #268 — Competition CSV telemetry payload schema
+#
+# One row in ``data/datasets/competition/*.csv`` maps to this flat schema.
+# The same record also lands in ``manufacturing.competition_telemetry``
+# (see ``data/schemas/bigquery_tables.sql``) after ``S9`` seeds it. This
+# model is the single source of truth for both the wire format (CSV replay)
+# and the warehouse row representation, so the validation rules below are
+# shared by both ingestion paths.
+# ---------------------------------------------------------------------------
+
+# Whitelist of canonical operating statuses emitted by the competition dataset.
+# Anything else (e.g. ``IDLE``, ``OFFLINE``, ``STARTUP``) is a schema bug at
+# ingestion time and must surface as a ValidationError rather than silently
+# pass through to BigQuery and corrupt downstream SPC calculations.
+COMPETITION_OPERATING_STATUSES: tuple[str, ...] = ("RUNNING", "FAULT")
+
+
+def _coerce_competition_timestamp(raw: Any) -> Any:
+    """Coerce a competition CSV timestamp string into ``YYYY-MM-DD HH:MM:SS``.
+
+    The two canonical CSV formats emitted by the competition dataset are:
+
+    * ``M/D/YYYY H:MM`` (e.g. ``10/1/2026 8:00``) — ``normal_machine_operating_data_1000_with_timestamp.csv``
+    * ``YYYY-MM-DD HH:MM:SS`` (e.g. ``2026-10-01 09:00:00``) — ``abnormal_machine_operating_data_1000.csv``
+
+    Anything already in ISO-8601 (e.g. an MQTT replay that already wrapped the
+    CSV timestamp in a ``Z`` suffix) is left untouched so BigQuery can parse
+    it. An unrecognised format raises ``ValueError`` so the seed/replay loop
+    fails fast instead of storing a malformed value.
+    """
+    if not isinstance(raw, str):
+        return raw
+    candidate = raw.strip()
+    if not candidate:
+        return None
+    # Pass through if already ISO-8601 (with optional trailing 'Z' or offset).
+    if "T" in candidate or candidate.endswith("Z") or "+" in candidate[10:]:
+        return candidate
+    # M/D/YYYY H:MM or M/D/YYYY H:MM:SS (US-style without leading zeros).
+    if "/" in candidate:
+        for fmt in ("%m/%d/%Y %H:%M:%S", "%m/%d/%Y %H:%M"):
+            try:
+                return datetime.strptime(candidate, fmt).strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                continue
+    # YYYY-MM-DD HH:MM:SS — already canonical, just normalise spacing.
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+        try:
+            return datetime.strptime(candidate, fmt).strftime("%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            continue
+    raise ValueError(
+        f"timestamp {raw!r} is not a recognised competition CSV format "
+        "(expected M/D/YYYY H:MM or YYYY-MM-DD HH:MM:SS)"
+    )
+
+
+def _coerce_competition_bool(raw: Any) -> Any:
+    """Coerce a competition CSV ``fan_status`` cell into a Python ``bool``.
+
+    The dataset emits ``TRUE``/``true``/``FALSE``/``false``. Empty cells
+    represent missing data (the field is optional on the warehouse row) and
+    must round-trip as ``None`` so BigQuery stores a true NULL instead of
+    a default ``False``.
+    """
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, (int, float)):
+        return bool(raw)
+    if isinstance(raw, str):
+        cell = raw.strip()
+        if cell == "":
+            return None
+        lowered = cell.lower()
+        if lowered in {"true", "t", "1"}:
+            return True
+        if lowered in {"false", "f", "0"}:
+            return False
+        raise ValueError(f"fan_status {raw!r} is not a recognised boolean value")
+    raise ValueError(f"fan_status {raw!r} is not a string-coercible boolean")
+
+
+def _coerce_competition_optional_int(raw: Any) -> Any:
+    """Coerce a competition CSV integer cell into an ``int`` or ``None``.
+
+    The competition dataset emits ``alarm_code`` and ``warning_code`` as
+    empty strings when the asset is in baseline state and a numeric string
+    when it is in a fault. An empty cell is genuinely missing data and must
+    land in BigQuery as ``NULL`` so the histogram and SPC logic does not
+    treat a blank cell as a zero-valued code.
+    """
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        # Avoid the Python pitfall where ``bool`` is a subclass of ``int``
+        # and ``int(True) == 1`` would silently coerce a stray flag.
+        return int(raw)
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, float):
+        if raw != raw:  # NaN check (defensive — CSVs should not emit NaN).
+            return None
+        return int(raw)
+    if isinstance(raw, str):
+        cell = raw.strip()
+        if cell == "":
+            return None
+        try:
+            return int(cell)
+        except ValueError as exc:
+            raise ValueError(f"integer column {raw!r} is not a valid integer") from exc
+    raise ValueError(f"integer column {raw!r} is not a string-coercible int")
+
+
+class CompetitionTelemetryPayload(BaseModel):
+    """One row of the competition CSV telemetry dataset.
+
+    The flat schema mirrors the ``manufacturing.competition_telemetry`` BigQuery
+    table defined in ``data/schemas/bigquery_tables.sql`` so the same dict
+    shape flows into both the in-process Pydantic pipeline and the warehouse
+    ``INSERT``. The ``model_validator`` below normalises the two CSV timestamp
+    formats, the ``TRUE``/``true``/empty ``fan_status`` cell, and the empty
+    integer ``alarm_code`` / ``warning_code`` cells that the dataset emits
+    for baseline rows.
+
+    ``operating_status`` is restricted to the canonical values ``RUNNING``
+    (baseline) and ``FAULT`` (failure mode); anything else raises a
+    ``ValidationError`` so a misspelled enum never ends up in the warehouse.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    asset_factory_id: str = Field(description="Factory identifier e.g. FACTORY_01")
+    asset_line_id: str = Field(description="Production line identifier e.g. LINE_01")
+    asset_machine_id: str = Field(description="Machine identifier e.g. MOTOR_01")
+    operating_status: Literal["RUNNING", "FAULT"] = Field(
+        description="Equipment operating status; only RUNNING or FAULT are accepted"
+    )
+    operating_load_percent: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=200.0,
+        description="Operating load percentage (0-200)",
+    )
+    operating_runtime_hours: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        description="Cumulative asset runtime in hours",
+    )
+    sensor_temperature: Optional[float] = Field(
+        default=None,
+        description="Spindle bearing temperature in Celsius",
+    )
+    sensor_vibration: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        description="Spindle vibration amplitude in mm/s",
+    )
+    sensor_rpm: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description="Spindle rotational speed in rpm",
+    )
+    sensor_current: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        description="Motor current in Amperes",
+    )
+    health_anomaly_score: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Normalised anomaly score from the asset health estimator (0-1)",
+    )
+    alarm_code: Optional[int] = Field(
+        default=None,
+        description="Populated only on failure rows; empty on baseline rows",
+    )
+    warning_code: Optional[int] = Field(
+        default=None,
+        description="Populated only on failure rows; empty on baseline rows",
+    )
+    fan_status: Optional[bool] = Field(
+        default=None,
+        description="Cooling-fan OK flag (TRUE / true) — empty cell means unknown",
+    )
+    timestamp: str = Field(
+        description="Wall-clock sample timestamp (canonical YYYY-MM-DD HH:MM:SS)"
+    )
+
+    @field_validator("operating_status", mode="before")
+    @classmethod
+    def _uppercase_operating_status(cls, value: Any) -> Any:
+        """Normalise dataset casing before the Literal whitelist check.
+
+        The competition CSVs emit ``RUNNING`` / ``FAULT`` in uppercase already,
+        but case-insensitive upper-casing keeps the contract forgiving for
+        future datasets without weakening the whitelist (lowercased strings
+        still need to match the Literal values exactly).
+        """
+        if isinstance(value, str):
+            return value.strip().upper()
+        return value
+
+    @field_validator("timestamp", mode="before")
+    @classmethod
+    def _coerce_timestamp(cls, value: Any) -> Any:
+        return _coerce_competition_timestamp(value)
+
+    @field_validator("fan_status", mode="before")
+    @classmethod
+    def _coerce_fan_status(cls, value: Any) -> Any:
+        return _coerce_competition_bool(value)
+
+    @field_validator("alarm_code", "warning_code", mode="before")
+    @classmethod
+    def _coerce_optional_int(cls, value: Any) -> Any:
+        return _coerce_competition_optional_int(value)

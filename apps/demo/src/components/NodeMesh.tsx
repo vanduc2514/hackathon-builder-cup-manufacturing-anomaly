@@ -140,9 +140,11 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
             </span>
             <span className="node-label__title">{node.label}</span>
           </span>
-          <span className="node-label__sub">{node.sublabel}</span>
           {hovered && (
-            <span className="node-label__open">Open {APP_LINKS[node.target].title} ↗</span>
+            <>
+              <span className="node-label__sub">{node.sublabel}</span>
+              <span className="node-label__open">Open {APP_LINKS[node.target].title} ↗</span>
+            </>
           )}
         </div>
       </Html>

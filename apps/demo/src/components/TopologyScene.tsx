@@ -26,6 +26,7 @@ interface TopologySceneProps {
   onHover: (id: string | null) => void;
   onOpen: (node: TopologyNode) => void;
   resetToken: number;
+  showOutlines: boolean;
 }
 
 export default function TopologyScene({
@@ -33,6 +34,7 @@ export default function TopologyScene({
   onHover,
   onOpen,
   resetToken,
+  showOutlines,
 }: TopologySceneProps): React.ReactElement {
   const nodeById = useMemo(() => new Map(NODES.map((n) => [n.id, n])), []);
 
@@ -59,9 +61,7 @@ export default function TopologyScene({
         maxPolarAngle={1.1}
       />
       <ControlsReset resetToken={resetToken} />
-      {ZONES.map((zone) => (
-        <ZonePlate key={zone.id} zone={zone} />
-      ))}
+      {showOutlines && ZONES.map((zone) => <ZonePlate key={zone.id} zone={zone} />)}
       {EDGES.map((edge) => {
         const from = nodeById.get(edge.from);
         const to = nodeById.get(edge.to);

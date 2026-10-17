@@ -1,11 +1,12 @@
-// Animated robot figure for one agent: while working it hops, squashes, leans, shimmies and flaps
-// its arms with glowing eyes; on hover it waves its right hand with bright eyes and a small hop.
+// Animated robot figure for one agent: it turns toward the direction its next data leaves in;
+// while working it hops, squashes, leans, shimmies and flaps its arms with glowing eyes; on hover
+// it turns to the viewer and waves its right hand with bright eyes and a small hop.
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useAnimations, useGLTF } from '@react-three/drei';
 import { Quaternion, Vector3 } from 'three';
 import type { AnimationAction, Group, Mesh, MeshStandardMaterial, Object3D } from 'three';
-import { isAgentWorking, scenarioNow } from '../data/topology';
+import { headingAt, isAgentWorking, scenarioAt, scenarioNow } from '../data/topology';
 
 // "Futuristic flying animated Robot - Low Poly" by mshayan02 (Sketchfab), CC BY 4.0.
 const MODEL_URL = '/models/agent-robot.glb';
@@ -17,6 +18,10 @@ const LIGHT_MATERIAL = 'Blue_Light';
 const BODY_MATERIAL = 'White_Glossy';
 const IDLE_GLOW = 0.6;
 const ACTIVE_GLOW = 4;
+/** Model forward is local +z, so yaw θ faces world (sin θ, cos θ); π/4 faces the default camera. */
+const DEFAULT_YAW = Math.PI / 4;
+/** OrbitControls target, used if the controls are not available. */
+const FALLBACK_TARGET = new Vector3(-8, 0, -8);
 
 /** Hand pivots sit at ear height; about -Y a positive angle swings the hand outward and up. */
 const HAND_AXIS = new Vector3(0, -1, 0);
@@ -43,6 +48,8 @@ export default function AgentRobot({ agentId, hovered, size }: AgentRobotProps):
   const work = useRef(0);
   /** 0 idle .. 1 greeting, eased toward the hover state each frame. */
   const greet = useRef(0);
+  /** Current facing yaw, damped toward the data heading (or the viewer while hovered). */
+  const yaw = useRef(DEFAULT_YAW);
   const hover = useRef(hovered);
   hover.current = hovered;
 
@@ -85,7 +92,7 @@ export default function AgentRobot({ agentId, hovered, size }: AgentRobotProps):
   }, [actions]);
 
   // Registered after useAnimations, so this runs after the mixer and adds on top of the clip pose.
-  useFrame(() => {
+  useFrame((state) => {
     const t = scenarioNow();
     work.current += ((isAgentWorking(agentId, t) ? 1 : 0) - work.current) * 0.12;
     greet.current += ((hover.current ? 1 : 0) - greet.current) * 0.15;
@@ -101,7 +108,20 @@ export default function AgentRobot({ agentId, hovered, size }: AgentRobotProps):
       const sxz = 1 - 0.06 * (h - 0.5) * w;
       b.scale.set(sxz, sy, sxz);
       b.rotation.z = Math.sin(t * 5) * 0.18 * w;
-      b.rotation.y = Math.sin(t * 2.5) * 0.8 * w;
+      b.rotation.y = Math.sin(t * 2.5) * 0.35 * w;
+    }
+
+    if (root.current) {
+      let face = headingAt(agentId, scenarioAt(t).index) ?? DEFAULT_YAW;
+      if (hover.current) {
+        const controls = state.controls as { target?: Vector3 } | null;
+        const target = controls?.target ?? FALLBACK_TARGET;
+        face = Math.atan2(state.camera.position.x - target.x, state.camera.position.z - target.z);
+      }
+      let d = face - yaw.current;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      yaw.current += d * 0.1;
+      root.current.rotation.y = yaw.current;
     }
 
     const flap = Math.sin(t * 12) * 0.7 * w;
@@ -117,10 +137,10 @@ export default function AgentRobot({ agentId, hovered, size }: AgentRobotProps):
     for (const m of lights) m.emissiveIntensity = glow;
   });
 
-  // Face the isometric camera, which looks from +x/+z.
+  // Yaw of `root` is driven per frame above.
   return (
     <group ref={body}>
-      <group ref={root} scale={SCALE * size} rotation={[0, Math.PI / 4, 0]}>
+      <group ref={root} scale={SCALE * size}>
         <primitive object={model} />
       </group>
     </group>

@@ -32,8 +32,6 @@ export interface TopologyEdge {
   from: string;
   to: string;
   label: string;
-  /** Also draw an arrowhead at the start; packets always travel from -> to. */
-  bidir?: boolean;
   /** Corner choice of the L-shaped route: x-first by default, `'zx'` goes z-first. */
   route?: 'zx';
 }

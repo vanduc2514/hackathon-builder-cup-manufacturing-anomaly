@@ -185,7 +185,7 @@ export const EDGES: TopologyEdge[] = [
   { from: 'edge-gateway', to: 'pubsub', label: 'Defective images + anomalies' },
   { from: 'pubsub', to: 'bigquery', label: 'Raw telemetry storage' },
   { from: 'pubsub', to: 'orchestrator', label: 'Defect / SPC event' },
-  { from: 'orchestrator', to: 'firestore', label: 'Sole writer', bidir: true },
+  { from: 'orchestrator', to: 'firestore', label: 'Sole writer' },
   { from: 'orchestrator', to: 'qa', label: 'Dispatch' },
   { from: 'qa', to: 'tra', label: 'Defect confirmed', route: 'zx' },
   { from: 'tra', to: 'pa', label: 'Suspect lots', route: 'zx' },
@@ -197,7 +197,7 @@ export const EDGES: TopologyEdge[] = [
   { from: 'tra', to: 'bigquery', label: 'Lot genealogy', route: 'zx' },
   { from: 'rca', to: 'rag', label: 'RAG lookup' },
   { from: 'copilot', to: 'gemini', label: 'Vision · Live API', route: 'zx' },
-  { from: 'copilot', to: 'technician-app', label: 'Live voice + camera', bidir: true },
+  { from: 'copilot', to: 'technician-app', label: 'Live voice + camera' },
   { from: 'technician-app', to: 'factory-floor', label: 'Repair + verify' },
   { from: 'firestore', to: 'plant-ops', label: 'Live incident board' },
   { from: 'plant-ops', to: 'orchestrator', label: 'Shift-leader approval' },
@@ -287,16 +287,55 @@ export function isAgentWorking(id: string, seconds: number): boolean {
   return scenarioAt(seconds).step.working.includes(id);
 }
 
+const NODE_BY_ID = new Map(NODES.map((n) => [n.id, n]));
+
+/** Yaw (atan2(dx, dz)) of the first segment of the edge's L route, as EdgeFlow draws it. */
+function firstSegmentYaw(edge: TopologyEdge): number {
+  const from = NODE_BY_ID.get(edge.from);
+  const to = NODE_BY_ID.get(edge.to);
+  if (!from || !to) throw new Error(`Unknown node in edge ${edgeKey(edge)}`);
+  const [fx, fz] = from.position;
+  const [tx, tz] = to.position;
+  const zFirst = fx === tx || (fz !== tz && edge.route === 'zx');
+  return zFirst ? Math.atan2(0, Math.sign(tz - fz)) : Math.atan2(Math.sign(tx - fx), 0);
+}
+
+/** Per agent id, the heading for every scenario step (filled lazily). */
+const headingCache = new Map<string, (number | null)[]>();
+
+/**
+ * Yaw agent `id` should face at scenario step `stepIndex`: the direction its next outgoing data
+ * leaves in, searching forward from this step and wrapping once; null if it never sends data.
+ */
+export function headingAt(id: string, stepIndex: number): number | null {
+  let headings = headingCache.get(id);
+  if (!headings) {
+    const own = SCENARIO.map((step) => {
+      const edge = EDGES.find((e) => e.from === id && step.edges.includes(edgeKey(e)));
+      return edge ? firstSegmentYaw(edge) : null;
+    });
+    headings = own.map((_, i) => {
+      for (let k = 0; k < own.length; k += 1) {
+        const yaw = own[(i + k) % own.length];
+        if (yaw !== null) return yaw;
+      }
+      return null;
+    });
+    headingCache.set(id, headings);
+  }
+  return headings[stepIndex] ?? null;
+}
+
 export const ZONES: Zone[] = [
   // Flow runs away from the camera (factory front, people back); each chip sits just outside its
   // plate where it clears labels, the legend and the caption.
   {
     id: 'onprem',
-    label: 'Factory Floor · On-Premises Edge',
+    label: 'Factory Floor',
     rect: [-11, 15, 3.5, 23],
     chip: [4.1, 23.8],
   },
-  { id: 'cloud', label: 'Google Cloud · Control Plane', rect: [-21, -28.5, 4.8, 13], chip: [5.4, -29.1] },
-  { id: 'team', label: 'Agent Team · ADK Workflow', rect: [-12.5, -27, 3.5, 9], chip: [4.1, -9] },
-  { id: 'people', label: 'People · Apps', rect: [-9, -39, 4.5, -31], chip: [-9.6, -39.6] },
+  { id: 'cloud', label: 'Google Cloud', rect: [-21, -28.5, 4.8, 13], chip: [5.4, -29.1] },
+  { id: 'team', label: 'Agent Team', rect: [-12.5, -27, 3.5, 9], chip: [4.1, -9] },
+  { id: 'people', label: 'Apps', rect: [-9, -39, 4.5, -31], chip: [-9.6, -39.6] },
 ];

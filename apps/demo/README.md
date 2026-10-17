@@ -35,9 +35,14 @@ publishes `apps/demo/dist` to **https://kaizen-lab-demo.web.app**.
 | Plant Ops Dashboard | https://kaizen-lab-web.web.app | Cloud Pub/Sub, BigQuery, Firestore, ADK Orchestrator, Agent Team, Vertex AI Search, Gemini on Vertex AI, Plant Ops Dashboard |
 | Technician App | https://kaizen-lab-mobile.web.app | Technician App |
 
-The bottom-left legend lists the same nodes as buttons (keyboard and
-screen-reader path); hovering or focusing an entry highlights the node and its
-links in the scene.
+The bottom-left legend (collapsible via its "App pages" toggle) links the three
+app pages and keeps the robot model credit visible. Node labels show icon and
+title only; hovering a node adds its sublabel and the "Open …" hint. Under Reset
+view, the outline button shows or hides the zones (dashed outline, background
+and label), and the "?" button opens the camera-controls help (Esc closes it).
+
+Agent robots turn toward the direction their next outgoing data leaves in
+(`headingAt` in `src/data/topology.ts`) and turn to face the viewer while hovered.
 
 ## Where things live
 
@@ -49,4 +54,5 @@ links in the scene.
 | `src/components/NodeMesh.tsx` | Node shapes (`shapeParts`), hover lift, label, click |
 | `src/components/EdgeFlow.tsx` | L-shaped floor routing and packet animation |
 | `src/components/ZonePlate.tsx` | Zone floor plates and chips |
-| `src/components/NodeLegend.tsx`, `SceneToolbar.tsx` | DOM chrome: legend, brand crumb, reset view |
+| `src/components/AgentRobot.tsx` | Robot model: work/greet animation, facing (data heading, viewer on hover) |
+| `src/components/NodeLegend.tsx`, `SceneToolbar.tsx` | DOM chrome: collapsible legend, brand crumb, reset view, zone toggle, camera help |

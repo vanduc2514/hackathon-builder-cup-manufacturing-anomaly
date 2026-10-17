@@ -10,6 +10,7 @@ import type { TopologyNode } from './types/topology';
 export default function App(): React.ReactElement {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [resetToken, setResetToken] = useState(0);
+  const [showOutlines, setShowOutlines] = useState(true);
 
   const openNode = useCallback((node: TopologyNode): void => {
     window.open(APP_LINKS[node.target].url, '_blank', 'noopener,noreferrer');
@@ -19,9 +20,19 @@ export default function App(): React.ReactElement {
     <>
       <div className="app-backdrop" />
       <main className="scene-root" aria-label="Kaizen system topology, 3D view">
-        <TopologyScene hoveredId={hoveredId} onHover={setHoveredId} onOpen={openNode} resetToken={resetToken} />
+        <TopologyScene
+          hoveredId={hoveredId}
+          onHover={setHoveredId}
+          onOpen={openNode}
+          resetToken={resetToken}
+          showOutlines={showOutlines}
+        />
       </main>
-      <SceneToolbar onReset={() => setResetToken((t) => t + 1)} />
+      <SceneToolbar
+        onReset={() => setResetToken((t) => t + 1)}
+        outlinesOn={showOutlines}
+        onToggleOutlines={() => setShowOutlines((v) => !v)}
+      />
       <NodeLegend />
       <SceneCaption />
     </>

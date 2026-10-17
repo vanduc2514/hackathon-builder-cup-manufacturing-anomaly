@@ -362,12 +362,13 @@ description = "Upload data/knowledge_base to GCS and import it into the Vertex A
 run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && python scripts/import_knowledge_base.py --project "$TF_VAR_project_id" --bucket "$(terraform -chdir=infra/terraform output -raw kb_bucket)"'
 
 [tasks."firebase:targets"]
-description = "Map firebase.json hosting targets web/mobile/factory to the Terraform-managed sites (.firebaserc)"
+description = "Map firebase.json hosting targets web/mobile/factory/demo to the Terraform-managed sites (.firebaserc)"
 run = [
   ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && rm -f .firebaserc',
   'firebase target:apply hosting web "$(terraform -chdir=infra/terraform output -json hosting_sites | jq -r .web)" --project "$TF_VAR_project_id"',
   'firebase target:apply hosting mobile "$(terraform -chdir=infra/terraform output -json hosting_sites | jq -r .mobile)" --project "$TF_VAR_project_id"',
   'firebase target:apply hosting factory "$(terraform -chdir=infra/terraform output -json hosting_sites | jq -r .factory)" --project "$TF_VAR_project_id"',
+  'firebase target:apply hosting demo "$(terraform -chdir=infra/terraform output -json hosting_sites | jq -r .demo)" --project "$TF_VAR_project_id"',
 ]
 
 [tasks."deploy:web"]
@@ -397,9 +398,17 @@ run = [
   'firebase deploy --only hosting:factory --project "$TF_VAR_project_id"',
 ]
 
+[tasks."deploy:demo"]
+description = "Publish the standalone System Topology demo (apps/demo) to Firebase Hosting target demo (kaizen-lab-demo.web.app)"
+depends = ["firebase:targets"]
+run = [
+  'python scripts/strip_topology_chrome.py',
+  'firebase deploy --only hosting:demo --project "$TF_VAR_project_id"',
+]
+
 [tasks."deploy:frontend"]
-description = "Deploy all frontend apps (apps/web + apps/mobile + simulator/ui) to Firebase Hosting"
-depends = ["deploy:web", "deploy:mobile", "deploy:factory"]
+description = "Deploy all frontend apps (apps/web + apps/mobile + simulator/ui + apps/demo) to Firebase Hosting"
+depends = ["deploy:web", "deploy:mobile", "deploy:factory", "deploy:demo"]
 
 [tasks."deploy:backend"]
 description = "Build the backend image, push it and roll the Terraform-managed Cloud Run service"

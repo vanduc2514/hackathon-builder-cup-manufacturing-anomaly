@@ -32,12 +32,6 @@ resource "random_password" "auth_secret" {
   special = false
 }
 
-# Shared API key for mutating factory simulator endpoints (/inject, /reset).
-resource "random_password" "factory_api_key" {
-  length  = 32
-  special = false
-}
-
 resource "google_cloud_run_v2_service" "backend" {
   name                = var.service_name
   location            = var.region
@@ -132,29 +126,28 @@ resource "google_cloud_run_v2_service" "backend" {
         value = google_cloud_run_v2_service.factory.uri
       }
 
+      # TKT-073 / #288: backend -> factory auth via central HS256 JWT. The
+      # backend logs in to its own /api/auth/login endpoint with the shared
+      # service-account credentials, caches the Bearer token for up to
+      # FACTORY_SERVICE_TOKEN_TTL_SECONDS, and refreshes on 401.
       env {
-        name  = "FACTORY_API_KEY"
-        value = random_password.factory_api_key.result
-      }
-
-      # TKT-073 / #288: backend -> factory auth via central JWT. Operator creds
-      # are sourced here so factory_client.py can mint a Bearer token by
-      # calling this service's own /api/auth/login. ``BACKEND_PUBLIC_URL`` is
-      # the deployed URL so the JWT is issued for the same origin that
-      # Firebase Hosting rewrites reach.
-      env {
-        name  = "BACKEND_PUBLIC_URL"
+        name  = "FACTORY_BACKEND_BASE_URL"
         value = google_cloud_run_v2_service.backend.uri
       }
 
       env {
-        name  = "FACTORY_OPERATOR_ACCOUNT"
-        value = var.factory_operator_account
+        name  = "FACTORY_SERVICE_ACCOUNT_USERNAME"
+        value = var.factory_service_account_username
       }
 
       env {
-        name  = "FACTORY_OPERATOR_PASSWORD"
-        value = var.factory_operator_password
+        name  = "FACTORY_SERVICE_ACCOUNT_PASSWORD"
+        value = var.factory_service_account_password
+      }
+
+      env {
+        name  = "FACTORY_SERVICE_TOKEN_TTL_SECONDS"
+        value = tostring(var.factory_service_token_ttl_seconds)
       }
     }
   }

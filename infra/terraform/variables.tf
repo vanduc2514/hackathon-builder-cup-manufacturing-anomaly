@@ -140,21 +140,28 @@ variable "auth_users" {
   }
 }
 
-# TKT-073 / #288: dedicated backend->factory operator credentials. Must be an
-# entry present in `auth_users` (the factory gate reuses the central backend
-# JWT). Set TF_VAR_factory_operator_account / TF_VAR_factory_operator_password
-# in mise.local.toml so the backend can mint a Bearer token at runtime without
-# exposing the operator's password to anyone but Terraform + deploy.
-variable "factory_operator_account" {
-  description = "Username of the service account the backend uses to mint a JWT for /api/auth/login before calling the factory service. Must exist in auth_users."
+# TKT-073 / #288: dedicated backend->factory service-account credentials.
+# Must be an entry present in `auth_users` (the factory gate reuses the central
+# backend JWT). Set TF_VAR_factory_service_account_username /
+# TF_VAR_factory_service_account_password in mise.local.toml so the backend can
+# mint a Bearer token at runtime without exposing the service account's
+# password to anyone but Terraform + deploy.
+variable "factory_service_account_username" {
+  description = "Username of the shared service account the backend uses to mint a JWT via /api/auth/login before calling the factory service. Must exist in auth_users."
   type        = string
   sensitive   = true
   default     = ""
 }
 
-variable "factory_operator_password" {
-  description = "Password of the service account the backend uses to mint a JWT for /api/auth/login before calling the factory service. Must match auth_users."
+variable "factory_service_account_password" {
+  description = "Password of the shared service account the backend uses to mint a JWT via /api/auth/login before calling the factory service. Must match auth_users."
   type        = string
   sensitive   = true
   default     = ""
+}
+
+variable "factory_service_token_ttl_seconds" {
+  description = "Upper bound, in seconds, the backend caches a freshly minted JWT for /api/factory/* calls. Mirrors backend.core.config.factory_service_token_ttl_seconds (default 3600)."
+  type        = number
+  default     = 3600
 }

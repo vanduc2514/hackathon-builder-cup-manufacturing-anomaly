@@ -31,6 +31,7 @@ API_PORT         = "8000"
 WEB_PORT         = "{{ get_env(name='WEB_PORT', default='3000') }}"
 MOBILE_PORT      = "{{ get_env(name='MOBILE_PORT', default='3001') }}"
 FACTORY_PORT     = "{{ get_env(name='FACTORY_PORT', default='3002') }}"
+DEMO_PORT        = "{{ get_env(name='DEMO_PORT', default='3003') }}"
 API_PROXY_TARGET = "{{ get_env(name='API_PROXY_TARGET', default='http://localhost:' ~ env.API_PORT) }}"
 AI_PROVIDER      = "mock"
 # Demo login accounts (prod: TF_VAR_auth_users in mise.local.toml) + token signing key
@@ -48,8 +49,8 @@ TF_VAR_global_prefix = "kaizen-lab"
 
 # Install everything — backend pip deps + npm deps of both frontend apps
 [tasks.install]
-description = "Install all dependencies (backend + apps/web + apps/mobile + simulator/ui)"
-depends = ["install:backend", "install:web", "install:mobile", "install:factory"]
+description = "Install all dependencies (backend + apps/web + apps/mobile + simulator/ui + apps/demo)"
+depends = ["install:backend", "install:web", "install:mobile", "install:factory", "install:demo"]
 
 [tasks."install:backend"]
 description = "Install backend Python dependencies"
@@ -68,6 +69,11 @@ run = "npm install"
 [tasks."install:factory"]
 description = "Install simulator/ui npm dependencies"
 dir = "{{config_root}}/simulator/ui"
+run = "npm install"
+
+[tasks."install:demo"]
+description = "Install apps/demo npm dependencies"
+dir = "{{config_root}}/apps/demo"
 run = "npm install"
 
 [tasks."mqtt:listen"]
@@ -103,6 +109,11 @@ description = "Start Factory Floor UI Vite dev server (simulator/ui, :3002)"
 dir = "{{config_root}}/simulator/ui"
 run = "npm run dev -- --port $FACTORY_PORT --strictPort"
 
+[tasks."demo:dev"]
+description = "Start 3D System Topology demo Vite dev server (apps/demo, :3003)"
+dir = "{{config_root}}/apps/demo"
+run = "npm run dev -- --port $DEMO_PORT --strictPort"
+
 [tasks."web:build"]
 description = "Typecheck + production build of apps/web (apps/web/dist)"
 dir = "{{config_root}}/apps/web"
@@ -116,6 +127,11 @@ run = "npm run build"
 [tasks."factory:build"]
 description = "Typecheck + production build of simulator/ui (simulator/ui/dist)"
 dir = "{{config_root}}/simulator/ui"
+run = "npm run build"
+
+[tasks."demo:build"]
+description = "Typecheck + production build of apps/demo (apps/demo/dist)"
+dir = "{{config_root}}/apps/demo"
 run = "npm run build"
 
 [tasks."web:preview"]
@@ -138,6 +154,11 @@ description = "TypeScript typecheck of apps/mobile"
 dir = "{{config_root}}/apps/mobile"
 run = "npm run typecheck"
 
+[tasks."demo:typecheck"]
+description = "TypeScript typecheck of apps/demo"
+dir = "{{config_root}}/apps/demo"
+run = "npm run typecheck"
+
 [tasks."web:test"]
 description = "Run unit tests for apps/web"
 dir = "{{config_root}}/apps/web"
@@ -150,11 +171,11 @@ run = "npm test"
 
 [tasks.build]
 description = "Production build of all frontend apps"
-depends = ["web:build", "mobile:build"]
+depends = ["web:build", "mobile:build", "demo:build"]
 
 [tasks.typecheck]
 description = "Typecheck all frontend apps"
-depends = ["web:typecheck", "mobile:typecheck"]
+depends = ["web:typecheck", "mobile:typecheck", "demo:typecheck"]
 
 [tasks.adk-web]
 description = "Start ADK dev UI for the incident workflow (:8001, backend/agents/agent.py)"
@@ -399,10 +420,11 @@ run = [
 ]
 
 [tasks."deploy:demo"]
-description = "Publish the standalone System Topology demo (apps/demo) to Firebase Hosting target demo (kaizen-lab-demo.web.app)"
+description = "Build and publish the 3D System Topology demo (apps/demo) to Firebase Hosting target demo (kaizen-lab-demo.web.app)"
 depends = ["firebase:targets"]
 run = [
-  'python scripts/strip_topology_chrome.py',
+  { task = "install:demo" },
+  'cd apps/demo && npm run build',
   'firebase deploy --only hosting:demo --project "$TF_VAR_project_id"',
 ]
 

@@ -60,10 +60,11 @@ This file is the authoritative reference for AI coding agents and human contribu
 │   │   ├── src/
 │   │   ├── vite.config.ts      # Dev proxy: /api, /health → $API_PROXY_TARGET
 │   │   └── package.json
-│   └── mobile/                 # Technician mobile app (:3001)
-│       ├── src/
-│       ├── vite.config.ts      # Dev proxy: /api (+ WebSocket) → $API_PROXY_TARGET
-│       └── package.json
+│   ├── mobile/                 # Technician mobile app (:3001)
+│   │   ├── src/
+│   │   ├── vite.config.ts      # Dev proxy: /api (+ WebSocket) → $API_PROXY_TARGET
+│   │   └── package.json
+│   └── demo/                   # 3D System Topology demo (React + Vite + three.js, :3003)
 │
 ├── data/
 │   ├── datasets/               # Raw / mock sensor and traceability data

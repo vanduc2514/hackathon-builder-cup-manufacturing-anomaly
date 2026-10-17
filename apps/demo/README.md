@@ -1,64 +1,52 @@
-# apps/demo — System Topology Standalone Demo
+# apps/demo — 3D System Topology Demo
 
-A single-file static demo of the Kaizen 5-Layer Operational Execution Graph,
-deployed independently from the Plant Ops dashboard. The Plant Ops dashboard
-(`apps/web`) no longer carries the System Topology view — this folder hosts the
-extracted, chrome-free prototype that was originally authored at
-`.stitch/designs/system_topology_workflow.html`.
+An isometric 3D view of the Kaizen system topology: line-art glass nodes on the
+floor of three zones (factory edge, Google Cloud agent platform, people apps),
+connectors routed along the ground and packets flowing along each link. Every
+node is clickable and opens the deployed app it belongs to in a new tab.
 
-## What lives here
+No backend calls; the demo is fully client-side.
 
-| File | Purpose |
+## Stack
+
+- React 18 + TypeScript + Vite (dev server `:3003`)
+- three.js via `@react-three/fiber` 8 and `@react-three/drei` 9
+- Plain CSS with the Lumina Slate tokens from `docs/DESIGN.md` (`src/styles.css`)
+
+## Tasks
+
+```bash
+mise run install:demo     # npm install in apps/demo
+mise run demo:dev         # Vite dev server → http://localhost:3003
+mise run demo:typecheck   # tsc --noEmit
+mise run demo:build       # typecheck + production build → apps/demo/dist
+mise run deploy:demo      # build + firebase deploy --only hosting:demo
+```
+
+`deploy:demo` resolves the `demo` Hosting target through `firebase:targets`
+(which reads `terraform output -json hosting_sites`), builds the app and
+publishes `apps/demo/dist` to **https://kaizen-lab-demo.web.app**.
+
+## Node → app links
+
+| App | URL | Nodes |
+|---|---|---|
+| Factory Floor Console | https://kaizen-lab-factory.web.app | Factory Floor, Edge Gateway |
+| Plant Ops Dashboard | https://kaizen-lab-web.web.app | Cloud Pub/Sub, BigQuery, Firestore, ADK Orchestrator, Agent Team, Vertex AI Search, Gemini on Vertex AI, Plant Ops Dashboard |
+| Technician App | https://kaizen-lab-mobile.web.app | Technician App |
+
+The bottom-left legend lists the same nodes as buttons (keyboard and
+screen-reader path); hovering or focusing an entry highlights the node and its
+links in the scene.
+
+## Where things live
+
+| Path | Purpose |
 |---|---|
-| `index.html` | Self-contained demo (inline `<style>` + inline `<script>`). Pan / zoom / SVG bezier edges / drawer / minimap are all built in. No backend calls. |
-| `README.md` | This file. |
-
-## Deploy
-
-Firebase Hosting target `demo` (site `kaizen-lab-demo.web.app`) is wired in
-`firebase.json` and provisioned via Terraform (`infra/terraform/firebase.tf` +
-`locals.tf`). Deploy with:
-
-```bash
-mise run deploy:demo
-```
-
-`deploy:demo` resolves the `demo` target through `firebase:targets` (which reads
-`terraform output -raw hosting_sites`), then runs
-`firebase deploy --only hosting:demo --project "$TF_VAR_project_id"`.
-
-Live URL: **https://kaizen-lab-demo.web.app**
-
-## Local preview
-
-The file is fully static; any local HTTP server works:
-
-```bash
-cd apps/demo
-mise exec -- npx serve -p 3030 .
-# → http://localhost:3030
-```
-
-Or simply open `apps/demo/index.html` directly in a browser — the only thing
-that won't work without a server is the Web Font loading under `file://`.
-
-## Updating the demo
-
-Edit `apps/demo/index.html`. There is no build step. When the upstream
-`.stitch/designs/system_topology_workflow.html` changes, re-run the same strip
-script (kept under `scripts/strip_topology_chrome.py` once promoted, otherwise
-re-apply the three removals documented there):
-
-1. Drop the `<aside class="sidebar">…</aside>` block.
-2. Drop the `<header class="top-header">…</header>` block.
-3. Drop the sidebar / header / nav CSS rules (`.sidebar`, `.brand-*`, `.nav-*`,
-   `.sidebar-footer`, `.top-header`, `.top-header-left`, `.header-crumb`).
-
-Then commit and push; CI / `deploy:demo` will publish the new bytes.
-
-## No backend coupling
-
-This demo is intentionally offline. Pan & zoom, SVG edges, drawer previews and
-the minimap are all client-side. Adding backend coupling here would defeat the
-purpose of having a low-friction lab demo (`kaizen-lab-demo.web.app`) alongside
-the production dashboard (`kaizen-lab-web.web.app`).
+| `src/data/topology.ts` | `APP_LINKS`, `NODES`, `EDGES`, `ZONES`: edit here to change the graph |
+| `src/types/topology.ts` | Node / edge / zone types |
+| `src/components/TopologyScene.tsx` | Canvas, camera, lights, orbit controls |
+| `src/components/NodeMesh.tsx` | Node shapes (`shapeParts`), hover lift, label, click |
+| `src/components/EdgeFlow.tsx` | L-shaped floor routing and packet animation |
+| `src/components/ZonePlate.tsx` | Zone floor plates and chips |
+| `src/components/NodeLegend.tsx`, `SceneToolbar.tsx` | DOM chrome: legend, brand crumb, reset view |

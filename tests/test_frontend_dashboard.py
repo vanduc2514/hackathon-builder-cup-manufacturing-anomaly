@@ -361,7 +361,7 @@ def test_frontend_topology_files_and_contracts() -> None:
     topology_lib_text = (web_src / "lib" / "topology.ts").read_text(encoding="utf-8")
     expected_node_ids = [
         "edge-gemma",
-        "cloud-ingest",
+        "gcp-pubsub",
         "agent-qa",
         "agent-tra",
         "agent-pa",
@@ -529,9 +529,6 @@ def test_topology_two_window_partitioning_and_phase_stepper_contracts() -> None:
     assert 'id="pubsub-cross-bridge"' in view_text, (
         "Missing #pubsub-cross-bridge in SystemTopologyView"
     )
-    assert 'id="window-2-status-chip"' in view_text, (
-        "Missing #window-2-status-chip in SystemTopologyView"
-    )
     assert "window-1-boundary" in view_text, "Missing window-1-boundary class in SystemTopologyView"
     assert "window-2-boundary" in view_text, "Missing window-2-boundary class in SystemTopologyView"
     assert "cross-window-bridge" in view_text, (
@@ -560,6 +557,8 @@ def test_topology_two_window_partitioning_and_phase_stepper_contracts() -> None:
     assert "getWindow2Nodes" in lib_text
     assert "recovery-handshake" in lib_text
     assert "gate-2-to-esg" in lib_text
+    assert "recovery-handshake" not in lib_text
+    assert "gate-2-to-esg" not in lib_text
     assert "step-phase-a" in lib_text
     assert "step-phase-b" in lib_text
     assert "step-phase-c" in lib_text

@@ -511,18 +511,38 @@ describe('System Topology Production Polish Regression (Epic #238 / TKT-062)', (
     expect(link.getAttribute('rel')).toBe('noopener noreferrer');
   });
 
-  it('TKT-057: validates active incident jump button uses calm gentle pulse', () => {
+  it('TKT-057 / TKT-075 / AC-04: active incident jump button is hidden on production; replaced by dev-only chip on ?state= deep-links', () => {
     const onOpen = vi.fn();
-    const { container } = render(<SystemTopologyView incident={mockIncident} onOpenIncident={onOpen} />);
-    const jumpBtn = container.querySelector('#topology-jump-incident');
-    expect(jumpBtn).not.toBeNull();
-    expect(jumpBtn?.className).toContain('topology-jump-btn');
-    expect(jumpBtn?.className).not.toContain('animate-pulse-glow');
-    const pulseDot = jumpBtn?.querySelector('.status-dot');
-    expect(pulseDot?.className).toContain('animate-gentle-pulse');
-
-    fireEvent.click(jumpBtn!);
-    expect(onOpen).toHaveBeenCalledWith('inc-topo-01');
+    // Production load (activeScenario === 'live'): no #topology-jump-incident, no dev-only chip.
+    const originalSearch = window.location.search;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: { ...window.location, search: '' },
+    });
+    try {
+      const prod = render(<SystemTopologyView incident={mockIncident} onOpenIncident={onOpen} />);
+      expect(prod.container.querySelector('#topology-jump-incident')).toBeNull();
+      expect(prod.container.querySelector('#topology-dev-only-chip')).toBeNull();
+      prod.unmount();
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        writable: true,
+        value: { ...window.location, search: originalSearch },
+      });
+    }
+    // Scenario deep-link (?state=spc-breach): dev-only chip is visible so QA can reset to 'live'.
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: { ...window.location, search: '?state=detecting' },
+    });
+    const scenario = render(<SystemTopologyView incident={mockIncident} onOpenIncident={onOpen} />);
+    const devChip = scenario.container.querySelector('#topology-dev-only-chip');
+    expect(devChip).not.toBeNull();
+    expect(devChip?.className).toContain('chip-dev-only');
+    expect(scenario.container.querySelector('#topology-jump-incident')).toBeNull();
   });
 
   it('TKT-060: validates all 28 topology nodes have human-readable component titles with no raw JSX tags', () => {

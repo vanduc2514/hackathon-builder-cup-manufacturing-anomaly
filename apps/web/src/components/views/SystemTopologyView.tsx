@@ -11,13 +11,11 @@ import {
   derivePhaseLaneStatuses,
   deriveWindow2State,
 } from '../../lib/topology';
-import PhaseStepperBar from '../topology/PhaseStepperBar';
 import TopologyCanvas from '../topology/TopologyCanvas';
 import TopologyNode from '../topology/TopologyNode';
 import DecisionGateNode from '../topology/DecisionGateNode';
 import GateConditionBlock from '../topology/GateConditionBlock';
 import TopologyNodeDrawer from '../topology/TopologyNodeDrawer';
-import { STATUS_LABEL, friendlyDefectName } from '../../lib/incident';
 
 interface SystemTopologyViewProps {
   incident: IncidentState | null;
@@ -69,23 +67,8 @@ export default function SystemTopologyView({
   );
   const selectedState = selectedNodeId ? nodeStates[selectedNodeId] : null;
 
-  const isIncidentOpen = incident && !['normal', 'closed', 'dismissed'].includes(incident.status);
-
   // Helper node getter
   const getNode = (id: TopologyNodeId) => TOPOLOGY_NODES.find((n) => n.id === id);
-
-  const activeScenarioMeta = useMemo(() => {
-    if (activeScenario === 'live') {
-      return {
-        id: 'live',
-        label: incident ? `Live Incident #${incident.incident_id}` : 'Live Blackboard Stream (Nominal)',
-        description: incident
-          ? `Reactive blackboard stream bound to active incident #${incident.incident_id} (${STATUS_LABEL[incident.status]}).`
-          : 'Connected to live Firestore blackboard. All factory line components running nominal.',
-      };
-    }
-    return TOPOLOGY_SCENARIOS.find((s) => s.id === activeScenario);
-  }, [activeScenario, incident]);
 
   const handleSimulateRipple = (nodeId?: string) => {
     onNotify?.(
@@ -98,97 +81,27 @@ export default function SystemTopologyView({
 
   return (
     <div className="page page-compact topology-view">
-      {/* Active Incident Jump & Live Reset controls (TKT-064). Breadcrumb lives only in the global TopHeader (#271). */}
-      {(isIncidentOpen || activeScenario !== 'live') && (
-        <header className="row wrap" style={{ gap: 12, justifyContent: 'flex-end' }}>
-          <div className="row wrap" style={{ gap: 8, alignItems: 'center' }}>
-            {/* Quick Jump to Active Incident (TKT-057 calm animation) */}
-            {isIncidentOpen && onOpenIncident && (
-              <button
-                id="topology-jump-incident"
-                type="button"
-                className="btn btn-dark btn-sm topology-jump-btn"
-                onClick={() => onOpenIncident(incident.incident_id)}
-                style={{ gap: 6 }}
-              >
-                <span className="status-dot red animate-gentle-pulse" style={{ width: 8, height: 8 }} />
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                  warning
-                </span>
-                <span>
-                  Incident #{incident.incident_id} · {friendlyDefectName(incident.defect_type)} ({STATUS_LABEL[incident.status]})
-                </span>
-              </button>
-            )}
-
-            {/* Reset to live blackboard state (only shown while a ?state= scenario deep-link is active) */}
-            {activeScenario !== 'live' && (
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={() => {
-                  setActiveScenario('live');
-                  onNotify?.('Topology view reset to live Firestore blackboard state.', 'info');
-                }}
-                title="Reset to live blackboard state"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                  refresh
-                </span>
-                Live
-              </button>
-            )}
-          </div>
-        </header>
-      )}
-
-      {/* Scenario Context Banner */}
-      <div
-        className="glass"
-        style={{
-          padding: '0.75rem 1rem',
-          borderRadius: 'var(--r-md)',
-          borderLeft: '4px solid var(--accent)',
-          background: 'linear-gradient(90deg, rgba(99,102,241,0.06) 0%, rgba(255,255,255,0.8) 100%)',
-        }}
-      >
-        <div className="row between wrap" style={{ gap: 8, alignItems: 'center' }}>
-          <div className="row wrap" style={{ gap: 8, alignItems: 'center' }}>
-            <span className="chip chip-sm chip-blue mono" style={{ fontWeight: 700 }}>
-              Active Mode: {activeScenarioMeta?.label}
+      {/* Dev-only chip: only renders on ?state= demo deep-links (TKT-075 / AC-05).
+          Production loads use the default 'live' scenario and never see this control. */}
+      {activeScenario !== 'live' && (
+        <div className="row" style={{ justifyContent: 'flex-end', gap: 8, marginBottom: 8 }}>
+          <button
+            id="topology-dev-only-chip"
+            type="button"
+            className="chip chip-dev-only"
+            onClick={() => {
+              setActiveScenario('live');
+              onNotify?.('Topology view reset to live Firestore blackboard state.', 'info');
+            }}
+            title="[Dev only] Reset to live blackboard state"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }} aria-hidden="true">
+              science
             </span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--ink)' }}>
-              {activeScenarioMeta?.description}
-            </span>
-          </div>
-          <div className="row wrap" style={{ gap: 6, fontSize: '0.72rem', color: 'var(--muted)' }}>
-            <span className="row" style={{ gap: 4, alignItems: 'center' }}>
-              <span style={{ width: 8, height: 8, borderRadius: 999, background: '#4f46e5' }} /> Executing
-            </span>
-            <span className="row" style={{ gap: 4, alignItems: 'center' }}>
-              <span style={{ width: 8, height: 8, borderRadius: 999, background: '#16a34a' }} /> Verified / Done
-            </span>
-            <span className="row" style={{ gap: 4, alignItems: 'center' }}>
-              <span style={{ width: 8, height: 8, borderRadius: 999, background: '#d97706' }} /> Warning / Low Conf
-            </span>
-            <span className="row" style={{ gap: 4, alignItems: 'center' }}>
-              <span style={{ width: 8, height: 8, borderRadius: 999, background: '#dc2626' }} /> Defect / Reset
-            </span>
-          </div>
+            Dev · Live reset
+          </button>
         </div>
-      </div>
-
-      {/* Tier 1 Glance: Phase Stepper Bar (AC-TOP-23, Issue #227) */}
-      <PhaseStepperBar
-        incident={incident}
-        scenario={activeScenario}
-        onScrollToLayer={(layerId) => {
-          const el = document.getElementById(layerId);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }}
-      />
+      )}
 
       {/* 5-Layer Vertical Architecture Canvas */}
       <TopologyCanvas

@@ -551,7 +551,7 @@ class MachineTelemetryPayload(BaseModel):
             status_str = str(raw_status).strip().upper()
             if status_str == "NORMAL":
                 mapped = "NORMAL"
-            elif status_str in {"ANOMALY", "ABNORMAL", "FAULT", "ALARM"}:
+            elif status_str in {"ANOMALY", "ABNORMAL"}:
                 mapped = "ALARM"
             else:
                 mapped = "WARNING"

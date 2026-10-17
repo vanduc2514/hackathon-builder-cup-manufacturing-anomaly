@@ -279,15 +279,22 @@ def test_flat_payload_still_validates():
 
 
 def test_nested_operating_status_mapping():
-    """NORMAL->NORMAL, ANOMALY/ABNORMAL/FAULT/ALARM->ALARM, anything else->WARNING."""
+    """NORMAL->NORMAL, ANOMALY/ABNORMAL->ALARM, anything else->WARNING.
+
+    Plan spec (Tech Lead): the validator only treats the canonical health
+    statuses ``ANOMALY``/``ABNORMAL`` as ALARM. ``FAULT``/``ALARM``/etc. fall
+    through to ``WARNING``. The forward ``to_competition_payload`` mapping
+    only ever emits ``NORMAL`` or ``ANOMALY`` health.status values, so the
+    validator branch is intentionally narrow.
+    """
     cases = [
         ("NORMAL", "NORMAL"),
         (
             "RUNNING",
             "WARNING",
         ),  # Tech Lead plan: only the canonical health statuses map; others → WARNING
-        ("FAULT", "ALARM"),
-        ("ALARM", "ALARM"),
+        ("FAULT", "WARNING"),
+        ("ALARM", "WARNING"),
         ("ANOMALY", "ALARM"),
         ("ABNORMAL", "ALARM"),
         ("WARNING", "WARNING"),
@@ -342,7 +349,7 @@ def test_mixed_batch_mapping_invariant():
         },
         {
             "asset": {"machine_id": "MOTOR_02"},
-            "health": {"status": "ALARM", "anomaly_score": 0.91},
+            "health": {"status": "ANOMALY", "anomaly_score": 0.91},
             "sensor": {
                 "temperature": {"value": 88.0},
                 "vibration": {"value": 5.5},

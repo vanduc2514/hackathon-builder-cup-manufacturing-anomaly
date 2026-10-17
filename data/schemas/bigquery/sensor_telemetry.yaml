@@ -1,0 +1,16 @@
+# BigQuery schema allowlist — manufacturing.sensor_telemetry
+#
+# Source of truth: data/schemas/bigquery_tables.sql.
+
+table: manufacturing.sensor_telemetry
+columns:
+  - timestamp
+  - machine_id
+  - vibration_mm_s
+  - temperature_c
+  - current_a
+  - spindle_speed_rpm
+allowed_pseudo_columns:
+  - _PARTITIONDATE
+forbidden_pseudo_columns:
+  - _PARTITIONTIME

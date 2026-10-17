@@ -1,0 +1,28 @@
+# BigQuery schema allowlist — manufacturing.traceability
+#
+# Source of truth: data/schemas/bigquery_tables.sql (CREATE TABLE for
+# `manufacturing.traceability`). Manually curated from the DDL so the BigQuery
+# tool can validate queries without re-parsing the SQL at request time.
+#
+# Keep this file in lock-step with bigquery_tables.sql: any ALTER TABLE ...
+# ADD COLUMN / DROP COLUMN there must be mirrored here the same day, else the
+# live query guard (_assert_query_safe in backend/tools/bigquery_tool.py)
+# will start rejecting valid columns.
+
+table: manufacturing.traceability
+columns:
+  - product_id
+  - timestamp
+  - machine_id
+  - tool_id
+  - lot_id
+  - operator_id
+  - status
+# Date / time helpers that are NOT part of the column set above. We allow
+# _PARTITIONDATE (the modern sharded-column surrogate) but forbid the legacy
+# _PARTITIONTIME pseudo-column from the streaming buffer to keep the analytical
+# layer deterministic across partition-pruning rewrites. See issue #266.
+allowed_pseudo_columns:
+  - _PARTITIONDATE
+forbidden_pseudo_columns:
+  - _PARTITIONTIME

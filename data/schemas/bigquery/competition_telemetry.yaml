@@ -1,0 +1,28 @@
+# BigQuery schema allowlist — manufacturing.competition_telemetry
+#
+# Source of truth: data/schemas/bigquery_tables.sql (CREATE TABLE plus the
+# ALTER TABLE ADD COLUMN IF NOT EXISTS migrations for TKT-070 / issue #268).
+# Both the original CREATE columns and every migration are listed; the live
+# table is the union of both.
+
+table: manufacturing.competition_telemetry
+columns:
+  - asset_factory_id
+  - asset_line_id
+  - asset_machine_id
+  - operating_status
+  - operating_load_percent
+  - operating_runtime_hours
+  - sensor_temperature
+  - sensor_vibration
+  - sensor_rpm
+  - sensor_current
+  - health_anomaly_score
+  - alarm_code
+  - warning_code
+  - fan_status
+  - timestamp
+allowed_pseudo_columns:
+  - _PARTITIONDATE
+forbidden_pseudo_columns:
+  - _PARTITIONTIME

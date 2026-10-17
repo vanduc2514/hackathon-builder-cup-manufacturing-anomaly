@@ -1,0 +1,16 @@
+# BigQuery schema allowlist — manufacturing.sustainability_impact
+#
+# Source of truth: data/schemas/bigquery_tables.sql.
+
+table: manufacturing.sustainability_impact
+columns:
+  - incident_id
+  - timestamp
+  - scrap_pieces_avoided
+  - co2_kg_saved
+  - downtime_minutes_saved
+  - energy_kwh_saved
+allowed_pseudo_columns:
+  - _PARTITIONDATE
+forbidden_pseudo_columns:
+  - _PARTITIONTIME

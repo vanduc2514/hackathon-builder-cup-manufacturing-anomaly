@@ -743,12 +743,12 @@ describe('Window Containers, Contrast Hierarchy & Responsive Canvas Shell (TKT-0
     expect(screen.getByRole('button', { name: 'Toggle Minimap' })).toBeDefined();
 
     expect(TOPOLOGY_EDGES).toHaveLength(37);
-    // 10 of the 37 edges target gate1-yes/gate1-no/gate2-yes/gate2-no — labels on
-    // TOPOLOGY_GATE_BLOCKS used for highlight derivation, not standalone DOM nodes
-    // (pre-existing since #211/#254, unchanged by #255). Only the remaining 27 edges
-    // between real rendered nodes resolve to an SVG path.
-    const resolvableEdgeCount = TOPOLOGY_EDGES.length - 10;
+    // Issue #257 (TKT-066a): the deterministic orthogonal router routes
+    // ALL 37 connectors from the port-coordinate waypoint table —
+    // including the 10 gate-block fan-outs (gate1-yes/no, gate2-yes/no).
+    // These were previously skipped by the ad-hoc DOM-rect router when
+    // their target nodes were not present in the test fixture.
     const edgePaths = container.querySelectorAll('svg.topology-svg-overlay path.edge-path');
-    expect(edgePaths.length).toBe(resolvableEdgeCount);
+    expect(edgePaths.length).toBe(TOPOLOGY_EDGES.length);
   });
 });

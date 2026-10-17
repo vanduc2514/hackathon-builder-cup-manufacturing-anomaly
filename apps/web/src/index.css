@@ -695,7 +695,6 @@ input[type='range']::-moz-range-thumb {
 .animate-gentle-pulse {
   animation: gentlePulse 2.8s infinite ease-in-out;
 }
-}
 
 .stagger > * {
   animation: fadeUp 0.5s var(--ease) both;

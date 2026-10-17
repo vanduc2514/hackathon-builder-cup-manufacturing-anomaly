@@ -84,8 +84,15 @@ resource "google_cloud_run_v2_service" "factory" {
       }
 
       env {
-        name  = "FACTORY_API_KEY"
-        value = random_password.factory_api_key.result
+        name  = "AUTH_SECRET"
+        value = random_password.auth_secret.result
+      }
+
+      # Token TTL mirror of the central backend's auth_token_ttl_hours; the
+      # simulator only verifies tokens so we explicitly pin it here.
+      env {
+        name  = "FACTORY_AUTH_TOKEN_TTL_HOURS"
+        value = "12"
       }
     }
   }

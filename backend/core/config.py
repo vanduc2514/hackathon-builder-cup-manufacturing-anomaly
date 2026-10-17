@@ -107,10 +107,21 @@ class Settings(BaseSettings):
     # Maximum seconds to await physical/preset visual evidence before timeout
     evidence_wait_seconds: float = 90.0
 
-    # Factory Simulator service integration
+    # Factory Simulator service integration.
+    # TKT-073 / #288: backend -> factory auth switched from shared X-API-Key to
+    # central JWT minted by /api/auth/login. ``factory_service_url`` stays; the
+    # bearer token is cached in :mod:`backend.tools.factory_client` and refreshed
+    # transparently on 401. Operator credentials are sourced from the matching
+    # env vars (set on backend Cloud Run by infra/terraform/cloud_run.tf).
     factory_service_url: str | None = None
     factory_timeout_seconds: float = 3.0
-    factory_api_key: str | None = None
+    factory_operator_account: str | None = None
+    factory_operator_password: str | None = None
+    # Base URL the backend uses to call itself for the operator login.
+    # Defaults to ``backend_public_url``; falls back to ``backend_url`` (or empty
+    # string, which disables factory calls — see ``factory_client``).
+    backend_public_url: str | None = None
+    backend_url: str | None = None
     quality_event_max_age_seconds: int = 60
     quality_event_dedup_ttl_seconds: int = 300
     quality_event_debounce_seconds: float = 10.0

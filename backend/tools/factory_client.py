@@ -35,6 +35,20 @@ def map_severity_to_float(severity: str | float | None) -> float:
     return SEVERITY_MAP.get(str(severity).lower().strip(), 1.0)
 
 
+class FactoryAuthError(RuntimeError):
+    """Raised when the central JWT cannot be minted or the factory rejects a token.
+
+    Distinct from generic network errors so callers (and tests) can branch on a
+    permanent auth failure. ``_request`` translates the error into a typed
+    ``FactorySyncResult(ok=False, skipped=False, error=...)`` payload so the
+    outer API layer can surface a 502 Bad Gateway upstream.
+    """
+
+    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
 # Module-scoped Bearer token cache: the backend reuses a single JWT across all
 # factory calls until it expires, then refreshes transparently on the next call.
 class _BearerCache:
@@ -93,53 +107,63 @@ def _parse_expires_at(value: object) -> Optional[float]:
     return parsed.timestamp()
 
 
-async def _refresh_factory_bearer() -> Optional[tuple[str, float]]:
-    """Mint a new factory-operator JWT via the central backend login endpoint.
+async def _refresh_factory_bearer() -> tuple[str, float]:
+    """Mint a fresh factory-operator JWT via the central backend login endpoint.
 
-    Returns (token, expires_at_epoch_seconds), or None when operator creds are
-    not configured / the login request fails. Failures are logged at WARNING
-    and the caller is expected to skip the factory call (graceful degradation).
+    Raises:
+        FactoryAuthError: when ``factory_backend_base_url`` or the service
+            account credentials are unset, the login endpoint returns a
+            non-200 status, or the response payload is malformed.
     """
-    base = (settings.backend_public_url or settings.backend_url or "").rstrip("/")
-    account = settings.factory_operator_account
-    password = settings.factory_operator_password
-    if not base or not account or not password:
-        logger.debug(
-            "Factory operator credentials not configured (backend_public_url=%s, account_set=%s); "
-            "skipping Bearer refresh",
-            bool(base),
-            bool(account),
+    base = (settings.factory_backend_base_url or "").rstrip("/")
+    username = settings.factory_service_account_username
+    password = settings.factory_service_account_password
+    if not base or not username or not password:
+        raise FactoryAuthError(
+            "Factory service credentials not configured "
+            f"(factory_backend_base_url={'set' if base else 'unset'}, "
+            f"factory_service_account_username={'set' if username else 'unset'}, "
+            f"factory_service_account_password={'set' if password else 'unset'})"
         )
-        return None
     try:
         async with httpx.AsyncClient(timeout=settings.factory_timeout_seconds) as client:
             resp = await client.post(
                 f"{base}/api/auth/login",
-                json={"username": account, "password": password},
+                json={"username": username, "password": password},
             )
-        if not resp.is_success:
-            logger.warning(
-                "Factory operator login to %s failed: HTTP %d %s",
-                f"{base}/api/auth/login",
-                resp.status_code,
-                resp.text[:200],
-            )
-            return None
+    except httpx.HTTPError as exc:
+        raise FactoryAuthError(
+            f"Factory operator login request to {base}/api/auth/login failed: {exc}"
+        ) from exc
+
+    if resp.status_code != 200:
+        body = resp.text[:200]
+        raise FactoryAuthError(
+            f"Factory operator login to {base}/api/auth/login failed: "
+            f"HTTP {resp.status_code} {body}",
+            status_code=resp.status_code,
+        )
+    try:
         data = resp.json()
-        token = data.get("token")
-        if not token:
-            logger.warning("Factory operator login response missing 'token' field")
-            return None
-        # ``LoginResponse`` carries an ISO-8601 ``expires_at``; fall back to the
-        # configured TTL (seconds) when the field is absent or malformed so the
-        # caller still gets a usable cache window.
-        expires_at_epoch = _parse_expires_at(data.get("expires_at"))
-        if expires_at_epoch is None:
-            expires_at_epoch = time.time() + float(settings.auth_token_ttl_hours) * 3600.0
-        return token, expires_at_epoch
-    except Exception as exc:  # pragma: no cover - network failures are expected in dev
-        logger.warning("Factory operator login request raised: %s", exc)
-        return None
+    except ValueError as exc:
+        raise FactoryAuthError(
+            f"Factory operator login response was not valid JSON: {resp.text[:200]}"
+        ) from exc
+    token = data.get("token")
+    if not isinstance(token, str) or not token:
+        raise FactoryAuthError("Factory operator login response missing 'token' field")
+
+    # ``LoginResponse`` carries an ISO-8601 ``expires_at``; fall back to the
+    # configured TTL (seconds) when the field is absent or malformed so the
+    # caller still gets a usable cache window. Always cap at the configured
+    # ceiling so a server-side bug can't hand out immortal tokens.
+    expires_at_epoch = _parse_expires_at(data.get("expires_at"))
+    if expires_at_epoch is None:
+        expires_at_epoch = time.time() + float(settings.factory_service_token_ttl_seconds)
+    ttl_cap = time.time() + float(settings.factory_service_token_ttl_seconds)
+    if expires_at_epoch > ttl_cap:
+        expires_at_epoch = ttl_cap
+    return token, expires_at_epoch
 
 
 class FactorySimulatorClient:
@@ -175,9 +199,34 @@ class FactorySimulatorClient:
         return settings.factory_timeout_seconds
 
     async def _bearer(self) -> Optional[str]:
-        """Returns a cached Bearer token, minting one if missing/expired."""
+        """Returns a cached Bearer token, minting one if missing/expired.
+
+        Honours the module-scoped cache regardless of whether the token comes
+        from the default ``/api/auth/login`` flow or an injected
+        ``bearer_provider`` (reserved for tests, which return just the token
+        string). The injected provider is wrapped in a small adapter that
+        normalises its return value to the cache's ``(token, expires_at)``
+        tuple contract.
+
+        Raises:
+            FactoryAuthError: when the central login fails or credentials are
+                unset. ``_request`` translates this into a typed
+                ``FactorySyncResult(ok=False, error="FactoryAuthError: ...")``
+                so the rest of the app can surface a 502 Bad Gateway upstream
+                instead of silently dropping the call.
+        """
         if self._explicit_bearer_provider is not None:
-            return await self._explicit_bearer_provider()
+
+            async def _wrapped() -> Optional[tuple[str, float]]:
+                token = await self._explicit_bearer_provider()
+                if not token:
+                    return None
+                # Tests do not pin an explicit expiry; default to the configured
+                # TTL so the cache window matches the production refresh cadence.
+                return token, time.time() + float(settings.factory_service_token_ttl_seconds)
+
+            return await _bearer_cache.get_or_refresh(_wrapped)
+
         return await _bearer_cache.get_or_refresh(_refresh_factory_bearer)
 
     def is_configured(self) -> bool:
@@ -190,11 +239,15 @@ class FactorySimulatorClient:
         path: str,
         json_payload: Optional[dict[str, Any]] = None,
     ) -> FactorySyncResult:
-        """Internal helper to dispatch requests gracefully without raising.
+        """Internal helper that ALWAYS returns a FactorySyncResult (never raises).
 
-        Uses a Bearer token for auth; refreshes once on 401 and retries before
-        giving up. All non-success paths return a structured FactorySyncResult
-        rather than raising, so callers can degrade gracefully.
+        Bearer-token behaviour:
+        - mints a token lazily on first use;
+        - on 401, invalidates the cache, re-logs in once, and retries once;
+        - a persistent 401 (after the refresh+retry) or a mint failure
+          surfaces as ``FactoryAuthError: ...`` in the result ``error`` field
+          with ``ok=False, skipped=False`` so callers can branch on it and the
+          outer API can return a 502 Bad Gateway upstream.
         """
         base = self.base_url
         if not base:
@@ -215,7 +268,18 @@ class FactorySimulatorClient:
         # One attempt plus at most one retry after a forced Bearer refresh.
         for attempt in (1, 2):
             start_time = time.monotonic()
-            bearer = await self._bearer()
+            try:
+                bearer = await self._bearer()
+            except FactoryAuthError as exc:
+                latency_ms = round((time.monotonic() - start_time) * 1000.0, 2)
+                logger.warning("Factory simulator bearer mint failed for %s: %s", path, exc)
+                return FactorySyncResult(
+                    ok=False,
+                    latency_ms=latency_ms,
+                    endpoint=endpoint,
+                    error=f"FactoryAuthError: {exc}",
+                    skipped=False,
+                )
             if not bearer:
                 logger.debug(
                     "Factory simulator Bearer token unavailable; skipping call to %s", path
@@ -258,6 +322,10 @@ class FactorySimulatorClient:
                     continue
 
                 body_preview = response.text[:200]
+                auth_failure = FactoryAuthError(
+                    f"Factory simulator rejected token: HTTP {response.status_code} {body_preview}",
+                    status_code=response.status_code,
+                )
                 logger.warning(
                     "Factory simulator request to %s returned HTTP %d: %s",
                     endpoint,
@@ -268,10 +336,10 @@ class FactorySimulatorClient:
                     ok=False,
                     latency_ms=latency_ms,
                     endpoint=endpoint,
-                    error=f"HTTP {response.status_code}: {body_preview}",
+                    error=f"FactoryAuthError: {auth_failure}",
                     skipped=False,
                 )
-            except Exception as exc:
+            except httpx.HTTPError as exc:
                 latency_ms = round((time.monotonic() - start_time) * 1000.0, 2)
                 logger.warning("Factory simulator request to %s failed: %s", endpoint, exc)
                 return FactorySyncResult(

@@ -506,9 +506,14 @@ def _text_page(pypdf, text: str):
     content.set_data(
         b"BT /F1 12 Tf 50 750 Td (" + text.encode("latin-1", errors="replace") + b") Tj ET"
     )
-    page = pypdf.PageObject(pypdf)
+    page = pypdf.PageObject()
+    f1 = DictionaryObject({
+        NameObject("/Type"): NameObject("/Font"),
+        NameObject("/Subtype"): NameObject("/Type1"),
+        NameObject("/BaseFont"): NameObject("/Helvetica"),
+    })
     page[NameObject("/Resources")] = DictionaryObject(
-        {NameObject("/Font"): DictionaryObject({NameObject("/F1"): DictionaryObject()})}
+        {NameObject("/Font"): DictionaryObject({NameObject("/F1"): f1})}
     )
     page[NameObject("/Contents")] = content
     page[NameObject("/MediaBox")] = ArrayObject(

@@ -56,7 +56,9 @@ INSTRUCTION = (
     "Set confidence to the mean 'confidence' of 'defect_frames'. "
     "Build the citation as the words 'Gemma Edge frames ', then the first 8 characters of "
     "defect_frames[0].frame_hash and of defect_frames[1].frame_hash separated by ', ', then "
-    "' + SPC p-chart Nelson Rule 1'. Respond in English."
+    "' + SPC p-chart Nelson Rule 1'. "
+    "You must return your final output strictly as a JSON object matching the FindingDraft schema with keys "
+    "'finding', 'evidence', 'confidence', and 'citation'."
 )
 
 

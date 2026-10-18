@@ -111,6 +111,7 @@ async def health_check():
         "status": "healthy",
         "app": settings.app_name,
         "version": settings.version,
+        "gcp_project": settings.gcp_project_id,
     }
 
 

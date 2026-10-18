@@ -82,7 +82,7 @@ class Settings(BaseSettings):
     gemini_live_simulation_mode: bool = True
 
     # Gemini Vision settings
-    gemini_vision_model: str = "gemini-2.5-flash"
+    gemini_vision_model: str = "gemini-3.5-flash"
     gemini_vision_fallback_to_mock: bool = True
 
     # EMQX MQTT Settings
@@ -99,7 +99,7 @@ class Settings(BaseSettings):
     # Ollama endpoint: LiteLLM reads OLLAMA_API_BASE directly (default http://localhost:11434).
     ai_provider: Literal["ollama", "gemini", "mock"] = "mock"
     ollama_model: str = "gemma2:2b"
-    gemini_model: str = "gemini-flash-latest"
+    gemini_model: str = "gemini-3.5-flash"
     google_genai_use_vertexai: bool = False
 
     # Pause between simulated conveyor verification batches (seconds)

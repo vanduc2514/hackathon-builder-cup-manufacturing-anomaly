@@ -59,7 +59,7 @@ variable "vertex_ai_location" {
 variable "gemini_model" {
   description = "Gemini model used by the agents."
   type        = string
-  default     = "gemini-2.5-flash-lite"
+  default     = "gemini-3.5-flash"
 }
 
 variable "gemini_live_model" {

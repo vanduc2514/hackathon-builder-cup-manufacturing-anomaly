@@ -1,15 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import ExportedDocuments from './ExportedDocuments';
-import { useApi } from '../../lib/api';
+import { fetchJson, useApi } from '../../lib/api';
 import type { ApiResource } from '../../lib/api';
 import type { IncidentDocumentsResponse, IncidentState } from '../../types';
 
 vi.mock('../../lib/api', () => ({
   useApi: vi.fn(),
+  fetchJson: vi.fn(),
 }));
 
 const useApiMock = vi.mocked(useApi);
+const fetchJsonMock = vi.mocked(fetchJson);
 
 afterEach(() => cleanup());
 
@@ -42,12 +44,11 @@ const gcsResponse: IncidentDocumentsResponse = {
   export_error: null,
   destination: 'gcs',
   bucket: 'kaizen-lab-kb',
-  console_url: 'https://console.cloud.google.com/storage/browser/kaizen-lab-kb/incidents/INC-0412',
   documents: [
-    { name: 'work_order.md', title: 'Work Order', uri: 'gs://kaizen-lab-kb/incidents/INC-0412/work_order.md' },
-    { name: 'report_8d.md', title: '8D Report', uri: 'gs://kaizen-lab-kb/incidents/INC-0412/report_8d.md' },
-    { name: 'sop_proposal.md', title: 'SOP Proposal', uri: 'gs://kaizen-lab-kb/incidents/INC-0412/sop_proposal.md' },
-    { name: 'impact_card.md', title: 'Impact Card', uri: 'gs://kaizen-lab-kb/incidents/INC-0412/impact_card.md' },
+    { name: 'work_order.md', title: 'Work Order', path: 'incidents/INC-0412/work_order.md' },
+    { name: 'report_8d.md', title: '8D Report', path: 'incidents/INC-0412/report_8d.md' },
+    { name: 'sop_proposal.md', title: 'SOP Proposal', path: 'incidents/INC-0412/sop_proposal.md' },
+    { name: 'impact_card.md', title: 'Impact Card', path: 'incidents/INC-0412/impact_card.md' },
   ],
 };
 
@@ -63,45 +64,40 @@ describe('ExportedDocuments (#333)', () => {
     expect(container.textContent).toBe('');
   });
 
-  it('shows the 4 document links to the Cloud Console (new tab) after approval', () => {
+  it('shows relative paths with Download/Open and no Cloud Console links', () => {
     mockApi(gcsResponse);
     const { container } = render(<ExportedDocuments incident={incident} />);
     expect(container.querySelector('#documents-export')).not.toBeNull();
-
-    // The 4 exported documents with their gs:// URIs.
     for (const doc of gcsResponse.documents) {
       expect(screen.getByText(doc.title)).not.toBeNull();
-      expect(screen.getByText(doc.uri)).not.toBeNull();
+      expect(screen.getByText(doc.path)).not.toBeNull();
     }
-    // Every link opens the (private) GCS folder via the Console URL in a new tab.
-    const links = Array.from(container.querySelectorAll<HTMLAnchorElement>('a')).filter(
-      (a) => a.href === gcsResponse.console_url,
-    );
-    expect(links).toHaveLength(5);
-    for (const a of links) {
-      expect(a.target).toBe('_blank');
-      expect(a.rel).toBe('noreferrer');
-    }
+    expect(screen.getByText('incidents/INC-0412/work_order.md')).not.toBeNull();
+    expect(container.textContent).not.toContain('gs://');
+    expect(container.querySelectorAll('a')).toHaveLength(0);
+    expect(screen.getAllByRole('button', { name: /^Download / })).toHaveLength(4);
+    expect(screen.getAllByRole('button', { name: /^Open / })).toHaveLength(4);
   });
 
-  it('shows local paths with no console link in dev mode', () => {
+  it('opens a modal that renders the document Markdown', async () => {
+    mockApi(gcsResponse);
+    fetchJsonMock.mockResolvedValue({ name: 'work_order.md', title: 'Work Order', content: '# Work Order body\n\n- step one' });
+    render(<ExportedDocuments incident={incident} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open Work Order' }));
+    await waitFor(() => expect(screen.getByRole('dialog')).not.toBeNull());
+    expect(fetchJsonMock).toHaveBeenCalledWith('/api/incidents/documents/work_order.md');
+    expect(screen.getByRole('heading', { level: 1, name: 'Work Order body' })).not.toBeNull();
+  });
+
+  it('shows paths with no links or local chip in dev mode', () => {
     mockApi({
-      incident_id: 'INC-0412',
-      exported: true,
-      export_error: null,
+      ...gcsResponse,
       destination: 'local',
       bucket: null,
-      console_url: null,
-      documents: [
-        { name: 'work_order.md', title: 'Work Order', uri: 'artifacts/documents/INC-0412/work_order.md' },
-        { name: 'report_8d.md', title: '8D Report', uri: 'artifacts/documents/INC-0412/report_8d.md' },
-        { name: 'sop_proposal.md', title: 'SOP Proposal', uri: 'artifacts/documents/INC-0412/sop_proposal.md' },
-        { name: 'impact_card.md', title: 'Impact Card', uri: 'artifacts/documents/INC-0412/impact_card.md' },
-      ],
     });
     const { container } = render(<ExportedDocuments incident={incident} />);
     expect(screen.getByText(/local artifacts directory/)).not.toBeNull();
-    expect(screen.getAllByText('local file')).toHaveLength(4);
+    expect(screen.queryByText('local file')).toBeNull();
     expect(container.querySelectorAll('a')).toHaveLength(0);
   });
 
@@ -112,7 +108,6 @@ describe('ExportedDocuments (#333)', () => {
       export_error: null,
       destination: 'local',
       bucket: null,
-      console_url: null,
       documents: [],
     });
     const { container } = render(<ExportedDocuments incident={incident} />);
@@ -127,7 +122,6 @@ describe('ExportedDocuments (#333)', () => {
       export_error: 'gcs unreachable',
       destination: 'local',
       bucket: null,
-      console_url: null,
       documents: [],
     });
     render(<ExportedDocuments incident={incident} />);

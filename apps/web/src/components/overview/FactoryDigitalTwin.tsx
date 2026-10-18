@@ -71,7 +71,7 @@ export default function FactoryDigitalTwin({
                 border: "1px solid rgba(245, 158, 11, 0.4)",
               }}
               data-testid="twin-status-stale"
-              title={error ?? "Mất kết nối với factory stream"}
+              title={error ?? "Lost connection to the factory stream"}
             >
               <span
                 style={{
@@ -82,7 +82,7 @@ export default function FactoryDigitalTwin({
                   display: "inline-block",
                 }}
               />
-              Mất kết nối &middot; Dữ liệu cũ ({lastTickTimeStr})
+              Disconnected &middot; Stale data ({lastTickTimeStr})
             </span>
           ) : (
             <span
@@ -96,7 +96,7 @@ export default function FactoryDigitalTwin({
                 color: "var(--muted)",
               }}
               data-testid="twin-status-offline"
-              title={error ?? "Chưa có kết nối với factory stream..."}
+              title={error ?? "Not yet connected to the factory stream..."}
             >
               <span
                 style={{
@@ -133,10 +133,10 @@ export default function FactoryDigitalTwin({
             sensors_off
           </span>
           <div style={{ fontWeight: 650, fontSize: "0.95rem", color: "var(--ink)" }}>
-            Chưa có dữ liệu từ Factory
+            No data from Factory yet
           </div>
           <div style={{ fontSize: "0.82rem", color: "var(--muted)", maxWidth: 460 }}>
-            Hệ thống chưa nhận được gói dữ liệu nào từ Factory Service SSE stream. Khởi động simulator hoặc kiểm tra kết nối để nhận telemetry thực tế.
+            The system has not received any packet from the Factory Service SSE stream. Start the simulator or check the connection to receive live telemetry.
           </div>
         </div>
       ) : (
@@ -162,7 +162,7 @@ export default function FactoryDigitalTwin({
                   history
                 </span>
                 <span>
-                  Dữ liệu hiển thị từ lần cập nhật cuối lúc <strong>{lastTickTimeStr}</strong> (đang mất kết nối).
+                  Showing data from the last update at <strong>{lastTickTimeStr}</strong> (disconnected).
                 </span>
               </div>
             </div>

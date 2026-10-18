@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import type { WorkOrder } from '../../types/mobile';
-import { useCamera } from '../../hooks/useCamera';
 import { useGeminiLive, type LiveConnection } from '../../hooks/useGeminiLive';
 import { useOemManual } from '../../hooks/useOemManual';
 import { copilotPrompts } from './copilotPrompts';
-import { IMG } from './mobileData';
+import { defectImageFor } from './mobileData';
 
 interface MobileFixLiveProps {
   order: WorkOrder;
@@ -23,7 +22,7 @@ const CONNECTION_LABEL: Record<LiveConnection, string> = {
 };
 
 /**
- * Full-screen guided repair: camera, step card from the OEM checkpoints and the Technician
+ * Full-screen guided repair: stored defect photo, step card from the OEM checkpoints and the Technician
  * Copilot (real Gemini replies streamed as captions and spoken by the browser). The technician
  * talks to the Copilot by tapping scripted prompts. Steps are confirmed by the technician; the
  * backend exposes no checkpoint-verification endpoint, so nothing is marked "verified" by the app.
@@ -34,19 +33,12 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
   const isLiveOrder = Boolean(order.live);
   const [idx, setIdx] = useState(0);
   const [voiceOn, setVoiceOn] = useState(voiceGuidance);
-  const [torch, setTorch] = useState(false);
   const [showSheet, setShowSheet] = useState(false);
   const [notes, setNotes] = useState('');
-  const camera = useCamera(true);
-  const { setTorch: applyTorch } = camera;
   const copilot = useGeminiLive(isLiveOrder, voiceOn);
 
   const step = steps[idx];
   const isLast = idx === steps.length - 1;
-
-  useEffect(() => {
-    applyTorch(torch);
-  }, [torch, applyTorch]);
 
   const next = () => {
     if (isLast) setShowSheet(true);
@@ -85,11 +77,7 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
 
   return (
     <div className="m-cam">
-      {camera.error ? (
-        <img className="m-cam-feed" src={IMG.spindle} alt="Camera unavailable" style={{ filter: 'brightness(0.6) grayscale(0.4)' }} />
-      ) : (
-        <video ref={camera.videoRef} className="m-cam-video" playsInline muted aria-label="Live camera" />
-      )}
+      <img className="m-cam-feed" src={defectImageFor(order.machine)} alt="Defective part" />
       <div className="m-cam-vignette" />
 
       {/* Top bar */}
@@ -143,12 +131,6 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
         </div>
       </div>
 
-      {camera.error && (
-        <div className="m-hint-pill m-glass-dark" style={{ top: '49%' }}>
-          <span className="material-symbols-outlined">no_photography</span>
-          Camera unavailable · {camera.error}
-        </div>
-      )}
       {idx > 0 && (
         <div className="m-done-tag m-glass-light-on-dark" style={{ left: 24, top: 'calc(49% + 92px)' }}>
           <span className="material-symbols-outlined ms-fill">check_circle</span>
@@ -220,14 +202,6 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
       {/* Controls */}
       <div className="m-cam-controls">
         <div className="m-tool-group m-glass-dark">
-          <button
-            className={`m-tool ${torch ? 'on' : ''}`}
-            onClick={() => setTorch((v) => !v)}
-            aria-label="Torch"
-            disabled={Boolean(camera.error)}
-          >
-            <span className="material-symbols-outlined">flashlight_on</span>
-          </button>
           <button
             className="m-tool"
             onClick={() => idx > 0 && setIdx((i) => i - 1)}

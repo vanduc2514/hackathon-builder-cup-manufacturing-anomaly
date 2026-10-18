@@ -29,8 +29,7 @@ def test_system_prompt_english_persona_and_grounding():
     assert "STRICT GROUNDING" in prompt
     assert "Never invent numbers" in prompt
     assert REFUSAL_MESSAGE in prompt
-    # No hard-coded Vietnamese persona or invented tolerances remain in the prompt.
-    assert "tiếng Việt" not in prompt
+    # No invented tolerances remain in the prompt.
     assert "0.005" not in prompt
 
 
@@ -45,20 +44,20 @@ def test_oem_manual_knowledge_base():
     assert "IM-05" in OEM_REPAIR_MANUALS
 
     cnc_data = OEM_REPAIR_MANUALS["CNC-02"]
-    assert "Sổ tay hướng dẫn CNC-02 trang 112" in cnc_data["primary_citation"]
+    assert "CNC-02 manual, p.112" in cnc_data["primary_citation"]
     assert len(cnc_data["checkpoints"]) == 5
 
     for cp in cnc_data["checkpoints"]:
         assert "citation" in cp
-        assert "Sổ tay hướng dẫn CNC-02 trang 112" in cp["citation"]
-        assert len(cp["instruction_vi"]) > 20
+        assert "CNC-02 manual, p.112" in cp["citation"]
+        assert len(cp["instruction"]) > 20
 
 
 def test_get_oem_manual_citations():
     """Tests citation lookup helper."""
     citations = get_oem_manual_citations("CNC-02")
     assert len(citations) == 5
-    assert all("CNC-02 trang 112" in c for c in citations)
+    assert all("CNC-02 manual, p.112" in c for c in citations)
 
     unknown_citations = get_oem_manual_citations("UNKNOWN-MACHINE")
     assert unknown_citations == []
@@ -66,10 +65,10 @@ def test_get_oem_manual_citations():
 
 def test_is_action_grounded():
     """Tests action verification against OEM supported capabilities."""
-    assert is_action_grounded("CNC-02", "Cần thay mảnh cắt insert T07") is True
-    assert is_action_grounded("CNC-02", "Kiểm tra độ đảo bằng đồng hồ so") is True
-    assert is_action_grounded("CNC-02", "Tự chế đồ gá gia công gỗ") is False
-    assert is_action_grounded("UNKNOWN-MACHINE", "Thay dao") is False
+    assert is_action_grounded("CNC-02", "Replace insert T07") is True
+    assert is_action_grounded("CNC-02", "Check runout with a dial indicator") is True
+    assert is_action_grounded("CNC-02", "Improvise a woodworking jig") is False
+    assert is_action_grounded("UNKNOWN-MACHINE", "Replace insert") is False
 
 
 # =============================================================================
@@ -92,21 +91,21 @@ def test_generate_refusal():
 
 
 def test_parse_metric_from_text():
-    """Tests regex float extraction supporting Vietnamese comma and period separators."""
-    assert parse_metric_from_text("Độ đảo là 0.003 mm") == 0.003
-    assert parse_metric_from_text("Số đo là 0,004 mm") == 0.004
-    assert parse_metric_from_text("Điểm sấy -32.5 độ C") == -32.5
-    assert parse_metric_from_text("Không có số nào ở đây") is None
+    """Tests regex float extraction supporting comma and period separators."""
+    assert parse_metric_from_text("Runout is 0.003 mm") == 0.003
+    assert parse_metric_from_text("Reading 0,004 mm") == 0.004
+    assert parse_metric_from_text("Dew point -32.5 C") == -32.5
+    assert parse_metric_from_text("No number here") is None
 
 
 def test_validate_metric_measurement():
     """Tests numeric threshold verification logic."""
     cp_runout = RepairCheckpoint(
         step_number=4,
-        title_vi="Đo độ đảo",
-        instruction_vi="Đo đồng hồ so",
-        citation="Sổ tay CNC trang 112",
-        metric_name="Độ đảo",
+        title="Measure runout",
+        instruction="Measure runout with a dial indicator",
+        citation="CNC manual p.112",
+        metric_name="Runout",
         target_threshold=0.005,
         comparator="<=",
         unit="mm",
@@ -115,15 +114,15 @@ def test_validate_metric_measurement():
     # Passing measurement (0.003 <= 0.005)
     passed, msg = validate_metric_measurement(cp_runout, 0.003)
     assert passed is True
-    assert "đạt chuẩn" in msg
+    assert "within spec" in msg
     assert "0.003 mm" in msg
 
     # Failing measurement (0.012 > 0.005)
     passed, msg = validate_metric_measurement(cp_runout, 0.012)
     assert passed is False
-    assert "không đạt" in msg
-    assert "vượt dung sai" in msg
-    assert "đo lại" in msg
+    assert "out of spec" in msg
+    assert "exceeds allowed tolerance" in msg
+    assert "measure again" in msg
 
 
 

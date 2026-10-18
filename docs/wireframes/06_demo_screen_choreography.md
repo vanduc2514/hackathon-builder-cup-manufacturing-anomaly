@@ -68,7 +68,7 @@ Right pane: not rendered. Optional 2s cutaway to the Ishikawa/5-Whys drawer (`Si
 ```text
 ╭─ LEFT PANE 1120px ──────────────────────────────╮╭─ RIGHT PANE 420px, DarkGlass ───────────╮
 │ ╔═(④)═ Repair & Proof ── (●) Verifying ⌃ ════╗  ││  9:41                      ▂▄▆ ▮        │
-│ ║ StreakGate                                 ║  ││  ( ‹ )  [● Copilot Live]  [vi-VN]       │
+│ ║ StreakGate                                 ║  ││  ( ‹ )  [● Copilot Live]  [en-US]       │
 │ ║ ■■■■■■■■■■■■■■■■■■▣□□□□□□□□□□□  29/50      ║  ││  ╭ [2/3] Replace insert ────────────╮  │
 │ ╚══════════════════════════════════════════════╝ ││  │ Target 45 Nm │ Check within tol   │  │
 │ ╭─(5┄)─ Sign-off ──────────────────── [🔒Waiting]⌄╮││  ╰────────────────────────────────────╯  │
@@ -81,7 +81,7 @@ Key choreography notes:
 - The **lock stays visibly engaged** on the left (`🔒`, opacity .55, lock icon) the entire time the right pane shows the technician completing physical steps — this is the single frame judges should screenshot to "get" Invariant #3.
 - `StreakGate` count animates up in real time as the camera/voice session on the right progresses — the two panes are driven by the same incident SSE stream, not two disconnected mockups.
 - Right pane audio wave: `∿∿∿` 56px band, `--accent-2 → --accent` gradient, animates amplitude on voice input/output (mic hit-area 56px per DESIGN.md §4.4).
-- VO dialogue for this beat lives in [`07_demo_voiceover_script_vi.md`](./07_demo_voiceover_script_vi.md) §2.
+- VO dialogue for this beat lives in [`07_demo_voiceover_script.md`](./07_demo_voiceover_script.md) §2.
 
 ### Beat 5 — Close + impact card (`00:70–00:85`)
 ```text

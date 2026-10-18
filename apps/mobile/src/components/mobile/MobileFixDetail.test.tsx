@@ -14,7 +14,6 @@ const sampleStep: RepairStep = {
   id: 1,
   title: 'Replace spindle insert',
   instruction: 'Tighten fastener to 3.5 Nm',
-  instructionVi: 'Siết bu lông đến 3.5 Nm',
   target: '3.5 Nm',
   tolerance: '±0.2 Nm',
   reference: 'SOP-SPINDLE-02',
@@ -24,9 +23,8 @@ const dynamicStep: RepairStep = {
   id: 101,
   title: 'OEM Calibrate spindle head',
   instruction: 'Check runout with dial gauge',
-  instructionVi: 'Kiểm tra độ đảo bằng đồng hồ so',
   target: '≤ 0.02 mm',
-  tolerance: 'Xác nhận bằng mắt',
+  tolerance: 'Visual check',
   reference: 'OEM-MANUAL-SEC-4',
 };
 

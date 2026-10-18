@@ -45,7 +45,7 @@ export default function PresetEvidenceModal({
     authFetch("/api/presets/evidence")
       .then(async (res) => {
         if (!res.ok) {
-          throw new Error(`HTTP ${res.status}: Không tải được danh mục ảnh mẫu.`);
+          throw new Error(`HTTP ${res.status}: Could not load the sample image catalog.`);
         }
         return res.json() as Promise<VisualEvidencePresetListResponse>;
       })
@@ -57,7 +57,7 @@ export default function PresetEvidenceModal({
       })
       .catch((err: unknown) => {
         if (active) {
-          setFetchError(err instanceof Error ? err.message : "Lỗi tải ảnh mẫu");
+          setFetchError(err instanceof Error ? err.message : "Failed to load sample images");
           setLoading(false);
         }
       });
@@ -73,7 +73,7 @@ export default function PresetEvidenceModal({
 
   const handleSelectPreset = async (preset: VisualEvidencePreset) => {
     if (!isAwaitingEvidence) {
-      setActionError("Chỉ cho phép nạp ảnh mẫu khi sự cố ở trạng thái chờ bằng chứng (awaiting_evidence).");
+      setActionError("Sample images can only be loaded while the incident is awaiting evidence (awaiting_evidence).");
       return;
     }
 
@@ -95,22 +95,22 @@ export default function PresetEvidenceModal({
           const body = (await res.json().catch(() => ({}))) as { detail?: string };
           const detailMsg = body.detail ? `: ${body.detail}` : "";
           throw new Error(
-            `Xung đột: AI hiện không ở trạng thái chờ bằng chứng hoặc đã phân tích xong (HTTP 409)${detailMsg}`
+            `Conflict: the AI is not awaiting evidence or has already finished analysis (HTTP 409)${detailMsg}`
           );
         }
         if (res.status === 404) {
           const body = (await res.json().catch(() => ({}))) as { detail?: string };
           const detailMsg = body.detail ? `: ${body.detail}` : "";
-          throw new Error(`Không tìm thấy ảnh mẫu đã chọn trong hệ thống (HTTP 404)${detailMsg}`);
+          throw new Error(`Selected sample image not found (HTTP 404)${detailMsg}`);
         }
-        throw new Error(`Lỗi máy chủ (${res.status}) khi nạp ảnh mẫu.`);
+        throw new Error(`Server error (${res.status}) while loading the sample image.`);
       }
 
-      onNotify?.(`Đã nạp ảnh mẫu bằng chứng [${preset.title}] thành công`, "success");
+      onNotify?.(`Evidence sample image [${preset.title}] loaded successfully`, "success");
       onSelectSuccess?.(preset);
       onClose();
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : "Lỗi không xác định khi nạp ảnh mẫu");
+      setActionError(err instanceof Error ? err.message : "Unknown error while loading the sample image");
     } finally {
       setSubmittingId(null);
     }
@@ -122,7 +122,7 @@ export default function PresetEvidenceModal({
         className="glass glass-strong modal-panel"
         role="dialog"
         aria-modal="true"
-        aria-label="Chọn ảnh mẫu bằng chứng đối chuẩn"
+        aria-label="Choose reference evidence sample image"
         onClick={(e) => e.stopPropagation()}
         style={{
           maxWidth: 720,
@@ -139,16 +139,16 @@ export default function PresetEvidenceModal({
           <div>
             <div className="eyebrow">Visual Evidence Preset Gallery</div>
             <h3 className="card-title" style={{ fontSize: "1.3rem", margin: "2px 0 4px" }}>
-              Chọn ảnh mẫu đối chuẩn khuôn IM-05
+              Choose a reference sample image for mold IM-05
             </h3>
             <p className="card-sub" style={{ margin: 0 }}>
-              Bộ ảnh kiểm tra quang học mẫu thực tế phục vụ xác minh khuyết tật vật lý và đối chuẩn nguyên nhân gốc.
+              Real optical-inspection sample images for verifying physical defects and benchmarking root causes.
             </p>
           </div>
           <button
             type="button"
             className="btn btn-sm"
-            aria-label="Đóng bảng chọn ảnh mẫu"
+            aria-label="Close sample image picker"
             onClick={onClose}
           >
             <span className="material-symbols-outlined">close</span>
@@ -173,8 +173,8 @@ export default function PresetEvidenceModal({
               info
             </span>
             <div style={{ fontSize: "0.85rem", lineHeight: 1.4 }}>
-              <strong>Lưu ý:</strong> Sự cố hiện tại đang ở trạng thái{" "}
-              <code>{incident.status}</code>. Thao tác nạp ảnh mẫu chỉ khả dụng khi workflow đang ở bước <code>awaiting_evidence</code>.
+              <strong>Note:</strong> The incident is currently in status{" "}
+              <code>{incident.status}</code>. Loading a sample image is only available while the workflow is at the <code>awaiting_evidence</code> step.
             </div>
           </div>
         )}
@@ -202,7 +202,7 @@ export default function PresetEvidenceModal({
 
         <div className="col" style={{ gap: 6 }}>
           <label htmlFor="preset-notes-input" className="eyebrow" style={{ color: "var(--text)" }}>
-            Ghi chú đính kèm (tùy chọn):
+            Attached notes (optional):
           </label>
           <input
             id="preset-notes-input"
@@ -210,7 +210,7 @@ export default function PresetEvidenceModal({
             className="input"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="VD: Kiểm tra phôi chu kỳ ép lúc 10:15, phát hiện bavia/nứt thành mép..."
+            placeholder="E.g. Checked the part from the 10:15 press cycle, found flash/cracked edge..."
             style={{
               padding: "8px 12px",
               borderRadius: 8,
@@ -228,7 +228,7 @@ export default function PresetEvidenceModal({
             <span className="material-symbols-outlined spin" style={{ fontSize: 28 }}>
               sync
             </span>
-            <span>Đang tải danh mục ảnh đối chuẩn...</span>
+            <span>Loading reference image catalog...</span>
           </div>
         )}
 
@@ -243,7 +243,7 @@ export default function PresetEvidenceModal({
 
         {!loading && !fetchError && presets.length === 0 && (
           <div className="inset col center" style={{ padding: 24, color: "var(--text)" }}>
-            Không có ảnh mẫu nào khả dụng.
+            No sample images available.
           </div>
         )}
 
@@ -292,7 +292,7 @@ export default function PresetEvidenceModal({
                         }`}
                         style={{ fontSize: "0.75rem" }}
                       >
-                        {preset.expected_defect_detected ? "Khuyết tật" : "Đạt chuẩn"}
+                        {preset.expected_defect_detected ? "Defect" : "Pass"}
                       </span>
                       {preset.suggested_sop_code && (
                         <span className="chip mono" style={{ fontSize: "0.72rem" }}>
@@ -304,7 +304,7 @@ export default function PresetEvidenceModal({
                       {preset.description}
                     </div>
                     <div style={{ fontSize: "0.78rem", color: "var(--faint)", fontStyle: "italic" }}>
-                      Phân tích AI: {preset.analysis}
+                      AI analysis: {preset.analysis}
                     </div>
                   </div>
                   <div>
@@ -319,7 +319,7 @@ export default function PresetEvidenceModal({
                       <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                         {isSubmitting ? "sync" : "upload_file"}
                       </span>
-                      <span>{isSubmitting ? "Đang nạp..." : "Nạp ảnh này"}</span>
+                      <span>{isSubmitting ? "Loading…" : "Load this image"}</span>
                     </button>
                   </div>
                 </div>

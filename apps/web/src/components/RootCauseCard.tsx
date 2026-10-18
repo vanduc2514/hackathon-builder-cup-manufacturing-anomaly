@@ -71,7 +71,7 @@ export default function RootCauseCard({ findings, rootCause, defectLabel = 'Surf
           </span>
         ) : (
           <span className="mono" style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>
-            {isAnalyzing ? 'Phân tích đang diễn ra…' : 'Chưa có kết luận'}
+            {isAnalyzing ? 'Analysis in progress…' : 'No conclusion yet'}
           </span>
         )}
       </div>
@@ -141,12 +141,12 @@ export default function RootCauseCard({ findings, rootCause, defectLabel = 'Surf
               {isAnalyzing ? 'hourglass_top' : 'account_tree'}
             </span>
             <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>
-              {isAnalyzing ? 'Phân tích nguyên nhân gốc đang diễn ra...' : 'Chưa có chuỗi 5-Whys'}
+              {isAnalyzing ? 'Root-cause analysis in progress...' : 'No 5-Whys chain yet'}
             </span>
             <span className="muted" style={{ fontSize: '0.74rem' }}>
               {isAnalyzing
-                ? 'Chuỗi 5-Whys sẽ hiển thị khi Root Cause agent hoàn thành phân tích.'
-                : 'Không có dữ liệu 5-Whys cho sự cố này.'}
+                ? 'The 5-Whys chain will appear once the Root Cause agent finishes its analysis.'
+                : 'No 5-Whys data for this incident.'}
             </span>
           </div>
         )
@@ -188,12 +188,12 @@ export default function RootCauseCard({ findings, rootCause, defectLabel = 'Surf
             {isAnalyzing ? 'hourglass_top' : 'schema'}
           </span>
           <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>
-            {isAnalyzing ? 'Phân tích nguyên nhân gốc đang diễn ra...' : 'Chưa có biểu đồ Ishikawa'}
+            {isAnalyzing ? 'Root-cause analysis in progress...' : 'No Ishikawa diagram yet'}
           </span>
           <span className="muted" style={{ fontSize: '0.74rem' }}>
             {isAnalyzing
-              ? 'Biểu đồ Ishikawa 6M sẽ hiển thị khi Root Cause agent xác định các yếu tố nguyên nhân.'
-              : 'Không có dữ liệu Ishikawa 6M cho sự cố này.'}
+              ? 'The Ishikawa 6M diagram will appear once the Root Cause agent identifies the causal factors.'
+              : 'No Ishikawa 6M data for this incident.'}
           </span>
         </div>
       )}

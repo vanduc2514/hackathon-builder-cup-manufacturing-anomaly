@@ -1,6 +1,6 @@
 # Mobile Design — Technician App
 
-A simple phone app for the specialist who fixes the machine. Large buttons, few words, usable with gloves. The copilot speaks Vietnamese (Gemini Live, `vi-VN`).
+A simple phone app for the specialist who fixes the machine. Large buttons, few words, usable with gloves. The copilot speaks English (Gemini, `en-US`).
 
 **1. My Work Order**
 One card for the current job: incident ID, machine, tool, root cause and the work order text.

@@ -871,7 +871,7 @@ To provide technicians and systems engineers with intuitive situational awarenes
 +-----------------------------------+
 | PHASE C: RESOLUTION & FIX         |
 | [7] Tech Copilot (Gemini Live)    |
-|     Hands-free audio / vi-VN      |
+|     Hands-free audio / en-US      |
 | [8] Incident Scribe (8D & SOP)    |
 |     D1-D8 Drafted · WO-2026-8812  |
 |     │                             |

@@ -89,13 +89,13 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
 ```text
 [Work List]                              [Collect evidence]                       [Guided repair (Gemini Live)]
 ╭──────────────────────────────────╮     ╭──────────────────────────────────╮     ╭──────────────────────────────────╮
-│ kAIgen (●) Live             (AV) │     │ ( ‹ )  Collect evidence    [P1]  │     │ ( ‹ ) [● Copilot Live] [vi-VN]   │
+│ kAIgen (●) Live             (AV) │     │ ( ‹ )  Collect evidence    [P1]  │     │ ( ‹ ) [● Copilot Live] [en-US]   │
 │ Work List                        │     │ ╭ AiCard  AI needs your eyes ╭──╮╮│     │ ╭ [2/3] Replace insert         ╮ │
 │ (█Active█) Processing  Completed │     │ │ "Take a close-up…"        │65│││     │ │ Target 45 Nm │ Check ± tol   │ │
 │ COLLECT EVIDENCE                 │     │ ╰───────────────────────────╰──╯╯│     │ ╰──────────────────────────────╯ │
 │ ▌[NEEDS EVIDENCE][P1][LIVE]      │     │ ALREADY COLLECTED · 2 ITEMS      │     │ ╭ You … / ✦ Copilot … ∿∿∿      ╮ │
 │ ▌ Evidence collected 1 of 3      │     │ STILL NEEDED · 1 LEFT            │     │ ╰──────────────────────────────╯ │
-│ REPAIRS                          │     │                                  │     │ [(ϟ)(↶)] (🔊56) [Done · next]    │
+│ REPAIRS                          │     │                                  │     │ [(↶)]    (🔊56) [Done · next]    │
 │ ▌[READY TO FIX][P2][DEMO]        │     │ [■ Capture 1 more to submit ■]   │     │                                  │
 │ [█WorkList█]  Notifs  Settings   │     │ [█WorkList█]  Notifs  Settings   │     │ [WorkList] [Notifs] [Settings]   │
 ╰──────────────────────────────────╯     ╰──────────────────────────────────╯     ╰──────────────────────────────────╯
@@ -184,8 +184,8 @@ The desktop dashboard is a **floating glass sidebar shell** and the technician a
  │                         < Decision Gate 1: Conf >= 0.70? >                                         │
  │                         ├── NO (< 0.70)  ──> [6b] Diagnostic Agent (status: awaiting_evidence)     │
  │                         │                    └──> [6c] Technician Photo (Gemini Vision)            │
- │                         │                         └──> Nối vào Phase C: Copilot / Resolution       │
- │                         └── YES (>= 0.70) ──> Dẫn thẳng vào Phase C                                │
+ │                         │                         └──> Joins Phase C: Copilot / Resolution       │
+ │                         └── YES (>= 0.70) ──> Straight into Phase C                             │
  ╰──────────────────────────────────────────────────╪─────────────────────────────────────────────────╯
                                                     │
                                                     ▼ (Verified Root Cause Dossier ➔ Resolution)
@@ -242,6 +242,6 @@ Not a product screen — storyboard, screen choreography, and VO assets for the 
 |---|---|---|
 | 90s storyboard | 4-phase incident lifecycle × 4 scoring-pillar timeline | [`05_demo_storyboard_90s.md`](./05_demo_storyboard_90s.md) |
 | Screen choreography | Split-screen wireframe: dashboard Andon lamps (left) + mobile camera/Live Copilot (right) | [`06_demo_screen_choreography.md`](./06_demo_screen_choreography.md) |
-| Voiceover script (vi) | Technician/Copilot dialogue + narrator VO draft | [`07_demo_voiceover_script_vi.md`](./07_demo_voiceover_script_vi.md) |
+| Voiceover script | Technician/Copilot dialogue + narrator VO draft | [`07_demo_voiceover_script.md`](./07_demo_voiceover_script.md) |
 | Pitch deck skeleton | Slide-by-slide layout brief for architecture + impact slides | [`08_demo_pitch_deck_skeleton.md`](./08_demo_pitch_deck_skeleton.md) |
 | HTML prototype | Lumina Slate-fidelity static render of the Beat-4 split-screen moment | [`../../.stitch/designs/demo_split_screen_choreography.html`](../../.stitch/designs/demo_split_screen_choreography.html) |

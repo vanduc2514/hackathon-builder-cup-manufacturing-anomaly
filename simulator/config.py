@@ -15,7 +15,6 @@ class SimulatorSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="allow")
 
     app_env: str = os.getenv("APP_ENV", "development")
-    factory_api_key: Optional[str] = os.getenv("FACTORY_API_KEY", None)
 
     # TKT-073 / #288: factory app shares the central backend's AUTH_SECRET so
     # tokens minted by /api/auth/login are accepted here. The factory service

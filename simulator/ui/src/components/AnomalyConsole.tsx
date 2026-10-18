@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
 import type { ActiveAnomalyStatus, PubSubDeliveryReport } from '../types';
-import OperatorKeyInput from './OperatorKeyInput';
 
 interface Props {
   activeAnomaly?: ActiveAnomalyStatus | null;
   onInject: (scenario: string, machineId?: string, severity?: number, mode?: string) => Promise<boolean>;
   onReset: () => Promise<boolean>;
-  apiKey?: string;
-  onApiKeyChange?: (key: string) => void;
   authError?: string | null;
   deliveryReports?: PubSubDeliveryReport[];
 }
@@ -16,8 +13,6 @@ export default function AnomalyConsole({
   activeAnomaly,
   onInject,
   onReset,
-  apiKey = '',
-  onApiKeyChange,
   authError,
   deliveryReports,
 }: Props): React.ReactElement {
@@ -54,13 +49,7 @@ export default function AnomalyConsole({
         </div>
       </div>
 
-      {onApiKeyChange && (
-        <OperatorKeyInput
-          apiKey={apiKey}
-          onApiKeyChange={onApiKeyChange}
-          authError={authError}
-        />
-      )}
+      {authError && <div className="banner-alert">{authError}</div>}
 
       {activeAnomaly?.scenario && (
         <div className="banner-alert">

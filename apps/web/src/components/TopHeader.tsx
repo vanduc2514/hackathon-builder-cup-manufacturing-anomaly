@@ -35,7 +35,25 @@ export default function TopHeader({
   const [paletteOpen, setPaletteOpen] = useState<boolean>(false);
   const [query, setQuery] = useState<string>('');
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const [profileOpen, setProfileOpen] = useState<boolean>(false);
+  const profileRef = useRef<HTMLDivElement | null>(null);
   const user = useSession()?.user;
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!profileRef.current?.contains(e.target as Node)) setProfileOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setProfileOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [profileOpen]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -192,15 +210,21 @@ export default function TopHeader({
         </button>
 
         {user && (
-          <div className="row" style={{ gap: '0.7rem', paddingLeft: '0.4rem' }}>
-            <div className="col header-role-text" style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: '0.88rem', fontWeight: 650 }}>{ROLE_LABEL[user.role]}</span>
-            </div>
-            <div
+          <div style={{ position: 'relative', paddingLeft: '0.4rem' }} ref={profileRef}>
+            <button
+              id="header-profile"
+              type="button"
+              aria-haspopup="dialog"
+              aria-expanded={profileOpen}
+              aria-label="Account details"
+              onClick={() => setProfileOpen((v) => !v)}
               style={{
                 width: 42,
                 height: 42,
                 borderRadius: 999,
+                border: 0,
+                padding: 0,
+                cursor: 'pointer',
                 background: 'linear-gradient(160deg, #1f2937, #0b1220)',
                 color: '#fff',
                 display: 'grid',
@@ -211,7 +235,31 @@ export default function TopHeader({
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
                 {ROLE_ICON[user.role]}
               </span>
-            </div>
+            </button>
+            {profileOpen && (
+              <div
+                className="glass glass-strong col"
+                role="dialog"
+                aria-label="Account details"
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 'calc(100% + 8px)',
+                  minWidth: 200,
+                  padding: '0.8rem 1rem',
+                  zIndex: 80,
+                  gap: 4,
+                }}
+              >
+                <span style={{ fontSize: '0.9rem', fontWeight: 650 }}>{user.display_name}</span>
+                <span className="row" style={{ gap: 4, fontSize: '0.78rem', color: 'var(--muted)' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
+                    {ROLE_ICON[user.role]}
+                  </span>
+                  {ROLE_LABEL[user.role]}
+                </span>
+              </div>
+            )}
           </div>
         )}
 

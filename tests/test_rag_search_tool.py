@@ -456,14 +456,13 @@ def test_progressive_relaxation():
 
 
 def test_multi_query_expansion():
-    """Verify expand_symptom_queries generates technical and bilingual variations."""
+    """Verify expand_symptom_queries generates technical variations."""
     from backend.tools.rag_search_tool import expand_symptom_queries
 
     queries = expand_symptom_queries("scratch_vertical", "CNC-02")
     assert len(queries) >= 3
-    # Checks for OEM terminology and Vietnamese equivalent
+    # Checks for OEM terminology
     assert any("flank wear" in q for q in queries)
-    assert any("xước" in q for q in queries)
 
 
 # =============================================================================

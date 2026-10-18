@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import type { VerifiedSolution } from '../../lib/eightD';
 import { eightDMarkdown, eightDSteps, proofComplete } from '../../lib/eightD';
 import EightDSteps from './EightDSteps';
+import MarkdownViewer from '../MarkdownViewer';
 
 interface EightDReportCardProps {
   solution: VerifiedSolution;
@@ -90,9 +91,7 @@ export default function EightDReportCard({ solution: s, defaultOpen }: EightDRep
                   expand_more
                 </span>
               </summary>
-              <pre className="mono diff-block" style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>
-                {s.report8d}
-              </pre>
+              <MarkdownViewer source={s.report8d} />
             </details>
           )}
         </div>

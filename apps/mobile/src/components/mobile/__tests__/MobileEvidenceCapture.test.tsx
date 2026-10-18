@@ -116,7 +116,7 @@ describe('MobileEvidenceCapture Preset Handling', () => {
     );
 
     // Open preset gallery sheet
-    const openBtn = screen.getByRole('button', { name: /Chọn ảnh mẫu/i });
+    const openBtn = screen.getByRole('button', { name: /Choose sample image/i });
     fireEvent.click(openBtn);
 
     await waitFor(() => {
@@ -175,7 +175,7 @@ describe('MobileEvidenceCapture Preset Handling', () => {
     );
 
     // Open preset gallery sheet
-    const openBtn = screen.getByRole('button', { name: /Chọn ảnh mẫu/i });
+    const openBtn = screen.getByRole('button', { name: /Choose sample image/i });
     fireEvent.click(openBtn);
 
     await waitFor(() => {

@@ -39,19 +39,17 @@ REST calls, including the web app's `/health` ping, stay relative and go through
 
 ## Backend → Factory auth (TKT-073 / #288)
 
-The backend's `FactorySimulatorClient` (`backend/tools/factory_client.py`) authenticates every call to the factory service with a Bearer JWT minted by the central backend's own `/api/auth/login` endpoint, **not** the historical shared `X-API-Key`. The factory service now gates `POST /api/factory/inject`, `POST /api/factory/reset`, and `GET /api/factory/stream` on the same HS256 JWT verification used by every other `/api` route in the platform (`simulator/auth.py`).
+The backend's `FactorySimulatorClient` (`backend/tools/factory_client.py`) authenticates every call to the factory service with a Bearer JWT minted by the central backend's own `/api/auth/login` endpoint. The factory service gates `POST /api/factory/inject` and `POST /api/factory/reset` on the same HS256 JWT verification used by every other `/api` route in the platform (`simulator/auth.py`); the factory UI sends the signed-in user's token the same way. The legacy shared `X-API-Key` is removed everywhere (code, `FACTORY_API_KEY` env vars, `random_password.factory_api_key`).
 
 Configuration lives in `infra/terraform/cloud_run.tf` (backend Cloud Run) and `infra/terraform/factory.tf` (factory Cloud Run). After this change:
 
 - Backend Cloud Run env vars (added): `BACKEND_PUBLIC_URL` (the deployed backend URL, so the client can call itself), `FACTORY_OPERATOR_ACCOUNT`, `FACTORY_OPERATOR_PASSWORD` (a low-privilege `AUTH_USERS` entry, set via `TF_VAR_factory_operator_account` / `TF_VAR_factory_operator_password` in `mise.local.toml`).
-- Backend Cloud Run env vars (kept for safety belt + follow-up cleanup): `FACTORY_API_KEY` (orphaned on the backend after the Python field drop; remove in the follow-up ticket).
-- Factory Cloud Run env vars (replaced): `FACTORY_API_KEY` → `AUTH_SECRET` (same `random_password.auth_secret` resource as the backend, so a JWT issued by `/api/auth/login` verifies here).
-- Factory Cloud Run resources (kept as orphan this PR; remove in the follow-up ticket): `random_password.factory_api_key`.
+- Factory Cloud Run env vars: `AUTH_SECRET` (same `random_password.auth_secret` resource as the backend, so a JWT issued by `/api/auth/login` verifies here). Production without it fails closed with 503.
 - Firebase Hosting rewrites (`firebase.json`, target `factory`): an `/api/auth/**` rule is added before `/api/**`, pointing to `kaizen-backend`, so the operator login from the factory UI (if added later) hits the backend rather than the factory service.
 
 The client caches the Bearer token in-process, reuses it across calls, and refreshes it exactly once on a 401 before failing (`backend/tools/factory_client.py`). Login failure or missing operator credentials are skipped gracefully — `factory_client` returns `FactorySyncResult(skipped=True, error="bearer_unavailable")` rather than raising, so callers degrade quietly.
 
-Deploy coordination (Risk #3 from issue #288): Terraform must be applied **before** the new backend image is rolled; otherwise the factory container still has `FACTORY_API_KEY` env-var while the backend no longer sends `X-API-Key`, and every backend → factory call 401s.
+Applying Terraform after this change destroys `random_password.factory_api_key` and drops the `FACTORY_API_KEY` env var from the backend service; nothing reads either any more.
 
 ## `?pwd=` prefill on login URLs
 

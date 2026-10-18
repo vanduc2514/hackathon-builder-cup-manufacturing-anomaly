@@ -22,6 +22,7 @@ from google.cloud import storage
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
 from backend.core.models import (
+    IncidentDocumentContent,
     IncidentDocumentLink,
     IncidentDocumentsExportResult,
     IncidentDocumentsResponse,
@@ -33,7 +34,6 @@ logger = logging.getLogger(__name__)
 # GCS object prefix per incident; the local mirror keeps the same layout under artifacts/.
 EXPORT_PREFIX = "incidents"
 LOCAL_EXPORT_ROOT = Path(__file__).resolve().parents[2] / "artifacts" / "documents"
-CONSOLE_URL_TEMPLATE = "https://console.cloud.google.com/storage/browser/{bucket}/{prefix}"
 
 # (file name, display title) for the four exported documents, in stable order.
 DOCUMENT_FILES: tuple[tuple[str, str], ...] = (
@@ -49,24 +49,19 @@ def export_destination() -> Literal["gcs", "local"]:
     return "gcs" if settings.is_production else "local"
 
 
-def console_url(bucket: str, incident_id: str) -> str:
-    """Cloud Console browser path for the incident's document folder (#333: blobs are private)."""
-    return CONSOLE_URL_TEMPLATE.format(bucket=bucket, prefix=f"{EXPORT_PREFIX}/{incident_id}")
-
-
 def new_gcs_client() -> storage.Client:
     """Creates the GCS client used for the upload; tests monkeypatch this hook."""
     return storage.Client(project=settings.gcp_project_id)
 
 
 def _header(state: IncidentState) -> list[str]:
-    """Shared Markdown header lines stamped on every exported document."""
+    """Shared Markdown header list stamped on every exported document (one bullet per field)."""
     return [
-        f"Incident: {state.incident_id}",
-        f"Machine / tool: {state.suspect_machine or '-'} / {state.suspect_tool or '-'}",
-        f"Defect: {state.defect_type or '-'} ({state.defect_rate:.3f} vs UCL {state.spc_ucl:.3f})",
-        f"Status: {state.status} (approved by shift leader)",
-        f"Closed at: {state.closed_at or '-'}",
+        f"- **Incident:** {state.incident_id}",
+        f"- **Machine / tool:** {state.suspect_machine or '-'} / {state.suspect_tool or '-'}",
+        f"- **Defect:** {state.defect_type or '-'} ({state.defect_rate:.3f} vs UCL {state.spc_ucl:.3f})",
+        f"- **Status:** {state.status} (approved by shift leader)",
+        f"- **Closed at:** {state.closed_at or '-'}",
     ]
 
 
@@ -146,7 +141,6 @@ def export_incident_documents(
             bucket=bucket_name,
             prefix=prefix,
             uris=uris,
-            console_url=console_url(bucket_name, state.incident_id),
         )
     root = LOCAL_EXPORT_ROOT / state.incident_id
     root.mkdir(parents=True, exist_ok=True)
@@ -168,25 +162,34 @@ def export_incident_documents(
         bucket=None,
         prefix=prefix,
         uris=uris,
-        console_url=None,
         note=f"app_env={settings.app_env}: documents written to {root} locally instead of GCS",
     )
 
 
 def document_links(state: IncidentState) -> list[IncidentDocumentLink]:
-    """URIs for the four exported documents (gs:// in prod, local paths in dev)."""
+    """Bucket-relative paths for the four exported documents (same layout for gcs and local)."""
     if not state.documents_exported:
         return []
-    dest = export_destination()
     prefix = f"{EXPORT_PREFIX}/{state.incident_id}"
     links: list[IncidentDocumentLink] = []
     for name, title in DOCUMENT_FILES:
-        if dest == "gcs":
-            uri = f"gs://{settings.documents_bucket}/{prefix}/{name}"
-        else:
-            uri = str(LOCAL_EXPORT_ROOT / state.incident_id / name)
-        links.append(IncidentDocumentLink(name=name, title=title, uri=uri))
+        links.append(IncidentDocumentLink(name=name, title=title, path=f"{prefix}/{name}"))
     return links
+
+
+def document_content(state: IncidentState, name: str) -> IncidentDocumentContent | None:
+    """Full Markdown text of one exported document, re-rendered from board state (read-only).
+
+    Returns None when the documents were not exported yet or ``name`` is not one of the four files.
+    """
+    if not state.documents_exported:
+        return None
+    titles = dict(DOCUMENT_FILES)
+    if name not in titles:
+        return None
+    return IncidentDocumentContent(
+        name=name, title=titles[name], content=render_documents(state)[name]
+    )
 
 
 def documents_response(state: IncidentState) -> IncidentDocumentsResponse:
@@ -199,7 +202,6 @@ def documents_response(state: IncidentState) -> IncidentDocumentsResponse:
         export_error=state.documents_export_error,
         destination=dest,
         bucket=bucket,
-        console_url=console_url(bucket, state.incident_id) if bucket else None,
         documents=document_links(state),
     )
 

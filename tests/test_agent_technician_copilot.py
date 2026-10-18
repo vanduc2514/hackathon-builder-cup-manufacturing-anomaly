@@ -49,7 +49,7 @@ def build_copilot_finding(board_data: dict | IncidentState | None = None) -> Fin
     if is_im:
         return FindingDraft(
             finding=(
-                f"Guided frontline technician in Vietnamese through {suspect_machine} dryer de-energization, "
+                f"Guided frontline technician through {suspect_machine} dryer de-energization, "
                 "desiccant filter FLT-ABS-04 replacement, and dewpoint verification (-35.0 °C <= -30.0 °C) "
                 "following SOP-MOLD-02."
             ),
@@ -64,7 +64,7 @@ def build_copilot_finding(board_data: dict | IncidentState | None = None) -> Fin
 
     return FindingDraft(
         finding=(
-            f"Guided frontline technician in Vietnamese through {suspect_machine} enclosure removal, "
+            f"Guided frontline technician through {suspect_machine} enclosure removal, "
             f"tool {suspect_tool} insert replacement at 4.2 N·m torque, and dial indicator runout verification "
             "(0.003 mm <= 0.005 mm) following OEM manual."
         ),

@@ -64,10 +64,10 @@ def test_repair_checkpoint_schema():
 
     cp = RepairCheckpoint(
         step_number=4,
-        title_vi="Đo độ đảo",
-        instruction_vi="Dùng đồng hồ so rà độ đảo",
-        citation="Sổ tay CNC trang 112",
-        metric_name="Độ đảo",
+        title="Measure runout",
+        instruction="Measure runout with a dial indicator",
+        citation="CNC manual p.112",
+        metric_name="Runout",
         target_threshold=0.005,
         comparator="<=",
         unit="mm",
@@ -85,7 +85,7 @@ def test_copilot_session_telemetry_schema():
     turn = CopilotTurn(
         turn_id=1,
         speaker="copilot",
-        message_vi="Xin chào kỹ thuật viên",
+        message="Hello technician",
         citation="OEM",
     )
     telemetry = CopilotSessionTelemetry(

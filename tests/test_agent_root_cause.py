@@ -532,7 +532,7 @@ def test_build_root_cause_finding_low_confidence_diagnostic_probe():
     )
     assert draft.confidence < 0.70
     assert draft.diagnostic_request is not None
-    assert "mũi dao T07" in draft.diagnostic_request or "T07" in draft.diagnostic_request
+    assert "T07" in draft.diagnostic_request
 
 
 def test_rca_gate_confident_route():

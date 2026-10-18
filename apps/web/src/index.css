@@ -2145,8 +2145,7 @@ button.incident-chip:hover {
 
 @media (max-width: 759.98px) {
   .header-search-label,
-  .header-search-kbd,
-  .header-role-text {
+  .header-search-kbd {
     display: none;
   }
 
@@ -3971,3 +3970,21 @@ button.incident-chip:hover {
   background: rgba(34, 197, 94, 0.2);
   color: #15803d;
 }
+
+.md-viewer { color: var(--text); }
+.md-viewer h1, .md-viewer h2, .md-viewer h3 { font-weight: 650; margin: 0.9em 0 0.4em; }
+.md-viewer > :first-child { margin-top: 0; }
+.md-viewer h1 { font-size: 1.15rem; }
+.md-viewer h2 { font-size: 1.02rem; }
+.md-viewer h3 { font-size: 0.92rem; }
+.md-viewer p, .md-viewer li { font-size: 0.86rem; line-height: 1.6; }
+.md-viewer p { margin: 0.5em 0; }
+.md-viewer ul, .md-viewer ol { padding-left: 1.2rem; margin: 0.5em 0; }
+.md-viewer code, .md-viewer pre { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.78rem; background: rgba(15, 23, 42, 0.05); border-radius: 8px; }
+.md-viewer code { padding: 0.1em 0.35em; }
+.md-viewer pre { padding: 0.7rem 0.9rem; overflow-x: auto; }
+.md-viewer pre code { background: none; padding: 0; }
+.md-viewer table { width: 100%; border-collapse: collapse; margin: 0.6em 0; font-size: 0.82rem; }
+.md-viewer th, .md-viewer td { border: 1px solid var(--hair); padding: 6px 10px; text-align: left; }
+.md-viewer blockquote { margin: 0.6em 0; padding-left: 0.9rem; border-left: 3px solid var(--accent); color: var(--muted); }
+.md-viewer hr { border: 0; border-top: 1px solid var(--hair); margin: 1em 0; }

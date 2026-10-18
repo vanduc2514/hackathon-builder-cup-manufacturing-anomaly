@@ -8,7 +8,7 @@ interface MobileSettingsProps {
   onSignOut: () => void;
 }
 
-type TextKey = 'phone' | 'email' | 'leadName';
+type TextKey = 'leadName';
 type ToggleKey = 'voiceGuidance' | 'pushAlerts' | 'haptics';
 
 /** Personal information and a few preferences. Kept deliberately small. */
@@ -21,8 +21,6 @@ export default function MobileSettings({
     onChange({ ...profile, [key]: value });
 
   const textFields: { key: TextKey; label: string; type: string }[] = [
-    { key: 'phone', label: 'Phone', type: 'tel' },
-    { key: 'email', label: 'Email', type: 'email' },
     { key: 'leadName', label: 'Shift Leader', type: 'text' },
   ];
 
@@ -71,18 +69,6 @@ export default function MobileSettings({
 
         <div className="m-label">Preferences</div>
         <section className="m-glass m-list" style={{ padding: 0 }}>
-          <div className="m-field">
-            <label htmlFor="m-set-lang">Language</label>
-            <select
-              id="m-set-lang"
-              value={profile.language}
-              onChange={(e) => set('language', e.target.value as TechnicianProfile['language'])}
-            >
-              <option value="vi-VN">Tiếng Việt</option>
-              <option value="en-US">English</option>
-            </select>
-            <span className="material-symbols-outlined m-li-chev" style={{ fontSize: 18 }}>unfold_more</span>
-          </div>
           {toggles.map((t) => (
             <div key={t.key} className="m-field">
               <span className="m-li-icon" style={{ width: 28, height: 28, borderRadius: 8 }}>

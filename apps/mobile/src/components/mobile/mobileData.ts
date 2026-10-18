@@ -18,6 +18,12 @@ import type {
 import type { TelemetryContext } from '../../hooks/useTelemetry';
 import type { AgentFinding, AuthUser, IncidentState, IncidentSummary } from '../../types';
 
+export function defectImageFor(machine: string): string {
+  return machine.toUpperCase().startsWith('IM')
+    ? '/presets/evidence/preset_im05_crack.jpg'
+    : '/presets/evidence/cnc02/tool_worn_insert_commons_bautsch_cc0.jpg';
+}
+
 export const IMG = {
   lathe: '/mobile/lathe.jpg',
   mill: '/mobile/mill.jpg',
@@ -630,12 +636,9 @@ export function createTechnicianProfile(user?: AuthUser | null): TechnicianProfi
     employeeId: user?.username ? `EMP-${user.username.toUpperCase()}` : 'TECH-0427',
     name: user?.display_name || (isLead ? 'Shift Leader' : 'Maintenance Technician'),
     role: isLead ? 'Shift Leader' : 'Maintenance Technician',
-    phone: '+84 90 123 4567',
-    email: user?.username ? `${user.username}@apex-factory.vn` : 'technician@apex-factory.vn',
     shift: 'Shift A · 06:00–14:00',
     bay: 'Bay 4',
     leadName: isLead ? 'Plant Manager' : 'Shift Leader (Duty)',
-    language: 'vi-VN',
     voiceGuidance: true,
     pushAlerts: true,
     haptics: true,

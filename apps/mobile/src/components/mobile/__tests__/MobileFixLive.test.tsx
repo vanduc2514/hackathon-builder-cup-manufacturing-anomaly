@@ -11,16 +11,6 @@ import {
 import type { WorkOrder } from '../../../types/mobile';
 import type { GeminiLiveServiceStatus } from '../../../types';
 
-vi.mock('../../../hooks/useCamera', () => ({
-  useCamera: vi.fn(() => ({
-    videoRef: { current: null },
-    ready: true,
-    error: null,
-    grab: vi.fn(),
-    setTorch: vi.fn(),
-  })),
-}));
-
 vi.mock('../../../hooks/useOemManual', () => ({
   useOemManual: vi.fn(() => ({ steps: [], loading: false })),
 }));
@@ -97,7 +87,7 @@ const order = {
   sensors: [],
   evidence: [],
   steps: [
-    { id: 1, title: 'Stop the spindle', instruction: 'Stop it.', instructionVi: '', target: 'Stopped', reference: 'OEM p.112' },
+    { id: 1, title: 'Stop the spindle', instruction: 'Stop it.', target: 'Stopped', reference: 'OEM p.112' },
   ],
   partsNeeded: [],
   live: {
@@ -162,7 +152,14 @@ describe('MobileFixLive Copilot', () => {
     ]) {
       expect(screen.getByRole('button', { name: new RegExp(label) })).toBeTruthy();
     }
-    expect(screen.queryByText(/Bắt đầu|Xong bước/)).toBeNull();
+    expect(screen.queryByText(/Start|Step done/)).toBeNull();
+  });
+
+  it('shows the stored defect image and no torch control', async () => {
+    await renderReady();
+    const img = screen.getByAltText('Defective part') as HTMLImageElement;
+    expect(img.src.endsWith('tool_worn_insert_commons_bautsch_cc0.jpg')).toBe(true);
+    expect(screen.queryByLabelText('Torch')).toBeNull();
   });
 
   it('sends the tapped prompt, streams captions and speaks each completed sentence', async () => {

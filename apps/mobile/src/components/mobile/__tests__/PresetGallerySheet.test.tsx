@@ -92,8 +92,8 @@ describe("PresetGallerySheet", () => {
 
     const img = screen.getByAltText("IM-05 Housing Structural Wall Crack") as HTMLImageElement;
     expect(img.getAttribute("src")).toBe("/presets/evidence/preset_im05_crack.jpg");
-    expect(screen.getByText("Đạt chuẩn")).toBeDefined();
-    expect(screen.getByText("Có khuyết tật")).toBeDefined();
+    expect(screen.getByText("Pass")).toBeDefined();
+    expect(screen.getByText("Defect")).toBeDefined();
   });
 
   it("submits selected preset to /api/incidents/evidence/preset with notes and triggers onSelectSuccess", async () => {
@@ -132,7 +132,7 @@ describe("PresetGallerySheet", () => {
     });
 
     const notesInput = screen.getByTestId("preset-notes-input");
-    fireEvent.change(notesInput, { target: { value: "Ảnh chụp khuôn 3 nứt vỏ" } });
+    fireEvent.change(notesInput, { target: { value: "Close-up of mold 3 shell crack" } });
 
     const selectBtn = screen.getByTestId("preset-select-btn-preset-im05-crack");
     fireEvent.click(selectBtn);
@@ -144,7 +144,7 @@ describe("PresetGallerySheet", () => {
           method: "POST",
           body: JSON.stringify({
             preset_id: "preset-im05-crack",
-            notes: "Ảnh chụp khuôn 3 nứt vỏ",
+            notes: "Close-up of mold 3 shell crack",
           }),
         })
       );

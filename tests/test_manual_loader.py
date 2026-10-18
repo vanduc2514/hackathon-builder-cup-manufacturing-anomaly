@@ -30,7 +30,7 @@ def test_load_oem_repair_manuals_parses_json() -> None:
     first_cp = cnc.checkpoints[0]
     assert isinstance(first_cp, RepairCheckpoint)
     assert first_cp.step_number == 1
-    assert "LOTO" in first_cp.title_vi
+    assert "LOTO" in first_cp.title
     assert "CNC-02" in first_cp.citation
 
 

@@ -137,7 +137,6 @@ export default function AndonPhaseTracker({ incident }: AndonPhaseTrackerProps):
                   <span style={{ fontSize: '0.84rem', fontWeight: 650, color: lit || done ? 'var(--ink)' : 'var(--muted)' }}>
                     {p.name}
                   </span>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--faint)', fontStyle: 'italic' }}>{p.vietnameseName}</span>
                 </span>
               </button>
             );

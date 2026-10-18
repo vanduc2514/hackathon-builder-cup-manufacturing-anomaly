@@ -13,7 +13,7 @@ COPY simulator/ /app/simulator/
 
 # Build Vite frontend if package.json exists; otherwise generate fallback index.html
 RUN if [ -f /app/simulator/ui/package.json ]; then \
-        cd /app/simulator/ui && npm install && npm run build; \
+        cd /app/simulator/ui && npm ci && npm run build; \
     else \
         mkdir -p /app/simulator/ui/dist && \
         echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Factory Client</title></head><body><div id="root">Factory Floor UI Placeholder</div></body></html>' > /app/simulator/ui/dist/index.html; \

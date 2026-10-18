@@ -13,8 +13,6 @@ export default function App(): React.ReactElement {
     connected,
     injectAnomaly,
     resetFactory,
-    apiKey,
-    setApiKey,
     authError,
     deliveryReports,
   } = useFactoryStream();
@@ -68,8 +66,6 @@ export default function App(): React.ReactElement {
           activeAnomaly={packet?.active_anomaly}
           onInject={injectAnomaly}
           onReset={resetFactory}
-          apiKey={apiKey}
-          onApiKeyChange={setApiKey}
           authError={authError}
           deliveryReports={deliveryReports}
         />

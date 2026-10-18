@@ -28,6 +28,7 @@ from backend.core.models import (
     AuthUser,
     HandoverNote,
     HandoverNoteRequest,
+    IncidentDocumentContent,
     IncidentDocumentsResponse,
     IncidentState,
     IncidentSummary,
@@ -35,7 +36,7 @@ from backend.core.models import (
     VisualEvidencePayload,
     VisualEvidencePreset,
 )
-from backend.tools.document_export import documents_response
+from backend.tools.document_export import document_content, documents_response
 from backend.tools.gemini_vision_tool import (
     SCRIPTED_CONFIDENCE,
     analyze_visual_evidence_frame,
@@ -191,8 +192,17 @@ async def unarchive_incident(incident_id: str) -> IncidentSummary:
 
 @router.get("/documents", response_model=IncidentDocumentsResponse)
 async def get_incident_documents() -> IncidentDocumentsResponse:
-    """Returns the exported Markdown documents (URIs + console link) for the current incident (#333)."""
+    """Returns the exported Markdown document links (bucket-relative paths) for the current incident (#333)."""
     return documents_response(blackboard.get_state())
+
+
+@router.get("/documents/{name}", response_model=IncidentDocumentContent)
+async def get_incident_document(name: str) -> IncidentDocumentContent:
+    """Returns the full Markdown text of one exported document of the current incident."""
+    doc = document_content(blackboard.get_state(), name)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Document not found or not exported yet")
+    return doc
 
 
 @router.post("/repair-done")
@@ -229,7 +239,7 @@ async def upload_incident_evidence(
         agent_name=AGENT_NAME,
         phase=DIAGNOSTIC_PHASE,
         finding=f"Frontline technician submitted close-up photo confirming defect root cause on {cur_st.suspect_machine or 'CNC-02'}.",
-        evidence=ev_payload.analysis + (f" Ghi chú: {notes}" if notes else ""),
+        evidence=ev_payload.analysis + (f" Notes: {notes}" if notes else ""),
         confidence=payload_confidence(ev_payload),
         citation=ev_payload.citation,
     )
@@ -293,7 +303,7 @@ async def attach_preset_evidence(
     if ev_payload.source != "gemini":
         evidence_text += " (scripted expectation)"
     if request.notes:
-        evidence_text += f" Ghi chú: {request.notes}"
+        evidence_text += f" Notes: {request.notes}"
 
     finding = AgentFinding(
         agent_id=AGENT_ID,

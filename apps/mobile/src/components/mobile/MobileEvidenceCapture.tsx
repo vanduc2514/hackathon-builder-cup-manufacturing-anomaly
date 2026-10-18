@@ -209,13 +209,13 @@ export default function MobileEvidenceCapture({
                 borderRadius: 22,
               }}
               onClick={() => setShowPresetGallery(true)}
-              aria-label="Chọn ảnh mẫu"
+              aria-label="Choose sample image"
               id="m-open-preset-gallery"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
                 photo_library
               </span>
-              Chọn ảnh mẫu
+              Choose sample image
             </button>
           </div>
 

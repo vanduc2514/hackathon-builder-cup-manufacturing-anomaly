@@ -141,17 +141,12 @@ describe('MobileFixLive Copilot', () => {
     vi.unstubAllGlobals();
   });
 
-  it('shows the five scripted English prompt chips', async () => {
+  it('shows the four scripted English prompt chips', async () => {
     await renderReady();
-    for (const label of [
-      'What is wrong?',
-      'Show removed insert',
-      'Replacement steps',
-      'New insert fitted',
-      'Before restart',
-    ]) {
+    for (const label of ['What is wrong?', 'Show removed insert', 'Replacement steps', 'Before restart']) {
       expect(screen.getByRole('button', { name: new RegExp(label) })).toBeTruthy();
     }
+    expect(screen.queryByRole('button', { name: /Show new insert/ })).toBeNull();
     expect(screen.queryByText(/Start|Step done/)).toBeNull();
   });
 
@@ -199,10 +194,14 @@ describe('MobileFixLive Copilot', () => {
     expect(screen.getByAltText('Photo sent to the Copilot')).toBeTruthy();
   });
 
-  it('attaches the new-insert preset when confirming the replacement', async () => {
+  it('switches the photo chip to the new insert once the removed insert was shown', async () => {
     const ws = await renderReady();
-    fireEvent.click(screen.getByRole('button', { name: /New insert fitted/ }));
-    expect(ws.sent[0]).toMatchObject({ type: 'user_turn', preset_id: NEW_INSERT_PRESET_ID });
+    fireEvent.click(screen.getByRole('button', { name: /Show removed insert/ }));
+    ws.emit({ type: 'turn_complete' });
+    expect(screen.queryByRole('button', { name: /Show removed insert/ })).toBeNull();
+    await waitFor(() => expect(chip(/Show new insert/).disabled).toBe(false));
+    fireEvent.click(chip(/Show new insert/));
+    expect(ws.sent[1]).toMatchObject({ type: 'user_turn', preset_id: NEW_INSERT_PRESET_ID });
     expect(NEW_INSERT_PRESET_ID).toBe('preset-cnc02-tool-new-insert-commons-raizy-1');
   });
 

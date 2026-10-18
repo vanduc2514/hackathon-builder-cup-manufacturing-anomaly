@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import type { WorkOrder } from '../../types/mobile';
 import { useGeminiLive, type LiveConnection } from '../../hooks/useGeminiLive';
 import { useOemManual } from '../../hooks/useOemManual';
-import { copilotPrompts } from './copilotPrompts';
+import { copilotPrompts, WORN_INSERT_PHOTO_URL } from './copilotPrompts';
 import { defectImageFor } from './mobileData';
 
 interface MobileFixLiveProps {
@@ -66,7 +66,8 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
     );
   }
 
-  const prompts = copilotPrompts(order.machine, order.suspectTool ?? 'cutting tool');
+  const removedInsertShown = copilot.turns.some((t) => t.speaker === 'technician' && t.photoUrl === WORN_INSERT_PHOTO_URL);
+  const prompts = copilotPrompts(order.machine, order.suspectTool ?? 'cutting tool', removedInsertShown);
   const lastTech = [...copilot.turns].reverse().find((t) => t.speaker === 'technician');
   const lastReply = [...copilot.turns].reverse().find((t) => t.speaker !== 'technician');
   const awaitingReply = copilot.streaming && (!lastReply || !lastTech || lastReply.id < lastTech.id);

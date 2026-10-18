@@ -13,7 +13,16 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, File, Form, Query, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from starlette.websockets import WebSocketState
 
 from backend.agents.agent_technician_copilot import (
@@ -23,7 +32,7 @@ from backend.agents.agent_technician_copilot import (
     analyze_visual_evidence_frame_async,
     build_contextual_diagnostic_probe_vi,
 )
-from backend.agents.orchestrator import orchestrator
+from backend.agents.orchestrator import EvidenceNotAwaitedError, orchestrator
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
 from backend.core.models import (
@@ -452,8 +461,19 @@ async def gemini_live_websocket(
                         confidence=0.92,
                         citation=ev_payload.citation,
                     )
-                    blackboard.attach_field_evidence(finding, ev_payload)
-                    orchestrator.notify_evidence()
+                    try:
+                        orchestrator.attach_evidence(finding, ev_payload)
+                    except EvidenceNotAwaitedError as exc:
+                        await send_server_message(
+                            websocket,
+                            session,
+                            GeminiLiveServerMessage(
+                                type="error",
+                                session_id=session.session_id,
+                                error_message=str(exc),
+                            ),
+                        )
+                        continue
                     resp = await generate_live_guidance_async("ảnh camera kiểm định", session)
                 else:
                     resp = await generate_live_guidance_async("bị gì", session)
@@ -532,6 +552,7 @@ async def gemini_live_websocket(
                     continue
 
                 # 4. Realtime media input (base64 audio or image)
+                evidence_error: Optional[str] = None
                 if "realtime_input" in payload and payload["realtime_input"]:
                     chunks = payload["realtime_input"].get("media_chunks", [])
                     has_video = any("image" in c.get("mime_type", "") for c in chunks)
@@ -558,9 +579,22 @@ async def gemini_live_websocket(
                                     confidence=0.92,
                                     citation=ev_payload.citation,
                                 )
-                                blackboard.attach_field_evidence(finding, ev_payload)
-                                orchestrator.notify_evidence()
+                                try:
+                                    orchestrator.attach_evidence(finding, ev_payload)
+                                except EvidenceNotAwaitedError as exc:
+                                    evidence_error = str(exc)
                                 break
+                        if evidence_error is not None:
+                            await send_server_message(
+                                websocket,
+                                session,
+                                GeminiLiveServerMessage(
+                                    type="error",
+                                    session_id=session.session_id,
+                                    error_message=evidence_error,
+                                ),
+                            )
+                            continue
                         user_text = "ảnh camera kiểm định"
                     else:
                         user_text = "bị gì"
@@ -633,8 +667,10 @@ async def upload_gemini_live_evidence(
         confidence=0.92,
         citation=ev_payload.citation,
     )
-    new_state = blackboard.attach_field_evidence(finding, ev_payload)
-    orchestrator.notify_evidence()
+    try:
+        new_state = orchestrator.attach_evidence(finding, ev_payload)
+    except EvidenceNotAwaitedError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {
         "status": "success",
         "evidence": ev_payload.model_dump(),

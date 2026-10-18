@@ -9,6 +9,7 @@ import pytest
 from starlette.testclient import TestClient
 
 from backend.api.main import app
+from backend.core.blackboard import blackboard
 
 
 @pytest.fixture
@@ -142,6 +143,7 @@ def test_gemini_live_websocket_binary_audio_streaming(client: TestClient) -> Non
 
 def test_gemini_live_websocket_binary_camera_frame(client: TestClient) -> None:
     """Asserts handling of raw binary camera image frames (JPEG header)."""
+    blackboard.update_status("awaiting_evidence", diagnostic_request="Need a photo.")
     with client.websocket_connect("/api/gemini-live/ws?mode=simulation") as ws:
         ws.receive_json()  # setup_complete
 

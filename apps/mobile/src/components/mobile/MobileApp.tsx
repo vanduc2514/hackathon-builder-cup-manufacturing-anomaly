@@ -167,7 +167,7 @@ export default function MobileApp({ incident, history }: MobileAppProps): React.
     }
 
     let cancelled = false;
-    fetchIncidentHistory(20)
+    fetchIncidentHistory(20, undefined, false)
       .then((items) => {
         if (!cancelled && items.length > 0) {
           setBaseOrders((prev) => {

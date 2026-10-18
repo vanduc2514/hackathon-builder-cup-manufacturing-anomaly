@@ -271,7 +271,7 @@ export function getPhaseStatus(phase: AndonPhaseKey, status: IncidentStatus): An
 }
 
 export function isIncidentActive(incident: IncidentState | null): boolean {
-  if (!incident) return false;
+  if (!incident || incident.archived) return false;
   return !['normal', 'closed', 'dismissed'].includes(incident.status);
 }
 
@@ -447,7 +447,7 @@ export function formatIncidentDate(raw?: string | null): string {
  * when offline or nominal, returns an empty map (no fabricated incidents).
  */
 export function productIncidents(live: IncidentState | null): Record<string, IncidentState> {
-  if (!live || live.status === 'normal') return {};
+  if (!live || live.status === 'normal' || live.archived) return {};
   return { [ACTIVE_PRODUCT]: live };
 }
 

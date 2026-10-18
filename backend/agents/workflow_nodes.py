@@ -454,6 +454,11 @@ def record_handover_note(author: str, note: str) -> HandoverNote:
     return handover
 
 
+def record_archive(incident_id: str, archived_by: str | None) -> IncidentState | None:
+    """Archives an incident on the Blackboard (hidden from the technician app)."""
+    return blackboard.archive_incident(incident_id, archived_by)
+
+
 def record_field_evidence_payload(
     finding: AgentFinding,
     visual_evidence: VisualEvidencePayload | None = None,

@@ -14,7 +14,12 @@ from backend.agents.agent_technician_copilot import (
     DIAGNOSTIC_PHASE,
     analyze_visual_evidence_frame_async,
 )
-from backend.agents.orchestrator import EvidenceNotAwaitedError, RepairNotAwaitedError, orchestrator
+from backend.agents.orchestrator import (
+    EvidenceNotAwaitedError,
+    IncidentInProgressError,
+    RepairNotAwaitedError,
+    orchestrator,
+)
 from backend.core.auth import require_user
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
@@ -121,9 +126,12 @@ async def get_current_incident():
 async def get_incident_history(
     limit: int = Query(20, ge=1, le=100),
     status: Optional[str] = Query(None),
+    archived: Optional[bool] = Query(
+        None, description="true = only archived, false = only unarchived, omitted = all"
+    ),
 ) -> List[IncidentSummary]:
     """Returns past incident history records from Firestore or local fallback."""
-    incidents = blackboard.list_incidents(limit=limit, status=status)
+    incidents = blackboard.list_incidents(limit=limit, status=status, archived=archived)
     return [IncidentSummary.from_incident(inc) for inc in incidents]
 
 
@@ -152,6 +160,24 @@ async def approve_incident(current_user: AuthUser = Depends(require_user)) -> Di
         "message": f"Incident approved by {approver}",
         "state": state,
     }
+
+
+@router.post("/{incident_id}/archive", response_model=IncidentSummary)
+async def archive_incident(
+    incident_id: str, current_user: AuthUser = Depends(require_user)
+) -> IncidentSummary:
+    """Dashboard input: archives an incident so the technician app stops listing it."""
+    try:
+        # Archiving a historical incident reads and writes Firestore (blocking client).
+        state = await asyncio.to_thread(
+            orchestrator.archive_incident, incident_id, archived_by=current_user.username
+        )
+    except IncidentInProgressError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if state is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return IncidentSummary.from_incident(state)
+
 
 @router.get("/documents", response_model=IncidentDocumentsResponse)
 async def get_incident_documents() -> IncidentDocumentsResponse:

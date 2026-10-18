@@ -36,7 +36,7 @@ export interface FleetRow {
 
 /** An incident that still needs attention: being worked, or closed but not yet signed off. */
 export function isIncidentOpen(inc: IncidentState | null): inc is IncidentState {
-  if (!inc) return false;
+  if (!inc || inc.archived) return false;
   return isIncidentActive(inc) || (inc.status === 'closed' && !inc.approved);
 }
 

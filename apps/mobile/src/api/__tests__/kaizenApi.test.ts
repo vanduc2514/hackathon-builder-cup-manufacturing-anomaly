@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { postRepairDone } from '../kaizenApi';
+import { fetchIncidentHistory, postRepairDone } from '../kaizenApi';
 
 const authFetch = vi.hoisted(() => vi.fn());
 vi.mock('../auth', () => ({ authFetch, withToken: (u: string) => u }));
@@ -21,5 +21,13 @@ describe('postRepairDone', () => {
       json: async () => ({ detail: 'The AI is not waiting for a repair confirmation right now' }),
     });
     await expect(postRepairDone()).rejects.toThrow('The AI is not waiting for a repair confirmation right now');
+  });
+});
+
+describe('fetchIncidentHistory', () => {
+  it('asks the backend for unarchived incidents only when archived=false', async () => {
+    authFetch.mockResolvedValue({ ok: true, json: async () => [] });
+    await fetchIncidentHistory(20, undefined, false);
+    expect(authFetch.mock.calls[0][0]).toBe('/api/incidents/history?limit=20&archived=false');
   });
 });

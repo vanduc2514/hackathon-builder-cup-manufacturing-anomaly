@@ -824,6 +824,16 @@ class IncidentState(BaseModel):
         default=None,
         description="ISO 8601 UTC timestamp of the shift-leader sign-off",
     )
+    archived: bool = Field(
+        default=False,
+        description="True once the shift leader archived the incident; hidden from the technician app",
+    )
+    archived_by: Optional[str] = Field(
+        default=None, description="Username who archived the incident"
+    )
+    archived_at: Optional[str] = Field(
+        default=None, description="ISO 8601 UTC timestamp of archiving"
+    )
     documents_exported: bool = Field(
         default=False,
         description="#333: approved documents rendered to Markdown and uploaded to GCS",
@@ -891,6 +901,16 @@ class IncidentSummary(BaseModel):
     root_cause: Optional[str] = Field(default=None, description="Identified root cause summary")
     repair_done: bool = Field(default=False, description="Whether repair has been executed")
     approved: bool = Field(default=False, description="Whether incident has shift-leader sign-off")
+    archived: bool = Field(
+        default=False,
+        description="True once the shift leader archived the incident; hidden from the technician app",
+    )
+    archived_by: Optional[str] = Field(
+        default=None, description="Username who archived the incident"
+    )
+    archived_at: Optional[str] = Field(
+        default=None, description="ISO 8601 UTC timestamp of archiving"
+    )
     verification_count: int = Field(default=0, description="Consecutive verified parts count")
     verification_target: int = Field(default=50, description="Target verified parts count")
     opened_at: Optional[str] = Field(default=None, description="ISO timestamp when incident opened")
@@ -915,6 +935,9 @@ class IncidentSummary(BaseModel):
             root_cause=incident.root_cause,
             repair_done=incident.repair_done,
             approved=incident.approved,
+            archived=incident.archived,
+            archived_by=incident.archived_by,
+            archived_at=incident.archived_at,
             verification_count=incident.verification_count,
             verification_target=incident.verification_target,
             opened_at=incident.opened_at,

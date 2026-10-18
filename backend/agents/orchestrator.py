@@ -39,6 +39,7 @@ from backend.agents.workflow_nodes import (
     inspect_production,
     open_incident,
     rca_gate,
+    record_archive,
     record_detection,
     record_field_evidence,
     record_field_evidence_payload,
@@ -292,6 +293,25 @@ class RepairNotAwaitedError(Exception):
     """Raised when a repair confirmation arrives while no incident awaits one."""
 
 
+# Live-incident statuses that are still being worked; such an incident cannot be archived.
+IN_PROGRESS_STATUSES = frozenset(
+    {
+        "detecting",
+        "tracing",
+        "investigating",
+        "analyzing",
+        "awaiting_evidence",
+        "repairing",
+        "verifying",
+        "pending_approval",
+    }
+)
+
+
+class IncidentInProgressError(Exception):
+    """Raised when the live incident is still being worked and cannot be archived yet."""
+
+
 class Orchestrator:
     """Single input/output boundary: starts, approves and resets incidents; one at a time."""
 
@@ -449,6 +469,18 @@ class Orchestrator:
         # local BM25 reindex) off the approval path.
         schedule_learning_writeback(approved_state)
         return approved_state
+
+    def archive_incident(
+        self, incident_id: str, archived_by: str | None = None
+    ) -> IncidentState | None:
+        """Archives an incident; the live one only once it is no longer being worked."""
+        state = blackboard.get_state()
+        if incident_id == state.incident_id and state.status in IN_PROGRESS_STATUSES:
+            raise IncidentInProgressError(
+                f"Incident {incident_id} is still in progress ({state.status}); "
+                "finish or escalate it first"
+            )
+        return record_archive(incident_id=incident_id, archived_by=archived_by)
 
     def add_handover_note(self, author: str, note: str) -> HandoverNote:
         """Dispatches a technician handover note addition through the workflow node."""

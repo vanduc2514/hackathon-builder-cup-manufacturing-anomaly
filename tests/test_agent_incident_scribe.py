@@ -14,6 +14,7 @@ from backend.agents.agent_incident_scribe import (
     AGENT_NAME,
     DEFAULT_CITATION,
     DEFAULT_IM_CITATION,
+    INSTRUCTION,
     PHASE,
 )
 from backend.agents.workflow_nodes import record_resolution
@@ -531,3 +532,9 @@ def test_record_resolution_workflow_node_integration():
     assert wo["pending_approval"] == "shift_leader"
     assert r8d["pending_approval"] == "shift_leader"
     assert sop["pending_approval"] == "shift_leader"
+
+
+def test_instruction_requires_markdown_formatted_documents():
+    """Scribe documents must be structured Markdown so the dashboards render them with formatting."""
+    assert "structured Markdown" in INSTRUCTION
+    assert "bullet lists" in INSTRUCTION

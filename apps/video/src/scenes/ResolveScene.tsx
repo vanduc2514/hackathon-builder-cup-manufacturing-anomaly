@@ -113,8 +113,7 @@ const ResolveSceneInner = ({ caption }: { caption: string }): React.ReactElement
           </div>
           <div style={{ flex: 1, padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Bubble frame={frame} from={14} side="ai">
-              Anh vui lòng chụp ảnh cận cảnh mũi dao T07.
-              <div style={{ fontSize: 17, color: C.muted, marginTop: 6 }}>Please take a close-up photo of the T07 tool tip.</div>
+              Please take a close-up photo of the T07 tool tip.
             </Bubble>
             <Bubble frame={frame} from={36} side="tech">
               <div
@@ -135,8 +134,7 @@ const ResolveSceneInner = ({ caption }: { caption: string }): React.ReactElement
               <div style={{ fontSize: 17, opacity: 0.75, marginTop: 6 }}>Photo · tool tip T07</div>
             </Bubble>
             <Bubble frame={frame} from={56} side="ai">
-              Mũi dao bị mòn. Bước 1: dừng trục chính và khoá an toàn.
-              <div style={{ fontSize: 17, color: C.muted, marginTop: 6 }}>Insert is worn. Step 1: stop the spindle and lock out.</div>
+              The insert is worn. Step 1: stop the spindle and lock out.
             </Bubble>
           </div>
         </div>

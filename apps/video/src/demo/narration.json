@@ -1,0 +1,25 @@
+{
+  "voice": "Puck",
+  "model": "gemini-2.5-flash-tts",
+  "style": "Read this in a clear, upbeat, professional product-demo voice, at a steady pace:",
+  "lines": [
+    { "id": "hook-1", "text": "On a factory line, a worn cutting tool can scratch parts for hours while every sensor still reads normal." },
+    { "id": "hook-2", "text": "Kaizen Agent starts from the product, not the sensor." },
+    { "id": "topo-1", "text": "Here is the system, live on Google Cloud. Gemma 3 inspects every part at the edge, and events flow through Pub/Sub to a Google ADK orchestrator." },
+    { "id": "topo-2", "text": "It runs seven Gemini agents, backed by BigQuery, Vertex AI Search and Firestore. Let's follow one real incident." },
+    { "id": "detect-1", "text": "On our simulated factory line, we trigger a worn tool on machine CNC-02. The Gemma 3 edge filter flags the scratched parts on the conveyor, and drops ninety-five percent of normal frames on-premise." },
+    { "id": "detect-2", "text": "Only the defect events are published to Pub/Sub." },
+    { "id": "diag-1", "text": "Seconds later, the Plant Ops dashboard raises one clear alert: an eight percent defect rate, against a three percent control limit." },
+    { "id": "diag-2", "text": "The Quality Inspector confirms the scratch from the camera frames." },
+    { "id": "diag-3", "text": "The Traceability agent queries part genealogy in BigQuery, and isolates machine CNC-02 and tool T07." },
+    { "id": "diag-4", "text": "The Root Cause agent searches the manuals and past 8D reports with Vertex AI Search. Gemini traces the scratches to tool arbor misalignment and spindle vibration at tool T07, eighty-five percent confident." },
+    { "id": "resolve-1", "text": "The technician gets the job on their phone, with the root cause, and a work order drafted by the Incident Scribe." },
+    { "id": "resolve-2", "text": "In guided repair, the Copilot runs on Gemini. Asked what is wrong, it explains the defect from the incident context." },
+    { "id": "resolve-3", "text": "The technician shows the removed insert, and Gemini sees the chipped, worn corner in the photo." },
+    { "id": "resolve-4", "text": "Every step cites the machine manual. When all five are done, the repair is submitted." },
+    { "id": "verify-1", "text": "Now the product has to prove the fix. The incident closes only after fifty good parts in a row." },
+    { "id": "verify-2", "text": "The 8D report is already drafted. The shift leader reviews it, and approves the release of the line." },
+    { "id": "close-1", "text": "For this one incident: two hundred and forty parts of scrap avoided, forty-five minutes of downtime saved, and three thousand six hundred dollars." },
+    { "id": "close-2", "text": "Kaizen Agent. The product tells the truth. AI traces it back. Built on Google Cloud." }
+  ]
+}

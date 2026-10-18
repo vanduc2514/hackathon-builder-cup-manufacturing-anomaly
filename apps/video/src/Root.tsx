@@ -1,6 +1,8 @@
 import React from 'react';
 import { Composition, Folder } from 'remotion';
 import KaizenTeaser from './KaizenTeaser';
+import KaizenDemo from './demo/KaizenDemo';
+import { TOTAL_FRAMES } from './demo/timeline';
 import { DetectScene } from './scenes/DetectScene';
 import { OutroScene } from './scenes/OutroScene';
 import { ProblemScene } from './scenes/ProblemScene';
@@ -11,6 +13,7 @@ import { VerifyScene } from './scenes/VerifyScene';
 export default function Root(): React.ReactElement {
   return (
     <>
+      <Composition id="KaizenDemo" component={KaizenDemo} durationInFrames={TOTAL_FRAMES} fps={30} width={1920} height={1080} />
       <Composition id="KaizenTeaser" component={KaizenTeaser} durationInFrames={900} fps={30} width={1920} height={1080} />
       <Folder name="Scenes">
         <Composition

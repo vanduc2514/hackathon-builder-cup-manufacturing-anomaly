@@ -15,7 +15,7 @@ export default function Subtitle({ text, from = 8, to }: SubtitleProps): React.R
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
   const end = to ?? durationInFrames;
-  if (frame < from || frame >= end) return null;
+  if (!text || frame < from || frame >= end) return null;
   const opacity = Math.min(progress(frame, from, from + 10), 1 - progress(frame, end - 8, end));
   return (
     <div
@@ -23,7 +23,7 @@ export default function Subtitle({ text, from = 8, to }: SubtitleProps): React.R
         position: 'absolute',
         left: 0,
         right: 0,
-        bottom: 64,
+        bottom: 40,
         display: 'flex',
         justifyContent: 'center',
         opacity,
@@ -33,14 +33,14 @@ export default function Subtitle({ text, from = 8, to }: SubtitleProps): React.R
       <div
         style={{
           maxWidth: 1760,
-          padding: '18px 36px',
+          padding: '14px 32px',
           borderRadius: 20,
           background: C.glassBgStrong,
           border: `1.5px solid ${C.glassBorder}`,
           boxShadow: GLASS_SHADOW,
           backdropFilter: 'blur(28px) saturate(180%)',
           fontFamily: FONT.main,
-          fontSize: 42,
+          fontSize: 38,
           fontWeight: 600,
           lineHeight: 1.25,
           color: C.ink,

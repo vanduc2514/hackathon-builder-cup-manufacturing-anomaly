@@ -65,7 +65,8 @@ This file is the authoritative reference for AI coding agents and human contribu
 │   │   ├── src/
 │   │   ├── vite.config.ts      # Dev proxy: /api (+ WebSocket) → $API_PROXY_TARGET
 │   │   └── package.json
-│   └── demo/                   # 3D System Topology demo (React + Vite + three.js, :3003)
+│   ├── demo/                   # 3D System Topology demo (React + Vite + three.js, :3003)
+│   └── video/                  # Remotion demo video (prod footage + Gemini TTS voiceover); see apps/video/README.md
 │
 ├── data/
 │   ├── datasets/               # Raw / mock sensor and traceability data

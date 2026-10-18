@@ -193,12 +193,6 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
                 open_in_new
               </span>
             </span>
-            {hovered && (
-              <>
-                <span className="node-label__sub">{node.sublabel}</span>
-                <span className="node-label__open">Open {appLink.title} ↗</span>
-              </>
-            )}
           </a>
         ) : (
           <div className={`node-label${hovered ? ' is-hovered' : ''}`}>
@@ -208,9 +202,6 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
               </span>
               <span className="node-label__title">{node.label}</span>
             </span>
-            {hovered && (
-              <span className="node-label__sub">{node.sublabel}</span>
-            )}
           </div>
         )}
       </Html>

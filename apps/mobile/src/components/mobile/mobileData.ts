@@ -353,7 +353,7 @@ export function buildLiveOrder(
   telemetry: TelemetryContext,
   captures: Record<string, LiveCapture> = {},
 ): WorkOrder | null {
-  if (!incident || !incident.incident_id || incident.status === 'normal') return null;
+  if (!incident || !incident.incident_id || incident.status === 'normal' || incident.archived) return null;
 
   const { kind, stage } = classify(incident);
   const status = incident.status;

@@ -20,6 +20,10 @@ from backend.core.models import (
 
 logger = logging.getLogger(__name__)
 
+# Rows scanned when filtering history on `archived`: legacy Firestore docs lack the field, so
+# the filter runs in Python over a wider window instead of as a Firestore query.
+HISTORY_SCAN_LIMIT = 200
+
 
 class Blackboard:
     """Reactive blackboard representing Firestore shared incident state."""
@@ -55,19 +59,67 @@ class Blackboard:
         if len(self._history) > 50:
             self._history = self._history[:50]
 
-    def list_incidents(self, limit: int = 20, status: str | None = None) -> list[IncidentState]:
+    def list_incidents(
+        self, limit: int = 20, status: str | None = None, archived: bool | None = None
+    ) -> list[IncidentState]:
         """Lists incidents from Firestore if enabled, or falls back to in-memory history buffer."""
         if self.is_firestore_enabled and self._storage:
-            results = self._storage.list_incidents(limit=limit, status=status)
+            fetch_limit = limit if archived is None else HISTORY_SCAN_LIMIT
+            results = self._storage.list_incidents(limit=fetch_limit, status=status)
             if results:
-                return results
+                matches = [inc for inc in results if archived is None or inc.archived == archived]
+                return matches[:limit]
 
         # In-memory fallback: sync current active/closed incident if present
         if self._state.incident_id and self._state.status != "normal":
             self._record_in_history(self._state)
 
-        filtered = [inc for inc in self._history if not status or inc.status == status]
+        filtered = [
+            inc
+            for inc in self._history
+            if (not status or inc.status == status)
+            and (archived is None or inc.archived == archived)
+        ]
         return filtered[:limit]
+
+    def set_archived(
+        self, incident_id: str, archived: bool, archived_by: str | None = None
+    ) -> IncidentState | None:
+        """Sets or clears an incident's archive flag (archived ones are hidden from the technician app); idempotent, None if unknown."""
+        if archived:
+            stamp = {
+                "archived": True,
+                "archived_by": archived_by,
+                "archived_at": datetime.now(timezone.utc).isoformat(),
+            }
+        else:
+            stamp = {"archived": False, "archived_by": None, "archived_at": None}
+        if incident_id == self._state.incident_id and self._state.status != "normal":
+            if self._state.archived == archived:
+                return self._state
+            update_dict = self._state.model_dump()
+            update_dict.update(stamp)
+            self._state = IncidentState(**update_dict)
+            self._record_in_history(self._state)
+            self._notify()
+            self._persist()
+            return self._state
+
+        found: IncidentState | None = None
+        if self.is_firestore_enabled:
+            found = self._storage.get_incident(incident_id)
+        if found is None:
+            found = next((inc for inc in self._history if inc.incident_id == incident_id), None)
+        if found is None:
+            return None
+        if found.archived == archived:
+            return found
+
+        archived_inc = found.model_copy(update={**stamp, "revision": found.revision + 1})
+        self._record_in_history(archived_inc)
+        if self.is_firestore_enabled and not self._storage.save_incident(archived_inc):
+            raise RuntimeError(f"Failed to persist archive flag for {incident_id}")
+        return archived_inc
 
     def update_status(self, status: str, **kwargs) -> IncidentState:
         update_dict = self._state.model_dump()

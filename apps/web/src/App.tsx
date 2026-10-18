@@ -284,6 +284,11 @@ export default function App(): React.ReactElement {
     setCurrentTab('incident-detail');
   };
 
+  const showIncidentList = useCallback(() => {
+    setActiveIncidentId(null);
+    setCurrentTab('incident-detail');
+  }, []);
+
   const selectIncident = useCallback((id: string) => {
     setActiveIncidentId(id);
     setCurrentTab('incident-detail');
@@ -295,9 +300,9 @@ export default function App(): React.ReactElement {
   }, []);
 
   const handleOpenIncidentsFromSidebar = useCallback(() => {
-    openIncidents();
+    showIncidentList();
     setNavOpen(false);
-  }, [openIncidents]);
+  }, [showIncidentList]);
 
   const handleSelectIncidentFromSidebar = useCallback((id: string) => {
     selectIncident(id);

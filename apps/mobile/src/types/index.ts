@@ -188,6 +188,7 @@ export interface IncidentState {
   verification_target: number;
   repair_done?: boolean;
   approved: boolean;
+  archived?: boolean;
   findings: AgentFinding[];
   impact: ImpactMetrics | null;
   documents: IncidentDocuments;
@@ -215,6 +216,7 @@ export interface IncidentSummary {
   root_cause?: string | null;
   repair_done: boolean;
   approved: boolean;
+  archived?: boolean;
   verification_count: number;
   verification_target: number;
   opened_at?: string | null;

@@ -6,7 +6,7 @@ import type { ToastTone } from '../App';
 import type { EsgLedgerEntry, EsgTotals } from '../lib/fleet';
 import LineOverviewView from '../components/views/LineOverviewView';
 import IncidentCommandView from '../components/views/IncidentCommandView';
-import IncidentsEmptyView from '../components/views/IncidentsEmptyView';
+import IncidentListView from '../components/views/IncidentListView';
 import KaizenImpactView from '../components/views/KaizenImpactView';
 import TechWalkthroughsView from '../components/views/TechWalkthroughsView';
 import SopLibraryView from '../components/views/SopLibraryView';
@@ -83,9 +83,11 @@ export default function Dashboard({
         />
       )}
       {currentTab === 'incident-detail' && !openIncident && (
-        <IncidentsEmptyView
-          onOpenSimulation={onOpenSimulation}
+        <IncidentListView
+          incident={incident}
           onNavigateHome={goHome}
+          onOpenIncident={onOpenIncident}
+          onNotify={onNotify}
         />
       )}
       {currentTab === 'impact' && (

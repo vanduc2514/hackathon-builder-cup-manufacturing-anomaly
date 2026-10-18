@@ -48,10 +48,11 @@ export function fetchOemManual(machineId: string): Promise<OemRepairManual> {
   return getJson<OemRepairManual>(`/api/copilot/manuals/${encodeURIComponent(machineId)}`);
 }
 
-export function fetchIncidentHistory(limit = 20, status?: string): Promise<IncidentSummary[]> {
+export function fetchIncidentHistory(limit = 20, status?: string, archived?: boolean): Promise<IncidentSummary[]> {
   const params = new URLSearchParams();
   if (limit) params.set('limit', String(limit));
   if (status) params.set('status', status);
+  if (archived !== undefined) params.set('archived', String(archived));
   const q = params.toString();
   return getJson<IncidentSummary[]>(`/api/incidents/history${q ? `?${q}` : ''}`);
 }

@@ -164,6 +164,9 @@ export interface IncidentState {
   approved: boolean;
   approved_by?: string | null;
   approved_at?: string | null;
+  archived?: boolean;
+  archived_by?: string | null;
+  archived_at?: string | null;
   findings: AgentFinding[];
   impact: ImpactMetrics | null;
   documents: Record<string, unknown>;
@@ -195,6 +198,9 @@ export interface IncidentSummary {
   root_cause?: string | null;
   repair_done: boolean;
   approved: boolean;
+  archived?: boolean;
+  archived_by?: string | null;
+  archived_at?: string | null;
   verification_count: number;
   verification_target: number;
   opened_at?: string | null;

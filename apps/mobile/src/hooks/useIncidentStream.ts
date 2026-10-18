@@ -27,7 +27,7 @@ export function useIncidentStream(): IncidentStream {
 
   const refreshHistory = useCallback(async () => {
     try {
-      const items = await fetchIncidentHistory(20);
+      const items = await fetchIncidentHistory(20, undefined, false);
       setHistory(items);
     } catch (err) {
       console.warn('Incident history unavailable:', err);
@@ -69,7 +69,7 @@ export function useIncidentStream(): IncidentStream {
         try {
           const updated = JSON.parse(event.data) as IncidentState;
           setIncident(updated);
-          if (['closed', 'pending_approval', 'normal'].includes(updated.status)) {
+          if (updated.archived || ['closed', 'pending_approval', 'normal'].includes(updated.status)) {
             void refreshHistory();
           }
         } catch (err) {
@@ -111,6 +111,8 @@ export function useIncidentStream(): IncidentStream {
         .catch((err: unknown) => {
           console.warn('Incident snapshot liveness check failed:', err);
         });
+      // Archiving a non-live incident on the dashboard emits no SSE event; poll the history too.
+      void refreshHistory();
     }, LIVENESS_MS);
 
     refreshSnapshot();

@@ -147,6 +147,11 @@ body,
   padding-left: 6px;
   color: var(--ink);
 }
+img.brand-tile {
+  object-fit: cover;
+  background: #000;
+}
+
 .scene-crumb .brand-tile {
   width: 32px;
   height: 32px;

@@ -25,7 +25,7 @@ function build8D(incident: IncidentState) {
   const signoffReady = incident.status === 'closed' || incident.status === 'pending_approval';
   const done = (minStage: string) => signoffReady || (stage >= 0 && stage >= STAGE_ORDER.indexOf(minStage));
   return [
-    { code: 'D1', title: 'Team', desc: 'Kaizen agent team + Marcus Vance (TECH-902), Devon Vance (Lead Ops)', done: done('detecting') },
+    { code: 'D1', title: 'Team', desc: 'kAIzen agent team + Marcus Vance (TECH-902), Devon Vance (Lead Ops)', done: done('detecting') },
     { code: 'D2', title: 'Problem', desc: `${friendlyDefectName(incident.defect_type)} spike ${(incident.defect_rate * 100).toFixed(2)}% > UCL ${(incident.spc_ucl * 100).toFixed(1)}%`, done: done('detecting') },
     { code: 'D3', title: 'Containment', desc: machine ? `Suspect lot quarantined; ${machine} feed held` : 'Suspect lot quarantined; feed held', done: done('tracing') },
     { code: 'D4', title: 'Root Cause', desc: incident.root_cause ?? (tool ? `Tool ${tool} — analysis in progress` : 'Root cause analysis in progress'), done: done('repairing') },

@@ -94,7 +94,7 @@ export default function LoginScreen(): React.ReactElement {
           className="glass card-pad"
           style={{ width: '100%', maxWidth: 400, animation: 'fadeUp 0.35s var(--ease) both' }}
         >
-          <div className="eyebrow">Kaizen Agent</div>
+          <div className="eyebrow" style={{ textTransform: 'none' }}>kAIzen</div>
           <div className="col" style={{ gap: 6, marginTop: '1rem', textAlign: 'center' }}>
             <div style={AVATAR_STYLE}>
               <span className="material-symbols-outlined" style={{ fontSize: 32 }}>

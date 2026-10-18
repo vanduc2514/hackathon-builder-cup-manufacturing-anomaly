@@ -214,7 +214,7 @@ export default function WhatIfCalculator({ benchmarks, loading, error }: WhatIfC
             </div>
             {[
               { label: 'Manual QA + diagnosis', mins: manual + earlier, color: 'linear-gradient(90deg,#fda4af,#e5484d)' },
-              { label: 'Kaizen agent team', mins: ai, color: 'linear-gradient(90deg,#7c7cff,#5b5bf0)' },
+              { label: 'kAIzen agent team', mins: ai, color: 'linear-gradient(90deg,#7c7cff,#5b5bf0)' },
             ].map((b) => (
               <div key={b.label} style={{ marginBottom: 8 }}>
                 <div className="row between" style={{ fontSize: '0.72rem', marginBottom: 3 }}>

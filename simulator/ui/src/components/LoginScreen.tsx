@@ -101,8 +101,8 @@ export default function LoginScreen(): React.ReactElement {
           className="glass-card"
           style={{ width: '100%', maxWidth: 420, padding: '2rem 1.8rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}
         >
-          <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)' }}>
-            Kaizen Agent Platform
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--accent)' }}>
+            kAIzen Platform
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'center' }}>

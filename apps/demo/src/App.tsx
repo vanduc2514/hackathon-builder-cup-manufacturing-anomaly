@@ -19,7 +19,7 @@ export default function App(): React.ReactElement {
   return (
     <>
       <div className="app-backdrop" />
-      <main className="scene-root" aria-label="Kaizen system topology, 3D view">
+      <main className="scene-root" aria-label="kAIzen system topology, 3D view">
         <TopologyScene
           hoveredId={hoveredId}
           onHover={setHoveredId}

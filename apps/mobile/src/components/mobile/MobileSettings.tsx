@@ -91,7 +91,7 @@ export default function MobileSettings({
           <span className="material-symbols-outlined">logout</span>
           Sign out
         </button>
-        <p className="m-sub" style={{ textAlign: 'center', margin: 0 }}>kAIgen · v1.0</p>
+        <p className="m-sub" style={{ textAlign: 'center', margin: 0 }}>kAIzen · v1.0</p>
       </div>
     </>
   );

@@ -115,24 +115,20 @@ export default function Sidebar({
         <div className="col" style={{ gap: '0.9rem', padding: '0 0.4rem' }}>
           <div className="row between" style={{ gap: '0.65rem' }}>
             <div className="row" style={{ gap: '0.65rem' }}>
-              <div
+              <img
+                src="/logo.png"
+                alt="kAIzen logo"
                 style={{
                   width: 32,
                   height: 32,
                   borderRadius: 9,
-                  background: 'linear-gradient(160deg, #1f2937, #0b1220)',
-                  color: '#fff',
-                  display: 'grid',
-                  placeItems: 'center',
-                  fontWeight: 800,
-                  fontSize: '0.9rem',
-                  boxShadow: '0 6px 14px -4px rgba(11,18,32,0.5), inset 0 1px 0 rgba(255,255,255,0.15)',
+                  objectFit: 'cover',
+                  background: '#000',
+                  boxShadow: '0 6px 14px -4px rgba(11,18,32,0.5)',
                 }}
-              >
-                K
-              </div>
+              />
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.05rem', letterSpacing: '-0.02em' }}>
-                KAIZEN AGENT
+                kAIzen
               </span>
             </div>
             {onCloseNav && (

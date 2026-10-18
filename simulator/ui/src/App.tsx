@@ -24,9 +24,9 @@ export default function App(): React.ReactElement {
       <div className="app-backdrop" />
       <header className="glass-card header-bar">
         <div className="header-brand">
-          <div className="brand-icon"><span className="material-symbols-outlined">factory</span></div>
+          <img className="brand-icon" src="/logo.png" alt="kAIzen logo" />
           <div>
-            <h1 className="brand-h1">Kaizen Factory Floor</h1>
+            <h1 className="brand-h1">kAIzen Factory Floor</h1>
             <p className="brand-p">Window 1: Physical Telemetry & Machine Simulator</p>
           </div>
         </div>
@@ -77,7 +77,7 @@ export default function App(): React.ReactElement {
       </main>
 
       <footer className="footer-bar faint text-xs">
-        <span>Kaizen Agent Platform • simulator/ui/</span>
+        <span>kAIzen Platform • simulator/ui/</span>
         <span className="mono">Lumina Slate Liquid Glass</span>
       </footer>
     </div>

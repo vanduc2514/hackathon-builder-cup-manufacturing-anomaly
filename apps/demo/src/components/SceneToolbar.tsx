@@ -38,8 +38,8 @@ export default function SceneToolbar({
   return (
     <>
       <header className="header-crumb scene-crumb">
-        <span className="brand-tile">K</span>
-        <b>Kaizen System Topology</b>
+        <img className="brand-tile" src="/logo.png" alt="kAIzen logo" />
+        <b>kAIzen System Topology</b>
       </header>
       <div className="scene-controls">
         <button type="button" className="ctrl-btn" aria-label="Reset view" title="Reset view" onClick={onReset}>

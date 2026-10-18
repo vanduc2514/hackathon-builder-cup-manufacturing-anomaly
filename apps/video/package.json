@@ -1,0 +1,28 @@
+{
+  "name": "kaizen-demo-video",
+  "version": "0.1.0",
+  "description": "Kaizen Agent: demo video (Remotion)",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts KaizenDemo out/kaizen-demo.mp4",
+    "render:teaser": "remotion render src/index.ts KaizenTeaser out/kaizen-teaser.mp4",
+    "typecheck": "tsc --noEmit",
+    "render:evidence": "remotion render src/index.ts KaizenEvidence out/kaizen-evidence.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.536",
+    "@remotion/google-fonts": "^4.0.536",
+    "@remotion/media": "4.0.536",
+    "@remotion/transitions": "^4.0.536",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.536"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "typescript": "^5.9.3"
+  },
+  "private": true,
+  "type": "module"
+}

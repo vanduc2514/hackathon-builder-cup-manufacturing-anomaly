@@ -159,6 +159,36 @@ description = "TypeScript typecheck of apps/demo"
 dir = "{{config_root}}/apps/demo"
 run = "npm run typecheck"
 
+[tasks."video:studio"]
+description = "Open Remotion Studio for the demo video (apps/video)"
+dir = "{{config_root}}/apps/video"
+run = "npm run studio"
+
+[tasks."video:render"]
+description = "Render the 3-minute demo video to apps/video/out/kaizen-demo.mp4"
+dir = "{{config_root}}/apps/video"
+run = "npm run render"
+
+[tasks."video:render:evidence"]
+description = "Render the evidence-loop supplement to apps/video/out/kaizen-evidence.mp4"
+dir = "{{config_root}}/apps/video"
+run = "npm run render:evidence"
+
+[tasks."video:render:teaser"]
+description = "Render the 30 s animated teaser to apps/video/out/kaizen-teaser.mp4"
+dir = "{{config_root}}/apps/video"
+run = "npm run render:teaser"
+
+[tasks."video:voiceover"]
+description = "Regenerate voiceover with Gemini TTS on Vertex AI (--script evidence for the supplement, --only <line-id> for single lines)"
+dir = "{{config_root}}/apps/video"
+run = "{{config_root}}/.venv/bin/python scripts/generate_voiceover.py"
+
+[tasks."video:typecheck"]
+description = "TypeScript typecheck of apps/video"
+dir = "{{config_root}}/apps/video"
+run = "npm run typecheck"
+
 [tasks."web:test"]
 description = "Run unit tests for apps/web"
 dir = "{{config_root}}/apps/web"
@@ -451,20 +481,3 @@ run = "bash scripts/deploy_cloud_run.sh --service-name kaizen-factory --dockerfi
 [tasks."deploy:factory:container:dry"]
 description = "Dry-run validation of factory container build and Cloud Run deployment"
 run = "bash scripts/deploy_cloud_run.sh --service-name kaizen-factory --dockerfile simulator/Dockerfile --dry-run"
-
-# =============================================================================
-# Remotion Walkthrough Video Tasks
-# =============================================================================
-
-[tasks."video:dev"]
-description = "Launch Remotion Studio preview (Remotion default :3000; stop `mise run web` first)"
-run = "cd video && npm run dev"
-
-[tasks."video:render"]
-description = "Render the Technician Copilot 9:16 mobile walkthrough video (MP4)"
-run = "cd video && npx remotion render TechnicianCopilotMobile walkthrough_mobile.mp4"
-
-[tasks."video:render-desktop"]
-description = "Render the Industrial Command Center 16:9 walkthrough video (MP4)"
-run = "cd video && npx remotion render IndustrialCommandCenter walkthrough_desktop.mp4"
-

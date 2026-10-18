@@ -1,0 +1,12 @@
+{
+  "voice": "Puck",
+  "model": "gemini-2.5-flash-tts",
+  "style": "Read this in a clear, upbeat, professional product-demo voice, at a steady pace:",
+  "lines": [
+    { "id": "intro-1", "text": "The machine never stopped. No alarm went off." },
+    { "id": "intro-2", "text": "But for two hours, it quietly made scrap." },
+    { "id": "intro-3", "text": "Defects show up at end-of-shift QC, or at the customer." },
+    { "id": "intro-4", "text": "Tracing the cause takes hours, and the one expert who knows is on another shift." },
+    { "id": "intro-5", "text": "For small factories, poor quality can cost up to twenty percent of revenue." }
+  ]
+}

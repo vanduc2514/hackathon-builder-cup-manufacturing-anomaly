@@ -3,9 +3,12 @@ import { Track } from 'remotion';
 import { BrowserShot } from './BrowserShot';
 import { DEMO } from './demoTimeline';
 import { EndScene } from './EndScene';
-import { IntroScene, INTRO_SECONDS } from './IntroScene';
+import { INTRO } from '../intro/introTimeline';
+import { IntroScene } from './IntroScene';
 import { LearnScene } from './LearnScene';
+import { MeetScene } from './MeetScene';
 import { PhoneShot } from './PhoneShot';
+import { SolutionScene } from './SolutionScene';
 import Voiceover from './Voiceover';
 
 // Prod recordings of INC-1028C4 (run C), its close-out (C2), the manual step card (F) and the knowledge pages (E).
@@ -25,7 +28,17 @@ export default function KaizenDemo(): React.ReactElement {
   return (
     <>
       <Track name="Shots">
-        <IntroScene name="Intro" durationInFrames={Math.round(INTRO_SECONDS * S)} />
+        <IntroScene name="Intro" durationInFrames={INTRO.totalFrames} />
+        <MeetScene name="Meet" from={l['meet-1'].from} durationInFrames={l['meet-1'].duration} captions={captionsFor(['meet-1'], l['meet-1'].from)} />
+        <SolutionScene
+          name="Solution"
+          from={l['solution-1'].from}
+          durationInFrames={l['solution-1'].duration}
+          captions={captionsFor(['solution-1'], l['solution-1'].from)}
+          speechAt={l['solution-1'].speechAt}
+          speech={l['solution-1'].speech}
+          text={l['solution-1'].text}
+        />
         <BrowserShot
           name="Topology"
           from={topo.from}

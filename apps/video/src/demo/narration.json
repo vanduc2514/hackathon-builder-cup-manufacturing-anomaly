@@ -4,6 +4,14 @@
   "style": "Read this in a clear, upbeat, professional product-demo voice, at a steady pace:",
   "lines": [
     {
+      "id": "meet-1",
+      "text": "Meet kAIzen. We built Kaizen Agent to stop silent scrap, before it costs hours of production."
+    },
+    {
+      "id": "solution-1",
+      "text": "Kaizen Agent spots the defect on the product, traces it to the cause, guides the repair in the technician's language, and closes only when fifty good parts prove the fix."
+    },
+    {
       "id": "topo-1",
       "text": "Here is the system, live on Google Cloud. Gemma 3 inspects every part at the edge, and events flow through Pub/Sub to a Google ADK orchestrator."
     },

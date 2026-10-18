@@ -4,7 +4,7 @@ Programmatic videos for the AI Builder Cup submission, styled with the Lumina Sl
 
 | Composition | Length | What it is |
 |---|---|---|
-| `KaizenDemo` | ~3:41 | Submission video: the intro film re-voiced with the same Gemini TTS voice, no subtitles (its title card replaced by the kAIzen logo card), then prod screen recordings of one real incident (INC-1028C4) from detection to sign-off and the knowledge loop, Gemini TTS voiceover, burned-in English subtitles, Google service badges per shot |
+| `KaizenDemo` | ~3:49 | Submission video: the intro film (retimed to ~26 s, ending before its own title card) re-voiced with the same Gemini TTS voice, no subtitles; a "Meet kAIzen" team-logo scene and a Detect/Trace/Fix/Prove solution scene; then prod screen recordings of one real incident (INC-1028C4) from detection to sign-off and the knowledge loop, Gemini TTS voiceover, burned-in English subtitles, Google service badges per shot |
 | `KaizenEvidence` | ~1:02 | Supplement: the evidence loop — the Root Cause agent pauses for a photo, the technician picks it from the evidence library, Gemini re-checks (90% → 98%) before repair |
 | `KaizenTeaser` | 0:30 | Fully animated teaser (no footage) |
 
@@ -18,6 +18,7 @@ mise run video:render:teaser               # out/kaizen-teaser.mp4
 mise run video:voiceover                   # regenerate the KaizenDemo narration (Gemini TTS on Vertex AI)
 mise run video:voiceover -- --only diag-4  # regenerate one line
 mise run video:voiceover -- --script evidence   # or --script intro
+mise run video:voiceover -- --pauses-only      # re-measure subtitle cue points from the MP3s on disk
 mise run video:typecheck
 ```
 
@@ -27,12 +28,14 @@ mise run video:typecheck
 |---|---|
 | `src/{demo,evidence,intro}/narration.json` | Voiceover script, voice (`Puck`) and TTS model; also the subtitle text (the intro has none) |
 | `src/*/voiceover-durations.json` | Measured line lengths written by the generator; drive all timing |
+| `src/*/voiceover-pauses.json` | Where speech resumes after each pause inside a clip (written by the generator); KaizenDemo subtitle chunks snap to these |
 | `src/demo/timeline.ts` | `buildTimeline`: lead/hold pacing per line, slot frames, subtitle chunking |
+| `src/intro/introTimeline.ts` | Intro pacing; the film's playback rate is fitted to it |
 | `src/demo/demoTimeline.ts` | KaizenDemo pacing |
 | `src/demo/KaizenDemo.tsx`, `src/evidence/KaizenEvidence.tsx` | Shot lists: footage file, source in/out seconds, camera zoom keys, callouts, services |
 | `scripts/generate_voiceover.py` | Gemini TTS (`gemini-2.5-flash-tts`, Vertex AI, ADC) → `public/voiceover/<line>.mp3` |
 | `public/footage/clips/` | H.264 screen recordings and `intro.mp4` (first 31.5 s of the team's intro film, with its audio); not in git, ~150 MB |
-| `public/brand/logo.png` | App logo (copy of `apps/web/public/logo.png`) for the title card |
+| `public/brand/team-logo.png` | kAIzen team logo for the Meet scene |
 
 Changing a line: edit the narration file, run `video:voiceover -- --only <id>`; the timeline re-flows from the new duration.
 Footage is retimed to fill each shot; shots played faster than 1.3× show an "N× speed" tag.

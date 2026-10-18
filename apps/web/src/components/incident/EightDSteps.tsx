@@ -1,6 +1,7 @@
 // EightDSteps: the D1–D8 list in plain language — done disciplines get a green tick, missing ones read "not filled in yet".
 import React from 'react';
 import type { EightDStep } from '../../lib/eightD';
+import MarkdownViewer from '../MarkdownViewer';
 
 interface EightDStepsProps {
   steps: EightDStep[];
@@ -17,7 +18,11 @@ export default function EightDSteps({ steps }: EightDStepsProps): React.ReactEle
               <span className="eightd-title">{s.title}</span>
               <span className="eightd-term">{s.term}</span>
             </span>
-            <span className={s.body ? 'eightd-body' : 'eightd-body eightd-empty'}>{s.body ?? 'Not filled in yet.'}</span>
+            {s.body ? (
+              <MarkdownViewer source={s.body} className="eightd-body" />
+            ) : (
+              <span className="eightd-body eightd-empty">Not filled in yet.</span>
+            )}
             {s.detail && <span className="kpi-hint">{s.detail}</span>}
           </span>
           <span

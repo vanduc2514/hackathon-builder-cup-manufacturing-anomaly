@@ -5,6 +5,7 @@ import type { VerifiedSolution } from '../../lib/eightD';
 import { eightDSteps } from '../../lib/eightD';
 import SideDrawer from '../SideDrawer';
 import EightDSteps from '../incident/EightDSteps';
+import MarkdownViewer from '../MarkdownViewer';
 
 interface EightDSheetProps {
   solution: VerifiedSolution;
@@ -55,9 +56,7 @@ export default function EightDSheet({ solution: s, impact, onClose }: EightDShee
               expand_more
             </span>
           </summary>
-          <pre className="mono diff-block" style={{ whiteSpace: 'pre-wrap' }}>
-            {s.report8d}
-          </pre>
+          <MarkdownViewer source={s.report8d} />
         </details>
       )}
     </SideDrawer>

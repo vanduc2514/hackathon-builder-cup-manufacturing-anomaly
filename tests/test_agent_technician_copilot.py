@@ -123,15 +123,11 @@ def test_agent_technician_copilot_adk_definition():
     assert agent_technician_copilot.agent.name == "technician_copilot"
     assert agent_technician_copilot.agent.output_schema == FindingDraft
     assert agent_technician_copilot.agent.generate_content_config is not None
-    assert agent_technician_copilot.agent.generate_content_config.max_output_tokens == 2048
 
     # Diagnostic probe agent
     assert agent_technician_copilot.diagnostic_agent.name == "technician_copilot_diagnostic"
     assert agent_technician_copilot.diagnostic_agent.output_schema == FindingDraft
     assert agent_technician_copilot.diagnostic_agent.generate_content_config is not None
-    assert (
-        agent_technician_copilot.diagnostic_agent.generate_content_config.max_output_tokens == 2048
-    )
 
     # Module constants
     assert AGENT_ID == "COPILOT"

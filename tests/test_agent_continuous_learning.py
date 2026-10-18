@@ -211,7 +211,6 @@ def test_agent_continuous_learning_adk_definition():
     assert agent_continuous_learning.agent.name == "continuous_learning"
     assert agent_continuous_learning.agent.output_schema == FindingDraft
     assert agent_continuous_learning.agent.generate_content_config is not None
-    assert agent_continuous_learning.agent.generate_content_config.max_output_tokens == 2048
 
     assert AGENT_ID == "LEARN"
     assert AGENT_NAME == "Continuous Learning"

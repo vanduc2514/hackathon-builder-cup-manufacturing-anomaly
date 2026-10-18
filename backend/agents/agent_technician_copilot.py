@@ -9,7 +9,11 @@ from typing import Any
 from google.adk import Agent
 from google.genai import types
 
-from backend.agents.tool_guards import limit_tool_calls, return_argument_errors
+from backend.agents.tool_guards import (
+    AGENT_MAX_OUTPUT_TOKENS,
+    limit_tool_calls,
+    return_argument_errors,
+)
 from backend.core.config import settings
 from backend.core.models import (
     FindingDraft,
@@ -353,7 +357,9 @@ agent = Agent(
     before_model_callback=limit_tool_calls(query_repair_procedure),
     on_tool_error_callback=return_argument_errors,
     output_schema=FindingDraft,
-    generate_content_config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=2048),
+    generate_content_config=types.GenerateContentConfig(
+        temperature=0.1, max_output_tokens=AGENT_MAX_OUTPUT_TOKENS
+    ),
 )
 
 DIAGNOSTIC_INSTRUCTION = (
@@ -382,5 +388,7 @@ diagnostic_agent = Agent(
     before_model_callback=limit_tool_calls(query_repair_procedure),
     on_tool_error_callback=return_argument_errors,
     output_schema=FindingDraft,
-    generate_content_config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=2048),
+    generate_content_config=types.GenerateContentConfig(
+        temperature=0.1, max_output_tokens=AGENT_MAX_OUTPUT_TOKENS
+    ),
 )

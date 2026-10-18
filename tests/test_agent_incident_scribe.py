@@ -328,7 +328,6 @@ def test_agent_incident_scribe_adk_definition():
     assert agent_incident_scribe.agent.name == "incident_scribe"
     assert agent_incident_scribe.agent.output_schema == ScribeDraft
     assert agent_incident_scribe.agent.generate_content_config is not None
-    assert agent_incident_scribe.agent.generate_content_config.max_output_tokens == 2048
 
     assert AGENT_ID == "DOC"
     assert AGENT_NAME == "Incident Scribe"

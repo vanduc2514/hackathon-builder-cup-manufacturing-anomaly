@@ -7,7 +7,11 @@ import logging
 from google.adk import Agent
 from google.genai import types
 
-from backend.agents.tool_guards import limit_tool_calls, return_argument_errors
+from backend.agents.tool_guards import (
+    AGENT_MAX_OUTPUT_TOKENS,
+    limit_tool_calls,
+    return_argument_errors,
+)
 from backend.core.config import settings
 from backend.core.models import RAGSearchResult, ScribeDraft
 from backend.tools.rag_search_tool import search_knowledge_base
@@ -73,5 +77,5 @@ agent = Agent(
     before_model_callback=limit_tool_calls(query_8d_archive_and_sops),
     on_tool_error_callback=return_argument_errors,
     output_schema=ScribeDraft,
-    generate_content_config=types.GenerateContentConfig(max_output_tokens=2048),
+    generate_content_config=types.GenerateContentConfig(max_output_tokens=AGENT_MAX_OUTPUT_TOKENS),
 )

@@ -212,7 +212,13 @@ export interface IncidentSummary {
 export interface IncidentDocumentLink {
   name: string;
   title: string;
-  uri: string;
+  path: string;
+}
+
+export interface IncidentDocumentContent {
+  name: string;
+  title: string;
+  content: string;
 }
 
 export interface IncidentDocumentsResponse {
@@ -221,7 +227,6 @@ export interface IncidentDocumentsResponse {
   export_error: string | null;
   destination: 'gcs' | 'local';
   bucket: string | null;
-  console_url: string | null;
   documents: IncidentDocumentLink[];
 }
 
@@ -259,7 +264,6 @@ export interface AndonPhaseDetails {
   key: AndonPhaseKey;
   letter: string;
   name: string;
-  vietnameseName: string;
   lampColor: 'red' | 'yellow' | 'blue' | 'green';
   lampHex: string;
   description: string;

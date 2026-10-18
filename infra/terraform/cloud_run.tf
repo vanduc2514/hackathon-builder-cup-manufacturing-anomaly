@@ -31,18 +31,6 @@ resource "random_password" "auth_secret" {
   special = false
 }
 
-# Shared API key for mutating factory simulator endpoints (/inject, /reset).
-# ---------------------------------------------------------------------------
-# TKT-073 follow-up / Tech Lead deferred: removal of FACTORY_API_KEY env var
-# and `random_password.factory_api_key` is **deliberately deferred** until the
-# 7-day zero-read window completes (TL decision: keep parity with the prior
-# auth path so the rollback safety belt is intact). Do NOT remove in any
-# follow-up PR without explicit TL sign-off. See PR #294 / TKT-073 follow-up.
-resource "random_password" "factory_api_key" {
-  length  = 32
-  special = false
-}
-
 resource "google_cloud_run_v2_service" "backend" {
   name                = var.service_name
   location            = var.region
@@ -139,17 +127,6 @@ resource "google_cloud_run_v2_service" "backend" {
       env {
         name  = "FACTORY_SERVICE_URL"
         value = google_cloud_run_v2_service.factory.uri
-      }
-
-      # ---------------------------------------------------------------------------
-      # TKT-073 follow-up / Tech Lead deferred: removal of FACTORY_API_KEY env var
-      # and `random_password.factory_api_key` is **deliberately deferred** until
-      # the 7-day zero-read window (TL decision: keep parity with the prior
-      # auth path so the rollback safety belt is intact). Do NOT remove in any
-      # follow-up PR without explicit TL sign-off. See PR #294 / TKT-073 follow-up.
-      env {
-        name  = "FACTORY_API_KEY"
-        value = random_password.factory_api_key.result
       }
 
       # TKT-073 / #288: backend -> factory auth via central JWT. Operator creds

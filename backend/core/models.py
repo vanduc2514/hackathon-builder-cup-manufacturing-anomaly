@@ -1086,8 +1086,8 @@ class SimulationResetResponse(BaseModel):
 # On shift-leader approval the four documents (work order, 8D report, SOP
 # proposal, impact card) are rendered to Markdown and written to
 # gs://<documents_bucket>/incidents/<incident_id>/ (artifacts/documents/
-# outside production). The blobs are private, so the dashboard links to the
-# Cloud Console browser path instead.
+# outside production). The dashboard shows bucket-relative paths and serves the
+# rendered text through GET /api/incidents/documents/{name}.
 # ---------------------------------------------------------------------------
 
 
@@ -1101,18 +1101,19 @@ class IncidentDocumentsExportResult(BaseModel):
     uris: List[str] = Field(
         default_factory=list, description="gs:// object URIs or local file paths"
     )
-    console_url: Optional[str] = None
     note: str = Field(
         default="", description="Human-readable detail, e.g. the local fallback reason"
     )
 
 
 class IncidentDocumentLink(BaseModel):
-    """One exported Markdown document with its storage URI."""
+    """One exported Markdown document with its bucket-relative path."""
 
     name: str = Field(description="Markdown file name, e.g. work_order.md")
     title: str = Field(description="Display title, e.g. Work Order")
-    uri: str = Field(description="gs:// object URI (GCS) or local file path (dev)")
+    path: str = Field(
+        description="Object path relative to the bucket/export root, e.g. incidents/INC-0412/work_order.md"
+    )
 
 
 class IncidentDocumentsResponse(BaseModel):
@@ -1123,8 +1124,15 @@ class IncidentDocumentsResponse(BaseModel):
     export_error: Optional[str] = None
     destination: Literal["gcs", "local"]
     bucket: Optional[str] = None
-    console_url: Optional[str] = None
     documents: List[IncidentDocumentLink] = Field(default_factory=list)
+
+
+class IncidentDocumentContent(BaseModel):
+    """One exported Markdown document with its full text (GET /api/incidents/documents/{name})."""
+
+    name: str
+    title: str
+    content: str
 
 
 class SuspectCorrelation(BaseModel):
@@ -1540,8 +1548,8 @@ class RepairCheckpoint(BaseModel):
     """Intermediate verification checkpoint for physical equipment repair."""
 
     step_number: int
-    title_vi: str
-    instruction_vi: str
+    title: str
+    instruction: str
     citation: str
     metric_name: Optional[str] = None
     target_threshold: Optional[float] = None
@@ -1577,7 +1585,7 @@ class CopilotTurn(BaseModel):
 
     turn_id: int
     speaker: str  # "technician" or "copilot"
-    message_vi: str
+    message: str
     citation: Optional[str] = None
     step_number: Optional[int] = None
     checkpoint_verified: Optional[bool] = None

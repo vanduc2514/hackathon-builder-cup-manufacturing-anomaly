@@ -83,7 +83,7 @@ describe("FactoryDigitalTwin Component", () => {
     vi.clearAllMocks();
   });
 
-  it("renders empty state 'Chưa có dữ liệu từ Factory' before any tick arrives", () => {
+  it("renders empty state 'No data from Factory yet' before any tick arrives", () => {
     const emptyPacket: FactoryTickPacket = {
       tick_index: 0,
       machines: [],
@@ -109,7 +109,7 @@ describe("FactoryDigitalTwin Component", () => {
     expect(screen.getByTestId("factory-digital-twin")).toBeDefined();
     expect(screen.getByTestId("twin-status-offline")).toBeDefined();
     expect(screen.getByTestId("twin-empty-state")).toBeDefined();
-    expect(screen.getByText("Chưa có dữ liệu từ Factory")).toBeDefined();
+    expect(screen.getByText("No data from Factory yet")).toBeDefined();
     // Must NOT render fake machine cards or fake edge stats
     expect(screen.queryByTestId("twin-machine-CNC-01")).toBeNull();
     expect(screen.queryByTestId("twin-edge-stats")).toBeNull();
@@ -164,7 +164,7 @@ describe("FactoryDigitalTwin Component", () => {
 
     // Stale chip should be displayed with timestamp
     expect(screen.getByTestId("twin-status-stale")).toBeDefined();
-    expect(screen.getByText(new RegExp(`Dữ liệu cũ \\(${expectedTimeStr}\\)`))).toBeDefined();
+    expect(screen.getByText(new RegExp(`Stale data \\(${expectedTimeStr}\\)`))).toBeDefined();
     expect(screen.getByTestId("twin-stale-banner")).toBeDefined();
 
     // Must NOT render empty state; should retain last packet machines and data

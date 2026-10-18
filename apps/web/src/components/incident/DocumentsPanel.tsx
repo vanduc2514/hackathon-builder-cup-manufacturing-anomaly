@@ -1,6 +1,7 @@
 // DocumentsPanel: work order and SOP proposal drafted by the Incident Scribe (the 8D lives in the Sign-off step).
 import React, { useState } from 'react';
 import type { IncidentState } from '../../types';
+import MarkdownViewer from '../MarkdownViewer';
 
 interface DocumentsPanelProps {
   incident: IncidentState;
@@ -53,23 +54,18 @@ export default function DocumentsPanel({ incident, ready }: DocumentsPanelProps)
       </div>
       {text ? (
         <>
-          <pre
-            className="mono"
+          <div
             style={{
-              margin: 0,
               maxHeight: 320,
               overflow: 'auto',
-              whiteSpace: 'pre-wrap',
-              fontSize: '0.78rem',
-              lineHeight: 1.55,
               background: 'rgba(255,255,255,0.92)',
               border: '1px solid var(--hair)',
               borderRadius: 12,
               padding: '0.8rem 1rem',
             }}
           >
-            {text}
-          </pre>
+            <MarkdownViewer source={text} />
+          </div>
           <div className="row" style={{ gap: 6 }}>
             <button type="button" className="btn btn-sm" onClick={download}>
               <span className="material-symbols-outlined">download</span>

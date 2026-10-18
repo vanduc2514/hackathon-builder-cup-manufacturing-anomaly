@@ -153,7 +153,7 @@ def test_parse_xlsx_in_memory():
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Tooling"
-    ws.append(["Mã dao", "Mảnh cắt", "Lực siết", "Độ đảo"])
+    ws.append(["Tool code", "Insert", "Torque", "Runout"])
     ws.append(["T07", "WNMG-080408", "4.2 N·m", "0.003 mm"])
     ws.append(["T08", "CNMG-120408", "5.0 N·m", "0.004 mm"])
 
@@ -167,9 +167,9 @@ def test_parse_xlsx_in_memory():
     )
 
     assert "### Sheet: Tooling" in extracted
-    assert "Mã dao: T07" in extracted
-    assert "Lực siết: 4.2 N·m" in extracted
-    assert "Độ đảo: 0.003 mm" in extracted
+    assert "Tool code: T07" in extracted
+    assert "Torque: 4.2 N·m" in extracted
+    assert "Runout: 0.003 mm" in extracted
 
 
 def test_search_exact_documents(mock_connector: GoogleDriveConnector):

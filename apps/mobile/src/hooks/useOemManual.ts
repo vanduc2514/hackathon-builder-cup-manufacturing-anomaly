@@ -11,11 +11,10 @@ export function checkpointToStep(cp: RepairCheckpoint): RepairStep {
   const symbol = COMPARATOR_SYMBOL[cp.comparator ?? '<='] ?? cp.comparator ?? '';
   return {
     id: cp.step_number,
-    title: cp.title_vi,
-    instruction: cp.instruction_vi,
-    instructionVi: cp.instruction_vi,
-    target: hasMetric ? `${symbol} ${cp.target_threshold} ${cp.unit ?? ''}`.trim() : 'Hoàn thành',
-    tolerance: cp.metric_name ?? 'Xác nhận bằng mắt',
+    title: cp.title,
+    instruction: cp.instruction,
+    target: hasMetric ? `${symbol} ${cp.target_threshold} ${cp.unit ?? ''}`.trim() : 'Complete',
+    tolerance: cp.metric_name ?? 'Visual check',
     reference: cp.citation,
   };
 }

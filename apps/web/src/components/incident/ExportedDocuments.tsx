@@ -1,9 +1,10 @@
 // ExportedDocuments (#333): the four approved incident documents exported as Markdown.
-// GCS objects are private, so each entry links to the Cloud Console browser path
-// (new tab); in dev the export lands in artifacts/documents/ and shows local paths.
-import React from 'react';
-import type { IncidentDocumentsResponse, IncidentState } from '../../types';
-import { useApi } from '../../lib/api';
+// Each entry shows its relative object path with Download (Markdown file) and Open (rendered viewer modal);
+// content is served by GET /api/incidents/documents/{name}.
+import React, { useState } from 'react';
+import type { IncidentDocumentContent, IncidentDocumentLink, IncidentDocumentsResponse, IncidentState } from '../../types';
+import { fetchJson, useApi } from '../../lib/api';
+import DocumentViewerModal from './DocumentViewerModal';
 
 interface ExportedDocumentsProps {
   incident: IncidentState;
@@ -11,6 +12,9 @@ interface ExportedDocumentsProps {
 
 export default function ExportedDocuments({ incident }: ExportedDocumentsProps): React.ReactElement | null {
   const approved = incident.approved;
+  const [busy, setBusy] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<{ doc: IncidentDocumentLink; content: string } | null>(null);
 
   // Approval returns before the background export lands on the board, so poll until it does.
   const { data, error } = useApi<IncidentDocumentsResponse>(
@@ -18,6 +22,29 @@ export default function ExportedDocuments({ incident }: ExportedDocumentsProps):
     approved && !incident.documents_exported ? 4000 : 0,
     [incident.incident_id, incident.documents_exported],
   );
+
+  const load = async (doc: IncidentDocumentLink, action: 'download' | 'open'): Promise<void> => {
+    setBusy(doc.name);
+    setLoadError(null);
+    try {
+      const res = await fetchJson<IncidentDocumentContent>(`/api/incidents/documents/${doc.name}`);
+      if (action === 'open') {
+        setViewing({ doc, content: res.content });
+      } else {
+        const blob = new Blob([res.content], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = doc.name;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (e) {
+      setLoadError(`Could not load ${doc.title}: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBusy(null);
+    }
+  };
 
   if (!approved) return null;
 
@@ -46,47 +73,59 @@ export default function ExportedDocuments({ incident }: ExportedDocumentsProps):
 
   return (
     <div className="inset col" id="documents-export" style={{ gap: 10 }}>
-      <div className="row between wrap" style={{ gap: 8 }}>
-        <span className="eyebrow">Exported documents · Markdown</span>
-        {data.console_url && (
-          <a className="btn btn-sm" href={data.console_url} target="_blank" rel="noreferrer">
-            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
-              open_in_new
-            </span>
-            Open folder in Cloud Console
-          </a>
-        )}
-      </div>
+      <span className="eyebrow">Exported documents · Markdown</span>
       <div className="col" style={{ gap: 6 }}>
-        {data.documents.map((doc) => (
-          <div key={doc.name} className="row between wrap" style={{ gap: 8 }}>
-            <div className="col" style={{ gap: 1 }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 650 }}>{doc.title}</span>
-              <span className="mono" style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
-                {doc.uri}
-              </span>
-            </div>
-            {data.console_url ? (
-              <a
-                className="btn btn-sm"
-                href={data.console_url}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`Open ${doc.title} in Cloud Console`}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
-                  description
+        {data.documents.map((doc) => {
+          const loading = busy === doc.name;
+          return (
+            <div key={doc.name} className="row between wrap" style={{ gap: 8 }}>
+              <div className="col" style={{ gap: 1 }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 650 }}>{doc.title}</span>
+                <span className="mono" style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
+                  {doc.path}
                 </span>
-                Open
-              </a>
-            ) : (
-              <span className="chip mono">local file</span>
-            )}
-          </div>
-        ))}
+              </div>
+              <div className="row" style={{ gap: 6 }}>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={loading}
+                  aria-label={`Download ${doc.title}`}
+                  onClick={() => void load(doc, 'download')}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
+                    download
+                  </span>
+                  {loading ? 'Loading…' : 'Download'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={loading}
+                  aria-label={`Open ${doc.title}`}
+                  onClick={() => void load(doc, 'open')}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
+                    description
+                  </span>
+                  {loading ? 'Loading…' : 'Open'}
+                </button>
+              </div>
+            </div>
+          );
+        })}
       </div>
+      {loadError && <span className="kpi-hint" role="alert">{loadError}</span>}
       {data.destination === 'local' && (
-        <span className="kpi-hint">Dev mode: the documents were written to the local artifacts directory instead of GCS.</span>
+        <span className="kpi-hint">Dev mode: documents are stored in the local artifacts directory instead of GCS.</span>
+      )}
+      {viewing && (
+        <DocumentViewerModal
+          title={viewing.doc.title}
+          path={viewing.doc.path}
+          content={viewing.content}
+          onClose={() => setViewing(null)}
+        />
       )}
     </div>
   );

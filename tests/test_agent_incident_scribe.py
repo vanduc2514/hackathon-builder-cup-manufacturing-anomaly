@@ -508,7 +508,7 @@ def test_record_resolution_workflow_node_integration():
         finding="Technician completed tool T07 replacement and runout calibration.",
         evidence="Torque 4.2 N·m and dial runout <= 0.005 mm confirmed.",
         confidence=0.94,
-        citation="Sổ tay hướng dẫn CNC-02 trang 112, mục 4.2",
+        citation="CNC-02 manual, p.112, sec. 4.2",
     )
     scribe_draft = build_scribe_draft(IncidentState(suspect_machine="CNC-02", suspect_tool="T07"))
 

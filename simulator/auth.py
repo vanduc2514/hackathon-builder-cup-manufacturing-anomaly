@@ -12,7 +12,6 @@ not need an ``AUTH_USERS`` roster — it only checks signature/exp).
 
 from __future__ import annotations
 
-import hmac
 import logging
 import os
 
@@ -38,7 +37,7 @@ class AuthError(Exception):
 
 
 class AuthenticatedUser(BaseModel):
-    """Resolved identity of the authenticated caller (sub claim from JWT or API key)."""
+    """Resolved identity of the authenticated caller (sub claim from the JWT)."""
 
     sub: str
     ttl_hours: int
@@ -48,7 +47,7 @@ def _resolve_secret() -> str | None:
     """Return the configured ``AUTH_SECRET`` / ``FACTORY_AUTH_SECRET`` or ``None``.
 
     The simulator mirrors the backend's fail-closed posture: when running with
-    ``APP_ENV=production`` and no ``AUTH_SECRET`` / ``FACTORY_API_KEY`` configured,
+    ``APP_ENV=production`` and no ``AUTH_SECRET`` configured,
     requests fail with 503 rather than silently allowing access.
     """
     secret = (
@@ -58,11 +57,10 @@ def _resolve_secret() -> str | None:
         or os.getenv("AUTH_SECRET")
     )
     if not secret and settings.app_env == "production":
-        if not getattr(settings, "factory_api_key", None):
-            raise AuthError(
-                status.HTTP_503_SERVICE_UNAVAILABLE,
-                "Factory security is not configured on production server",
-            )
+        raise AuthError(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Factory security is not configured on production server",
+        )
     return secret or None
 
 
@@ -105,54 +103,18 @@ def token_from(conn: HTTPConnection) -> str | None:
 
 
 async def require_factory_user(conn: HTTPConnection) -> AuthenticatedUser:
-    """FastAPI dependency: resolves caller from Bearer JWT, X-API-Key, or dev environment."""
+    """FastAPI dependency: resolves the caller from the login Bearer JWT (open in dev)."""
     try:
-        expected_key = getattr(settings, "factory_api_key", None)
-        secret = _resolve_secret()
-        app_env = getattr(settings, "app_env", os.getenv("APP_ENV", "development"))
-
-        # 1. Fail closed with 503 in production if neither API key nor secret is configured
-        if app_env == "production" and not expected_key and not secret:
-            raise AuthError(
-                status.HTTP_503_SERVICE_UNAVAILABLE,
-                "Factory security is not configured on production server",
-            )
-
-        # 2. Check X-API-Key if provided
-        x_api_key = conn.headers.get("x-api-key")
-        if x_api_key:
-            if expected_key and hmac.compare_digest(x_api_key, expected_key):
-                return AuthenticatedUser(
-                    sub="api-key", ttl_hours=settings.factory_auth_token_ttl_hours
-                )
-            raise AuthError(status.HTTP_401_UNAUTHORIZED, "Invalid or missing X-API-Key header")
-
-        # 3. Check Bearer token or ?token=
+        # Fails closed with 503 in production when AUTH_SECRET is missing.
+        _resolve_secret()
         token = token_from(conn)
         if token is not None:
             return decode_token(token)
-
-        # 4. No credentials provided
+        app_env = getattr(settings, "app_env", os.getenv("APP_ENV", "development"))
         if app_env == "production":
-            if not expected_key:
-                raise AuthError(
-                    status.HTTP_503_SERVICE_UNAVAILABLE,
-                    "Factory security is not configured on production server",
-                )
             raise AuthError(
-                status.HTTP_401_UNAUTHORIZED,
-                "Invalid or missing X-API-Key or Authorization Bearer token",
+                status.HTTP_401_UNAUTHORIZED, "Invalid or missing Authorization Bearer token"
             )
-
-        # In development:
-        # If factory_api_key is explicitly configured, enforce it or Bearer
-        if expected_key:
-            raise AuthError(
-                status.HTTP_401_UNAUTHORIZED,
-                "Invalid or missing X-API-Key or Authorization Bearer token",
-            )
-
-        # If factory_api_key is unset in development, allow mutations
         return AuthenticatedUser(sub="dev-anon", ttl_hours=settings.factory_auth_token_ttl_hours)
     except AuthError as exc:
         if conn.scope["type"] == "websocket":

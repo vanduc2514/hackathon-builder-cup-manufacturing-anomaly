@@ -434,8 +434,8 @@ def build_copilot():
     ])
     return pv_svg(150, 'Live voice copilot guiding technician through 3 steps', f'''
       {svg_box(8, 14, 272, 64, rx=12, fill='#f6f8fd')}<g class="pv-breathe">{wave}</g>
-      {svg_text(296, 34, '“Siết vít Torx T15', size=11, fill='var(--ink)')}{svg_text(296, 52, 'tới 4.5 Nm.”', size=11, fill='var(--ink)')}
-      {svg_text(296, 70, 'vi-VN · hands-free', mono=True, size=10)}
+      {svg_text(296, 34, '“Tighten Torx T15 screw', size=11, fill='var(--ink)')}{svg_text(296, 52, 'to 4.5 Nm.”', size=11, fill='var(--ink)')}
+      {svg_text(296, 70, 'en-US · hands-free', mono=True, size=10)}
       <line x1="40" y1="112" x2="440" y2="112" stroke="var(--success)" stroke-width="2"/>
       {step_circles}''')
 

@@ -249,7 +249,7 @@ def validate_metric_measurement(
 ) -> tuple[bool, str]:
     """Validates whether a measured metric satisfies the checkpoint threshold."""
     if checkpoint.target_threshold is None:
-        return True, "Không yêu cầu chỉ số đo."
+        return True, "No measurement required."
 
     target = checkpoint.target_threshold
     comparator = checkpoint.comparator or "<="
@@ -267,18 +267,18 @@ def validate_metric_measurement(
         passed = measured_value > target
 
     unit_str = f" {checkpoint.unit}" if checkpoint.unit else ""
-    metric_label = checkpoint.metric_name or "Chỉ số kiểm tra"
+    metric_label = checkpoint.metric_name or "Check"
 
     if passed:
         message = (
-            f"Chỉ số {metric_label} đạt chuẩn: {measured_value}{unit_str} "
-            f"(đạt yêu cầu {comparator} {target}{unit_str}). [{checkpoint.citation}]"
+            f"{metric_label} within spec: {measured_value}{unit_str} "
+            f"(requirement {comparator} {target}{unit_str}). [{checkpoint.citation}]"
         )
     else:
         message = (
-            f"Chỉ số {metric_label} không đạt: {measured_value}{unit_str} "
-            f"(vượt dung sai cho phép {comparator} {target}{unit_str}). "
-            f"Vui lòng vệ sinh bề mặt tiếp xúc, định vị lại gá kẹp và đo lại theo [{checkpoint.citation}]."
+            f"{metric_label} out of spec: {measured_value}{unit_str} "
+            f"(exceeds allowed tolerance {comparator} {target}{unit_str}). "
+            f"Clean the contact surface, reposition the fixture and measure again per [{checkpoint.citation}]."
         )
 
     return passed, message
@@ -293,8 +293,8 @@ AGENT_NAME = "Technician Copilot"
 PHASE = "Phase C - Resolution"
 DIAGNOSTIC_PHASE = "Phase B - Field Evidence"
 
-DEFAULT_CNC_CITATION = "Gemini Live API multimodal voice session (CNC-02 OEM Manual p.112, mục 4.2)"
-DEFAULT_IM_CITATION = "Gemini Live API multimodal voice session (IM-05 SOP-MOLD-02 p.45, mục 3)"
+DEFAULT_CNC_CITATION = "Gemini Live API multimodal voice session (CNC-02 OEM Manual p.112, sec. 4.2)"
+DEFAULT_IM_CITATION = "Gemini Live API multimodal voice session (IM-05 SOP-MOLD-02 p.45, sec. 3)"
 DEFAULT_DIAGNOSTIC_CNC_CITATION = (
     "Technician diagnostic camera stream via Gemini Live (CNC-02 T07 macro inspection)"
 )
@@ -303,34 +303,34 @@ DEFAULT_DIAGNOSTIC_IM_CITATION = (
 )
 
 
-def build_contextual_diagnostic_probe_vi(
+def build_contextual_diagnostic_probe(
     confidence: float,
     machine_id: str = "CNC-02",
     tool_id: str | None = "T07",
     defect_type: str | None = "scratch_vertical",
     diagnostic_request: str | None = None,
 ) -> str:
-    """Verbalizes the diagnostic question in Vietnamese for the frontline technician when RCA confidence is low (< 70%).
+    """Verbalizes the diagnostic question in English for the frontline technician when RCA confidence is low (< 70%).
 
-    Example: 'Độ tin cậy hiện là 65%. Anh vui lòng chụp ảnh cận cảnh mũi dao T07 để xác nhận là mòn lưỡi hay mẻ hạt.'
+    Example: 'Current confidence is 65%. Please take a close-up photo of insert T07 to confirm flank wear or chipping.'
     """
     conf_pct = int(round(confidence * 100)) if confidence <= 1.0 else int(confidence)
     if diagnostic_request:
-        if f"{conf_pct}%" in diagnostic_request or diagnostic_request.startswith("Độ tin cậy"):
+        if f"{conf_pct}%" in diagnostic_request or diagnostic_request.startswith("Current confidence"):
             return diagnostic_request
-        return f"Độ tin cậy hiện là {conf_pct}%. {diagnostic_request}"
+        return f"Current confidence is {conf_pct}%. {diagnostic_request}"
 
     is_im = "IM" in machine_id.upper() or (defect_type and "short" in defect_type.lower())
     if is_im:
         return (
-            f"Độ tin cậy hiện là {conf_pct}%. Anh vui lòng kiểm tra cụm sấy Dryer-03 và chụp ảnh hạt hút ẩm desiccant "
-            f"để xác nhận độ bão hòa ẩm gây lỗi thiếu liệu (short fill)."
+            f"Current confidence is {conf_pct}%. Please inspect dryer unit Dryer-03 and photograph the desiccant beads "
+            f"to confirm moisture saturation causing short fill."
         )
 
     target_tool = tool_id or "T07"
     return (
-        f"Độ tin cậy hiện là {conf_pct}%. Anh vui lòng chụp ảnh cận cảnh mũi dao {target_tool} "
-        f"để xác nhận là mòn lưỡi hay mẻ hạt."
+        f"Current confidence is {conf_pct}%. Please take a close-up photo of insert {target_tool} "
+        f"to confirm flank wear or chipping."
     )
 
 
@@ -386,7 +386,7 @@ INSTRUCTION = (
 
 agent = Agent(
     name="technician_copilot",
-    description="Guides the technician through physical equipment repair in Vietnamese grounded in OEM manuals.",
+    description="Guides the technician through physical equipment repair in English grounded in OEM manuals.",
     instruction=INSTRUCTION,
     tools=[query_repair_procedure] if _supports_tools() else [],
     before_model_callback=limit_tool_calls(query_repair_procedure),

@@ -78,7 +78,7 @@ def test_post_preset_qa_defect_uses_gemini_result(monkeypatch: pytest.MonkeyPatc
     assert "scratch vertical detected, severity 4/5, region left edge" in ev["analysis"]
     assert data["finding"]["confidence"] == 0.77
     assert "scripted expectation" not in data["finding"]["evidence"]
-    assert "Ghi chú: close-up" in data["finding"]["evidence"]
+    assert "Notes: close-up" in data["finding"]["evidence"]
     assert preset_catalog.get_preset(QA_PRESET).analysis not in str(data)
     assert client.models.generate_content.call_count == 1
     assert blackboard.get_state().visual_evidence.source == "gemini"

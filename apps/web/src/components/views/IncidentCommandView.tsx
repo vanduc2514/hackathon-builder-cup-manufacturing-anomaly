@@ -271,7 +271,7 @@ export default function IncidentCommandView({
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                   photo_library
                 </span>
-                <span>Chọn ảnh mẫu (IM-05)</span>
+                <span>Choose sample image (IM-05)</span>
               </button>
             )}
             </div>
@@ -458,10 +458,10 @@ export default function IncidentCommandView({
             >
               <div className="col" style={{ gap: 2 }}>
                 <span style={{ fontWeight: 650, color: 'var(--accent)' }}>
-                  Đang chờ bằng chứng thực địa (Awaiting Evidence)
+                  Awaiting field evidence
                 </span>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text)' }}>
-                  {incident.diagnostic_request ?? 'Hệ thống yêu cầu kiểm tra thực địa và nạp ảnh bề mặt phôi IM-05.'}
+                  {incident.diagnostic_request ?? 'The system needs a field check: load a close-up image of the IM-05 part surface.'}
                 </span>
               </div>
               <button
@@ -474,7 +474,7 @@ export default function IncidentCommandView({
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                   photo_library
                 </span>
-                <span>Chọn ảnh mẫu</span>
+                <span>Choose sample image</span>
               </button>
             </div>
           )}

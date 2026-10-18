@@ -243,10 +243,10 @@ async def rca_gate(ctx: Context, node_input: RootCauseFindingDraft) -> Event:
         if not diag_req:
             state = blackboard.get_state()
             from backend.agents.agent_technician_copilot import (
-                build_contextual_diagnostic_probe_vi,
+                build_contextual_diagnostic_probe,
             )
 
-            diag_req = build_contextual_diagnostic_probe_vi(
+            diag_req = build_contextual_diagnostic_probe(
                 confidence=confidence,
                 machine_id=state.suspect_machine or "CNC-02",
                 tool_id=state.suspect_tool,

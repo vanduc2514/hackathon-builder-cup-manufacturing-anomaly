@@ -160,7 +160,7 @@ describe("PresetEvidenceModal", () => {
     });
 
     const notesInput = screen.getByTestId("preset-notes-input");
-    fireEvent.change(notesInput, { target: { value: "Ảnh chụp khuôn 3 nứt vỏ" } });
+    fireEvent.change(notesInput, { target: { value: "Photo of mold 3 cracked shell" } });
 
     const selectBtn = screen.getByTestId("preset-select-btn-preset-im05-crack");
     fireEvent.click(selectBtn);
@@ -173,7 +173,7 @@ describe("PresetEvidenceModal", () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             preset_id: "preset-im05-crack",
-            notes: "Ảnh chụp khuôn 3 nứt vỏ",
+            notes: "Photo of mold 3 cracked shell",
           }),
         })
       );

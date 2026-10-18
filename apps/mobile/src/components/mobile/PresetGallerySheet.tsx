@@ -43,7 +43,7 @@ export default function PresetGallerySheet({
     authFetch("/api/presets/evidence")
       .then(async (res) => {
         if (!res.ok) {
-          throw new Error(`Không thể tải danh sách mẫu (HTTP ${res.status})`);
+          throw new Error(`Could not load the sample list (HTTP ${res.status})`);
         }
         const data = (await res.json()) as VisualEvidencePresetListResponse;
         if (active) {
@@ -52,7 +52,7 @@ export default function PresetGallerySheet({
       })
       .catch((err: unknown) => {
         if (active) {
-          const msg = err instanceof Error ? err.message : "Lỗi kết nối khi tải danh sách mẫu";
+          const msg = err instanceof Error ? err.message : "Connection error while loading the sample list";
           setFetchError(msg);
         }
       })
@@ -75,7 +75,7 @@ export default function PresetGallerySheet({
     }
 
     if (!isAwaitingEvidence) {
-      setActionError("Chỉ có thể gửi ảnh mẫu khi hệ thống đang ở trạng thái chờ bằng chứng (awaiting_evidence).");
+      setActionError("Sample images can only be sent while the system is awaiting evidence (awaiting_evidence).");
       return;
     }
 
@@ -93,25 +93,25 @@ export default function PresetGallerySheet({
       });
 
       if (res.status === 409) {
-        setActionError("Xung đột: AI hiện không ở trạng thái chờ bằng chứng hoặc đã phân tích xong (HTTP 409).");
+        setActionError("Conflict: the AI is no longer awaiting evidence or has already finished analysing (HTTP 409).");
         return;
       }
 
       if (res.status === 404) {
-        setActionError("Không tìm thấy ảnh mẫu đã chọn trong hệ thống (HTTP 404).");
+        setActionError("The selected sample image was not found (HTTP 404).");
         return;
       }
 
       if (!res.ok) {
-        setActionError(`Gửi ảnh mẫu thất bại (HTTP ${res.status}). Vui lòng thử lại.`);
+        setActionError(`Sending the sample image failed (HTTP ${res.status}). Please try again.`);
         return;
       }
 
       onSelectSuccess(preset);
       onClose();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Lỗi mạng khi gửi ảnh mẫu";
-      setActionError(`Lỗi kết nối: ${msg}`);
+      const msg = err instanceof Error ? err.message : "Network error while sending the sample image";
+      setActionError(`Connection error: ${msg}`);
     } finally {
       setSubmittingId(null);
     }
@@ -128,7 +128,7 @@ export default function PresetGallerySheet({
       <div
         className="m-sheet"
         role="dialog"
-        aria-label="Chọn ảnh mẫu bằng chứng"
+        aria-label="Choose evidence sample image"
         style={{
           zIndex: 76,
           bottom: 24,
@@ -149,14 +149,14 @@ export default function PresetGallerySheet({
               photo_library
             </span>
             <div className="m-h3" style={{ fontSize: 16 }}>
-              Chọn ảnh mẫu (IM-05)
+              Choose sample image (IM-05)
             </div>
           </div>
           <button
             type="button"
             className="m-iconbtn"
             onClick={onClose}
-            aria-label="Đóng bảng chọn ảnh mẫu"
+            aria-label="Close sample image picker"
             style={{ minWidth: 44, minHeight: 44 }}
             data-testid="preset-gallery-close-btn"
           >
@@ -165,7 +165,7 @@ export default function PresetGallerySheet({
         </div>
 
         <div className="m-sub" style={{ fontSize: 12 }}>
-          Bộ sưu tập 5 mẫu đối chuẩn phôi đúc ép IM-05 cho quy trình xác thực thị giác tự động.
+          Collection of 5 IM-05 injection-molded reference samples for automated visual verification.
         </div>
 
         <div style={{ margin: "4px 0" }}>
@@ -173,7 +173,7 @@ export default function PresetGallerySheet({
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Ghi chú kỹ thuật viên (tùy chọn)..."
+            placeholder="Technician notes (optional)..."
             style={{
               width: "100%",
               padding: "8px 12px",
@@ -211,7 +211,7 @@ export default function PresetGallerySheet({
               warning
             </span>
             <span>
-              Hệ thống hiện ở trạng thái <b>{status}</b>. Chỉ được gửi ảnh mẫu khi ở trạng thái{" "}
+              The system is currently in status <b>{status}</b>. Sample images can only be sent while in status{" "}
               <b>awaiting_evidence</b>.
             </span>
           </div>
@@ -251,7 +251,7 @@ export default function PresetGallerySheet({
             }}
             data-testid="preset-loading"
           >
-            Đang tải danh sách mẫu...
+            Loading sample list...
           </div>
         )}
 
@@ -280,7 +280,7 @@ export default function PresetGallerySheet({
               fontSize: 13,
             }}
           >
-            Không có ảnh mẫu nào trong danh mục.
+            No sample images in the catalog.
           </div>
         )}
 
@@ -350,7 +350,7 @@ export default function PresetGallerySheet({
                           : "var(--green)",
                       }}
                     >
-                      {preset.expected_defect_detected ? "Có khuyết tật" : "Đạt chuẩn"}
+                      {preset.expected_defect_detected ? "Defect" : "Pass"}
                     </span>
                   </div>
                   <div
@@ -380,13 +380,13 @@ export default function PresetGallerySheet({
                       justifyContent: "center",
                       gap: 6,
                     }}
-                    aria-label={`Chọn mẫu ${preset.title}`}
+                    aria-label={`Choose sample ${preset.title}`}
                     data-testid={`preset-select-btn-${preset.id}`}
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                       {isSubmitting ? "hourglass_empty" : "check"}
                     </span>
-                    {isSubmitting ? "Đang gửi..." : "Chọn ảnh mẫu này"}
+                    {isSubmitting ? "Sending..." : "Load this image"}
                   </button>
                 </div>
               </div>

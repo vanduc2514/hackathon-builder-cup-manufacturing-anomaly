@@ -16,28 +16,24 @@ from backend.core.models import AgentFinding, ImpactMetrics, IncidentState
 PHASE_CONFIG = {
     "A": {
         "name": "Detection",
-        "vietnamese_name": "Phát hiện",
         "lamp_color": "red",
         "lamp_hex": "#EF4444",
         "statuses": ["detecting"],
     },
     "B": {
         "name": "Tracing & RCA",
-        "vietnamese_name": "Truy ngược & RCA",
         "lamp_color": "yellow",
         "lamp_hex": "#F59E0B",
         "statuses": ["tracing", "investigating", "analyzing", "awaiting_evidence"],
     },
     "C": {
         "name": "Resolution & Verification",
-        "vietnamese_name": "Xử lý & Xác nhận",
         "lamp_color": "blue",
         "lamp_hex": "#3B82F6",
         "statuses": ["repairing", "verifying"],
     },
     "D": {
         "name": "Learning & Impact",
-        "vietnamese_name": "Học hỏi & Tác động",
         "lamp_color": "green",
         "lamp_hex": "#10B981",
         "statuses": ["closed"],

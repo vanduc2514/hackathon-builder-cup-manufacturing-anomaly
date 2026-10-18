@@ -9,8 +9,6 @@ const BASE_MACHINES: MachineTelemetry[] = [
   { machine_id: 'IM-05', tool_id: 'MOLD-03', spindle_vibration: 0.08, motor_current: 28.5, spindle_temp: 78.0, rpm: 0, operating_status: 'NORMAL', dryer_dew_point: -40.0 },
 ];
 
-const STORAGE_KEY = 'factory_operator_key';
-
 export function useFactoryStream() {
   const [packet, setPacket] = useState<FactoryTickPacket>({
     tick_index: 0,
@@ -21,30 +19,9 @@ export function useFactoryStream() {
   });
   const [deliveryReports, setDeliveryReports] = useState<PubSubDeliveryReport[]>([]);
   const [connected, setConnected] = useState(false);
-  const [apiKey, setApiKeyState] = useState<string>(() => {
-    try {
-      return sessionStorage.getItem(STORAGE_KEY) || '';
-    } catch {
-      return '';
-    }
-  });
   const [authError, setAuthError] = useState<string | null>(null);
 
   const streamOrigin = (import.meta.env.VITE_STREAM_ORIGIN ?? '').replace(/\/$/, '');
-
-  const setApiKey = useCallback((key: string) => {
-    setApiKeyState(key);
-    setAuthError(null);
-    try {
-      if (key) {
-        sessionStorage.setItem(STORAGE_KEY, key);
-      } else {
-        sessionStorage.removeItem(STORAGE_KEY);
-      }
-    } catch {
-      // sessionStorage unavailable or restricted
-    }
-  }, []);
 
   useEffect(() => {
     let es: EventSource | null = null;
@@ -79,17 +56,13 @@ export function useFactoryStream() {
   const injectAnomaly = useCallback(async (scenario: string, machine_id?: string, severity = 1.0, mode = 'demo') => {
     try {
       setAuthError(null);
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (apiKey.trim()) {
-        headers['X-API-Key'] = apiKey.trim();
-      }
       const res = await authFetch(`${streamOrigin}/api/factory/inject`, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenario, machine_id, severity, mode }),
       });
       if (res.status === 401) {
-        setAuthError('Unauthorized: Missing or invalid Operator Key or Session (401)');
+        setAuthError('Unauthorized: sign-in session missing or expired (401)');
         return false;
       }
       if (res.status === 503) {
@@ -111,18 +84,14 @@ export function useFactoryStream() {
     } catch {
       return false;
     }
-  }, [apiKey, streamOrigin]);
+  }, [streamOrigin]);
 
   const resetFactory = useCallback(async () => {
     try {
       setAuthError(null);
-      const headers: Record<string, string> = {};
-      if (apiKey.trim()) {
-        headers['X-API-Key'] = apiKey.trim();
-      }
-      const res = await authFetch(`${streamOrigin}/api/factory/reset`, { method: 'POST', headers });
+      const res = await authFetch(`${streamOrigin}/api/factory/reset`, { method: 'POST' });
       if (res.status === 401) {
-        setAuthError('Unauthorized: Missing or invalid Operator Key or Session (401)');
+        setAuthError('Unauthorized: sign-in session missing or expired (401)');
         return false;
       }
       if (res.status === 503) {
@@ -137,8 +106,8 @@ export function useFactoryStream() {
     } catch {
       return false;
     }
-  }, [apiKey, streamOrigin]);
+  }, [streamOrigin]);
 
-  return { packet, connected, injectAnomaly, resetFactory, apiKey, setApiKey, authError, deliveryReports };
+  return { packet, connected, injectAnomaly, resetFactory, authError, deliveryReports };
 }
 

@@ -307,8 +307,8 @@ export interface GeminiLiveServerMessage {
 /** Mirrors `RepairCheckpoint` (one OEM repair step with an optional measured target). */
 export interface RepairCheckpoint {
   step_number: number;
-  title_vi: string;
-  instruction_vi: string;
+  title: string;
+  instruction: string;
   citation: string;
   metric_name?: string | null;
   target_threshold?: number | null;
@@ -363,7 +363,6 @@ export interface AndonPhaseDetails {
   key: AndonPhaseKey;
   letter: string;
   name: string;
-  vietnameseName: string;
   lampColor: 'red' | 'yellow' | 'blue' | 'green';
   lampHex: string;
   description: string;

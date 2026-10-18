@@ -38,7 +38,6 @@ export interface RepairStep {
   id: number;
   title: string;
   instruction: string;
-  instructionVi: string;
   target: string;
   tolerance?: string;
   reference: string;
@@ -142,7 +141,6 @@ export interface TechnicianProfile {
   shift: string;
   bay: string;
   leadName?: string;
-  language: 'vi-VN' | 'en-US';
   voiceGuidance: boolean;
   pushAlerts: boolean;
   haptics: boolean;

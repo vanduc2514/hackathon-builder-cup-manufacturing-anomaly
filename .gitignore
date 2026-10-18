@@ -72,13 +72,13 @@ apps/*/dist/
 apps/*/.vite/
 apps/*/build/
 
-# npm / yarn / pnpm
+# npm is the only package manager; each app commits its package-lock.json.
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-package-lock.json
 yarn.lock
+pnpm-lock.yaml
 
 # Firebase CLI cache
 .firebase/

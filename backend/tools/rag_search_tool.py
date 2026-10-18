@@ -194,7 +194,6 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "bap400r",
         "longitudinal",
         "groove",
-        "vết xước dọc",
         "bavia",
     },
     "spindle_vibration": {
@@ -209,8 +208,6 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "chatter",
         "bearing",
         "temperature",
-        "độ rung",
-        "độ đảo",
         # TKT-069 / Issue #267 — drive alarms that map to vibration/spindle drift.
         "alarm_52",
         "alarm_53",
@@ -233,8 +230,6 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "flow",
         "damp",
         "moisture",
-        "thiếu liệu",
-        "hụt liệu",
     },
     "sink_mark": {
         "sink_mark",
@@ -247,7 +242,6 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "dewpoint",
         "moisture",
         "dryer",
-        "lõm bề mặt",
     },
     "damp_material": {
         "damp_material",
@@ -263,7 +257,6 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "desiccant",
         "flt-dm-04",
         "flt-abs-04",
-        "ẩm liệu",
     },
     "tool_wear": {
         "tool_wear",
@@ -279,7 +272,6 @@ SYMPTOM_SYNONYMS: Dict[str, Set[str]] = {
         "2000",
         "calendar",
         "sop-mnt-cnc-04",
-        "mòn dao",
         # TKT-069 / Issue #267 — drive alarms that map to tool-wear-style faults.
         "alarm_45",
         "alarm_46",
@@ -344,14 +336,11 @@ def expand_symptom_queries(symptom: str, asset: str) -> List[str]:
     if clean_sym in ("scratch_vertical", "tool_wear"):
         queries.append(f"{asset} insert flank wear longitudinal score mark")
         queries.append(f"{asset} T07 WNMG-080408 runout tolerance")
-        queries.append(f"{asset} mòn mảnh dao xước dọc")
     elif clean_sym in ("short_fill", "sink_mark", "damp_material"):
         queries.append(f"{asset} resin dehumidifier desiccant dewpoint short fill")
         queries.append(f"{asset} FLT-ABS-04 dryer filter maintenance")
-        queries.append(f"{asset} ẩm liệu thiếu liệu sấy nhựa")
     elif clean_sym == "spindle_vibration":
         queries.append(f"{asset} spindle bearing vibration runout 0.005mm")
-        queries.append(f"{asset} độ rung trục chính độ đảo")
 
     return queries
 

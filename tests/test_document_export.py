@@ -6,8 +6,9 @@ Validates:
 - Dev (non-production) runs write artifacts/documents/<id>/ locally instead.
 - Export failures never fail the approval: they log a warning and land on the
   blackboard (documents_exported=False + documents_export_error).
-- GET /api/incidents/documents returns the document links (gs:// URIs or local
-  paths) plus the Cloud Console folder URL in production.
+- GET /api/incidents/documents returns the document links (bucket-relative paths
+  like incidents/<id>/work_order.md); GET /api/incidents/documents/{name} returns
+  the rendered Markdown text.
 """
 
 from __future__ import annotations
@@ -167,15 +168,15 @@ def test_documents_route_returns_local_paths_in_dev(monkeypatch: pytest.MonkeyPa
     assert data["exported"] is True
     assert data["destination"] == "local"
     assert data["bucket"] is None
-    assert data["console_url"] is None
+    assert "console_url" not in data
     assert [d["name"] for d in data["documents"]] == FILE_NAMES
-    assert all(f"artifacts/documents/{INCIDENT_ID}/" in d["uri"] for d in data["documents"])
+    assert all(d["path"] == f"incidents/{INCIDENT_ID}/{d['name']}" for d in data["documents"])
 
 
-def test_documents_route_returns_gcs_uris_and_console_url(
+def test_documents_route_returns_gcs_paths(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """In production the route returns gs:// URIs plus the Cloud Console folder URL."""
+    """In production the route returns bucket-relative paths and no console URL."""
     monkeypatch.setattr(settings, "app_env", "production")
     monkeypatch.setattr(settings, "documents_bucket", "kaizen-lab-kb")
     _incident_awaiting_approval()
@@ -186,11 +187,34 @@ def test_documents_route_returns_gcs_uris_and_console_url(
     data = res.json()
     assert data["destination"] == "gcs"
     assert data["bucket"] == "kaizen-lab-kb"
-    assert data["console_url"] == (
-        "https://console.cloud.google.com/storage/browser/kaizen-lab-kb/incidents/INC-TEST-333"
-    )
+    assert "console_url" not in data
     assert [d["name"] for d in data["documents"]] == FILE_NAMES
-    assert all(
-        d["uri"] == f"gs://kaizen-lab-kb/incidents/{INCIDENT_ID}/{d['name']}"
-        for d in data["documents"]
-    )
+    assert all(d["path"] == f"incidents/{INCIDENT_ID}/{d['name']}" for d in data["documents"])
+
+
+def test_document_content_route_returns_rendered_markdown() -> None:
+    """GET /documents/{name} returns the exported document text rendered from board state."""
+    _incident_awaiting_approval()
+    blackboard.update_status("closed", approved=True, documents_exported=True)
+
+    res = TestClient(app).get("/api/incidents/documents/work_order.md")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["name"] == "work_order.md"
+    assert data["title"]
+    assert data["content"].startswith("#")
+    assert INCIDENT_ID in data["content"]
+    assert "WO-2026-1004: replace insert T07 on CNC-02." in data["content"]
+
+
+def test_document_content_route_unknown_name_is_404() -> None:
+    """Names outside the four exported files are rejected."""
+    _incident_awaiting_approval()
+    blackboard.update_status("closed", approved=True, documents_exported=True)
+    assert TestClient(app).get("/api/incidents/documents/evil.md").status_code == 404
+
+
+def test_document_content_route_before_export_is_404() -> None:
+    """Before the export ran there is nothing to show."""
+    _incident_awaiting_approval()
+    assert TestClient(app).get("/api/incidents/documents/work_order.md").status_code == 404

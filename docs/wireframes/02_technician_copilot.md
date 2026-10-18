@@ -110,7 +110,7 @@ The live incident maps to a work-order stage as below. Demo orders (badge `Demo`
 ### 3.3. Settings (tab)
 - Profile card: 64px avatar, name, role, mono employee-ID chip, indigo bay chip.
 - `Personal information`: Name, Phone, Email, Shift Leader, Shift (read-only).
-- `Preferences`: Language select (Tiếng Việt / English); toggles Voice guidance / Push notifications / Haptics (28px icon tiles, `Switch`).
+- `Preferences`: toggles Voice guidance / Push notifications / Haptics (28px icon tiles, `Switch`).
 - `Button` variant `secondary` `Sign out` with red text; footer `kAIgen · v1.0`.
 
 ```text
@@ -122,7 +122,6 @@ The live incident maps to a work-order stage as below. Demo orders (badge `Demo`
 │ PERSONAL INFORMATION                          │
 │ │ Name  ……  │ Phone ……  │ Email …… │ Shift … │
 │ PREFERENCES                                   │
-│ │ [◎] Language            Tiếng Việt ›      │ │
 │ │ [◎] Voice guidance            (●━━)       │ │
 │ │ [◎] Push notifications        (●━━)       │ │
 │ │ [◎] Haptics                   (━━○)       │ │
@@ -215,15 +214,15 @@ The live incident maps to a work-order stage as below. Demo orders (badge `Demo`
 ```
 
 ### 3.7. Guided Repair with Gemini Live (full-screen)
-- Rear camera video with vignette.
-- Top: `IconButton` (40px, variant `inverse`) back, glass-dark pill with connection state (`Copilot Live` / `Connecting…` / `Copilot offline` / `Demo guide`) + machine, `Chip` tone `inverse` `vi-VN · LIVE/SIM`.
+- Background: stored close-up photo of the defective part (worn insert for CNC machines, cracked housing for IM machines); no live camera feed.
+- Top: `IconButton` (40px, variant `inverse`) back, glass-dark pill with connection state (`Copilot Live` / `Connecting…` / `Copilot offline` / `Demo guide`) + machine, `Chip` tone `inverse` `EN-US · GEMINI`.
 - Light glass step card: `Chip` tone `accent` `i/N`, reference chip (`menu_book`), step title, instruction, 2-cell spec grid **Target** / **Check** (tolerance in accent), step-progress dots; `Step n done` tag.
-- Transcript card: `You` line + `Copilot` line (accent spark avatar), voice-wave, `Ask again` `Button` (size `sm`, variant `secondary`). Demo steps show Vietnamese text with an English subline.
-- Controls row: glass-dark tool group (torch, undo previous step; 40px `IconButton` `inverse`), **56px accent voice button** (`volume_up` / `volume_off`, pulsing halo when on), `Button` (size `lg`, variant `primary`) `NextStepButton` **`Done · next (k/N)`** → **`Finish`** (`flag`) on the last step.
+- Transcript card: `You` line + `Copilot` line (accent spark avatar), voice-wave, `Ask again` `Button` (size `sm`, variant `secondary`). Demo steps show English guidance text.
+- Controls row: glass-dark tool group (undo previous step; 40px `IconButton` `inverse`), **56px accent voice button** (`volume_up` / `volume_off`, pulsing halo when on), `Button` (size `lg`, variant `primary`) `NextStepButton` **`Done · next (k/N)`** → **`Finish`** (`flag`) on the last step.
 
 ```text
-╭──────────────────────────────────────╮  (camera video + vignette)
-│ ( ‹ ) [● Copilot Live · CNC-02] [vi-VN · LIVE]
+╭──────────────────────────────────────╮  (stored defect photo)
+│ ( ‹ ) [● Copilot Live · CNC-02] [EN-US · GEMINI]
 │ ╭──────────────────────────────────╮ │
 │ │ [2/3] [📖 SOP-…]                 │ │
 │ │ Replace insert                   │ │
@@ -236,7 +235,7 @@ The live incident maps to a work-order stage as below. Demo orders (badge `Demo`
 │ ╭ You: …                            ╮│
 │ │ ✦ Copilot: … ∿∿∿     [Ask again]  ││
 │ ╰───────────────────────────────────╯│
-│ [(ϟ)(↶)]     ( 🔊 56 )  [Done · next (2/3)]│
+│ [(↶)]        ( 🔊 56 )  [Done · next (2/3)]│
 ╰──────────────────────────────────────╯
 ```
 

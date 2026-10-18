@@ -10,20 +10,13 @@ const HELP_ROWS: [string, string][] = [
   ['Hover a node', 'Show details; robots wave at you'],
   ['Click a node', 'Open its app in a new tab'],
   ['Reset button', 'Return to the starting view'],
-  ['Outline button', 'Show or hide the zones (outline, background and label)'],
 ];
 
 interface SceneToolbarProps {
   onReset: () => void;
-  outlinesOn: boolean;
-  onToggleOutlines: () => void;
 }
 
-export default function SceneToolbar({
-  onReset,
-  outlinesOn,
-  onToggleOutlines,
-}: SceneToolbarProps): React.ReactElement {
+export default function SceneToolbar({ onReset }: SceneToolbarProps): React.ReactElement {
   const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
@@ -45,18 +38,6 @@ export default function SceneToolbar({
         <button type="button" className="ctrl-btn" aria-label="Reset view" title="Reset view" onClick={onReset}>
           <span className="material-symbols-outlined" aria-hidden="true">
             center_focus_strong
-          </span>
-        </button>
-        <button
-          type="button"
-          className={outlinesOn ? 'ctrl-btn is-active' : 'ctrl-btn'}
-          aria-label="Toggle dashed outlines"
-          title="Toggle dashed outlines"
-          aria-pressed={outlinesOn}
-          onClick={onToggleOutlines}
-        >
-          <span className="material-symbols-outlined" aria-hidden="true">
-            border_style
           </span>
         </button>
         <button

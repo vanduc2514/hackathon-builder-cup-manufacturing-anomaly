@@ -502,7 +502,7 @@ export interface EsgLedgerResponse {
   basis: 'benchmark' | 'measured';
 }
 
-export type DashboardTab = 'overview' | 'incident-detail' | 'incident-list' | 'impact' | 'walkthroughs' | 'sops';
+export type DashboardTab = 'overview' | 'incident-detail' | 'impact' | 'walkthroughs' | 'sops';
 export type PresetCategory =
   | "surface_scratch"
   | "crack"

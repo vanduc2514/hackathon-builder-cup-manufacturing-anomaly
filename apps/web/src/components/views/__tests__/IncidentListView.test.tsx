@@ -72,7 +72,7 @@ describe('IncidentListView', () => {
 
   it('shows only unarchived incidents by default and archived ones under the Archived filter', async () => {
     routeFetch(jsonResponse(200, {}));
-    render(<IncidentListView incident={null} onNavigateHome={vi.fn()} onNotify={vi.fn()} />);
+    render(<IncidentListView incident={null} onNavigateHome={vi.fn()} onOpenIncident={vi.fn()} onNotify={vi.fn()} />);
 
     expect(await screen.findByText('INC-1')).toBeTruthy();
     expect(screen.queryByText('INC-2')).toBeNull();
@@ -86,7 +86,7 @@ describe('IncidentListView', () => {
   it('archives an incident through the API and confirms with a toast', async () => {
     routeFetch(jsonResponse(200, { ...HISTORY[0], archived: true }));
     const onNotify = vi.fn();
-    render(<IncidentListView incident={null} onNavigateHome={vi.fn()} onNotify={onNotify} />);
+    render(<IncidentListView incident={null} onNavigateHome={vi.fn()} onOpenIncident={vi.fn()} onNotify={onNotify} />);
 
     await screen.findByText('INC-1');
     fireEvent.click(document.getElementById('archive-btn-INC-1') as HTMLButtonElement);
@@ -97,17 +97,49 @@ describe('IncidentListView', () => {
 
   it('disables Archive while the live incident is still being worked', async () => {
     routeFetch(jsonResponse(200, {}));
-    render(<IncidentListView incident={liveIncident('repairing')} onNavigateHome={vi.fn()} onNotify={vi.fn()} />);
+    render(
+      <IncidentListView
+        incident={liveIncident('repairing')}
+        onNavigateHome={vi.fn()}
+        onOpenIncident={vi.fn()}
+        onNotify={vi.fn()}
+      />,
+    );
 
     await screen.findByText('INC-1');
     const button = document.getElementById('archive-btn-INC-1') as HTMLButtonElement;
     expect(button.disabled).toBe(true);
   });
 
+  it('opens the live incident from its View button', async () => {
+    routeFetch(jsonResponse(200, {}));
+    const onOpenIncident = vi.fn();
+    render(
+      <IncidentListView
+        incident={liveIncident('repairing')}
+        onNavigateHome={vi.fn()}
+        onOpenIncident={onOpenIncident}
+        onNotify={vi.fn()}
+      />,
+    );
+
+    await screen.findByText('INC-1');
+    fireEvent.click(document.getElementById('view-btn-INC-1') as HTMLButtonElement);
+    expect(onOpenIncident).toHaveBeenCalledWith('INC-1');
+  });
+
+  it('offers no View button for incidents without a live detail view', async () => {
+    routeFetch(jsonResponse(200, {}));
+    render(<IncidentListView incident={null} onNavigateHome={vi.fn()} onOpenIncident={vi.fn()} onNotify={vi.fn()} />);
+
+    await screen.findByText('INC-1');
+    expect(document.getElementById('view-btn-INC-1')).toBeNull();
+  });
+
   it('surfaces the backend conflict detail when archiving is refused', async () => {
     routeFetch(jsonResponse(409, { detail: 'Incident INC-1 is still in progress (verifying)' }));
     const onNotify = vi.fn();
-    render(<IncidentListView incident={null} onNavigateHome={vi.fn()} onNotify={onNotify} />);
+    render(<IncidentListView incident={null} onNavigateHome={vi.fn()} onOpenIncident={vi.fn()} onNotify={onNotify} />);
 
     await screen.findByText('INC-1');
     fireEvent.click(document.getElementById('archive-btn-INC-1') as HTMLButtonElement);

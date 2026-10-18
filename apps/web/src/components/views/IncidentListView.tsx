@@ -8,6 +8,7 @@ import { authFetch } from '../../lib/auth';
 interface IncidentListViewProps {
   incident: IncidentState | null;
   onNavigateHome: () => void;
+  onOpenIncident: (incidentId: string) => void;
   onNotify: (text: string, tone?: ToastTone) => void;
 }
 
@@ -70,6 +71,7 @@ function matchesFilter(inc: IncidentSummary, filter: ArchiveFilter): boolean {
 export default function IncidentListView({
   incident,
   onNavigateHome,
+  onOpenIncident,
   onNotify,
 }: IncidentListViewProps): React.ReactElement {
   const { data, error, loading, reload } = useApi<IncidentSummary[]>('/api/incidents/history?limit=100', 10000, [
@@ -126,14 +128,14 @@ export default function IncidentListView({
             Overview
           </button>
           <span>/</span>
-          <span style={{ fontWeight: 600, color: 'var(--ink)' }}>Incident List</span>
+          <span style={{ fontWeight: 600, color: 'var(--ink)' }}>Incidents</span>
         </nav>
       </header>
 
       <section className="glass col" style={{ borderRadius: 24, padding: '1.5rem', gap: '1rem' }}>
         <div className="row between wrap" style={{ gap: '0.75rem' }}>
           <div className="col" style={{ gap: 2 }}>
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--ink)' }}>Incident List</h2>
+            <h2 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--ink)' }}>Incidents</h2>
             <span style={{ fontSize: '0.8rem', color: 'var(--text)' }}>
               Archived incidents are hidden from the technician app
             </span>
@@ -218,7 +220,9 @@ export default function IncidentListView({
               </thead>
               <tbody>
                 {rows.map((inc) => {
-                  const inProgress = incident?.incident_id === inc.incident_id && IN_PROGRESS[incident.status] === true;
+                  const liveStatus = incident?.incident_id === inc.incident_id ? incident.status : null;
+                  const isLive = liveStatus !== null && liveStatus !== 'normal';
+                  const inProgress = liveStatus !== null && IN_PROGRESS[liveStatus] === true;
                   return (
                     <tr key={inc.incident_id}>
                       <td style={{ padding: '0.75rem', fontWeight: 600 }}>
@@ -247,19 +251,34 @@ export default function IncidentListView({
                         {inc.archived ? (
                           <span style={{ fontSize: '0.82rem', color: 'var(--text)' }}>{inc.archived_by ?? '—'}</span>
                         ) : (
-                          <button
-                            id={`archive-btn-${inc.incident_id}`}
-                            type="button"
-                            className="btn btn-sm"
-                            disabled={inProgress || busyId === inc.incident_id}
-                            title={inProgress ? 'Incident still in progress' : undefined}
-                            onClick={() => void archive(inc.incident_id)}
-                          >
-                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                              archive
-                            </span>
-                            Archive
-                          </button>
+                          <div className="row" style={{ gap: 8 }}>
+                            {isLive && (
+                              <button
+                                id={`view-btn-${inc.incident_id}`}
+                                type="button"
+                                className="btn btn-sm"
+                                onClick={() => onOpenIncident(inc.incident_id)}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                                  open_in_new
+                                </span>
+                                View
+                              </button>
+                            )}
+                            <button
+                              id={`archive-btn-${inc.incident_id}`}
+                              type="button"
+                              className="btn btn-sm"
+                              disabled={inProgress || busyId === inc.incident_id}
+                              title={inProgress ? 'Incident still in progress' : undefined}
+                              onClick={() => void archive(inc.incident_id)}
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                                archive
+                              </span>
+                              Archive
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>

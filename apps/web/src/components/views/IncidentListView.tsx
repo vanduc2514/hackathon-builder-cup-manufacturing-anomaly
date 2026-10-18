@@ -85,12 +85,13 @@ export default function IncidentListView({
   const all = data ?? [];
   const rows = all.filter((inc) => matchesFilter(inc, filter));
 
-  const archive = async (id: string): Promise<void> => {
+  const setArchived = async (id: string, archived: boolean): Promise<void> => {
+    const verb = archived ? 'archive' : 'unarchive';
     setBusyId(id);
     try {
-      const res = await authFetch(`/api/incidents/${encodeURIComponent(id)}/archive`, { method: 'POST' });
+      const res = await authFetch(`/api/incidents/${encodeURIComponent(id)}/${verb}`, { method: 'POST' });
       if (res.ok) {
-        onNotify(`Incident ${id} archived`, 'success');
+        onNotify(`Incident ${id} ${verb}d`, 'success');
         reload();
       } else {
         let detail = `HTTP ${res.status}`;
@@ -103,7 +104,7 @@ export default function IncidentListView({
         onNotify(detail, 'error');
       }
     } catch {
-      onNotify('Failed to archive incident', 'error');
+      onNotify(`Failed to ${verb} incident`, 'error');
     } finally {
       setBusyId(null);
     }
@@ -137,7 +138,7 @@ export default function IncidentListView({
           <div className="col" style={{ gap: 2 }}>
             <h2 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--ink)' }}>Incidents</h2>
             <span style={{ fontSize: '0.8rem', color: 'var(--text)' }}>
-              Archived incidents are hidden from the technician app
+              Archived incidents are hidden from the technician app; unarchive to restore them
             </span>
           </div>
           <div className="seg" role="group" aria-label="Archive filter">
@@ -249,7 +250,21 @@ export default function IncidentListView({
                       </td>
                       <td style={{ padding: '0.75rem' }}>
                         {inc.archived ? (
-                          <span style={{ fontSize: '0.82rem', color: 'var(--text)' }}>{inc.archived_by ?? '—'}</span>
+                          <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.82rem', color: 'var(--text)' }}>{inc.archived_by ?? '—'}</span>
+                            <button
+                              id={`unarchive-btn-${inc.incident_id}`}
+                              type="button"
+                              className="btn btn-sm"
+                              disabled={busyId === inc.incident_id}
+                              onClick={() => void setArchived(inc.incident_id, false)}
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                                unarchive
+                              </span>
+                              Unarchive
+                            </button>
+                          </div>
                         ) : (
                           <div className="row" style={{ gap: 8 }}>
                             {isLive && (
@@ -271,7 +286,7 @@ export default function IncidentListView({
                               className="btn btn-sm"
                               disabled={inProgress || busyId === inc.incident_id}
                               title={inProgress ? 'Incident still in progress' : undefined}
-                              onClick={() => void archive(inc.incident_id)}
+                              onClick={() => void setArchived(inc.incident_id, true)}
                             >
                               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                                 archive

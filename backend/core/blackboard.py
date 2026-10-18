@@ -82,17 +82,20 @@ class Blackboard:
         ]
         return filtered[:limit]
 
-    def archive_incident(
-        self, incident_id: str, archived_by: str | None = None
+    def set_archived(
+        self, incident_id: str, archived: bool, archived_by: str | None = None
     ) -> IncidentState | None:
-        """Marks an incident archived (hidden from the technician app); idempotent, None if unknown."""
-        stamp = {
-            "archived": True,
-            "archived_by": archived_by,
-            "archived_at": datetime.now(timezone.utc).isoformat(),
-        }
+        """Sets or clears an incident's archive flag (archived ones are hidden from the technician app); idempotent, None if unknown."""
+        if archived:
+            stamp = {
+                "archived": True,
+                "archived_by": archived_by,
+                "archived_at": datetime.now(timezone.utc).isoformat(),
+            }
+        else:
+            stamp = {"archived": False, "archived_by": None, "archived_at": None}
         if incident_id == self._state.incident_id and self._state.status != "normal":
-            if self._state.archived:
+            if self._state.archived == archived:
                 return self._state
             update_dict = self._state.model_dump()
             update_dict.update(stamp)
@@ -109,7 +112,7 @@ class Blackboard:
             found = next((inc for inc in self._history if inc.incident_id == incident_id), None)
         if found is None:
             return None
-        if found.archived:
+        if found.archived == archived:
             return found
 
         archived_inc = found.model_copy(update={**stamp, "revision": found.revision + 1})

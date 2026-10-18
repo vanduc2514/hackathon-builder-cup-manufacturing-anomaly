@@ -80,7 +80,7 @@ describe('IncidentListView', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Archived/ }));
     expect(await screen.findByText('INC-2')).toBeTruthy();
     expect(screen.queryByText('INC-1')).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Archive$/ })).toBeNull();
+    expect(document.getElementById('archive-btn-INC-2')).toBeNull();
   });
 
   it('archives an incident through the API and confirms with a toast', async () => {
@@ -93,6 +93,20 @@ describe('IncidentListView', () => {
 
     await waitFor(() => expect(onNotify).toHaveBeenCalledWith('Incident INC-1 archived', 'success'));
     expect(mockAuthFetch).toHaveBeenCalledWith('/api/incidents/INC-1/archive', { method: 'POST' });
+  });
+
+  it('unarchives an archived incident through the API', async () => {
+    routeFetch(jsonResponse(200, { ...HISTORY[1], archived: false }));
+    const onNotify = vi.fn();
+    render(<IncidentListView incident={null} onNavigateHome={vi.fn()} onOpenIncident={vi.fn()} onNotify={onNotify} />);
+
+    await screen.findByText('INC-1');
+    fireEvent.click(document.getElementById('incident-filter-archived') as HTMLButtonElement);
+    await screen.findByText('INC-2');
+    fireEvent.click(document.getElementById('unarchive-btn-INC-2') as HTMLButtonElement);
+
+    await waitFor(() => expect(onNotify).toHaveBeenCalledWith('Incident INC-2 unarchived', 'success'));
+    expect(mockAuthFetch).toHaveBeenCalledWith('/api/incidents/INC-2/unarchive', { method: 'POST' });
   });
 
   it('disables Archive while the live incident is still being worked', async () => {

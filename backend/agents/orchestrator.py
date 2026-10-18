@@ -480,7 +480,11 @@ class Orchestrator:
                 f"Incident {incident_id} is still in progress ({state.status}); "
                 "finish or escalate it first"
             )
-        return record_archive(incident_id=incident_id, archived_by=archived_by)
+        return record_archive(incident_id=incident_id, archived=True, archived_by=archived_by)
+
+    def unarchive_incident(self, incident_id: str) -> IncidentState | None:
+        """Restores an archived incident to the technician app (undo of archive_incident)."""
+        return record_archive(incident_id=incident_id, archived=False, archived_by=None)
 
     def add_handover_note(self, author: str, note: str) -> HandoverNote:
         """Dispatches a technician handover note addition through the workflow node."""

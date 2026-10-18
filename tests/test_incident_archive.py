@@ -1,4 +1,4 @@
-"""Tests for archiving incidents: Blackboard flag, Orchestrator gate and the archive API."""
+"""Tests for archiving and unarchiving incidents: Blackboard flag, Orchestrator gate and the API."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ def test_archiving_live_incident_stamps_notifies_once_and_is_idempotent() -> Non
     queue: asyncio.Queue = asyncio.Queue()
     board._listeners.append(queue)
 
-    state = board.archive_incident("INC-A", "lead")
+    state = board.set_archived("INC-A", True, "lead")
 
     assert state is not None
     assert state.archived is True
@@ -53,10 +53,30 @@ def test_archiving_live_incident_stamps_notifies_once_and_is_idempotent() -> Non
     assert queue.qsize() == 1
     assert json.loads(queue.get_nowait())["archived"] is True
 
-    again = board.archive_incident("INC-A", "someone-else")
+    again = board.set_archived("INC-A", True, "someone-else")
     assert again is not None
     assert again.archived_by == "lead"
     assert queue.qsize() == 0
+
+
+def test_unarchiving_live_incident_clears_stamp_notifies_once_and_is_idempotent() -> None:
+    board = _local_board()
+    board.update_status("closed", incident_id="INC-A")
+    board.set_archived("INC-A", True, "lead")
+    queue: asyncio.Queue = asyncio.Queue()
+    board._listeners.append(queue)
+
+    state = board.set_archived("INC-A", False)
+
+    assert state is not None
+    assert state.archived is False
+    assert state.archived_by is None
+    assert state.archived_at is None
+    assert queue.qsize() == 1
+
+    board.set_archived("INC-A", False)
+    assert queue.qsize() == 1
+    assert _ids(board.list_incidents(archived=False)) == ["INC-A"]
 
 
 def test_archiving_historical_incident_flips_only_that_incident_and_filters_history() -> None:
@@ -65,7 +85,7 @@ def test_archiving_historical_incident_flips_only_that_incident_and_filters_hist
     board.reset()
     board.update_status("repairing", incident_id="INC-B")
 
-    archived = board.archive_incident("INC-A", "lead")
+    archived = board.set_archived("INC-A", True, "lead")
 
     assert archived is not None and archived.archived is True
     assert board.get_state().incident_id == "INC-B"
@@ -75,7 +95,7 @@ def test_archiving_historical_incident_flips_only_that_incident_and_filters_hist
     assert by_id["INC-B"].archived is False
     assert _ids(board.list_incidents(archived=False)) == ["INC-B"]
     assert _ids(board.list_incidents(archived=True)) == ["INC-A"]
-    assert board.archive_incident("INC-NOPE", "lead") is None
+    assert board.set_archived("INC-NOPE", True, "lead") is None
 
 
 def test_archive_filter_scans_past_the_limit_on_firestore() -> None:
@@ -102,7 +122,7 @@ def test_archiving_historical_firestore_incident_persists_with_bumped_revision()
     storage.save_incident.return_value = True
     board = Blackboard(storage=storage)
 
-    archived = board.archive_incident("INC-OLD", "lead")
+    archived = board.set_archived("INC-OLD", True, "lead")
 
     assert archived is not None
     storage.save_incident.assert_called_once()
@@ -110,6 +130,29 @@ def test_archiving_historical_firestore_incident_persists_with_bumped_revision()
     assert saved.incident_id == "INC-OLD"
     assert saved.archived is True
     assert saved.archived_by == "lead"
+    assert saved.revision == 5
+
+
+def test_unarchiving_historical_firestore_incident_persists_with_bumped_revision() -> None:
+    storage = MagicMock(spec=FirestoreAdapter)
+    storage.is_enabled = True
+    storage.get_incident.return_value = IncidentState(
+        incident_id="INC-OLD",
+        status="closed",
+        archived=True,
+        archived_by="lead",
+        archived_at="2026-10-18T00:00:00+00:00",
+        revision=4,
+    )
+    storage.save_incident.return_value = True
+    board = Blackboard(storage=storage)
+
+    board.set_archived("INC-OLD", False)
+
+    storage.save_incident.assert_called_once()
+    saved = storage.save_incident.call_args.args[0]
+    assert saved.archived is False
+    assert saved.archived_by is None
     assert saved.revision == 5
 
 
@@ -121,7 +164,7 @@ def test_archiving_historical_firestore_incident_raises_when_save_fails() -> Non
     board = Blackboard(storage=storage)
 
     with pytest.raises(RuntimeError, match="INC-OLD"):
-        board.archive_incident("INC-OLD", "lead")
+        board.set_archived("INC-OLD", True, "lead")
 
 
 @pytest.mark.parametrize("status", ["repairing", "pending_approval"])
@@ -172,3 +215,12 @@ def test_archive_api_contract_and_history_filter() -> None:
     assert [row["incident_id"] for row in archived] == ["INC-A"]
     everything = client.get("/api/incidents/history").json()
     assert {row["incident_id"] for row in everything} == {"INC-A", "INC-B"}
+
+    restored = client.post("/api/incidents/INC-A/unarchive")
+    assert restored.status_code == 200
+    restored_body = restored.json()
+    assert restored_body["archived"] is False
+    assert restored_body["archived_by"] is None
+    assert restored_body["archived_at"] is None
+    assert client.get("/api/incidents/history", params={"archived": "true"}).json() == []
+    assert client.post("/api/incidents/INC-NOPE/unarchive").status_code == 404

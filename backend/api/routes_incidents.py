@@ -179,6 +179,16 @@ async def archive_incident(
     return IncidentSummary.from_incident(state)
 
 
+@router.post("/{incident_id}/unarchive", response_model=IncidentSummary)
+async def unarchive_incident(incident_id: str) -> IncidentSummary:
+    """Dashboard input: unarchives an incident so the technician app lists it again."""
+    # Unarchiving a historical incident reads and writes Firestore (blocking client).
+    state = await asyncio.to_thread(orchestrator.unarchive_incident, incident_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return IncidentSummary.from_incident(state)
+
+
 @router.get("/documents", response_model=IncidentDocumentsResponse)
 async def get_incident_documents() -> IncidentDocumentsResponse:
     """Returns the exported Markdown documents (URIs + console link) for the current incident (#333)."""

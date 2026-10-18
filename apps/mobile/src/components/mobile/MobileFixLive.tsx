@@ -251,18 +251,10 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
             <span className="material-symbols-outlined">undo</span>
           </button>
         </div>
-        <div className="m-row" style={{ gap: 8 }}>
-          {idx > 0 && (
-            <div className="m-done-tag m-glass-light-on-dark">
-              <span className="material-symbols-outlined ms-fill">check_circle</span>
-              Step {idx} done
-            </div>
-          )}
-          <button className="m-next" onClick={next} id="m-live-next">
-            {isLast ? 'Finish' : `Done · next (${idx + 2}/${steps.length})`}
-            <span className="material-symbols-outlined">{isLast ? 'flag' : 'arrow_forward'}</span>
-          </button>
-        </div>
+        <button className="m-next" onClick={next} id="m-live-next">
+          {isLast ? 'Finish' : `Done · next (${idx + 2}/${steps.length})`}
+          <span className="material-symbols-outlined">{isLast ? 'flag' : 'arrow_forward'}</span>
+        </button>
       </div>
 
       {showSheet && (

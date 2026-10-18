@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import threading
@@ -180,31 +181,43 @@ class PubSubManager:
             return None
 
     def publish_telemetry(self, payload: MachineTelemetryPayload) -> bool:
-        """Publishes machine telemetry to Pub/Sub telemetry topic, with direct fallback."""
-        data_json = payload.model_dump_json()
+        """Publishes machine telemetry to Pub/Sub telemetry topic, with direct fallback.
+
+        The message is the flat ``sensor_telemetry`` row so the Pub/Sub BigQuery
+        subscription can write it without the backend running.
+        """
+        from backend.tools.bigquery_tool import build_sensor_telemetry_row
+
+        data_json = json.dumps(build_sensor_telemetry_row(payload))
         msg_id = None
         if self.is_available():
             msg_id = self.publish_message(settings.pubsub_telemetry_topic, data_json)
 
         if msg_id is None and settings.pubsub_fallback_to_direct:
-            from backend.tools.bigquery_tool import stream_sensor_telemetry
+            from backend.tools.bigquery_tool import insert_sensor_row
 
-            stream_sensor_telemetry(payload)
+            insert_sensor_row(build_sensor_telemetry_row(payload))
             return True
 
         return msg_id is not None
 
     def publish_traceability(self, payload: TraceabilityEventPayload) -> bool:
-        """Publishes discrete part event to Pub/Sub traceability topic, with direct fallback."""
-        data_json = payload.model_dump_json()
+        """Publishes discrete part event to Pub/Sub traceability topic, with direct fallback.
+
+        The message is the flat ``traceability`` row so the Pub/Sub BigQuery
+        subscription can write it without the backend running.
+        """
+        from backend.tools.bigquery_tool import build_traceability_row
+
+        data_json = json.dumps(build_traceability_row(payload))
         msg_id = None
         if self.is_available():
             msg_id = self.publish_message(settings.pubsub_traceability_topic, data_json)
 
         if msg_id is None and settings.pubsub_fallback_to_direct:
-            from backend.tools.bigquery_tool import stream_traceability_record
+            from backend.tools.bigquery_tool import insert_traceability_row
 
-            stream_traceability_record(payload)
+            insert_traceability_row(build_traceability_row(payload))
             return True
 
         return msg_id is not None
@@ -225,10 +238,13 @@ class PubSubManager:
     # -------------------------------------------------------------------------
 
     def _handle_telemetry_message(self, message: Any) -> None:
-        """Callback ingesting telemetry packets from Pub/Sub into BigQuery."""
+        """Callback ingesting telemetry packets from Pub/Sub into BigQuery (emulator/dev).
+
+        Production relies on the Pub/Sub BigQuery subscription instead (#331); this
+        handler consumes the same flat sensor_telemetry row the publisher sends.
+        """
         try:
-            data_str = message.data.decode("utf-8")
-            telemetry = MachineTelemetryPayload.model_validate_json(data_str)
+            row = json.loads(message.data.decode("utf-8"))
         except Exception as exc:
             logger.warning(
                 "Malformed Pub/Sub telemetry message received; acknowledging and dropping poison-pill: %s",
@@ -238,9 +254,11 @@ class PubSubManager:
             return
 
         try:
-            from backend.tools.bigquery_tool import stream_sensor_telemetry
+            if not isinstance(row, dict):
+                raise ValueError("sensor telemetry row must be a JSON object")
+            from backend.tools.bigquery_tool import insert_sensor_row
 
-            stream_sensor_telemetry(telemetry)
+            insert_sensor_row(row)
             message.ack()
         except ValueError as exc:
             # Schema/validation failures are permanent; a nack redelivers instantly and
@@ -252,13 +270,14 @@ class PubSubManager:
             message.nack()
 
     def _handle_traceability_message(self, message: Any) -> None:
-        """Callback ingesting traceability packets from Pub/Sub into BigQuery."""
+        """Callback ingesting traceability packets from Pub/Sub into BigQuery (emulator/dev)."""
         try:
-            data_str = message.data.decode("utf-8")
-            record = TraceabilityEventPayload.model_validate_json(data_str)
-            from backend.tools.bigquery_tool import stream_traceability_record
+            row = json.loads(message.data.decode("utf-8"))
+            if not isinstance(row, dict):
+                raise ValueError("traceability row must be a JSON object")
+            from backend.tools.bigquery_tool import insert_traceability_row
 
-            stream_traceability_record(record)
+            insert_traceability_row(row)
             message.ack()
         except ValueError as exc:
             logger.error("Dropping Pub/Sub traceability message that fails validation: %s", exc)
@@ -410,11 +429,16 @@ class PubSubManager:
                 self.ensure_topics_and_subscriptions()
             subscriber = self.get_subscriber_client()
 
-            handlers = [
-                (settings.pubsub_telemetry_sub, self._handle_telemetry_message),
-                (settings.pubsub_traceability_sub, self._handle_traceability_message),
-                (settings.pubsub_quality_events_sub, self._handle_quality_event_message),
-            ]
+            handlers = [(settings.pubsub_quality_events_sub, self._handle_quality_event_message)]
+            if self.is_emulator:
+                # Ingest locally only: production telemetry/traceability topics are written
+                # to BigQuery directly by their BigQuery subscriptions (#331), so subscribing
+                # here as well would duplicate rows.
+                handlers = [
+                    (settings.pubsub_telemetry_sub, self._handle_telemetry_message),
+                    (settings.pubsub_traceability_sub, self._handle_traceability_message),
+                    *handlers,
+                ]
 
             for sub_name, callback in handlers:
                 sub_path = self.get_subscription_path(sub_name)

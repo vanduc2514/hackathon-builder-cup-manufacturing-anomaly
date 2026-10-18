@@ -12,7 +12,11 @@ export default function App(): React.ReactElement {
   const [resetToken, setResetToken] = useState(0);
 
   const openNode = useCallback((node: TopologyNode): void => {
-    window.open(APP_LINKS[node.target].url, '_blank', 'noopener,noreferrer');
+    if (!node.target) return;
+    const link = APP_LINKS[node.target];
+    if (link?.url) {
+      window.open(link.url, '_blank', 'noopener,noreferrer');
+    }
   }, []);
 
   return (

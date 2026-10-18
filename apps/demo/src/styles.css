@@ -295,16 +295,46 @@ img.brand-tile {
   font-size: 11px;
   color: var(--ink);
   white-space: nowrap;
-  pointer-events: auto;
-  cursor: pointer;
+  pointer-events: none;
+  cursor: default;
   text-decoration: none;
   user-select: none;
   transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
 }
-.node-label:hover,
 .node-label.is-hovered {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-ring), var(--glass-shadow);
+  border-color: rgba(15, 23, 42, .24);
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, .06), var(--glass-shadow);
+}
+
+/* Clickable Deployed App Labels (Factory Floor, Technician App, Plant Ops) */
+.node-label.is-clickable {
+  pointer-events: auto;
+  cursor: pointer;
+  border: 1.5px solid #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), var(--glass-shadow);
+  background: rgba(255, 255, 255, 0.92);
+}
+.node-label.is-clickable:hover,
+.node-label.is-clickable.is-hovered {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.35), 0 4px 14px rgba(37, 99, 235, 0.18), var(--glass-shadow);
+}
+.node-label.is-clickable .node-label__head {
+  color: #1e3a8a;
+}
+.node-label.is-clickable .node-label__head .material-symbols-outlined {
+  color: #2563eb;
+}
+.node-label.is-clickable .node-label__ext-icon {
+  font-size: 12px;
+  color: #3b82f6;
+  margin-left: 2px;
+  transition: transform .15s var(--ease), color .15s var(--ease);
+}
+.node-label.is-clickable:hover .node-label__ext-icon,
+.node-label.is-clickable.is-hovered .node-label__ext-icon {
+  color: #1d4ed8;
+  transform: translate(1px, -1px);
 }
 .node-label__head {
   display: inline-flex;

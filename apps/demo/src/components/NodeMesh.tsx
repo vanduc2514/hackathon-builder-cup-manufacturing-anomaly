@@ -4,7 +4,7 @@ import React, { Suspense, useRef } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Edges, Html, Outlines } from '@react-three/drei';
 import type { Group, Mesh, MeshStandardMaterial } from 'three';
-import { APP_LINKS, isNodeActive, scenarioNow } from '../data/topology';
+import { APP_LINKS, isAgentId, isNodeActive, scenarioNow } from '../data/topology';
 import type { NodeShape, TopologyNode } from '../types/topology';
 import AgentRobot from './AgentRobot';
 
@@ -58,11 +58,22 @@ function shapeParts(shape: NodeShape): ShapePart[] {
 interface NodeMeshProps {
   node: TopologyNode;
   hovered: boolean;
+  selected: boolean;
+  highlightedId: string | null;
   onHover: (id: string | null) => void;
+  onSelect: (node: TopologyNode | null) => void;
   onOpen: (node: TopologyNode) => void;
 }
 
-export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshProps): React.ReactElement {
+export default function NodeMesh({
+  node,
+  hovered: _hovered,
+  selected,
+  highlightedId,
+  onHover,
+  onSelect,
+  onOpen,
+}: NodeMeshProps): React.ReactElement {
   const group = useRef<Group>(null);
   const ring = useRef<Mesh>(null);
   const downTime = useRef<number>(0);
@@ -70,7 +81,19 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
   const [x, z] = node.position;
   const isRobot = node.shape === 'agent' || node.shape === 'hub';
   const robotSize = node.shape === 'hub' ? 1.4 : 1;
-  const lineColor = hovered ? ACCENT : LINE;
+
+  const isDirectlyHighlighted = highlightedId === node.id;
+  const isGeminiLinked =
+    (node.id === 'gemini' && isAgentId(highlightedId)) ||
+    (highlightedId === 'gemini' && isAgentId(node.id));
+  const isResourceLinked =
+    (node.id === 'bigquery' && highlightedId === 'tra') ||
+    (node.id === 'tra' && highlightedId === 'bigquery') ||
+    (node.id === 'rag' && highlightedId === 'rca') ||
+    (node.id === 'rca' && highlightedId === 'rag');
+
+  const isHighlighted = isDirectlyHighlighted || isGeminiLinked || isResourceLinked;
+  const lineColor = isHighlighted ? ACCENT : LINE;
 
   const isClickable = Boolean(node.target && APP_LINKS[node.target]);
   const appLink = node.target ? APP_LINKS[node.target] : null;
@@ -78,9 +101,9 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
   useFrame(() => {
     if (!group.current) return;
     const active = isNodeActive(node.id, scenarioNow());
-    const isLit = hovered || active;
-    const targetY = active ? 0.55 : (hovered ? HOVER_LIFT : 0);
-    const targetScale = active ? 1.15 : (hovered ? 1.05 : 1.0);
+    const isLit = isHighlighted || active;
+    const targetY = active ? 0.55 : (isHighlighted ? HOVER_LIFT : 0);
+    const targetScale = active ? 1.15 : (isHighlighted ? 1.05 : 1.0);
     const y = group.current.position.y;
     group.current.position.y = y + (targetY - y) * 0.15;
     const s = group.current.scale.x;
@@ -101,6 +124,8 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
     e.stopPropagation();
     if (isClickable) {
       onOpen(node);
+    } else {
+      onSelect(node);
     }
   };
   const handlePointerDown = (e: ThreeEvent<PointerEvent>): void => {
@@ -117,6 +142,8 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
       e.stopPropagation();
       if (isClickable) {
         onOpen(node);
+      } else {
+        onSelect(node);
       }
     }
   };
@@ -148,7 +175,7 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
       ))}
       {isRobot && (
         <Suspense fallback={null}>
-          <AgentRobot agentId={node.id} hovered={hovered} size={robotSize} />
+          <AgentRobot agentId={node.id} hovered={isHighlighted} size={robotSize} />
         </Suspense>
       )}
       <mesh ref={ring} position={[0, 0.03, 0]}>
@@ -170,14 +197,14 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
       </mesh>
       <Html
         position={[0, isRobot ? ROBOT_LABEL_BOTTOM * robotSize : LABEL_BOTTOM, 0]}
-        style={{ pointerEvents: isClickable ? 'auto' : 'none' }}
+        style={{ pointerEvents: 'auto' }}
       >
         {isClickable && appLink ? (
           <a
             href={appLink.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`node-label is-clickable${hovered ? ' is-hovered' : ''}`}
+            className={`node-label is-clickable${isHighlighted ? ' is-hovered' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
             }}
@@ -195,7 +222,15 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
             </span>
           </a>
         ) : (
-          <div className={`node-label${hovered ? ' is-hovered' : ''}`}>
+          <div
+            className={`node-label${isHighlighted ? ' is-hovered' : ''}${selected ? ' is-selected' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(node);
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+          >
             <span className="node-label__head">
               <span className="material-symbols-outlined" aria-hidden="true">
                 {node.icon}

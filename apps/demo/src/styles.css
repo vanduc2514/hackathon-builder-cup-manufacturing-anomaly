@@ -295,8 +295,8 @@ img.brand-tile {
   font-size: 11px;
   color: var(--ink);
   white-space: nowrap;
-  pointer-events: none;
-  cursor: default;
+  pointer-events: auto;
+  cursor: pointer;
   text-decoration: none;
   user-select: none;
   transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
@@ -304,6 +304,11 @@ img.brand-tile {
 .node-label.is-hovered {
   border-color: rgba(15, 23, 42, .24);
   box-shadow: 0 0 0 2px rgba(15, 23, 42, .06), var(--glass-shadow);
+}
+.node-label.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2.5px rgba(91, 91, 240, 0.35), var(--glass-shadow);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 /* Clickable Deployed App Labels (Factory Floor, Technician App, Plant Ops) */

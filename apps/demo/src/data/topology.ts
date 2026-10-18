@@ -271,6 +271,21 @@ export function scenarioAt(seconds: number): ScenarioState {
   return { index, step: SCENARIO[index], progress: 1 };
 }
 
+export const AGENT_IDS = new Set([
+  'orchestrator',
+  'qa',
+  'tra',
+  'pa',
+  'rca',
+  'copilot',
+  'doc',
+  'learn',
+]);
+
+export function isAgentId(id: string | null | undefined): boolean {
+  return Boolean(id && AGENT_IDS.has(id));
+}
+
 /** Whether agent `id` is working (processing data) `seconds` into the scenario. */
 export function isAgentWorking(id: string, seconds: number): boolean {
   return scenarioAt(seconds).step.working.includes(id);
@@ -280,6 +295,7 @@ export function isAgentWorking(id: string, seconds: number): boolean {
 export function isNodeActive(id: string, seconds: number): boolean {
   const { step } = scenarioAt(seconds);
   if (step.working.includes(id)) return true;
+  if (id === 'gemini' && step.working.some((w) => AGENT_IDS.has(w))) return true;
   return step.edges.some((key) => key.startsWith(`${id}->`) || key.endsWith(`->${id}`));
 }
 

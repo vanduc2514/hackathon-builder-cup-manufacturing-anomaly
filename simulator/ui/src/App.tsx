@@ -75,11 +75,6 @@ export default function App(): React.ReactElement {
           <EdgeFilterCard stats={packet?.edge_stats} />
         </div>
       </main>
-
-      <footer className="footer-bar faint text-xs">
-        <span>kAIzen Platform • simulator/ui/</span>
-        <span className="mono">Lumina Slate Liquid Glass</span>
-      </footer>
     </div>
   );
 }

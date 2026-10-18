@@ -2,7 +2,7 @@ import React from 'react';
 import type { ConveyorPart } from '../types';
 
 export default function ConveyorBelt({ parts = [] }: { parts?: ConveyorPart[] }): React.ReactElement {
-  const items = parts.slice(0, 7);
+  const items = parts.slice(0, 8);
   return (
     <div className="glass-card flex-col">
       <div className="section-head">

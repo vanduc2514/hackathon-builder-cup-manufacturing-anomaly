@@ -32,11 +32,15 @@ interface Route {
 function buildRoute(
   from: TopologyNode,
   to: TopologyNode,
-  via: TopologyEdge['route'],
-  waypoints?: [number, number][],
+  edge: TopologyEdge,
 ): Route {
-  const [fx, fz] = from.position;
-  const [tx, tz] = to.position;
+  const fx = edge.fromPort ? edge.fromPort[0] : from.position[0];
+  const fz = edge.fromPort ? edge.fromPort[1] : from.position[1];
+  const tx = edge.toPort ? edge.toPort[0] : to.position[0];
+  const tz = edge.toPort ? edge.toPort[1] : to.position[1];
+  const via = edge.route;
+  const waypoints = edge.waypoints;
+
   let points: Point[];
   if (waypoints && waypoints.length > 0) {
     points = [
@@ -77,10 +81,7 @@ function placeAt(mesh: Mesh, route: Route, distance: number): void {
 const easeInOut = (p: number): number => p * p * (3 - 2 * p);
 
 export default function EdgeFlow({ edge, from, to, hoveredId }: EdgeFlowProps): React.ReactElement {
-  const route = useMemo(
-    () => buildRoute(from, to, edge.route, edge.waypoints),
-    [from, to, edge.route, edge.waypoints],
-  );
+  const route = useMemo(() => buildRoute(from, to, edge), [from, to, edge]);
   const steps = useMemo(
     () => SCENARIO.flatMap((s, i) => (s.edges.includes(edgeKey(edge)) ? [i] : [])),
     [edge],

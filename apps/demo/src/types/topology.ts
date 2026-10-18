@@ -34,6 +34,10 @@ export interface TopologyEdge {
   label: string;
   /** Corner choice of the L-shaped route: x-first by default, `'zx'` goes z-first. */
   route?: 'zx';
+  /** Optional start override [x, z], e.g. at a container boundary. */
+  fromPort?: [number, number];
+  /** Optional end override [x, z], e.g. at a container boundary. */
+  toPort?: [number, number];
   /** Optional intermediate waypoints [x, z] between from and to. */
   waypoints?: [number, number][];
   /** If true, the edge is hidden when idle and only appears/highlights when active or hovered. */

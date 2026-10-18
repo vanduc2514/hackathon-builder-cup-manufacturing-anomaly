@@ -363,6 +363,21 @@ export function formatClock(iso?: string | null): string {
   return d.toISOString().substring(11, 19);
 }
 
+export function formatLocalClock(iso?: string | null, includeSeconds = false): string {
+  if (!iso) return includeSeconds ? '--:--:--' : '--:--';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    const match = iso.match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/);
+    return match ? match[1] : iso;
+  }
+  return d.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(includeSeconds ? { second: '2-digit' } : {}),
+    hour12: false,
+  });
+}
+
 export function parseTimeSeconds(raw?: string | null): number | null {
   if (!raw) return null;
   if (raw.includes('T') || (raw.includes('-') && raw.includes(':'))) {
@@ -392,7 +407,7 @@ export function computeIncidentDuration(startRaw?: string | null, endRaw?: strin
 
   const dStart = new Date(startRaw);
   const dEnd = new Date(endRaw);
-  if (!Number.isNaN(dStart.getTime()) && !Number.isNaN(dEnd.getTime()) && startRaw.includes('-') && endRaw.includes('-')) {
+  if (!Number.isNaN(dStart.getTime()) && !Number.isNaN(dEnd.getTime()) && (startRaw.includes('-') || startRaw.includes('T')) && (endRaw.includes('-') || endRaw.includes('T'))) {
     const diff = Math.max(0, dEnd.getTime() - dStart.getTime());
     return formatDuration(diff);
   }

@@ -5,6 +5,7 @@ import MobileNavBar from './MobileNavBar';
 import ConfidenceRing from './ConfidenceRing';
 import AiReasonCard from './AiReasonCard';
 import VisualEvidenceCard from './VisualEvidenceCard';
+import { formatOrderTimestamp } from './mobileData';
 
 interface MobileWorkStatusProps {
   order: WorkOrder;
@@ -209,7 +210,7 @@ export default function MobileWorkStatus({
             </span>
             <div className="m-col" style={{ gap: 2 }}>
               <div className="m-h3">{order.outcome}</div>
-              <div className="m-sub">Finished {order.completedAt}</div>
+              <div className="m-sub">Finished {formatOrderTimestamp(order.completedAt)}</div>
             </div>
           </section>
         )}

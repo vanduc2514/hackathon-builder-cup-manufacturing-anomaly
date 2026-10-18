@@ -64,6 +64,52 @@ export function getMachineLocation(machine?: string | null): string {
   return 'Location not mapped';
 }
 
+/** Formats a timestamp (ISO or time string) into local 24h time HH:mm in the user's timezone. */
+export function formatTime(raw?: string | null): string {
+  if (!raw) return '';
+  try {
+    const d = new Date(raw);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+  } catch {
+    // fallback below
+  }
+  const match = raw.match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/);
+  return match ? match[1] : raw;
+}
+
+/** Formats an order's creation or completion timestamp into clean local time for work cards. */
+export function formatOrderTimestamp(raw?: string | null): string {
+  if (!raw) return '';
+  try {
+    const d = new Date(raw);
+    if (!isNaN(d.getTime())) {
+      const now = new Date();
+      const isToday =
+        d.getFullYear() === now.getFullYear() &&
+        d.getMonth() === now.getMonth() &&
+        d.getDate() === now.getDate();
+      const timeStr = d.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      });
+      if (isToday) {
+        return timeStr;
+      }
+      const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      const shortTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      return `${dateStr}, ${shortTime}`;
+    }
+  } catch {
+    // fallback below
+  }
+  const cleaned = raw.replace(/(\.\d{3})\d+/, '$1').replace(/\+$/, '');
+  return cleaned;
+}
+
 function latestFinding(
   incident: IncidentState,
   match: (f: AgentFinding) => boolean,
@@ -85,7 +131,7 @@ function toReason(f?: AgentFinding): AiReason | undefined {
     finding: f.finding,
     evidence: f.evidence,
     citation: f.citation,
-    timestamp: f.timestamp,
+    timestamp: formatTime(f.timestamp),
     fiveWhys: f.five_whys,
   };
 }
@@ -243,7 +289,7 @@ function buildEvidence(
       mediaType: 'photo',
       captured: true,
       source: 'sensor',
-      capturedAt: tel ? tel.timestamp.slice(11, 16) : history[history.length - 1].timestamp.slice(11, 16),
+      capturedAt: tel ? formatTime(tel.timestamp) : history[history.length - 1] ? formatTime(history[history.length - 1].timestamp) : undefined,
       series: history.slice(-14).map((p) => p.vibration_mm_s),
     });
   }
@@ -257,7 +303,7 @@ function buildEvidence(
       mediaType: 'photo',
       captured: true,
       source: 'sensor',
-      capturedAt: a.timestamp.slice(11, 16),
+      capturedAt: formatTime(a.timestamp),
     });
   }
   if (incident.visual_evidence) {
@@ -269,7 +315,7 @@ function buildEvidence(
       mediaType: 'photo',
       captured: true,
       source: 'technician',
-      capturedAt: v.timestamp.slice(11, 16),
+      capturedAt: formatTime(v.timestamp),
     });
   }
   const capture = captures[LIVE_PHOTO_ITEM_ID];
@@ -389,7 +435,7 @@ export function buildLiveOrder(
     summary,
     image: machine.toUpperCase().startsWith('IM') ? IMG.insert : IMG.lathe,
     aiConfidence: getIncidentConfidence(incident),
-    createdAt: incident.findings[0]?.timestamp ?? incident.updated_at,
+    createdAt: incident.opened_at ?? incident.findings[0]?.timestamp ?? incident.updated_at,
     rootCause: incident.root_cause ?? undefined,
     suspectTool: incident.suspect_tool ?? undefined,
     aiRequest,
@@ -468,7 +514,7 @@ export function summaryToWorkOrder(summary: IncidentSummary, leadName: string): 
   let processing: ProcessingInfo | undefined;
   if (stage === 'processing') {
     processing = {
-      submittedAt: summary.updated_at ?? 'Recent',
+      submittedAt: summary.updated_at ? formatTime(summary.updated_at) : 'Recent',
       verified: summary.verification_count,
       target: summary.verification_target,
       lead: leadName,

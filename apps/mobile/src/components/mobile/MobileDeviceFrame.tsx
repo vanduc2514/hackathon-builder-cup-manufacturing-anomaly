@@ -110,9 +110,6 @@ export default function MobileDeviceFrame({
         </div>
       </div>
       </div>
-      <p style={{ margin: 0, color: '#6b7280', fontSize: '0.78rem', textAlign: 'center', maxWidth: 420 }}>
-        Technician app · Work List → Collect evidence or Repair → Processing (lead verifies) → Completed
-      </p>
     </div>
   );
 }

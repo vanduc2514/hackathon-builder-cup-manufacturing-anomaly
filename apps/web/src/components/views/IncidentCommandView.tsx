@@ -24,7 +24,7 @@ import {
   STATUS_LABEL,
   STEP_OF_STATUS,
   computeIncidentDuration,
-  formatClock,
+  formatLocalClock,
   formatPct,
   friendlyDefectName,
   matchesAgentRole,
@@ -129,9 +129,9 @@ export default function IncidentCommandView({
       if (s < lo) [lo, first] = [s, f.timestamp];
       if (s > hi) [hi, last] = [s, f.timestamp];
     }
-    return { firstTime: first ?? incident.updated_at, lastTime: last ?? incident.updated_at };
-  }, [findings, incident.updated_at]);
-  const duration = computeIncidentDuration(firstTime, closed || approved ? lastTime : new Date().toTimeString().substring(0, 8));
+    return { firstTime: first ?? incident.opened_at ?? incident.updated_at, lastTime: last ?? incident.closed_at ?? incident.updated_at };
+  }, [findings, incident.opened_at, incident.closed_at, incident.updated_at]);
+  const duration = computeIncidentDuration(firstTime, closed || approved ? lastTime : new Date().toISOString());
 
   const tel = incident.latest_telemetry?.machine_id === machine ? incident.latest_telemetry : null;
   const alerts = incident.telemetry_alerts ?? [];
@@ -280,7 +280,7 @@ export default function IncidentCommandView({
             {machine ? ` on ${machine}` : ''}
           </h1>
           <p style={{ fontSize: '0.86rem', color: 'var(--text)' }}>
-            {product} · found at end-of-line inspection · opened {formatClock(firstTime).substring(0, 5)} ·{' '}
+            {product} · found at end-of-line inspection · opened {formatLocalClock(firstTime)} ·{' '}
             {closed || approved ? `resolved in ${duration}` : `open for ${duration}`}
           </p>
         </header>

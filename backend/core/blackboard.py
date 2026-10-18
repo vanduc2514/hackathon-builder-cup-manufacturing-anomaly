@@ -80,6 +80,7 @@ class Blackboard:
             and not kwargs.get("closed_at")
         ):
             update_dict["closed_at"] = datetime.now(timezone.utc).isoformat()
+        update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
         update_dict.update(kwargs)
         self._state = IncidentState(**update_dict)
         self._record_in_history(self._state)

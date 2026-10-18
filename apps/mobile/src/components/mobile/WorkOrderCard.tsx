@@ -1,5 +1,6 @@
 import React from 'react';
 import type { WorkOrder } from '../../types/mobile';
+import { formatOrderTimestamp } from './mobileData';
 
 interface WorkOrderCardProps {
   order: WorkOrder;
@@ -52,7 +53,7 @@ export default function WorkOrderCard({ order, onOpen }: WorkOrderCardProps): Re
         </div>
         <div className="m-work-meta">
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
-          Finished {order.completedAt}
+          Finished {formatOrderTimestamp(order.completedAt)}
           <span className="sep" />
           {order.machine}
         </div>
@@ -144,7 +145,7 @@ export default function WorkOrderCard({ order, onOpen }: WorkOrderCardProps): Re
           <span className={`m-chip ${PRIORITY_TONE[order.priority]}`}>{order.priority}</span>
           {sourceChip}
         </div>
-        <span className="m-sub">{order.createdAt}</span>
+        <span className="m-sub">{formatOrderTimestamp(order.createdAt)}</span>
       </div>
 
       <div className="m-work-head">

@@ -545,7 +545,7 @@ def get_mock_sensor_telemetry_window(
 
 
 def query_traceability_topology(
-    time_window: Optional[str] = "09:30-10:00",
+    time_window: Optional[str] = "60 MINUTE",
     start_time: Optional[str] = None,
     end_time: Optional[str] = None,
     product_ids: Optional[List[str]] = None,

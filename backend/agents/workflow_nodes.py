@@ -167,19 +167,21 @@ async def record_detection(ctx: Context, node_input: FindingDraft) -> IncidentSt
 
 
 async def trace_topology(ctx: Context, node_input: IncidentState | dict) -> dict:
-    """Traceability Agent queries discrete topology and passes the evidence report to the reasoner."""
-    qi_report_data = ctx.state.get("qi_report")
-    product_ids = None
-    if qi_report_data:
-        frames = qi_report_data.get("defect_frames", [])
-        product_ids = [f["product_id"] for f in frames if f.get("product_id")]
+    """Traceability Agent queries discrete topology and passes the evidence report to the reasoner.
 
+    The query covers this incident only: from the pre-incident window start (opened_at minus
+    the Process Analyst lookback) until now, unless the trigger names an explicit time_window.
+    """
     trigger = ctx.state.get("trigger", {})
-    time_window = trigger.get("time_window", "09:30-10:00")
+    time_window = trigger.get("time_window")
+    start_time = None
+    opened_at = blackboard.get_state().opened_at
+    if not time_window and opened_at:
+        start_time, _ = agent_process_analyst.pre_incident_window(opened_at)
 
     report = await agent_traceability.trace_line_topology(
         time_window=time_window,
-        product_ids=product_ids,
+        start_time=start_time,
     )
     ctx.state["traceability_report"] = report.model_dump()
     return {

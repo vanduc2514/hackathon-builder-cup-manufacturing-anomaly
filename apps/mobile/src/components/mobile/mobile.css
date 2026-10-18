@@ -1026,6 +1026,43 @@
   animation: m-enter 0.45s var(--ease) both;
 }
 
+/* Collapsed-panel bubbles over the camera feed */
+.m-cam-bubble {
+  position: absolute;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  animation: m-enter 0.45s var(--ease) both;
+}
+.m-cam-bubble .material-symbols-outlined { font-size: 20px; }
+.m-cam-bubble .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.m-cam-bubble.step { top: 94px; left: 14px; }
+.m-cam-bubble.chat { right: 14px; bottom: 164px; }
+
+.m-cam-min {
+  min-height: 44px;
+  min-width: 44px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.m-cam-min .material-symbols-outlined { font-size: 18px; }
+
 .m-spec {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { WorkOrder } from '../../types/mobile';
 import { useGeminiLive, type LiveConnection } from '../../hooks/useGeminiLive';
 import { useOemManual } from '../../hooks/useOemManual';
@@ -35,7 +35,14 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
   const [voiceOn, setVoiceOn] = useState(voiceGuidance);
   const [showSheet, setShowSheet] = useState(false);
   const [notes, setNotes] = useState('');
+  const [stepOpen, setStepOpen] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
   const copilot = useGeminiLive(isLiveOrder, voiceOn);
+
+  // The offline caption must never stay hidden behind the chat bubble.
+  useEffect(() => {
+    if (copilot.connection === 'unavailable' || copilot.connection === 'offline') setChatOpen(true);
+  }, [copilot.connection]);
 
   const step = steps[idx];
   const isLast = idx === steps.length - 1;
@@ -100,36 +107,56 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
       </div>
 
       {/* Step card */}
-      <div key={step.id} className="m-cam-step m-glass-light-on-dark">
-        <div className="m-between">
-          <div className="m-row" style={{ gap: 6 }}>
-            <span className="m-chip" style={{ background: 'var(--accent)', color: '#fff' }}>
-              {idx + 1}/{steps.length}
-            </span>
-            <span className="m-chip plain">
-              <span className="material-symbols-outlined">menu_book</span>
-              {step.reference}
-            </span>
+      {stepOpen ? (
+        <div key={step.id} className="m-cam-step m-glass-light-on-dark">
+          <div className="m-between">
+            <div className="m-row" style={{ gap: 6 }}>
+              <span className="m-chip" style={{ background: 'var(--accent)', color: '#fff' }}>
+                {idx + 1}/{steps.length}
+              </span>
+              <span className="m-chip plain">
+                <span className="material-symbols-outlined">menu_book</span>
+                {step.reference}
+              </span>
+            </div>
+            <button
+              className="m-cam-min"
+              id="m-live-min-step"
+              aria-label="Minimize step card"
+              onClick={() => setStepOpen(false)}
+            >
+              <span className="material-symbols-outlined">remove</span>
+            </button>
+          </div>
+          <h2 className="m-h2" style={{ marginTop: 8 }}>{step.title}</h2>
+          <p className="m-body" style={{ fontSize: 12.5, marginTop: 2 }}>{step.instruction}</p>
+          <div className="m-spec">
+            <div>
+              <div className="k">Target</div>
+              <div className="v">{step.target}</div>
+            </div>
+            <div>
+              <div className="k">Check</div>
+              <div className="v acc">{step.tolerance}</div>
+            </div>
+          </div>
+          <div className="m-steps-dots" style={{ marginTop: 10 }}>
+            {steps.map((s, i) => (
+              <i key={s.id} className={i <= idx ? 'on' : ''} />
+            ))}
           </div>
         </div>
-        <h2 className="m-h2" style={{ marginTop: 8 }}>{step.title}</h2>
-        <p className="m-body" style={{ fontSize: 12.5, marginTop: 2 }}>{step.instruction}</p>
-        <div className="m-spec">
-          <div>
-            <div className="k">Target</div>
-            <div className="v">{step.target}</div>
-          </div>
-          <div>
-            <div className="k">Check</div>
-            <div className="v acc">{step.tolerance}</div>
-          </div>
-        </div>
-        <div className="m-steps-dots" style={{ marginTop: 10 }}>
-          {steps.map((s, i) => (
-            <i key={s.id} className={i <= idx ? 'on' : ''} />
-          ))}
-        </div>
-      </div>
+      ) : (
+        <button
+          className="m-cam-bubble m-glass-dark step"
+          id="m-live-step-bubble"
+          aria-label={`Show step card: ${step.title}`}
+          onClick={() => setStepOpen(true)}
+        >
+          <span className="material-symbols-outlined">menu_book</span>
+          {idx + 1}/{steps.length}
+        </button>
+      )}
 
       {idx > 0 && (
         <div className="m-done-tag m-glass-light-on-dark" style={{ left: 24, top: 'calc(49% + 92px)' }}>
@@ -139,7 +166,8 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
       )}
 
       {/* Transcript: streamed Copilot captions, the Stop button and the scripted prompt chips */}
-      <div className="m-transcript m-glass-light-on-dark" style={{ animation: 'm-enter .45s var(--ease) both' }}>
+      {chatOpen ? (
+        <div className="m-transcript m-glass-light-on-dark" style={{ animation: 'm-enter .45s var(--ease) both' }}>
         <div className="m-tline">
           <span className="ic">
             <span className="material-symbols-outlined">person</span>
@@ -179,6 +207,14 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
                   Stop
                 </button>
               )}
+              <button
+                className="m-cam-min"
+                id="m-live-min-chat"
+                aria-label="Minimize Copilot chat"
+                onClick={() => setChatOpen(false)}
+              >
+                <span className="material-symbols-outlined">remove</span>
+              </button>
             </div>
             <div className="txt m-caption" aria-live="polite">{copilotCaption}</div>
           </div>
@@ -197,7 +233,18 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
             </button>
           ))}
         </div>
-      </div>
+        </div>
+      ) : (
+        <button
+          className="m-cam-bubble m-glass-dark chat"
+          id="m-live-chat-bubble"
+          aria-label="Open Copilot chat"
+          onClick={() => setChatOpen(true)}
+        >
+          <span className="material-symbols-outlined">forum</span>
+          {(copilot.streaming || copilot.speaking) && <span className="dot" />}
+        </button>
+      )}
 
       {/* Controls */}
       <div className="m-cam-controls">
@@ -218,7 +265,7 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
           id="m-live-mic"
           style={voiceOn ? undefined : { background: '#3a3d4a', boxShadow: 'none' }}
         >
-          <span className="material-symbols-outlined ms-fill">{voiceOn ? 'volume_up' : 'volume_off'}</span>
+          <span className="material-symbols-outlined ms-fill">{voiceOn ? 'auto_awesome' : 'volume_off'}</span>
         </button>
         <button className="m-next" onClick={next} id="m-live-next">
           {isLast ? 'Finish' : `Done · next (${idx + 2}/${steps.length})`}

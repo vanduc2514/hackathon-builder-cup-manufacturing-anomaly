@@ -109,6 +109,8 @@ function chip(name: RegExp): HTMLButtonElement {
 
 async function renderReady(): Promise<FakeWebSocket> {
   render(<MobileFixLive order={order} voiceGuidance onExit={vi.fn()} onSubmit={vi.fn()} />);
+  // The chat starts collapsed to a bubble; open it so the prompt chips render.
+  fireEvent.click(screen.getByRole('button', { name: /Open Copilot chat/ }));
   await waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
   const ws = FakeWebSocket.instances[0];
   ws.emit({ type: 'setup_complete', session_id: 's1', resumption_handle: 'h1' });
@@ -241,6 +243,83 @@ describe('MobileFixLive Copilot', () => {
     await waitFor(() => expect(screen.getByText(/Copilot is offline/)).toBeTruthy());
     expect(FakeWebSocket.instances).toHaveLength(0);
     expect(chip(/What is wrong/).disabled).toBe(true);
+  });
+});
+
+describe('camera bubbles', () => {
+  beforeEach(() => {
+    FakeWebSocket.instances = [];
+    speak.mockClear();
+    cancel.mockClear();
+    vi.stubGlobal('WebSocket', FakeWebSocket);
+    vi.stubGlobal('SpeechSynthesisUtterance', FakeUtterance);
+    Object.defineProperty(window, 'speechSynthesis', { value: { speak, cancel }, configurable: true });
+    vi.mocked(fetchGeminiLiveStatus).mockResolvedValue(status);
+    vi.mocked(createGeminiLiveSession).mockResolvedValue({
+      session_id: 's1',
+      status: 'active',
+      client_messages_received: 0,
+      server_messages_sent: 0,
+      created_at: '10:00:00',
+      last_active_at: '10:00:00',
+    });
+    vi.mocked(listGeminiLiveSessions).mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('starts with the step card expanded and the chat collapsed to a bubble', () => {
+    render(<MobileFixLive order={order} voiceGuidance onExit={vi.fn()} onSubmit={vi.fn()} />);
+    expect(screen.getByText('Stop the spindle')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /What is wrong/ })).toBeNull();
+    const bubble = screen.getByRole('button', { name: 'Open Copilot chat' });
+    expect(bubble.id).toBe('m-live-chat-bubble');
+
+    fireEvent.click(bubble);
+    expect(screen.getByRole('button', { name: 'Minimize Copilot chat' }).id).toBe('m-live-min-chat');
+    expect(screen.getByRole('button', { name: /What is wrong/ })).toBeTruthy();
+  });
+
+  it('collapses the step card into a bubble and restores it', () => {
+    render(<MobileFixLive order={order} voiceGuidance onExit={vi.fn()} onSubmit={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Minimize step card' }));
+    expect(screen.queryByText('Stop the spindle')).toBeNull();
+    const bubble = screen.getByRole('button', { name: 'Show step card: Stop the spindle' });
+    expect(bubble.id).toBe('m-live-step-bubble');
+    expect(bubble.textContent).toContain('1/1');
+
+    fireEvent.click(bubble);
+    expect(screen.getByText('Stop the spindle')).toBeTruthy();
+  });
+
+  it('shows an unread dot on the chat bubble while a reply streams', async () => {
+    const ws = await renderReady();
+    // Mute so the dot tracks streaming only (fake utterances never end).
+    fireEvent.click(screen.getByRole('button', { name: 'Mute copilot voice' }));
+    fireEvent.click(screen.getByRole('button', { name: /What is wrong/ }));
+    ws.emit({ type: 'text_delta', text: 'T07 shows flank wear.' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Minimize Copilot chat' }));
+    const bubble = screen.getByRole('button', { name: 'Open Copilot chat' });
+    expect(bubble.querySelector('.dot')).toBeTruthy();
+
+    ws.emit({ type: 'turn_complete' });
+    expect(bubble.querySelector('.dot')).toBeNull();
+  });
+
+  it('shows the AI sparkle on the mic button and volume_off when muted', async () => {
+    await renderReady();
+    const mic = screen.getByRole('button', { name: 'Mute copilot voice' });
+    expect(mic.id).toBe('m-live-mic');
+    expect(mic.textContent).toContain('auto_awesome');
+
+    fireEvent.click(mic);
+    expect(screen.getByRole('button', { name: 'Unmute copilot voice' }).textContent).toContain(
+      'volume_off',
+    );
   });
 });
 

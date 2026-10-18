@@ -10,6 +10,23 @@ function fitScale(top: number): number {
   return Math.max(0.55, Math.min(1, available / PHONE_H));
 }
 
+/** Viewports at or below this width are real phones: render the app without the demo chassis. */
+const PHONE_VIEWPORT_QUERY = '(max-width: 520px)';
+
+function useIsPhoneViewport(): boolean {
+  const [isPhone, setIsPhone] = useState<boolean>(() => window.matchMedia(PHONE_VIEWPORT_QUERY).matches);
+
+  useEffect(() => {
+    const query = window.matchMedia(PHONE_VIEWPORT_QUERY);
+    const onChange = (event: MediaQueryListEvent) => setIsPhone(event.matches);
+    setIsPhone(query.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+
+  return isPhone;
+}
+
 interface MobileDeviceFrameProps {
   incident?: IncidentState | null;
   history?: IncidentSummary[];
@@ -17,12 +34,30 @@ interface MobileDeviceFrameProps {
   children?: React.ReactNode;
 }
 
-/** Presents the technician app inside an iPhone-style chassis on the desktop demo page. */
+/**
+ * Presents the technician app full-screen on a phone viewport, or inside an iPhone-style
+ * chassis on the desktop demo page.
+ */
 export default function MobileDeviceFrame({
   incident,
   history,
   children,
 }: MobileDeviceFrameProps): React.ReactElement {
+  const isPhone = useIsPhoneViewport();
+  const content = children ?? <MobileApp incident={incident} history={history} />;
+
+  if (isPhone) {
+    return (
+      <div className="m-bare" style={{ position: 'fixed', inset: 0, background: '#eef1f8' }}>
+        {content}
+      </div>
+    );
+  }
+  return <DeviceChassis>{content}</DeviceChassis>;
+}
+
+/** Desktop demo chassis: notch, home bar and caption, scaled to fit the window height. */
+function DeviceChassis({ children }: { children: React.ReactNode }): React.ReactElement {
   const [scale, setScale] = useState<number>(0.8);
   const holderRef = useRef<HTMLDivElement>(null);
 
@@ -76,7 +111,7 @@ export default function MobileDeviceFrame({
             transform: 'translateZ(0)',
           }}
         >
-          {children ?? <MobileApp incident={incident} history={history} />}
+          {children}
           <div
             aria-hidden
             style={{

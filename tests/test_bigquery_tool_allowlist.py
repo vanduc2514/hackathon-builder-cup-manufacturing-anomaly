@@ -153,6 +153,22 @@ def test_validate_insert_payload_unknown_table_fails_closed():
         bigquery_tool._validate_insert_payload("manufacturing.ghost_table", {})
 
 
+def test_validate_insert_payload_uses_configured_dataset(monkeypatch):
+    """Cloud Run's dataset (kaizen_manufacturing) must accept the same tables as the DDL one."""
+    monkeypatch.setattr(bigquery_tool.settings, "bigquery_dataset", "kaizen_manufacturing")
+    row = {
+        "timestamp": "2026-10-18T05:00:00Z",
+        "machine_id": "CNC-01",
+        "vibration_mm_s": 1.4,
+        "temperature_c": 40.0,
+        "current_a": 12.0,
+        "spindle_speed_rpm": 12000,
+    }
+    bigquery_tool._validate_insert_payload("kaizen_manufacturing.sensor_telemetry", row)
+    with pytest.raises(ValueError, match="not in schema allowlist"):
+        bigquery_tool._validate_insert_payload("manufacturing.sensor_telemetry", row)
+
+
 def test_competition_telemetry_known_columns_pass():
     """All declared competition_telemetry columns are accepted."""
     sql = """

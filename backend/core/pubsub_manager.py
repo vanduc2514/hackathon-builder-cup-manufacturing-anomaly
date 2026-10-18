@@ -242,6 +242,11 @@ class PubSubManager:
 
             stream_sensor_telemetry(telemetry)
             message.ack()
+        except ValueError as exc:
+            # Schema/validation failures are permanent; a nack redelivers instantly and
+            # spins the subscriber (pinned CPU, Cloud Run 429s).
+            logger.error("Dropping Pub/Sub telemetry message that fails validation: %s", exc)
+            message.ack()
         except Exception as exc:
             logger.error("Error processing Pub/Sub telemetry message: %s", exc)
             message.nack()
@@ -254,6 +259,9 @@ class PubSubManager:
             from backend.tools.bigquery_tool import stream_traceability_record
 
             stream_traceability_record(record)
+            message.ack()
+        except ValueError as exc:
+            logger.error("Dropping Pub/Sub traceability message that fails validation: %s", exc)
             message.ack()
         except Exception as exc:
             logger.error("Error processing Pub/Sub traceability message: %s", exc)

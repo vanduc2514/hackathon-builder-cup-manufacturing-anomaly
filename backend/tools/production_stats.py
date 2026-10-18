@@ -29,6 +29,10 @@ NOMINAL_SPINDLE_RPM = 12000
 VIBRATION_WARNING_THRESHOLD = 1.95
 CURRENT_WARNING_THRESHOLD = 13.0
 
+# Telemetry history without an explicit start_time covers this many hours before the newest
+# row in sensor_telemetry; the full table is far too large to return per dashboard poll.
+TELEMETRY_DEFAULT_WINDOW_HOURS = 6
+
 # Canonical pre-incident and incident telemetry series (09:00 - 10:00)
 # Captures normal operation on CNC-01 and CNC-03, and the +35% vibration surge on CNC-02 at 09:30
 CANONICAL_TELEMETRY_POINTS: List[Dict[str, Any]] = [
@@ -309,25 +313,43 @@ CANONICAL_TELEMETRY_POINTS: List[Dict[str, Any]] = [
 ]
 
 
-def _fetch_telemetry_from_bigquery(
+def fetch_telemetry_from_bigquery(
     machine_id: Optional[str] = None,
     start_time: Optional[str] = None,
     end_time: Optional[str] = None,
 ) -> Optional[List[Dict[str, Any]]]:
-    """Attempts to query telemetry rows from BigQuery or BigQuery Emulator."""
+    """Queries telemetry rows from BigQuery (or the emulator); None when unavailable or empty."""
     try:
+        from google.cloud import bigquery
+
+        from backend.tools.bigquery_tool import _run_query
+
         client = get_bigquery_client()
         dataset_id = f"{client.project}.{settings.bigquery_dataset}"
         where_clauses: List[str] = []
+        params: List[Any] = []
 
         if machine_id:
-            where_clauses.append(f"machine_id = '{machine_id}'")
+            where_clauses.append("machine_id = @machine_id")
+            params.append(bigquery.ScalarQueryParameter("machine_id", "STRING", machine_id))
         if start_time:
-            where_clauses.append(f"timestamp >= TIMESTAMP('{start_time}')")
+            where_clauses.append("timestamp >= TIMESTAMP(@start_time)")
+            params.append(bigquery.ScalarQueryParameter("start_time", "STRING", start_time))
+        else:
+            where_clauses.append(
+                "timestamp >= TIMESTAMP_SUB("
+                f"(SELECT MAX(timestamp) FROM `{dataset_id}.sensor_telemetry`), "
+                "INTERVAL @window_hours HOUR)"
+            )
+            params.append(
+                bigquery.ScalarQueryParameter(
+                    "window_hours", "INT64", TELEMETRY_DEFAULT_WINDOW_HOURS
+                )
+            )
         if end_time:
-            where_clauses.append(f"timestamp <= TIMESTAMP('{end_time}')")
+            where_clauses.append("timestamp <= TIMESTAMP(@end_time)")
+            params.append(bigquery.ScalarQueryParameter("end_time", "STRING", end_time))
 
-        where_str = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
         query = f"""
             SELECT
                 FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%SZ', timestamp) as timestamp,
@@ -337,10 +359,10 @@ def _fetch_telemetry_from_bigquery(
                 COALESCE(current_a, 0.0) as current_a,
                 COALESCE(spindle_speed_rpm, {NOMINAL_SPINDLE_RPM}) as spindle_speed_rpm
             FROM `{dataset_id}.sensor_telemetry`
-            {where_str}
+            WHERE {" AND ".join(where_clauses)}
             ORDER BY timestamp ASC
         """
-        rows = list(client.query(query).result())
+        rows = list(_run_query(client, query, params))
         if not rows:
             return None
 
@@ -374,7 +396,7 @@ def fetch_telemetry_points(
     end_time: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Fetches telemetry points from BigQuery or falls back to canonical mock series and buffer."""
-    bq_rows = _fetch_telemetry_from_bigquery(machine_id, start_time, end_time)
+    bq_rows = fetch_telemetry_from_bigquery(machine_id, start_time, end_time)
     raw_points = [dict(p) for p in (bq_rows if bq_rows is not None else CANONICAL_TELEMETRY_POINTS)]
 
     mock_buffer = get_mock_sensor_telemetry()

@@ -2,19 +2,22 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Query
 
-from backend.core.config import settings
 from backend.core.models import (
     MultiMachineTelemetryResponse,
     SensorBaseline,
     TelemetryPoint,
 )
-from backend.tools.bigquery_tool import get_bigquery_client, get_mock_sensor_telemetry
-from backend.tools.production_stats import CANONICAL_TELEMETRY_POINTS
+from backend.tools.bigquery_tool import get_mock_sensor_telemetry
+from backend.tools.production_stats import (
+    CANONICAL_TELEMETRY_POINTS,
+    fetch_telemetry_from_bigquery,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,65 +27,6 @@ router = APIRouter(prefix="/api/telemetry", tags=["telemetry"])
 NOMINAL_BASELINE = SensorBaseline(vibration=1.50, temperature=40.0, current=12.0)
 VIBRATION_WARNING_THRESHOLD = 1.95  # 1.50 * 1.30 (+30% warning threshold)
 CURRENT_WARNING_THRESHOLD = 13.0
-
-
-def _fetch_from_bigquery(
-    machine_id: Optional[str] = None,
-    start_time: Optional[str] = None,
-    end_time: Optional[str] = None,
-) -> Optional[List[Dict[str, object]]]:
-    """Attempts to query telemetry rows from BigQuery or BigQuery Emulator."""
-    try:
-        client = get_bigquery_client()
-        dataset_id = f"{client.project}.{settings.bigquery_dataset}"
-        where_clauses: List[str] = []
-
-        if machine_id:
-            where_clauses.append(f"machine_id = '{machine_id}'")
-        if start_time:
-            where_clauses.append(f"timestamp >= TIMESTAMP('{start_time}')")
-        if end_time:
-            where_clauses.append(f"timestamp <= TIMESTAMP('{end_time}')")
-
-        where_str = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-        query = f"""
-            SELECT
-                FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%SZ', timestamp) as timestamp,
-                machine_id,
-                COALESCE(vibration_mm_s, 0.0) as vibration_mm_s,
-                COALESCE(temperature_c, 0.0) as temperature_c,
-                COALESCE(current_a, 0.0) as current_a,
-                COALESCE(spindle_speed_rpm, 12000) as spindle_speed_rpm
-            FROM `{dataset_id}.sensor_telemetry`
-            {where_str}
-            ORDER BY timestamp ASC
-        """
-        rows = list(client.query(query).result())
-        if not rows:
-            return None
-
-        result: List[Dict[str, object]] = []
-        for r in rows:
-            vib = float(r.vibration_mm_s)
-            curr = float(r.current_a)
-            is_anom = (vib >= VIBRATION_WARNING_THRESHOLD) or (curr >= CURRENT_WARNING_THRESHOLD)
-            score = min(1.0, max(0.0, (vib - 1.50) / 1.50)) if vib > 1.50 else 0.03
-            result.append(
-                {
-                    "timestamp": str(r.timestamp),
-                    "machine_id": str(r.machine_id),
-                    "vibration_mm_s": round(vib, 2),
-                    "temperature_c": round(float(r.temperature_c), 1),
-                    "current_a": round(curr, 2),
-                    "spindle_speed_rpm": int(r.spindle_speed_rpm),
-                    "is_anomalous": is_anom,
-                    "anomaly_score": round(score, 2),
-                }
-            )
-        return result
-    except Exception as exc:
-        logger.debug("BigQuery query attempt failed, falling back to canonical seed: %s", exc)
-        return None
 
 
 @router.get("/history", response_model=MultiMachineTelemetryResponse)
@@ -96,7 +40,9 @@ async def get_telemetry_history(
     Compares CNC-02 (suspect machine with +35% vibration spike at 09:30) against
     baseline controls CNC-01 and CNC-03.
     """
-    bq_rows = _fetch_from_bigquery(machine_id, start_time, end_time)
+    bq_rows = await asyncio.to_thread(
+        fetch_telemetry_from_bigquery, machine_id, start_time, end_time
+    )
     source = "bigquery" if bq_rows else "canonical_seed"
     raw_points = bq_rows if bq_rows is not None else list(CANONICAL_TELEMETRY_POINTS)
 

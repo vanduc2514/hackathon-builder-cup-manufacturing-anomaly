@@ -249,8 +249,8 @@ def test_pubsub_poison_pill_resilience():
 
     bad_msg_3 = _make_pubsub_message(b"[]", "bad-03")
     manager._handle_traceability_message(bad_msg_3)
-    bad_msg_3.nack.assert_called_once()
-    bad_msg_3.ack.assert_not_called()
+    bad_msg_3.ack.assert_called_once()
+    bad_msg_3.nack.assert_not_called()
 
 
 def test_gemma_edge_classifier_filtered_frame_contract():

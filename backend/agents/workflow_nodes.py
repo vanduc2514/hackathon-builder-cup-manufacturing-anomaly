@@ -126,6 +126,9 @@ async def inspect_production(ctx: Context, node_input: dict) -> Event:
         state.spc_ucl,
         defect_rate=rate,
         defect_type=dtype,
+        machine_id=trigger.get("machine_id"),
+        tool_id=trigger.get("tool_id"),
+        scenario=trigger.get("scenario"),
     )
     ctx.state["qi_report"] = report.model_dump()
     spc = report.spc
@@ -302,10 +305,9 @@ async def record_resolution(node_input: dict, ctx: Context | None = None) -> Inc
     scribe = ScribeDraft.model_validate(node_input[agent_incident_scribe.agent.name])
     _record(agent_technician_copilot, copilot, ctx=ctx)
     _record(agent_incident_scribe, scribe, ctx=ctx)
-    blackboard.set_repair_done(True)
     blackboard.update_status(
-        "verifying",
-        repair_done=True,
+        "repairing",
+        repair_done=False,
         documents={
             "work_order": scribe.work_order,
             "report_8d": scribe.report_8d,
@@ -313,6 +315,24 @@ async def record_resolution(node_input: dict, ctx: Context | None = None) -> Inc
         },
     )
     return blackboard.get_state()
+
+
+async def wait_for_repair_node(ctx: Context, node_input: Any) -> Event:
+    """Holds the workflow until the technician confirms 'Repair done' (Key Invariant 3)."""
+    from backend.agents.orchestrator import orchestrator
+
+    timeout = float(settings.repair_wait_seconds)
+    if timeout <= 0:
+        logger.info("repair_wait_seconds <= 0: proceeding without technician confirmation")
+    else:
+        outcome = await orchestrator.wait_for_repair(timeout=timeout)
+        if outcome == "cancelled":
+            return Event(route="ESCALATE", output="Incident cancelled while awaiting repair")
+        if outcome == "timeout":
+            reason = f"Technician did not confirm the repair within {timeout:g} s"
+            return Event(route="ESCALATE", output=reason)
+    blackboard.update_status("verifying", repair_done=True)
+    return Event(route="CONFIRMED", output=blackboard.get_state().model_dump())
 
 
 async def verify_repair(ctx: Context, node_input: dict) -> VerificationResult:

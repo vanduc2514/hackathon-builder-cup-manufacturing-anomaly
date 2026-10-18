@@ -642,6 +642,12 @@ class VisualEvidencePayload(BaseModel):
     source: Optional[Literal["gemini", "fallback", "mock"]] = Field(
         default=None, description="Origin of the analysis: model, scripted fallback or mock"
     )
+    confidence: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Model self-assessed confidence; scripted expectation value for fallback/mock",
+    )
 
 
 class PartInspectionResult(BaseModel):
@@ -650,6 +656,9 @@ class PartInspectionResult(BaseModel):
     defect_class: Literal["scratch_vertical", "chipping", "none"]
     severity: int = Field(ge=1, le=5)
     region: Literal["top", "center", "bottom", "left edge", "right edge"]
+    confidence: float = Field(
+        ge=0.0, le=1.0, description="Model self-assessed confidence in this classification"
+    )
 
 
 class InsertInspectionResult(BaseModel):
@@ -658,6 +667,9 @@ class InsertInspectionResult(BaseModel):
     flank_wear: Literal["none", "light", "severe"]
     edge_chipping: bool
     replace_insert: bool
+    confidence: float = Field(
+        ge=0.0, le=1.0, description="Model self-assessed confidence in this assessment"
+    )
 
 
 class GuardedInspection(BaseModel):
@@ -687,7 +699,6 @@ class VisualInspectionResult(BaseModel):
         description="Quantitative measurement of tool flank wear (VB), chip width, or defect size in mm if visible.",
     )
     confidence: float = Field(
-        default=0.92,
         ge=0.0,
         le=1.0,
         description="Confidence score between 0.0 and 1.0 of the visual analysis.",
@@ -1324,12 +1335,52 @@ class FilteredFramePacket(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
+class QaFrameInspection(BaseModel):
+    """One end-of-line camera frame classified by Gemini Vision (or guarded/mock) in Phase A."""
+
+    preset_id: str = Field(description="Catalog preset id of the camera image")
+    title: str
+    image_url: str
+    camera_id: str = "CAM-EOL-01"
+    machine_id: str
+    tool_id: str
+    kind: Literal["part", "visual"] = Field(
+        description="'part' = closed-schema part classification; 'visual' = free-form visual evidence"
+    )
+    expected_class: Optional[str] = Field(
+        default=None, description="Catalog expected result used by the DEMO_SCRIPTED guard"
+    )
+    defect_class: Optional[str] = Field(
+        default=None, description="Part classification (kind='part' only)"
+    )
+    severity: Optional[int] = Field(default=None, ge=1, le=5)
+    region: Optional[str] = None
+    confidence: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Model self-assessed confidence (real calls only)"
+    )
+    is_defect: bool
+    source: Literal["gemini", "fallback", "mock"]
+    model: str
+    summary: str = Field(description="Template-rendered display text, never model free text")
+
+
 class QualityInspectionReport(BaseModel):
-    """Quality Inspector Phase A evidence: SPC on the latest conveyor window plus edge-classified defect frames."""
+    """Quality Inspector Phase A evidence: SPC on the latest conveyor window plus vision-classified frames."""
 
     spc: SpcEvaluationResult
-    defect_type_counts: Dict[str, int] = Field(default_factory=dict)
-    defect_frames: List[FilteredFramePacket] = Field(default_factory=list)
+    defect_type_counts: Dict[str, int] = Field(
+        default_factory=dict,
+        description="SPC defect count from the trigger, labelled with the trigger defect type",
+    )
+    defect_type_counts_basis: str = Field(
+        default="spc_trigger",
+        description="Origin of defect_type_counts: the SPC window count, not a per-part census",
+    )
+    frame_class_counts: Dict[str, int] = Field(
+        default_factory=dict,
+        description="Class counts over the vision-classified sample frames only",
+    )
+    defect_frames: List[QaFrameInspection] = Field(default_factory=list)
 
 
 class EdgeFilterStatistics(BaseModel):

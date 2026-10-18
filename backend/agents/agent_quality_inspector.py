@@ -3,24 +3,24 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import logging
 from collections.abc import AsyncIterator, Callable
-from datetime import datetime, timezone
 
 from google.adk import Agent
 
 from backend.agents.tool_guards import limit_tool_calls, return_argument_errors
 from backend.core.config import settings
 from backend.core.models import (
-    BoundingBox,
-    FilteredFramePacket,
     FindingDraft,
+    QaFrameInspection,
     QualityInspectionReport,
     SpcEvaluationResult,
     StreakVerificationResult,
     VerificationResult,
+    VisualEvidencePreset,
 )
+from backend.tools.gemini_vision_tool import analyze_visual_evidence_frame, guarded_part_inspection
+from backend.tools.preset_catalog import list_presets, load_preset_image
 from backend.tools.spc_calculator import (
     DEFAULT_BASELINE_P,
     DEFAULT_VERIFICATION_TARGET,
@@ -37,26 +37,29 @@ VERIFICATION_PHASE = "Phase C - Verification"
 VERIFICATION_AGENT_NAME = "Quality Inspector (Gatekeeper)"
 
 SPC_WINDOW_SIZE = 300
-MAX_DEFECT_FRAMES = 5
+MAX_VISION_FRAMES = 2
 VERIFICATION_BATCH_PARTS = 10
 MAX_VERIFICATION_PARTS_FACTOR = 3
 
 INSTRUCTION = (
     "You are the Quality Inspector of the Kaizen Agent manufacturing incident team. "
     "The user message is JSON with two keys: 'board' (the current incident board) and "
-    "'inspection' (the conveyor window you just measured: 'spc' is the p-chart evaluation, "
-    "'defect_type_counts' counts edge-classified defects by type, 'defect_frames' are the "
-    "Gemma Edge packets of the first defective parts). "
+    "'inspection' (the conveyor window you just measured). In 'inspection', 'spc' is the p-chart "
+    "evaluation; 'defect_type_counts' is the SPC defect count taken from the incident trigger "
+    "(not a part-by-part census, see 'defect_type_counts_basis'); 'defect_frames' are the few "
+    "end-of-line camera images that were sampled and classified by the vision model, each with "
+    "'preset_id', 'defect_class' (or 'is_defect' for visual frames), 'severity', 'region', 'confidence', "
+    "'source' and a 'summary'; 'frame_class_counts' counts classes over those sampled frames only. "
     "If tools are available, you can call check_spc_control_limits or check_verification_streak. "
-    "Write one finding that classifies the dominant defect (the type with the highest count in "
-    "'defect_type_counts', located by 'defect_frames[].bounding_box') and states the SPC breach. "
+    "Write one finding that states the SPC breach and the defect type from 'defect_type_counts', "
+    "and reports what the sampled frames show. "
     "The evidence must quote spc.defect_count of spc.sample_size products, spc.defect_rate versus "
-    "spc.limits.ucl, and the dominant defect type count. Use ONLY numbers present in "
-    "'inspection'; never invent measurements. "
-    "Set confidence to the mean 'confidence' of 'defect_frames'. "
-    "Build the citation as the words 'Gemma Edge frames ', then the first 8 characters of "
-    "defect_frames[0].frame_hash and of defect_frames[1].frame_hash separated by ', ', then "
-    "' + SPC p-chart Nelson Rule 1'. "
+    "spc.limits.ucl, and the number of sampled frames with their classes. Use ONLY numbers and "
+    "facts present in 'inspection'; never invent measurements, bounding boxes or frame hashes. "
+    "If 'defect_frames' is empty, say that no frame was classified. "
+    "Set confidence to the mean 'confidence' of the frames that have one; if none has one, use 0.5. "
+    "Build the citation as 'End-of-line camera frames ' followed by the preset_id values of "
+    "'defect_frames' separated by ', ', then ' + SPC p-chart Nelson Rule 1'. "
     "You must return your final output strictly as a JSON object matching the FindingDraft schema with keys "
     "'finding', 'evidence', 'confidence', and 'citation'."
 )
@@ -138,8 +141,15 @@ async def inspect_production_window(
     defect_rate: float | None = None,
     defect_type: str | None = None,
     sample_size: int = SPC_WINDOW_SIZE,
+    machine_id: str | None = None,
+    tool_id: str | None = None,
+    scenario: str | None = None,
 ) -> QualityInspectionReport:
-    """Evaluates the next SPC window of conveyor parts against `spc_ucl` and yields defect evidence."""
+    """Evaluates the SPC window against `spc_ucl` and classifies sample end-of-line camera frames.
+
+    The defect rate is the SPC input from the trigger. Up to `MAX_VISION_FRAMES` catalog camera
+    images are classified with Gemini Vision (guarded by the DEMO_SCRIPTED expected-result guard).
+    """
     from backend.core.blackboard import blackboard
 
     state = blackboard.get_state()
@@ -149,45 +159,103 @@ async def inspect_production_window(
         else (state.defect_rate if state.defect_rate > 0 else 0.12)
     )
     dtype = defect_type or state.defect_type or "scratch_vertical"
-    machine_id = state.suspect_machine or "CNC-02"
-    tool_id = state.suspect_tool or "T07"
+    machine = machine_id or state.suspect_machine or "CNC-02"
+    tool = tool_id or state.suspect_tool or "T07"
+    is_im = scenario == "im_damp_material" or machine.upper().startswith("IM")
 
     defect_count = round(rate * sample_size)
     spc = evaluate_defect_rate(defect_count, sample_size, ucl_override=spc_ucl)
 
-    defect_type_counts: dict[str, int] = {}
+    defect_frames: list[QaFrameInspection] = []
     if defect_count > 0:
-        defect_type_counts[dtype] = defect_count
-
-    defect_frames: list[FilteredFramePacket] = []
-    num_frames = min(defect_count, MAX_DEFECT_FRAMES)
-    for i in range(num_frames):
-        product_id = f"PRD-20261015-{i + 1:05d}"
-        frame_hash = hashlib.sha256(f"{product_id}-{dtype}-{i}".encode()).hexdigest()
-        defect_frames.append(
-            FilteredFramePacket(
-                frame_hash=frame_hash,
-                camera_id="CAM-EOL-01",
-                product_id=product_id,
-                machine_id=machine_id,
-                tool_id=tool_id,
-                lot_id="LOT-20261015-A",
-                conveyor_timestamp=datetime.now(timezone.utc).isoformat(),
-                classification="DEFECT",
-                is_defect=True,
-                defect_type=dtype,
-                confidence=0.94,
-                uncertainty=0.06,
-                bounding_box=BoundingBox(ymin=0.25, xmin=0.35, ymax=0.65, xmax=0.75),
-                filter_decision="FORWARD",
-                diverter_actuated=True,
+        presets = _select_frame_presets(dtype, is_im)
+        defect_frames = list(
+            await asyncio.gather(
+                *(asyncio.to_thread(_classify_frame, p, machine, tool, is_im) for p in presets)
             )
         )
 
+    frame_class_counts: dict[str, int] = {}
+    for frame in defect_frames:
+        label = frame.defect_class or ("defect" if frame.is_defect else "none")
+        frame_class_counts[label] = frame_class_counts.get(label, 0) + 1
+
     return QualityInspectionReport(
         spc=spc,
-        defect_type_counts=defect_type_counts,
+        defect_type_counts={dtype: defect_count} if defect_count > 0 else {},
+        frame_class_counts=frame_class_counts,
         defect_frames=defect_frames,
+    )
+
+
+def _select_frame_presets(defect_type: str, is_im: bool) -> list[VisualEvidencePreset]:
+    """Picks at most MAX_VISION_FRAMES catalog end-of-line camera images for the trigger."""
+    if is_im:
+        candidates = [p for p in list_presets("im05") if p.expected_defect_detected]
+    else:
+        every = list_presets("qa_defect")
+        candidates = [p for p in every if p.expected_class == defect_type] or every
+    return candidates[:MAX_VISION_FRAMES]
+
+
+def _classify_frame(
+    preset: VisualEvidencePreset, machine_id: str, tool_id: str, is_im: bool
+) -> QaFrameInspection:
+    """Classifies one catalog camera image (blocking Gemini call; run in a worker thread)."""
+    common = {
+        "preset_id": preset.id,
+        "title": preset.title,
+        "image_url": preset.image_url,
+        "machine_id": machine_id,
+        "tool_id": tool_id,
+    }
+    if not is_im:
+        guarded = guarded_part_inspection(
+            load_preset_image(preset),
+            expected=preset.expected_class,
+            machine_id=machine_id,
+            tool_id=tool_id,
+        )
+        assert guarded.part is not None
+        return QaFrameInspection(
+            **common,
+            kind="part",
+            expected_class=preset.expected_class,
+            defect_class=guarded.part.defect_class,
+            severity=guarded.part.severity,
+            region=guarded.part.region,
+            confidence=guarded.part.confidence if guarded.source == "gemini" else None,
+            is_defect=guarded.part.defect_class != "none",
+            source=guarded.source,
+            model=guarded.model,
+            summary=guarded.summary,
+        )
+
+    expected = preset.expected_defect_detected
+    if not preset.image_file:
+        logger.warning("QA frame preset %s has no image_file", preset.id)
+        detected, source = expected, "mock"
+    else:
+        payload = analyze_visual_evidence_frame(
+            load_preset_image(preset),
+            machine_id=machine_id,
+            tool_id=tool_id,
+            filename=preset.image_file.rsplit("/", 1)[-1],
+        )
+        source = payload.source or (
+            "gemini" if payload.citation.startswith("Gemini Vision") else "mock"
+        )
+        detected = payload.defect_detected
+        if source == "gemini" and settings.demo_scripted and detected != expected:
+            detected, source = expected, "fallback"
+    verdict = "defect detected" if detected else "no defect detected"
+    return QaFrameInspection(
+        **common,
+        kind="visual",
+        is_defect=detected,
+        source=source,  # type: ignore[arg-type]
+        model=settings.gemini_vision_model,
+        summary=f"{machine_id} {tool_id}: {preset.title}: {verdict}.",
     )
 
 

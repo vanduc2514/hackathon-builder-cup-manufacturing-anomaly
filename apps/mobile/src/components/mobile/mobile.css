@@ -1000,8 +1000,7 @@
 .m-target-tag .material-symbols-outlined { font-size: 15px; }
 
 .m-done-tag {
-  position: absolute;
-  z-index: 4;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 5px;

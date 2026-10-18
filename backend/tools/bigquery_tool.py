@@ -86,7 +86,10 @@ def _load_schema_allowlist(*, force: bool = False) -> Dict[str, Dict[str, Any]]:
         if not isinstance(doc, dict) or "table" not in doc:
             logger.error("Schema allowlist %s missing 'table' key; skipping", path)
             continue
-        loaded[str(doc["table"])] = {
+        # YAMLs name the DDL dataset (`manufacturing.<table>`); the deployed dataset name
+        # comes from settings (e.g. `kaizen_manufacturing` on Cloud Run), so key by that.
+        table_name = str(doc["table"]).rsplit(".", 1)[-1]
+        loaded[_table_key(settings.bigquery_dataset, table_name)] = {
             "columns": {str(c) for c in doc.get("columns", []) or []},
             "allowed_pseudo_columns": {
                 str(c) for c in doc.get("allowed_pseudo_columns", []) or []

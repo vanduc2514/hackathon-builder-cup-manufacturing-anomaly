@@ -12,6 +12,13 @@ resource "google_pubsub_subscription" "subs" {
   name  = each.value
   topic = google_pubsub_topic.topics[each.key].id
 
+  # Without a retry policy a nacked message is redelivered immediately, so one failing
+  # handler turns the backlog into a hot loop on the single backend instance.
+  retry_policy {
+    minimum_backoff = "10s"
+    maximum_backoff = "600s"
+  }
+
   depends_on = [time_sleep.apis_ready]
 }
 

@@ -56,7 +56,7 @@ from backend.agents.workflow_nodes import (
     wait_for_evidence_node,
     wait_for_repair_node,
 )
-from backend.core.blackboard import blackboard
+from backend.core.blackboard import UNFINISHED_STATUSES, WORKFLOW_LOST_MESSAGE, blackboard
 from backend.core.config import settings
 from backend.core.models import (
     AgentFinding,
@@ -391,6 +391,14 @@ class Orchestrator:
                 run_config=RunConfig(max_llm_calls=MAX_LLM_CALLS_PER_INCIDENT),
             ):
                 pass
+            state = blackboard.get_state()
+            if state.status in UNFINISHED_STATUSES:
+                blackboard.update_status("error", status_reason=WORKFLOW_LOST_MESSAGE)
+                logger.warning(
+                    "incident workflow ended while status=%s (aborted or cancelled): "
+                    "marking error",
+                    state.status,
+                )
             logger.info("incident workflow finished: status=%s", blackboard.get_state().status)
         except AgentStepError as exc:
             logger.exception("incident workflow failed in %s", exc.agent_name)

@@ -24,6 +24,17 @@ logger = logging.getLogger(__name__)
 # the filter runs in Python over a wider window instead of as a Firestore query.
 HISTORY_SCAN_LIMIT = 200
 
+# Statuses that mean a workflow is (or was) mid-flight. If the workflow ends or the process
+# restarts while the board is in one of these, the incident can never finish: mark it `error`.
+# External waits (awaiting_evidence, repairing, pending_approval) are excluded on purpose: a
+# technician or shift leader can still act on those.
+UNFINISHED_STATUSES: frozenset[str] = frozenset(
+    {"detecting", "tracing", "investigating", "analyzing", "verifying"}
+)
+WORKFLOW_LOST_MESSAGE = (
+    "Workflow was interrupted before analysis finished. Re-inject the scenario to re-run it."
+)
+
 
 class Blackboard:
     """Reactive blackboard representing Firestore shared incident state."""
@@ -248,6 +259,13 @@ class Blackboard:
                 loaded.incident_id,
                 loaded.status,
             )
+            if loaded.status in UNFINISHED_STATUSES:
+                self.update_status("error", status_reason=WORKFLOW_LOST_MESSAGE)
+                logger.warning(
+                    "Recovered incident %s was in-flight (%s) and cannot resume: marked error",
+                    loaded.incident_id,
+                    loaded.status,
+                )
             return self._state
         return None
 

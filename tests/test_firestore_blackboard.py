@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.api.main import app
-from backend.core.blackboard import Blackboard, blackboard
+from backend.core.blackboard import WORKFLOW_LOST_MESSAGE, Blackboard, blackboard
 from backend.core.firestore_adapter import FirestoreAdapter
 from backend.core.models import AgentFinding, IncidentState, MachineTelemetryPayload
 
@@ -254,7 +254,7 @@ def test_blackboard_restart_recovery(fake_adapter: FirestoreAdapter) -> None:
     # Process 1: Running backend creates an incident
     bb1 = Blackboard(storage=fake_adapter)
     bb1.update_status(
-        "analyzing",
+        "repairing",
         incident_id="INC-RECOVERY-99",
         suspect_machine="IM-05",
         suspect_tool="MOLD-03",
@@ -282,7 +282,7 @@ def test_blackboard_restart_recovery(fake_adapter: FirestoreAdapter) -> None:
     reloaded = bb2.load_open_incident()
     assert reloaded is not None
     assert reloaded.incident_id == "INC-RECOVERY-99"
-    assert reloaded.status == "analyzing"
+    assert reloaded.status == "repairing"
     assert reloaded.suspect_machine == "IM-05"
     assert reloaded.suspect_tool == "MOLD-03"
     assert reloaded.defect_type == "short_fill"
@@ -292,7 +292,7 @@ def test_blackboard_restart_recovery(fake_adapter: FirestoreAdapter) -> None:
     # Subsequent get_state reflects restored state
     state = bb2.get_state()
     assert state.incident_id == "INC-RECOVERY-99"
-    assert state.status == "analyzing"
+    assert state.status == "repairing"
 
 
 def test_blackboard_graceful_on_persistence_error() -> None:
@@ -407,6 +407,29 @@ def test_api_current_incident_recovers_state_on_restart(fake_adapter: FirestoreA
     # Reset blackboard back to baseline
     blackboard.reset()
     blackboard.set_storage(None)
+
+
+@pytest.mark.parametrize(
+    ("persisted", "expected"),
+    [("investigating", "error"), ("analyzing", "error"), ("repairing", "repairing")],
+)
+def test_recovered_in_flight_incident_is_marked_error(
+    fake_adapter: FirestoreAdapter, persisted: str, expected: str
+) -> None:
+    """A workflow lost to a restart cannot resume: its incident lands as `error`, persisted."""
+    fake_adapter.save_incident(IncidentState(incident_id="INC-LOST", status=persisted))
+    board = Blackboard(storage=fake_adapter)
+
+    state = board.load_open_incident()
+
+    assert state is not None
+    assert state.status == expected
+    stored = fake_adapter.get_incident("INC-LOST")
+    assert stored is not None and stored.status == expected
+    if expected == "error":
+        assert state.status_reason == WORKFLOW_LOST_MESSAGE
+        assert stored.status_reason == WORKFLOW_LOST_MESSAGE
+    board.set_storage(None)
 
 
 def test_firestore_adapter_list_incidents(fake_adapter: FirestoreAdapter) -> None:

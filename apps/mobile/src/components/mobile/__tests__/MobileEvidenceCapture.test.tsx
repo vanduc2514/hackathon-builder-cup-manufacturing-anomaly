@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import MobileEvidenceCapture from '../MobileEvidenceCapture';
 import { authFetch } from '../../../api/auth';
+import { readFileAsDataUrl } from '../../../hooks/useCamera';
 import type { EvidenceItem, WorkOrder } from '../../../types/mobile';
 import type { VisualEvidencePreset } from '../../../types';
 
@@ -82,121 +83,55 @@ function buildMockOrder(liveOverride?: Partial<NonNullable<WorkOrder['live']>> |
 describe('MobileEvidenceCapture Preset Handling', () => {
   const onClose = vi.fn();
   const onSave = vi.fn();
-  const onPresetAttached = vi.fn();
+  const imageFetch = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuthFetch.mockImplementation(async (url: string) => {
-      if (url === '/api/presets/evidence') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ presets: mockPresets }),
-        } as unknown as Response;
-      }
-      return { ok: true, status: 200, json: async () => ({ status: 'success' }) } as unknown as Response;
-    });
+    mockAuthFetch.mockImplementation(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ presets: mockPresets }),
+    }) as unknown as Response);
+    imageFetch.mockResolvedValue({ ok: true, status: 200, blob: async () => new Blob(['jpg']) });
+    vi.stubGlobal('fetch', imageFetch);
+    vi.mocked(readFileAsDataUrl).mockResolvedValue('data:image/jpeg;base64,AAA');
   });
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
   });
 
-  it('demo order (non-live) saves preset locally and DOES NOT call POST API or onPresetAttached', async () => {
-    const demoOrder = buildMockOrder(null);
+  async function pickCrackPreset(order: WorkOrder): Promise<void> {
+    render(<MobileEvidenceCapture order={order} item={mockItem} onClose={onClose} onSave={onSave} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Choose sample image' }));
+    await waitFor(() => expect(screen.getByTestId('preset-select-btn-preset-im05-crack')).toBeDefined());
+    fireEvent.click(screen.getByTestId('preset-select-btn-preset-im05-crack'));
+  }
 
-    render(
-      <MobileEvidenceCapture
-        order={demoOrder}
-        item={mockItem}
-        onClose={onClose}
-        onSave={onSave}
-        onPresetAttached={onPresetAttached}
-      />
-    );
+  it.each([
+    ['live awaiting evidence', buildMockOrder({ canSubmitEvidence: true, status: 'awaiting_evidence' })],
+    ['demo', buildMockOrder(null)],
+  ])('%s order: a picked sample goes to review and is saved only on Use photo', async (_label, order) => {
+    await pickCrackPreset(order);
 
-    // Open preset gallery sheet
-    const openBtn = screen.getByRole('button', { name: /Choose sample image/i });
-    fireEvent.click(openBtn);
+    const review = (await screen.findByAltText(`Captured ${mockItem.label}`)) as HTMLImageElement;
+    expect(imageFetch).toHaveBeenCalledWith('/presets/evidence/preset_im05_crack.jpg');
+    expect(review.getAttribute('src')).toBe('data:image/jpeg;base64,AAA');
+    expect(screen.queryByTestId('preset-gallery-sheet')).toBeNull();
+    expect(onSave).not.toHaveBeenCalled();
+    expect(mockAuthFetch).not.toHaveBeenCalledWith('/api/incidents/evidence/preset', expect.anything());
 
-    await waitFor(() => {
-      expect(screen.getByTestId('preset-select-btn-preset-im05-crack')).toBeDefined();
-    });
-
-    // Select the preset
-    const selectBtn = screen.getByTestId('preset-select-btn-preset-im05-crack');
-    fireEvent.click(selectBtn);
-
-    // Verify authFetch was called only for GET catalog, NEVER for POST evidence
-    expect(mockAuthFetch).not.toHaveBeenCalledWith(
-      '/api/incidents/evidence/preset',
-      expect.anything()
-    );
-
-    // Verify onSave was called with local thumbnail URL
-    expect(onSave).toHaveBeenCalledWith('shot-1', '/presets/evidence/preset_im05_crack.jpg');
-
-    // Verify onPresetAttached was NOT called
-    expect(onPresetAttached).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /Use photo/ }));
+    expect(onSave).toHaveBeenCalledWith('shot-1', 'data:image/jpeg;base64,AAA');
   });
 
-  it('live order with canSubmitEvidence calls POST API and onPresetAttached, NOT onSave', async () => {
-    const liveOrder = buildMockOrder({
-      canSubmitEvidence: true,
-      status: 'awaiting_evidence',
-    });
+  it('stays on the camera with an error when the sample image cannot be loaded', async () => {
+    imageFetch.mockResolvedValue({ ok: false, status: 404 });
+    await pickCrackPreset(buildMockOrder(null));
 
-    mockAuthFetch.mockImplementation(async (url: string, init?: RequestInit) => {
-      if (url === '/api/presets/evidence') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ presets: mockPresets }),
-        } as unknown as Response;
-      }
-      if (url === '/api/incidents/evidence/preset' && init?.method === 'POST') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ status: 'success', incident_status: 'analyzing' }),
-        } as unknown as Response;
-      }
-      return { ok: false, status: 400 } as unknown as Response;
-    });
-
-    render(
-      <MobileEvidenceCapture
-        order={liveOrder}
-        item={mockItem}
-        onClose={onClose}
-        onSave={onSave}
-        onPresetAttached={onPresetAttached}
-      />
-    );
-
-    // Open preset gallery sheet
-    const openBtn = screen.getByRole('button', { name: /Choose sample image/i });
-    fireEvent.click(openBtn);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('preset-select-btn-preset-im05-crack')).toBeDefined();
-    });
-
-    // Select the preset
-    const selectBtn = screen.getByTestId('preset-select-btn-preset-im05-crack');
-    fireEvent.click(selectBtn);
-
-    await waitFor(() => {
-      // Verify POST API was called
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        '/api/incidents/evidence/preset',
-        expect.objectContaining({ method: 'POST' })
-      );
-      // Verify onPresetAttached was called with live order and preset
-      expect(onPresetAttached).toHaveBeenCalledWith(liveOrder, mockPresets[0]);
-    });
-
-    // Verify onSave was NOT called for live order
+    await waitFor(() => expect(screen.getByText(/Could not load the sample image \(HTTP 404\)/)).toBeDefined());
+    expect(screen.queryByRole('button', { name: /Use photo/ })).toBeNull();
     expect(onSave).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { VisualEvidencePreset } from '../../types';
 import type { EvidenceItem, MediaType, WorkOrder } from '../../types/mobile';
 import { readFileAsDataUrl, useCamera } from '../../hooks/useCamera';
+import { useEvidencePresets } from '../../hooks/useEvidencePresets';
 import PresetGallerySheet from './PresetGallerySheet';
 
 interface MobileEvidenceCaptureProps {
@@ -9,7 +10,6 @@ interface MobileEvidenceCaptureProps {
   item: EvidenceItem;
   onClose: () => void;
   onSave: (itemId: string, thumbnail: string) => void;
-  onPresetAttached?: (order: WorkOrder, preset: VisualEvidencePreset) => void;
 }
 
 type Phase = 'aim' | 'recording' | 'review';
@@ -24,7 +24,6 @@ export default function MobileEvidenceCapture({
   item,
   onClose,
   onSave,
-  onPresetAttached,
 }: MobileEvidenceCaptureProps): React.ReactElement {
   const [mode, setMode] = useState<MediaType>(item.mediaType);
   const [phase, setPhase] = useState<Phase>('aim');
@@ -37,6 +36,8 @@ export default function MobileEvidenceCapture({
   const fileRef = useRef<HTMLInputElement>(null);
   const camera = useCamera(phase !== 'review');
   const { grab, setTorch: applyTorch } = camera;
+  const catalog = useEvidencePresets(order.machine);
+  const previews = catalog.presets.slice(0, 3);
 
   const guidance = item.guidance ?? [];
   const noCamera = Boolean(camera.error);
@@ -87,6 +88,20 @@ export default function MobileEvidenceCapture({
       setPhase('review');
     } catch (err) {
       setPickError(err instanceof Error ? err.message : 'Could not read the photo');
+    }
+  };
+
+  /** A sample image is reviewed and saved like a camera shot; nothing is sent until the order is submitted. */
+  const onPickPreset = async (preset: VisualEvidencePreset) => {
+    setShowPresetGallery(false);
+    try {
+      const res = await fetch(preset.image_url);
+      if (!res.ok) throw new Error(`Could not load the sample image (HTTP ${res.status})`);
+      setShot(await readFileAsDataUrl(await res.blob()));
+      setPickError(null);
+      setPhase('review');
+    } catch (err) {
+      setPickError(err instanceof Error ? err.message : 'Could not load the sample image');
     }
   };
 
@@ -188,37 +203,6 @@ export default function MobileEvidenceCapture({
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0', zIndex: 10 }}>
-            <button
-              type="button"
-              className="m-btn glass"
-              style={{
-                minHeight: 44,
-                minWidth: 44,
-                padding: '0 16px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 13,
-                fontWeight: 600,
-                background: 'rgba(255, 255, 255, 0.25)',
-                color: '#fff',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
-                border: '1px solid rgba(255, 255, 255, 0.4)',
-                borderRadius: 22,
-              }}
-              onClick={() => setShowPresetGallery(true)}
-              aria-label="Choose sample image"
-              id="m-open-preset-gallery"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
-                photo_library
-              </span>
-              Choose sample image
-            </button>
-          </div>
-
           <div className="m-shutter-row">
             <div className="m-sub" style={{ color: 'rgba(255,255,255,.8)', fontSize: 11 }}>
               {mode === 'video' ? 'A still from the clip is sent' : mode === item.mediaType ? 'Required format' : `AI asked for ${item.mediaType}`}
@@ -234,7 +218,22 @@ export default function MobileEvidenceCapture({
             >
               <span />
             </button>
-            <div />
+            <button
+              className="m-shutter-side m-glass-dark"
+              onClick={() => setShowPresetGallery(true)}
+              aria-label="Choose sample image"
+              id="m-open-preset-gallery"
+            >
+              {previews.length > 0 ? (
+                <span className="m-thumb-stack" aria-hidden="true">
+                  {previews.map((p) => (
+                    <img key={p.id} src={p.thumbnail_url} alt="" />
+                  ))}
+                </span>
+              ) : (
+                <span className="material-symbols-outlined">photo_library</span>
+              )}
+            </button>
           </div>
         </>
       )}
@@ -269,18 +268,11 @@ export default function MobileEvidenceCapture({
 
       <PresetGallerySheet
         open={showPresetGallery}
-        status={order.live?.status ?? 'normal'}
-        isLive={Boolean(order.live)}
-        canSubmitEvidence={Boolean(order.live?.canSubmitEvidence)}
+        presets={catalog.presets}
+        loading={catalog.loading}
+        error={catalog.error}
         onClose={() => setShowPresetGallery(false)}
-        onSelectSuccess={(preset) => {
-          setShowPresetGallery(false);
-          if (order.live && onPresetAttached) {
-            onPresetAttached(order, preset);
-          } else {
-            onSave(item.id, preset.thumbnail_url);
-          }
-        }}
+        onSelect={(preset) => void onPickPreset(preset)}
       />
     </div>
   );

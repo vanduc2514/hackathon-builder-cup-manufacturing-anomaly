@@ -77,8 +77,8 @@ export function useCamera(enabled: boolean): Camera {
   return { videoRef, ready, error, grab, setTorch };
 }
 
-/** Reads a user-picked image file as a data URL. */
-export function readFileAsDataUrl(file: File): Promise<string> {
+/** Reads a user-picked image file (or fetched image blob) as a data URL. */
+export function readFileAsDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));

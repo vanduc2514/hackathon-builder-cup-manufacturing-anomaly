@@ -999,22 +999,6 @@
 
 .m-target-tag .material-symbols-outlined { font-size: 15px; }
 
-.m-done-tag {
-  position: absolute;
-  z-index: 4;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 650;
-  animation: m-enter 0.5s var(--ease) both;
-}
-
-.m-done-tag .material-symbols-outlined { font-size: 14px; color: var(--green); }
-
 .m-cam-step {
   position: absolute;
   top: 94px;
@@ -1025,6 +1009,71 @@
   border-radius: 22px;
   animation: m-enter 0.45s var(--ease) both;
 }
+
+/* Collapsed-panel bubbles over the camera feed */
+.m-cam-bubble {
+  position: absolute;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  animation: m-enter 0.45s var(--ease) both;
+}
+.m-cam-bubble .material-symbols-outlined { font-size: 20px; }
+.m-cam-bubble .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.m-cam-bubble.step { top: 94px; left: 14px; }
+.m-cam-bubble.chat {
+  right: 14px;
+  bottom: 164px;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--accent), var(--teal));
+  animation: m-enter 0.45s var(--ease) both, m-ai-glow 2.4s ease-in-out infinite;
+}
+.m-cam-bubble.chat .material-symbols-outlined { font-size: 24px; animation: m-ai-twinkle 2.4s ease-in-out infinite; }
+.m-cam-bubble.chat .dot { position: absolute; top: 2px; right: 2px; background: #fff; }
+
+@keyframes m-ai-glow {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(139, 123, 255, 0.25), 0 10px 20px -8px rgba(91, 76, 245, 0.9); }
+  50% { box-shadow: 0 0 0 10px rgba(139, 123, 255, 0.1), 0 10px 20px -8px rgba(91, 76, 245, 0.9); }
+}
+@keyframes m-ai-twinkle {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.15) rotate(12deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .m-cam-bubble.chat,
+  .m-cam-bubble.chat .material-symbols-outlined { animation: none; }
+}
+
+.m-cam-min {
+  min-height: 44px;
+  min-width: 44px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  /* Keep the 44px tap target without growing the header row it sits in. */
+  margin: -10px -10px -10px 0;
+}
+.m-cam-min.corner { position: absolute; top: 2px; right: 2px; margin: 0; z-index: 1; }
+.m-transcript .m-tline:first-of-type { padding-right: 32px; }
+.m-cam-min .material-symbols-outlined { font-size: 18px; }
 
 .m-spec {
   display: grid;
@@ -1167,28 +1216,6 @@
 .m-tool:active { transform: scale(0.9); }
 .m-tool .material-symbols-outlined { font-size: 19px; }
 
-.m-mic {
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  border: 0;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  cursor: pointer;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  box-shadow: 0 0 0 5px rgba(139, 123, 255, 0.25), 0 12px 24px -8px rgba(91, 76, 245, 0.9);
-  transition: transform 0.25s var(--spring);
-}
-
-.m-mic.live { animation: m-micpulse 1.6s ease-in-out infinite; }
-.m-mic .material-symbols-outlined { font-size: 26px; }
-
-@keyframes m-micpulse {
-  0%, 100% { box-shadow: 0 0 0 5px rgba(139, 123, 255, 0.25), 0 12px 24px -8px rgba(91, 76, 245, 0.9); }
-  50% { box-shadow: 0 0 0 12px rgba(139, 123, 255, 0.12), 0 12px 24px -8px rgba(91, 76, 245, 0.9); }
-}
-
 .m-next {
   height: 44px;
   padding: 0 16px;
@@ -1220,6 +1247,48 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: 0 26px;
+}
+
+/* Sample-image picker beside the shutter (right column of the shutter row). */
+.m-shutter-side {
+  justify-self: end;
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  cursor: pointer;
+}
+.m-shutter-side .material-symbols-outlined { font-size: 24px; }
+
+/* Up to three sample thumbnails fanned like a photo stack. */
+.m-thumb-stack { position: relative; width: 34px; height: 34px; }
+.m-thumb-stack img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1.5px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.m-thumb-stack img:nth-child(1) { z-index: 3; }
+.m-thumb-stack img:nth-child(2) { z-index: 2; transform: translate(4px, -4px) rotate(8deg); }
+.m-thumb-stack img:nth-child(3) { z-index: 1; transform: translate(-4px, -3px) rotate(-9deg); }
+
+/* Sample picker: bottom sheet above the dock; header stays, the list scrolls. */
+.m-preset-sheet { max-height: calc(100% - 90px - 56px); }
+.m-preset-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .m-shutter {

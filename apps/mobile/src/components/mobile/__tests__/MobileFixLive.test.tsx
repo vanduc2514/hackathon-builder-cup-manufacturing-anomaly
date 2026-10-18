@@ -107,8 +107,8 @@ function chip(name: RegExp): HTMLButtonElement {
   return screen.getByRole('button', { name }) as HTMLButtonElement;
 }
 
-async function renderReady(): Promise<FakeWebSocket> {
-  render(<MobileFixLive order={order} voiceGuidance onExit={vi.fn()} onSubmit={vi.fn()} />);
+async function renderReady(voiceGuidance = true): Promise<FakeWebSocket> {
+  render(<MobileFixLive order={order} voiceGuidance={voiceGuidance} onExit={vi.fn()} onSubmit={vi.fn()} />);
   await waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
   const ws = FakeWebSocket.instances[0];
   ws.emit({ type: 'setup_complete', session_id: 's1', resumption_handle: 'h1' });
@@ -141,17 +141,12 @@ describe('MobileFixLive Copilot', () => {
     vi.unstubAllGlobals();
   });
 
-  it('shows the five scripted English prompt chips', async () => {
+  it('shows the four scripted English prompt chips', async () => {
     await renderReady();
-    for (const label of [
-      'What is wrong?',
-      'Show removed insert',
-      'Replacement steps',
-      'New insert fitted',
-      'Before restart',
-    ]) {
+    for (const label of ['What is wrong?', 'Show removed insert', 'Replacement steps', 'Before restart']) {
       expect(screen.getByRole('button', { name: new RegExp(label) })).toBeTruthy();
     }
+    expect(screen.queryByRole('button', { name: /Show new insert/ })).toBeNull();
     expect(screen.queryByText(/Start|Step done/)).toBeNull();
   });
 
@@ -199,10 +194,14 @@ describe('MobileFixLive Copilot', () => {
     expect(screen.getByAltText('Photo sent to the Copilot')).toBeTruthy();
   });
 
-  it('attaches the new-insert preset when confirming the replacement', async () => {
+  it('switches the photo chip to the new insert once the removed insert was shown', async () => {
     const ws = await renderReady();
-    fireEvent.click(screen.getByRole('button', { name: /New insert fitted/ }));
-    expect(ws.sent[0]).toMatchObject({ type: 'user_turn', preset_id: NEW_INSERT_PRESET_ID });
+    fireEvent.click(screen.getByRole('button', { name: /Show removed insert/ }));
+    ws.emit({ type: 'turn_complete' });
+    expect(screen.queryByRole('button', { name: /Show removed insert/ })).toBeNull();
+    await waitFor(() => expect(chip(/Show new insert/).disabled).toBe(false));
+    fireEvent.click(chip(/Show new insert/));
+    expect(ws.sent[1]).toMatchObject({ type: 'user_turn', preset_id: NEW_INSERT_PRESET_ID });
     expect(NEW_INSERT_PRESET_ID).toBe('preset-cnc02-tool-new-insert-commons-raizy-1');
   });
 
@@ -225,9 +224,8 @@ describe('MobileFixLive Copilot', () => {
     expect(screen.getByText(/\(stopped\)/)).toBeTruthy();
   });
 
-  it('does not speak when the voice is muted', async () => {
-    const ws = await renderReady();
-    fireEvent.click(screen.getByRole('button', { name: 'Mute copilot voice' }));
+  it('does not speak when voice guidance is off', async () => {
+    const ws = await renderReady(false);
     fireEvent.click(screen.getByRole('button', { name: /What is wrong/ }));
     ws.emit({ type: 'text_delta', text: 'First sentence. ' });
     ws.emit({ type: 'turn_complete' });
@@ -241,6 +239,69 @@ describe('MobileFixLive Copilot', () => {
     await waitFor(() => expect(screen.getByText(/Copilot is offline/)).toBeTruthy());
     expect(FakeWebSocket.instances).toHaveLength(0);
     expect(chip(/What is wrong/).disabled).toBe(true);
+  });
+});
+
+describe('camera bubbles', () => {
+  beforeEach(() => {
+    FakeWebSocket.instances = [];
+    speak.mockClear();
+    cancel.mockClear();
+    vi.stubGlobal('WebSocket', FakeWebSocket);
+    vi.stubGlobal('SpeechSynthesisUtterance', FakeUtterance);
+    Object.defineProperty(window, 'speechSynthesis', { value: { speak, cancel }, configurable: true });
+    vi.mocked(fetchGeminiLiveStatus).mockResolvedValue(status);
+    vi.mocked(createGeminiLiveSession).mockResolvedValue({
+      session_id: 's1',
+      status: 'active',
+      client_messages_received: 0,
+      server_messages_sent: 0,
+      created_at: '10:00:00',
+      last_active_at: '10:00:00',
+    });
+    vi.mocked(listGeminiLiveSessions).mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('starts with the chat open and the step card collapsed to a bubble', () => {
+    render(<MobileFixLive order={order} voiceGuidance onExit={vi.fn()} onSubmit={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /What is wrong/ })).toBeTruthy();
+    expect(screen.queryByText('Stop the spindle')).toBeNull();
+    const bubble = screen.getByRole('button', { name: 'Show step card: Stop the spindle' });
+    expect(bubble.id).toBe('m-live-step-bubble');
+    expect(bubble.textContent).toContain('1/1');
+
+    fireEvent.click(bubble);
+    expect(screen.getByText('Stop the spindle')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Minimize step card' }));
+    expect(screen.queryByText('Stop the spindle')).toBeNull();
+  });
+
+  it('collapses the chat into a bubble and restores it', () => {
+    render(<MobileFixLive order={order} voiceGuidance onExit={vi.fn()} onSubmit={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Minimize Copilot chat' }));
+    expect(screen.queryByRole('button', { name: /What is wrong/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Copilot chat' }));
+    expect(screen.getByRole('button', { name: /What is wrong/ })).toBeTruthy();
+  });
+
+  it('shows an unread dot on the chat bubble while a reply streams', async () => {
+    // Voice off so the dot tracks streaming only (fake utterances never end).
+    const ws = await renderReady(false);
+    fireEvent.click(screen.getByRole('button', { name: /What is wrong/ }));
+    ws.emit({ type: 'text_delta', text: 'T07 shows flank wear.' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Minimize Copilot chat' }));
+    const bubble = screen.getByRole('button', { name: 'Open Copilot chat' });
+    expect(bubble.querySelector('.dot')).toBeTruthy();
+
+    ws.emit({ type: 'turn_complete' });
+    expect(bubble.querySelector('.dot')).toBeNull();
   });
 });
 

@@ -8,7 +8,7 @@ interface MobileSettingsProps {
   onSignOut: () => void;
 }
 
-type TextKey = 'phone' | 'email' | 'leadName';
+type TextKey = 'leadName';
 type ToggleKey = 'voiceGuidance' | 'pushAlerts' | 'haptics';
 
 /** Personal information and a few preferences. Kept deliberately small. */
@@ -21,8 +21,6 @@ export default function MobileSettings({
     onChange({ ...profile, [key]: value });
 
   const textFields: { key: TextKey; label: string; type: string }[] = [
-    { key: 'phone', label: 'Phone', type: 'tel' },
-    { key: 'email', label: 'Email', type: 'email' },
     { key: 'leadName', label: 'Shift Leader', type: 'text' },
   ];
 

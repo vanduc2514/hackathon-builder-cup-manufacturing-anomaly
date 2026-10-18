@@ -139,8 +139,6 @@ export interface TechnicianProfile {
   employeeId: string;
   name?: string;
   role: string;
-  phone: string;
-  email: string;
   shift: string;
   bay: string;
   leadName?: string;

@@ -630,8 +630,6 @@ export function createTechnicianProfile(user?: AuthUser | null): TechnicianProfi
     employeeId: user?.username ? `EMP-${user.username.toUpperCase()}` : 'TECH-0427',
     name: user?.display_name || (isLead ? 'Shift Leader' : 'Maintenance Technician'),
     role: isLead ? 'Shift Leader' : 'Maintenance Technician',
-    phone: '+84 90 123 4567',
-    email: user?.username ? `${user.username}@apex-factory.vn` : 'technician@apex-factory.vn',
     shift: 'Shift A · 06:00–14:00',
     bay: 'Bay 4',
     leadName: isLead ? 'Plant Manager' : 'Shift Leader (Duty)',

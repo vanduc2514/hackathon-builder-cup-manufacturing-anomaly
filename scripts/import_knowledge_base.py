@@ -17,8 +17,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 KB_ROOT = Path(__file__).resolve().parent.parent / "data" / "knowledge_base"
-# Tracked document folders; drive/ is a gitignored duplicate and index.json is not a document.
+# Document folders: the curated categories plus the same categories under drive/ (Drive
+# knowledge base converted by scripts/sync_gdrive_kb.py). index.json is not a document.
 KB_CATEGORIES = ("manuals", "maint_logs", "past_8d_reports")
+KB_SOURCES = ("", "drive")
 GCS_PREFIX = "kb/"
 # Import error logs; outside GCS_PREFIX so they are never imported. Without error_config,
 # Discovery Engine creates its own unmanaged *_import_content bucket. Its service agent
@@ -30,14 +32,16 @@ IMPORT_TIMEOUT_SECONDS = 1800
 def collect_documents(kb_root: Path = KB_ROOT) -> list[Path]:
     """Returns the Markdown documents of every knowledge-base category, sorted per category."""
     documents: list[Path] = []
-    for category in KB_CATEGORIES:
-        documents.extend(sorted((kb_root / category).glob("*.md")))
+    for source in KB_SOURCES:
+        for category in KB_CATEGORIES:
+            documents.extend(sorted((kb_root / source / category).glob("*.md")))
     return documents
 
 
-def _blob_name(path: Path) -> str:
-    """Maps data/knowledge_base/<category>/<stem>.md to kb/<category>__<stem>.txt."""
-    return f"{GCS_PREFIX}{path.parent.name}__{path.stem}.txt"
+def _blob_name(path: Path, kb_root: Path = KB_ROOT) -> str:
+    """Maps <kb_root>/[drive/]<category>/<stem>.md to kb/[drive__]<category>__<stem>.txt."""
+    folders = path.relative_to(kb_root).parent.parts
+    return f"{GCS_PREFIX}{'__'.join(folders)}__{path.stem}.txt"
 
 
 def upload_documents(project_id: str, bucket_name: str, files: list[Path]) -> list[str]:

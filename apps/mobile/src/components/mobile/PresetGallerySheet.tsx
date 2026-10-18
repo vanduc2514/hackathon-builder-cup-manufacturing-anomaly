@@ -1,55 +1,25 @@
-import React, { useEffect, useState } from "react";
-import { authFetch } from "../../api/auth";
-import type { VisualEvidencePreset, VisualEvidencePresetListResponse } from "../../types";
+import React from "react";
+import type { VisualEvidencePreset } from "../../types";
 
 export interface PresetGallerySheetProps {
   open: boolean;
+  presets: VisualEvidencePreset[];
+  loading: boolean;
+  error: string | null;
   onClose: () => void;
   /** The picked sample goes through the same review and submit flow as a camera shot. */
   onSelect: (preset: VisualEvidencePreset) => void;
 }
 
+/** Bottom sheet above the dock: fixed header, scrolling sample list. */
 export default function PresetGallerySheet({
   open,
+  presets,
+  loading,
+  error: fetchError,
   onClose,
   onSelect,
 }: PresetGallerySheetProps): React.ReactElement | null {
-  const [presets, setPresets] = useState<VisualEvidencePreset[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    let active = true;
-    setLoading(true);
-    setFetchError(null);
-
-    authFetch("/api/presets/evidence")
-      .then(async (res) => {
-        if (!res.ok) {
-          throw new Error(`Could not load the sample list (HTTP ${res.status})`);
-        }
-        const data = (await res.json()) as VisualEvidencePresetListResponse;
-        if (active) {
-          setPresets(data.presets || []);
-        }
-      })
-      .catch((err: unknown) => {
-        if (active) {
-          const msg = err instanceof Error ? err.message : "Connection error while loading the sample list";
-          setFetchError(msg);
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [open]);
-
   if (!open) return null;
 
   return (
@@ -61,16 +31,10 @@ export default function PresetGallerySheet({
         data-testid="preset-gallery-backdrop"
       />
       <div
-        className="m-sheet"
+        className="m-sheet m-preset-sheet"
         role="dialog"
         aria-label="Choose evidence sample image"
-        style={{
-          zIndex: 76,
-          bottom: 24,
-          maxHeight: "85vh",
-          overflowY: "auto",
-          paddingBottom: 24,
-        }}
+        style={{ zIndex: 76 }}
         data-testid="preset-gallery-sheet"
       >
         <div className="m-sheet-grabber" />
@@ -84,7 +48,7 @@ export default function PresetGallerySheet({
               photo_library
             </span>
             <div className="m-h3" style={{ fontSize: 16 }}>
-              Choose sample image (IM-05)
+              Choose sample image
             </div>
           </div>
           <button
@@ -100,9 +64,10 @@ export default function PresetGallerySheet({
         </div>
 
         <div className="m-sub" style={{ fontSize: 12 }}>
-          Collection of 5 IM-05 injection-molded reference samples for automated visual verification.
+          Reference photos from the sample catalog. You review the photo before it is saved.
         </div>
 
+        <div className="m-preset-list">
         {loading && (
           <div
             style={{
@@ -146,7 +111,7 @@ export default function PresetGallerySheet({
           </div>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {presets.map((preset) => (
               <div
                 key={preset.id}
@@ -250,6 +215,7 @@ export default function PresetGallerySheet({
                 </div>
               </div>
           ))}
+        </div>
         </div>
       </div>
     </>

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { VisualEvidencePreset } from '../../types';
 import type { EvidenceItem, MediaType, WorkOrder } from '../../types/mobile';
 import { readFileAsDataUrl, useCamera } from '../../hooks/useCamera';
+import { useEvidencePresets } from '../../hooks/useEvidencePresets';
 import PresetGallerySheet from './PresetGallerySheet';
 
 interface MobileEvidenceCaptureProps {
@@ -35,6 +36,8 @@ export default function MobileEvidenceCapture({
   const fileRef = useRef<HTMLInputElement>(null);
   const camera = useCamera(phase !== 'review');
   const { grab, setTorch: applyTorch } = camera;
+  const catalog = useEvidencePresets(order.machine);
+  const previews = catalog.presets.slice(0, 3);
 
   const guidance = item.guidance ?? [];
   const noCamera = Boolean(camera.error);
@@ -221,7 +224,15 @@ export default function MobileEvidenceCapture({
               aria-label="Choose sample image"
               id="m-open-preset-gallery"
             >
-              <span className="material-symbols-outlined">photo_library</span>
+              {previews.length > 0 ? (
+                <span className="m-thumb-stack" aria-hidden="true">
+                  {previews.map((p) => (
+                    <img key={p.id} src={p.thumbnail_url} alt="" />
+                  ))}
+                </span>
+              ) : (
+                <span className="material-symbols-outlined">photo_library</span>
+              )}
             </button>
           </div>
         </>
@@ -257,6 +268,9 @@ export default function MobileEvidenceCapture({
 
       <PresetGallerySheet
         open={showPresetGallery}
+        presets={catalog.presets}
+        loading={catalog.loading}
+        error={catalog.error}
         onClose={() => setShowPresetGallery(false)}
         onSelect={(preset) => void onPickPreset(preset)}
       />

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scripts.import_knowledge_base import _blob_name, collect_documents
+from scripts.import_knowledge_base import _blob_name, _is_stale, collect_documents
 
 
 def _touch(path: Path) -> Path:
@@ -36,3 +36,25 @@ def test_repository_knowledge_base_has_drive_documents() -> None:
     assert any("/drive/maint_logs/" in name for name in names)
     assert any("/drive/manuals/" in name for name in names)
     assert any("/drive/past_8d_reports/" in name for name in names)
+
+
+def test_reconciliation_keeps_learned_blobs() -> None:
+    """kb:import reconciliation never deletes Continuous Learning write-back blobs."""
+    keep = {"kb/manuals__foo.txt"}
+
+    # Learned write-back blobs survive even though this importer never uploads them
+    assert _is_stale("kb/learned__INC-0412.txt", keep) is False
+    assert _is_stale("kb/learned__INC-0412.txt", set()) is False
+    # Unmanaged curated blobs are still reconciled away
+    assert _is_stale("kb/manuals__bar.txt", keep) is True
+    # Managed blobs are kept
+    assert _is_stale("kb/manuals__foo.txt", keep) is False
+
+
+def test_learned_blob_name_matches_reconciliation_keep_prefix() -> None:
+    """The write-back blob name lands inside the kb/learned__ prefix kb:import keeps."""
+    from backend.tools.learning_writeback import learned_blob_name
+
+    name = learned_blob_name("INC-0412")
+    assert name == "kb/learned__INC-0412.txt"
+    assert _is_stale(name, set()) is False

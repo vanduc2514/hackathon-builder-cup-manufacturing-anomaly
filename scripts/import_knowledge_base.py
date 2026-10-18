@@ -22,6 +22,10 @@ KB_ROOT = Path(__file__).resolve().parent.parent / "data" / "knowledge_base"
 KB_CATEGORIES = ("manuals", "maint_logs", "past_8d_reports")
 KB_SOURCES = ("", "drive")
 GCS_PREFIX = "kb/"
+# Learned write-back blobs (kb/learned__<incident_id>.txt) are owned by the
+# Continuous Learning approval hook (backend/tools/learning_writeback.py); this
+# importer never uploads or deletes them.
+LEARNED_BLOB_PREFIX = f"{GCS_PREFIX}learned__"
 # Import error logs; outside GCS_PREFIX so they are never imported. Without error_config,
 # Discovery Engine creates its own unmanaged *_import_content bucket. Its service agent
 # writes here through the project-level roles/discoveryengine.serviceAgent grant.
@@ -44,6 +48,11 @@ def _blob_name(path: Path, kb_root: Path = KB_ROOT) -> str:
     return f"{GCS_PREFIX}{'__'.join(folders)}__{path.stem}.txt"
 
 
+def _is_stale(blob_name: str, keep: set[str]) -> bool:
+    """True for blobs this run should delete: unmanaged and not learned write-backs."""
+    return blob_name not in keep and not blob_name.startswith(LEARNED_BLOB_PREFIX)
+
+
 def upload_documents(project_id: str, bucket_name: str, files: list[Path]) -> list[str]:
     """Uploads documents as text/plain and deletes stale blobs under the kb/ prefix."""
     from google.cloud import storage
@@ -58,7 +67,7 @@ def upload_documents(project_id: str, bucket_name: str, files: list[Path]) -> li
 
     keep = set(uploaded)
     for blob in bucket.list_blobs(prefix=GCS_PREFIX):
-        if blob.name not in keep:
+        if _is_stale(blob.name, keep):
             blob.delete()
             logger.info("Deleted stale gs://%s/%s", bucket_name, blob.name)
 

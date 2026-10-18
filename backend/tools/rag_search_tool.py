@@ -531,6 +531,16 @@ class LocalBM25Retriever:
             self.avg_doc_len,
         )
 
+    def reindex(self) -> None:
+        """Forces a full rebuild so new or changed documents are indexed without a restart.
+
+        Used after an approved incident's learned entry lands under
+        ``data/knowledge_base/learned/`` (which ``index_corpus``'s ``rglob("*.md")``
+        already covers) so subsequent searches see it immediately.
+        """
+        self._indexed = False
+        self.index_corpus()
+
     def search(
         self,
         defect_symptom: str,
@@ -986,6 +996,16 @@ def _title_from_link(link: Any) -> Optional[str]:
 # Module-level singletons
 _local_retriever = LocalBM25Retriever()
 _vertex_client = VertexAISearchClient()
+
+
+def reindex_local_knowledge() -> int:
+    """Rebuilds the shared local BM25 index in place; returns the new chunk count.
+
+    Called after a learned entry is appended under ``data/knowledge_base/learned/``
+    so subsequent searches see it without a process restart.
+    """
+    _local_retriever.reindex()
+    return len(_local_retriever.chunks)
 
 
 def _resolve_dual_keys(

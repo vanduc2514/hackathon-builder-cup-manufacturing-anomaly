@@ -25,3 +25,11 @@ resource "google_storage_bucket_iam_member" "kb_discoveryengine_reader" {
 
   depends_on = [google_discovery_engine_data_store.kb]
 }
+
+# The backend runtime uploads approved incident documents (#333) and
+# Continuous Learning write-back entries (#334) to this bucket.
+resource "google_storage_bucket_iam_member" "kb_runtime_writer" {
+  bucket = google_storage_bucket.kb.name
+  role   = "roles/storage.objectUser"
+  member = local.runtime_member
+}

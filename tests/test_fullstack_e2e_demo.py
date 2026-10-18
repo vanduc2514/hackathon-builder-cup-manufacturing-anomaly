@@ -14,9 +14,14 @@ from httpx import ASGITransport
 
 from backend.agents.orchestrator import orchestrator
 from backend.api.main import app
+from backend.api.routes_simulation import DEV_INJECT_HEADER, DEV_INJECT_VALUE
 from backend.core.blackboard import blackboard
 from backend.core.models import DefectInjectionRequest
 from simulator.injection_engine import injection_engine
+
+# Local tests run with APP_ENV != production; the dev-inject header is required
+# since the gate introduced in #309 to reach the legacy happy path.
+DEV_INJECT_HEADERS = {DEV_INJECT_HEADER: DEV_INJECT_VALUE}
 
 
 @pytest.fixture(autouse=True)
@@ -152,6 +157,7 @@ def test_fullstack_api_endpoints():
                     "mode": "fast",
                     "duration_seconds": 5,
                 },
+                headers=DEV_INJECT_HEADERS,
             )
             assert resp_inject.status_code == 200
             assert resp_inject.json()["status"] in ("triggered", "injected", "detecting")

@@ -10,6 +10,7 @@ from starlette.testclient import TestClient
 
 import backend.agents.orchestrator as orchestrator_module
 from backend.api.main import app
+from backend.api.routes_simulation import DEV_INJECT_HEADER, DEV_INJECT_VALUE
 from backend.core.models import (
     MachineTelemetryPayload,
     QualityEventPayload,
@@ -296,6 +297,7 @@ def test_simulation_inject_pubsub_integration():
             resp = client.post(
                 "/api/simulation/inject",
                 json={"scenario": "cnc_tool_wear", "mode": "fast"},
+                headers={DEV_INJECT_HEADER: DEV_INJECT_VALUE},
             )
             assert resp.status_code == 200
             data = resp.json()

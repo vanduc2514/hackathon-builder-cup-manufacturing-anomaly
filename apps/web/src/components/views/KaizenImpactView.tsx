@@ -23,6 +23,9 @@ type Panel = { kind: 'eightd'; incidentId: string } | { kind: 'whatif' } | { kin
 
 const usd = (v: number) => `$${Math.round(v).toLocaleString('en-US')}`;
 
+const BENCHMARK_BASIS_TOOLTIP =
+  'Line speed, part cost and detection lead time come from manufacturing benchmarks, not measured production data.';
+
 export default function KaizenImpactView({
   esgLedger,
   esgTotals,
@@ -50,6 +53,7 @@ export default function KaizenImpactView({
       hint: has ? `energy ${formatCo2(totals.energyCo2)} · material ${formatCo2(totals.materialCo2)}` : across,
       icon: 'eco',
       color: '#0e8a43',
+      note: 'Benchmark-based estimate',
     },
   ];
 
@@ -89,6 +93,15 @@ export default function KaizenImpactView({
               {k.value}
             </span>
             <span className="kpi-hint">{k.hint}</span>
+            {k.note ? (
+              <span
+                className="kpi-hint"
+                title={BENCHMARK_BASIS_TOOLTIP}
+                style={{ fontSize: '0.72rem', opacity: 0.85 }}
+              >
+                {k.note}
+              </span>
+            ) : null}
           </article>
         ))}
       </div>

@@ -52,6 +52,13 @@ export default function EsgCard({ ledger, factoryType, onOpenHub }: EsgCardProps
         </span>
         <span className="kpi-hint">{totals ? `${totals.scrap} pcs · ${totals.energyKwh.toFixed(0)} kWh saved` : ''}</span>
       </div>
+      <span
+        className="kpi-hint"
+        title="Line speed, part cost and detection lead time come from manufacturing benchmarks, not measured production data."
+        style={{ fontSize: '0.72rem', opacity: 0.85 }}
+      >
+        Benchmark-based estimate
+      </span>
       <div className="col" style={{ gap: 5, marginTop: 'auto' }}>
         <div className="row between kpi-line">
           <span className="row" style={{ gap: 6 }}>

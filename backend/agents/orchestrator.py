@@ -10,7 +10,7 @@ import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 from types import ModuleType
-from typing import Any
+from typing import Any, Literal
 
 from google.adk import Context, Workflow
 from google.adk.agents import LlmAgent, RunConfig
@@ -53,6 +53,7 @@ from backend.agents.workflow_nodes import (
     verification_gate,
     verify_repair,
     wait_for_evidence_node,
+    wait_for_repair_node,
 )
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
@@ -231,9 +232,13 @@ incident_workflow = Workflow(
             (technician_copilot_node, incident_scribe_node),
             resolution_join,
             record_resolution,
-            verify_repair,
-            verification_gate,
+            wait_for_repair_node,
         ),
+        (
+            wait_for_repair_node,
+            {"CONFIRMED": verify_repair, "ESCALATE": escalate_incident},
+        ),
+        (verify_repair, verification_gate),
         (
             verification_gate,
             {
@@ -281,6 +286,10 @@ class EvidenceNotAwaitedError(Exception):
     pass
 
 
+class RepairNotAwaitedError(Exception):
+    """Raised when a repair confirmation arrives while no incident awaits one."""
+
+
 class Orchestrator:
     """Single input/output boundary: starts, approves and resets incidents; one at a time."""
 
@@ -289,6 +298,8 @@ class Orchestrator:
         self._task: Any = None
         self._abort: asyncio.Event | None = None
         self._evidence_event: asyncio.Event = asyncio.Event()
+        self._repair_event: asyncio.Event = asyncio.Event()
+        self._repair_confirmed: bool = False
         self._trigger: DefectInjectionRequest | None = None
         self._started_at: float | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -303,6 +314,8 @@ class Orchestrator:
             return False
         self._abort = asyncio.Event()
         self._evidence_event = asyncio.Event()
+        self._repair_event = asyncio.Event()
+        self._repair_confirmed = False
         self._trigger = trigger
         self._started_at = time.monotonic()
 
@@ -374,6 +387,7 @@ class Orchestrator:
         try:
             if self._evidence_event is not None:
                 self._evidence_event.set()
+            self._repair_event.set()
             if self.is_running:
                 self._abort.set()
                 await self._task
@@ -387,6 +401,7 @@ class Orchestrator:
         """Synchronously cancels any running incident workflow (test/backward compatibility)."""
         if self._evidence_event is not None:
             self._evidence_event.set()
+        self._repair_event.set()
         if self._task and not self._task.done():
             self._task.cancel()
             self._task = None
@@ -468,10 +483,34 @@ class Orchestrator:
         self.notify_evidence()
         return state
 
+    def arm_repair_wait(self) -> None:
+        """Arms the repair-confirmation event for a repairing round."""
+        self._repair_event.clear()
+        self._repair_confirmed = False
+
+    async def wait_for_repair(self, timeout: float) -> Literal["confirmed", "timeout", "cancelled"]:
+        """Awaits the technician's 'Repair done' confirmation for up to ``timeout`` seconds."""
+        try:
+            await asyncio.wait_for(self._repair_event.wait(), timeout=timeout)
+        except asyncio.TimeoutError:
+            return "timeout"
+        return "confirmed" if self._repair_confirmed else "cancelled"
+
+    def confirm_repair(self) -> IncidentState:
+        """Records the technician's 'Repair done' input; only valid while the workflow awaits it."""
+        state = blackboard.get_state()
+        if state.status != "repairing" or state.repair_done:
+            raise RepairNotAwaitedError("The AI is not waiting for a repair confirmation right now")
+        self._repair_confirmed = True
+        self._repair_event.set()
+        return state
+
     async def reset(self) -> IncidentState:
         """Cancels any running workflow and restores the baseline Blackboard."""
         await self.cancel()
         self._evidence_event = asyncio.Event()
+        self._repair_event = asyncio.Event()
+        self._repair_confirmed = False
         return blackboard.reset()
 
 

@@ -768,15 +768,20 @@ def query_sensor_telemetry_window(
 
 
 def reset_buffers() -> Dict[str, Any]:
-    """Restores BigQuery mock data, in-memory buffers, and resets emulator tables if connected."""
+    """Restores BigQuery mock data, in-memory buffers, and re-seeds emulator tables if connected.
+
+    Only the emulator is re-seeded: against a real project the seed would append duplicate
+    fixture and competition rows to production tables on every demo reset.
+    """
     clear_mock_sensor_telemetry()
     clear_mock_traceability_records()
-    try:
-        from scripts.seed_bigquery import seed_bigquery
+    if settings.bigquery_emulator_host:
+        try:
+            from scripts.seed_bigquery import seed_bigquery
 
-        seed_bigquery()
-    except Exception as exc:
-        logger.warning("Could not re-seed BigQuery tables during buffer reset: %s", exc)
+            seed_bigquery()
+        except Exception as exc:
+            logger.warning("Could not re-seed BigQuery tables during buffer reset: %s", exc)
     logger.info("Reset BigQuery buffers and mock datasets to pristine baseline")
     return {"status": "reset", "message": "BigQuery buffers and mock datasets restored to baseline"}
 

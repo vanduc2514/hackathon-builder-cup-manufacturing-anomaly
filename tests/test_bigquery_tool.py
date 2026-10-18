@@ -540,3 +540,20 @@ def test_query_competition_telemetry_distribution_filters_by_machine_id():
     # The WHERE clause was added to the SQL (machine_id filter).
     sql_arg = mock_query.call_args.args[1]
     assert "asset_machine_id = @machine_id" in sql_arg
+
+
+def test_reset_buffers_reseeds_only_the_emulator(monkeypatch):
+    """A demo reset must never append seed rows to a real (production) BigQuery project."""
+    from backend.core.config import settings
+    from backend.tools import bigquery_tool
+
+    calls: list[bool] = []
+    monkeypatch.setattr("scripts.seed_bigquery.seed_bigquery", lambda: calls.append(True))
+
+    monkeypatch.setattr(settings, "bigquery_emulator_host", None)
+    bigquery_tool.reset_buffers()
+    assert calls == []
+
+    monkeypatch.setattr(settings, "bigquery_emulator_host", "http://localhost:9050")
+    bigquery_tool.reset_buffers()
+    assert calls == [True]

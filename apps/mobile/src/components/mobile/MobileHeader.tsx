@@ -27,10 +27,10 @@ export default function MobileHeader({
       <header className="m-topbar">
         <div className="m-brand">
           <div className="m-brand-logo">
-            <span className="material-symbols-outlined ms-fill">precision_manufacturing</span>
+            <img src="/logo.png" alt="kAIzen logo" />
           </div>
           <div>
-            <div className="m-brand-name">kAIgen</div>
+            <div className="m-brand-name">kAIzen</div>
             <div className="m-live" role="status" aria-label={`Backend stream: ${stream.text}`} style={{ color: stream.color }}>
               <span className="m-dot pulse" style={{ color: stream.color }} />
               {stream.text}

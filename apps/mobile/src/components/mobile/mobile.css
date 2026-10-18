@@ -230,7 +230,8 @@
   box-shadow: 0 6px 14px -6px rgba(27, 30, 44, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-.m-brand-logo .material-symbols-outlined { font-size: 20px; }
+.m-brand-logo { overflow: hidden; }
+.m-brand-logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .m-brand-name { font-size: 15px; font-weight: 700; line-height: 1.1; }
 

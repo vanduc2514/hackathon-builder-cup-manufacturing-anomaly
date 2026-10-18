@@ -62,18 +62,6 @@ variable "gemini_model" {
   default     = "gemini-3.5-flash"
 }
 
-variable "gemini_live_model" {
-  description = "Gemini Live model used for multimodal technician copilot WebSocket streaming."
-  type        = string
-  default     = "gemini-2.0-flash-exp"
-}
-
-variable "gemini_live_simulation_mode" {
-  description = "Whether Gemini Live runs in local simulation mode (true) or live API mode (false)."
-  type        = bool
-  default     = false
-}
-
 variable "demo_scripted" {
   description = "Scripted demo mode: Gemini results that miss the curated expectation are retried once, then replaced by the expected result (source=fallback)."
   type        = bool

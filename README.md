@@ -32,7 +32,7 @@ Three agents work in parallel:
 - **Root Cause Agent** — synthesises 5-Whys and Ishikawa analysis using Vertex AI Search over maintenance logs, equipment manuals, and historical 8D reports.
 
 **Phase C — Resolution**
-The **Technician Copilot** opens a Gemini Live multimodal session — voice plus camera — guiding the technician through the repair procedure in Vietnamese (or any configured language). The **Incident Scribe** simultaneously generates a draft 8D report and corrective work order for human review.
+The **Technician Copilot** streams real Gemini replies (grounded in the incident board, SOP snippets and the technician's photo) to the technician's phone, which speaks them aloud in English; the technician taps scripted prompts. The **Incident Scribe** simultaneously generates a draft 8D report and corrective work order for human review.
 
 **Phase D — Verification & Learning**
 The Orchestrator has the **Quality Inspector** count post-repair products and holds the incident open until *N* consecutive products pass the inspection gate. On closure, the **Continuous Learning Agent** returns a knowledge entry and a sustainability impact card (scrap avoided, downtime saved, energy and CO₂ reduction), which the Orchestrator indexes into the vector knowledge base and publishes; the shift leader's approval goes back to the Orchestrator.

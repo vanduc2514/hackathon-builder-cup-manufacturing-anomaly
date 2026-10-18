@@ -51,11 +51,10 @@ vi.mock('../../lib/api', () => ({
       return {
         data: {
           status: 'ready',
-          simulation_mode: true,
+          copilot_available: true,
           active_sessions: 0,
-          default_model: 'gemini-2.0-flash',
-          default_voice: 'Puck',
-          default_language: 'vi-VN',
+          model: 'gemini-3.5-flash',
+          language: 'en-US',
         },
         error: null,
         loading: false,

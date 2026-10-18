@@ -96,7 +96,7 @@ _Round 4: sections 1a–1c are now wired into the dashboard (frontend only, no b
 | `GET /api/impact/benchmarks` | ✅ Done | Kaizen & Impact: benchmark table, real MTTR / manual vs AI diagnosis (replaces the hardcoded "18 min / -92.8% / 4.2 h"), What-If presets |
 | `POST /api/impact/calculate` | ✅ Done | `WhatIfCalculator` is mounted on Kaizen & Impact and calls this endpoint (the client-only "defective share" slider was removed because the backend does not model it) |
 | `GET /api/gemini-live/status` | ✅ Done | Step 4 `GeminiLiveCard` + Demo Controller |
-| `GET /api/gemini-live/sessions` | ✅ Done | Step 4 `GeminiLiveCard` (replaces the fake still image): ids, status, mode, message counters, created/last active |
+| `GET /api/gemini-live/sessions` | ✅ Done | Step 4 `GeminiLiveCard` (replaces the fake still image): ids, status, message counters, created/last active |
 | `POST /api/gemini-live/session`, `WS /api/gemini-live/ws` | ⛔ Not for the dashboard | Technician voice/camera stream belongs to the mobile app |
 | `GET /health` | ✅ Done | Demo Controller → "Backend services" (needs the `/health` Vite proxy entry, added to `vite.config.ts`) |
 

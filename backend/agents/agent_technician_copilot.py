@@ -1,9 +1,10 @@
-"""Technician Copilot: Vietnamese interactive repair guidance with strict OEM grounding."""
+"""Technician Copilot: streamed English repair guidance with strict OEM grounding."""
 
 from __future__ import annotations
 
 import logging
 import re
+from collections.abc import AsyncIterator
 from typing import Any
 
 from google.adk import Agent
@@ -17,6 +18,7 @@ from backend.agents.tool_guards import (
 from backend.core.config import settings
 from backend.core.models import (
     FindingDraft,
+    IncidentState,
     RAGSearchResult,
     RepairCheckpoint,
 )
@@ -25,6 +27,10 @@ from backend.tools.gemini_vision_tool import (
 )
 from backend.tools.gemini_vision_tool import (
     analyze_visual_evidence_frame_async as analyze_visual_evidence_frame_async,
+)
+from backend.tools.gemini_vision_tool import (
+    get_gemini_client,
+    normalize_image,
 )
 from backend.tools.gemini_vision_tool import (
     mock_visual_evidence_analysis as mock_visual_evidence_analysis,
@@ -38,125 +44,157 @@ from backend.tools.rag_search_tool import search_knowledge_base
 logger = logging.getLogger(__name__)
 
 # =============================================================================
-# Vietnamese Manufacturing Domain Vocabulary
-# =============================================================================
-
-VIETNAMESE_MANUFACTURING_VOCABULARY: dict[str, dict[str, str]] = {
-    "dau_dao": {
-        "term_vi": "đầu dao",
-        "term_en": "tool head / tool holder",
-        "definition_vi": "Bộ phận gá kẹp mảnh cắt insert hoặc chuôi dao vào trục chính CNC.",
-    },
-    "manh_cat_insert": {
-        "term_vi": "mảnh cắt insert",
-        "term_en": "cutting insert / indexable insert",
-        "definition_vi": "Chíp tiện/phay hợp kim cắt gọt kim loại, thay thế khi mòn quá định mức.",
-    },
-    "do_dao_spindle_runout": {
-        "term_vi": "độ đảo trục chính spindle runout",
-        "term_en": "spindle / tool runout",
-        "definition_vi": "Độ sai lệch tâm quay của trục chính hoặc cán dao so với trục quay lý thuyết.",
-    },
-    "dung_sai": {
-        "term_vi": "dung sai",
-        "term_en": "tolerance",
-        "definition_vi": "Khoảng sai lệch cho phép của kích thước hình học hoặc độ đảo cơ khí.",
-    },
-    "dong_ho_so": {
-        "term_vi": "đồng hồ so",
-        "term_en": "dial indicator / runout gauge",
-        "definition_vi": "Dụng cụ đo cơ khí chính xác dùng kiểm tra độ phẳng và độ đảo trục chính.",
-    },
-    "do_ga": {
-        "term_vi": "đồ gá",
-        "term_en": "fixture / jig",
-        "definition_vi": "Cơ cấu định vị và kẹp chặt phôi gia công trên bàn máy.",
-    },
-    "luc_siet": {
-        "term_vi": "lực siết bu-lông",
-        "term_en": "tightening torque",
-        "definition_vi": "Mô-men xoắn cần thiết khi siết vít kẹp mảnh cắt (ví dụ: 4.2 N·m).",
-    },
-    "nap_chan_an_toan": {
-        "term_vi": "nắp chắn an toàn",
-        "term_en": "safety enclosure guard / door",
-        "definition_vi": "Cửa chắn bảo vệ vùng gia công, ngăn phoi bắn và bảo vệ người vận hành.",
-    },
-    "truc_chinh": {
-        "term_vi": "trục chính",
-        "term_en": "main spindle",
-        "definition_vi": "Trục quay mang đầu gá dao hoặc mâm cặp chi tiết.",
-    },
-    "bo_loc_may_say": {
-        "term_vi": "bộ lọc máy sấy",
-        "term_en": "dryer filter",
-        "definition_vi": "Bộ lọc tách ẩm và dầu cho phễu sấy hạt nhựa nguyên sinh.",
-    },
-    "diem_suong": {
-        "term_vi": "điểm sương",
-        "term_en": "dew point",
-        "definition_vi": "Nhiệt độ đọng sương của luồng khí sấy (ngưỡng tiêu chuẩn dưới -30 °C).",
-    },
-}
-
-# =============================================================================
 # Verified OEM Equipment Manuals Database (Strict Grounding Sources)
 # =============================================================================
 
 OEM_REPAIR_MANUALS: dict[str, dict[str, Any]] = load_oem_repair_manuals_dict()
 
-REFUSAL_MESSAGE_VI = (
-    "Không có quy trình chính thức được ghi nhận trong tài liệu hướng dẫn OEM cho yêu cầu này. "
-    "Để đảm bảo an toàn kỹ thuật và tiêu chuẩn vận hành, vui lòng liên hệ ngay kỹ sư bảo trì "
-    "cấp cao hoặc bộ phận kỹ thuật nhà máy."
+REFUSAL_MESSAGE = (
+    "There is no documented OEM procedure for this request. "
+    "To keep the work safe and within spec, please contact the senior maintenance engineer "
+    "or the plant engineering department."
 )
 
+# =============================================================================
+# Technician Copilot runtime: real Gemini streaming replies (spoken by the mobile browser)
+# =============================================================================
 
-# =============================================================================
-# System Prompt Generation
-# =============================================================================
+COPILOT_LANGUAGE = "en-US"
+COPILOT_TEMPERATURE = 0.3
+COPILOT_MAX_OUTPUT_TOKENS = 1024
+COPILOT_HISTORY_TURNS = 8
+COPILOT_SOP_RESULTS = 3
+COPILOT_FINDINGS_IN_CONTEXT = 4
+COPILOT_EVIDENCE_CHARS = 300
+NO_SOP_CONTEXT = "No SOP excerpts were retrieved for this request."
 
 
 def build_technician_copilot_system_prompt(equipment_id: str = "CNC-02") -> str:
-    """Constructs the Vietnamese system prompt with strict grounding and persona."""
-    manual_info = OEM_REPAIR_MANUALS.get(equipment_id, {})
-    manual_title = manual_info.get("manual_title", "Sổ tay thiết bị OEM")
-    citation = manual_info.get("primary_citation", "Tài liệu OEM")
+    """Constructs the English system prompt: spoken persona, strict grounding and refusal rules."""
+    return f"""You are Kaizen Copilot, a senior maintenance engineer guiding a frontline technician at {equipment_id} by voice on a phone.
 
-    vocabulary_summary = "\n".join(
-        f"- {item['term_vi']} ({item['term_en']}): {item['definition_vi']}"
-        for item in VIETNAMESE_MANUFACTURING_VOCABULARY.values()
+SPOKEN STYLE:
+1. Your reply is read aloud: plain English, 2-4 short sentences, no markdown, no bullet lists, no emoji.
+2. One step at a time. Wait for the technician to confirm a step or report a measurement before moving on.
+
+STRICT GROUNDING:
+1. Take every procedure step, part number, torque, tolerance and measurement limit only from the SOP excerpts or the incident context below. Name the source when you give a step, for example "According to the OEM manual, page 112".
+2. If the SOP excerpts do not contain a value, say there is no documented value and tell the technician to ask the shift leader. Never invent numbers.
+3. When a photo is attached, describe what you actually see on the part or insert and relate it to the incident. Do not assume anything the photo does not show.
+
+REFUSAL:
+If the technician asks for something outside the documented design (for example overriding a safety sensor or running the spindle beyond its limits), refuse with: "{REFUSAL_MESSAGE}"
+"""
+
+
+def build_copilot_incident_context(state: IncidentState) -> str:
+    """Renders the incident board (status, suspect, root cause, findings, photo evidence) as prompt text."""
+    lines = [
+        f"Incident {state.incident_id}, status: {state.status}",
+        f"Machine: {state.suspect_machine or 'unknown'}; tool: {state.suspect_tool or 'unknown'}",
+        f"Reported defect: {state.defect_type or 'none recorded'} "
+        f"(defect rate {state.defect_rate:.1%}, SPC upper limit {state.spc_ucl:.1%})",
+        f"Root cause: {state.root_cause or 'not determined yet'}",
+        f"Repair done: {'yes' if state.repair_done else 'no'}; "
+        f"post-repair verification {state.verification_count}/{state.verification_target} good parts",
+    ]
+    if state.diagnostic_request:
+        lines.append(f"Open diagnostic request to the technician: {state.diagnostic_request}")
+    evidence = state.visual_evidence
+    if evidence is not None and evidence.analysis:
+        lines.append(f"Visual evidence on the board: {evidence.analysis}")
+    recent = state.findings[-COPILOT_FINDINGS_IN_CONTEXT:]
+    if recent:
+        lines.append("Latest agent findings:")
+        lines.extend(
+            f"- {f.agent_name} ({f.phase}): {f.finding} "
+            f"Evidence: {f.evidence[:COPILOT_EVIDENCE_CHARS]}"
+            for f in recent
+        )
+    return "\n".join(lines)
+
+
+async def fetch_copilot_sop_context(state: IncidentState, user_text: str) -> str:
+    """RAG lookup of SOP snippets for the incident symptom/asset and the technician's question."""
+    try:
+        result = await search_knowledge_base(
+            defect_symptom=state.defect_type,
+            suspect_asset=state.suspect_machine,
+            query=user_text,
+            max_results=COPILOT_SOP_RESULTS,
+        )
+    except Exception as exc:
+        logger.warning("Copilot SOP lookup failed: %s", exc)
+        return NO_SOP_CONTEXT
+    if not result.citations:
+        return NO_SOP_CONTEXT
+    return "\n".join(
+        f'{i}. [{c.formatted_citation()}] "{c.snippet}"'
+        for i, c in enumerate(result.citations, 1)
     )
 
-    return f"""Bạn là Kaizen Copilot — Kỹ sư bảo trì cơ khí cấp cao, chuyên gia hướng dẫn kỹ thuật viên tiền tuyến qua giao diện đàm thoại thời gian thực (Gemini Live) tại nhà máy thông minh.
 
-NGÔN NGỮ VÀ VĂN PHONG (VIETNAMESE PERSONA):
-1. Giao tiếp bằng tiếng Việt tự nhiên, chuẩn mực nhà xưởng cơ khí, điềm tĩnh và súc tích.
-2. Sử dụng chính xác thuật ngữ cơ khí chế tạo:
-{vocabulary_summary}
+def build_copilot_system_instruction(
+    equipment_id: str, incident_context: str, sop_context: str
+) -> str:
+    """System prompt plus the per-turn incident board and SOP excerpts."""
+    return (
+        f"{build_technician_copilot_system_prompt(equipment_id)}\n"
+        f"INCIDENT CONTEXT:\n{incident_context}\n\n"
+        f"SOP EXCERPTS:\n{sop_context}\n"
+    )
 
-NGUYÊN TẮC BẮT BUỘC VỀ TRÍCH DẪN (STRICT RAG GROUNDING):
-1. MỌI bước hướng dẫn sửa chữa cơ khí PHẢI trích dẫn chính xác tài liệu nguồn OEM.
-   Ví dụ: "Theo {citation}, hãy tháo nắp chắn bên trái..."
-2. Thiết bị hiện tại: {equipment_id} — {manual_title}.
-3. Tuyệt đối không đưa ra chỉ dẫn không có nguồn trích dẫn từ tài liệu OEM đã kiểm chứng.
 
-TỪ CHỐI BỊA ĐẶT (REFUSAL TO HALLUCINATE):
-1. Nếu kỹ thuật viên yêu cầu sửa đổi thông số ngoài thiết kế (như ép xung trục chính quá mức, ngắt cảm biến an toàn) hoặc thao tác trên thiết bị chưa có tài liệu OEM, bạn BẮT BUỘC PHẢI TỪ CHỐI.
-2. Câu trả lời từ chối chuẩn mực:
-   "{REFUSAL_MESSAGE_VI}"
+def build_copilot_contents(
+    history: list[tuple[str, str]], user_text: str, image_bytes: bytes | None
+) -> list[types.Content]:
+    """Chat history (last N turns) plus the current technician turn, with the photo when sent."""
+    contents = [
+        types.Content(role=role, parts=[types.Part.from_text(text=text)])
+        for role, text in history[-COPILOT_HISTORY_TURNS:]
+    ]
+    parts = [types.Part.from_text(text=user_text)]
+    if image_bytes:
+        parts.append(
+            types.Part.from_bytes(data=normalize_image(image_bytes), mime_type="image/jpeg")
+        )
+    contents.append(types.Content(role="user", parts=parts))
+    return contents
 
-QUY TRÌNH KIỂM SOÁT TỪNG BƯỚC (INTERACTIVE MULTI-TURN CHECKPOINTS):
-1. Hướng dẫn từng bước một (single-step guidance). Không liệt kê tất cả các bước cùng lúc.
-2. Chờ kỹ thuật viên xác nhận hoàn thành từng bước hoặc cung cấp số đo kiểm tra mới chuyển bước tiếp theo.
-3. Khi đến bước đo kiểm (ví dụ: dùng đồng hồ so đo độ đảo trục chính / đầu dao):
-   - Ngưỡng cho phép: <= 0.005 mm.
-   - Nếu kết quả vượt quá dung sai: giải thích lỗi, hướng dẫn vệ sinh gá kẹp và yêu cầu đo lại.
-   - Chỉ khi kết quả đo đạt chuẩn mới chuyển sang bước đóng nắp và chạy thử.
 
-KẾT THÚC VÀ PHÁT TÍN HIỆU (SESSION EMISSION):
-Khi tất cả các bước hoàn thành, phát tín hiệu xác nhận sửa chữa hoàn tất để hệ thống chuyển trạng thái sang xác minh 50 sản phẩm đạt chuẩn.
-"""
+async def stream_copilot_reply(
+    *,
+    state: IncidentState,
+    user_text: str,
+    history: list[tuple[str, str]],
+    image_bytes: bytes | None = None,
+    client: Any | None = None,
+) -> AsyncIterator[str]:
+    """One real Gemini `generate_content_stream` call; yields the reply text chunk by chunk.
+
+    `history` holds `(role, text)` pairs with role "user" or "model", oldest first. Raises on
+    API failure; the caller reports it to the technician.
+    """
+    equipment_id = state.suspect_machine or "CNC-02"
+    sop_context = await fetch_copilot_sop_context(state, user_text)
+    config = types.GenerateContentConfig(
+        system_instruction=build_copilot_system_instruction(
+            equipment_id, build_copilot_incident_context(state), sop_context
+        ),
+        temperature=COPILOT_TEMPERATURE,
+        max_output_tokens=COPILOT_MAX_OUTPUT_TOKENS,
+    )
+    contents = build_copilot_contents(history, user_text, image_bytes)
+    gemini_client = client or get_gemini_client()
+    logger.info(
+        "gemini_call kind=copilot model=%s image=%s", settings.gemini_model, bool(image_bytes)
+    )
+    stream = await gemini_client.aio.models.generate_content_stream(
+        model=settings.gemini_model, contents=contents, config=config
+    )
+    async for chunk in stream:
+        if chunk.text:
+            yield chunk.text
 
 
 # =============================================================================
@@ -190,7 +228,7 @@ def is_action_grounded(equipment_id: str, query: str) -> bool:
 
 def generate_refusal(query: str, equipment_id: str | None = None) -> str:
     """Generates standard refusal message when query lacks OEM grounding."""
-    return REFUSAL_MESSAGE_VI
+    return REFUSAL_MESSAGE
 
 
 def parse_metric_from_text(text: str) -> float | None:

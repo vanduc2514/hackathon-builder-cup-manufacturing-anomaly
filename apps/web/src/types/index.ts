@@ -306,18 +306,16 @@ export interface HealthResponse {
 export interface GeminiLiveStatus {
   status: string;
   service?: string;
-  simulation_mode: boolean;
+  copilot_available: boolean;
   active_sessions: number;
-  default_model: string;
-  default_voice: string;
-  default_language: string;
+  model: string;
+  language: string;
   timestamp?: string;
 }
 
 export interface GeminiLiveSessionStatus {
   session_id: string;
   status: string;
-  mode: string;
   client_messages_received: number;
   server_messages_sent: number;
   created_at: string;

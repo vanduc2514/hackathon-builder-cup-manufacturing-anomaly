@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { WorkOrder } from '../../types/mobile';
 import { useCamera } from '../../hooks/useCamera';
 import { useGeminiLive, type LiveConnection } from '../../hooks/useGeminiLive';
 import { useOemManual } from '../../hooks/useOemManual';
+import { copilotPrompts } from './copilotPrompts';
 import { IMG } from './mobileData';
 
 interface MobileFixLiveProps {
@@ -15,20 +16,17 @@ interface MobileFixLiveProps {
 const CONNECTION_LABEL: Record<LiveConnection, string> = {
   idle: 'Copilot off',
   connecting: 'Connecting…',
-  ready: 'Copilot Live',
+  ready: 'Copilot ready',
   reconnecting: 'Reconnecting…',
   unavailable: 'Copilot offline',
+  offline: 'Copilot offline',
 };
-
-/** What the technician says to the copilot when a step starts. */
-function stepQuestion(index: number, title: string): string {
-  return index === 0 ? `Bắt đầu sửa. Bước 1: ${title}` : `Xong bước ${index}. Bước ${index + 1}: ${title}`;
-}
 
 /**
  * Full-screen guided repair: camera, step card from the OEM checkpoints and the Technician
- * Copilot over Gemini Live. Steps are confirmed by the technician; the backend exposes no
- * checkpoint-verification endpoint, so nothing is marked "verified" by the app.
+ * Copilot (real Gemini replies streamed as captions and spoken by the browser). The technician
+ * talks to the Copilot by tapping scripted prompts. Steps are confirmed by the technician; the
+ * backend exposes no checkpoint-verification endpoint, so nothing is marked "verified" by the app.
  */
 export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }: MobileFixLiveProps): React.ReactElement {
   const { steps: dynamicSteps, loading: manualLoading } = useOemManual(order.machine);
@@ -42,7 +40,6 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
   const camera = useCamera(true);
   const { setTorch: applyTorch } = camera;
   const copilot = useGeminiLive(isLiveOrder, voiceOn);
-  const askedRef = useRef<number>(-1);
 
   const step = steps[idx];
   const isLast = idx === steps.length - 1;
@@ -51,20 +48,9 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
     applyTorch(torch);
   }, [torch, applyTorch]);
 
-  // Ask the copilot about each step once the session is ready.
-  const { connection, send } = copilot;
-  useEffect(() => {
-    if (!step || connection !== 'ready' || askedRef.current === idx) return;
-    if (send(stepQuestion(idx, step.title))) askedRef.current = idx;
-  }, [idx, step, connection, send]);
-
   const next = () => {
     if (isLast) setShowSheet(true);
     else setIdx((i) => i + 1);
-  };
-
-  const askAgain = () => {
-    if (step) send(stepQuestion(idx, step.title));
   };
 
   if (!step) {
@@ -82,10 +68,20 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
     );
   }
 
+  const prompts = copilotPrompts(order.machine, order.suspectTool ?? 'cutting tool');
   const lastTech = [...copilot.turns].reverse().find((t) => t.speaker === 'technician');
-  const lastCopilot = [...copilot.turns].reverse().find((t) => t.speaker !== 'technician');
-  const language = copilot.service?.default_language ?? 'vi-VN';
-  const modeTag = copilot.mode === 'simulation' || copilot.service?.simulation_mode ? 'SIM' : copilot.mode ? 'LIVE' : null;
+  const lastReply = [...copilot.turns].reverse().find((t) => t.speaker !== 'technician');
+  const awaitingReply = copilot.streaming && (!lastReply || !lastTech || lastReply.id < lastTech.id);
+  const canAsk = isLiveOrder && copilot.connection === 'ready' && !copilot.streaming;
+  const copilotCaption = ((): string => {
+    if (!isLiveOrder) return 'The Copilot is available on live incidents. Follow the manual step above.';
+    if (awaitingReply) return 'Thinking…';
+    if (lastReply) return lastReply.speaker === 'system' ? lastReply.text : `“${lastReply.text}”${lastReply.interrupted ? ' (stopped)' : ''}`;
+    if (copilot.connection === 'offline' || copilot.connection === 'unavailable') {
+      return 'Copilot is offline. Follow the manual step above.';
+    }
+    return copilot.connection === 'ready' ? 'Tap a prompt to ask the Copilot.' : 'Connecting to the Copilot…';
+  })();
 
   return (
     <div className="m-cam">
@@ -111,8 +107,7 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
           </span>
         </div>
         <span className="m-chip dark" style={{ height: 30 }}>
-          {language}
-          {modeTag ? ` · ${modeTag}` : ''}
+          {copilot.service?.language ?? 'en-US'} · Gemini
         </span>
       </div>
 
@@ -161,7 +156,7 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
         </div>
       )}
 
-      {/* Transcript */}
+      {/* Transcript: streamed Copilot captions, the Stop button and the scripted prompt chips */}
       <div className="m-transcript m-glass-light-on-dark" style={{ animation: 'm-enter .45s var(--ease) both' }}>
         <div className="m-tline">
           <span className="ic">
@@ -169,19 +164,26 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
           </span>
           <div style={{ flex: 1 }}>
             <div className="who">You</div>
-            <div className="txt">“{isLiveOrder ? lastTech?.text ?? stepQuestion(idx, step.title) : stepQuestion(idx, step.title)}”</div>
+            {lastTech ? (
+              <div className="txt m-row" style={{ gap: 8 }}>
+                {lastTech.photoUrl && <img className="m-turn-photo" src={lastTech.photoUrl} alt="Photo sent to the Copilot" />}
+                <span>“{lastTech.text}”</span>
+              </div>
+            ) : (
+              <div className="txt m-sub">Tap a prompt below to ask the Copilot.</div>
+            )}
           </div>
         </div>
         <div className="m-tline">
           <span className="ic ai">
             <span className="material-symbols-outlined ms-fill">auto_awesome</span>
           </span>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div className="who ai m-between" style={{ gap: 6 }}>
               <span className="m-row" style={{ gap: 6 }}>
                 Copilot
                 {copilot.speaking && voiceOn && (
-                  <span className="m-wave">
+                  <span className="m-wave" data-testid="copilot-wave" aria-label="Copilot is speaking">
                     <i />
                     <i />
                     <i />
@@ -189,29 +191,29 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
                   </span>
                 )}
               </span>
-              {isLiveOrder && copilot.connection === 'ready' && (
-                <button className="m-btn xs glass" onClick={askAgain} id="m-live-ask">
-                  Ask again
+              {(copilot.speaking || copilot.streaming) && (
+                <button className="m-copilot-stop" onClick={copilot.stop} id="m-live-stop" aria-label="Stop the Copilot">
+                  <span className="material-symbols-outlined ms-fill">stop_circle</span>
+                  Stop
                 </button>
               )}
             </div>
-            {isLiveOrder && lastCopilot ? (
-              <div className="txt">
-                “{lastCopilot.text}”{lastCopilot.interrupted ? ' (interrupted)' : ''}
-              </div>
-            ) : step.copilotVi ? (
-              <>
-                <div className="txt">“{step.copilotVi}”</div>
-                {step.copilotEn && <div className="en">{step.copilotEn}</div>}
-              </>
-            ) : (
-              <div className="txt">
-                {copilot.connection === 'unavailable'
-                  ? 'Copilot is offline. Follow the manual step above.'
-                  : 'Waiting for the copilot…'}
-              </div>
-            )}
+            <div className="txt m-caption" aria-live="polite">{copilotCaption}</div>
           </div>
+        </div>
+        <div className="m-prompt-chips" role="group" aria-label="Ask the Copilot">
+          {prompts.map((p) => (
+            <button
+              key={p.id}
+              className="m-prompt-chip"
+              disabled={!canAsk}
+              onClick={() => copilot.send(p.text, { presetId: p.presetId, photoUrl: p.photoUrl })}
+              title={p.text}
+            >
+              <span className="material-symbols-outlined">{p.icon}</span>
+              {p.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -237,10 +239,7 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
         </div>
         <button
           className={`m-mic ${voiceOn ? 'live' : ''}`}
-          onClick={() => {
-            if (voiceOn) copilot.interrupt();
-            setVoiceOn((v) => !v);
-          }}
+          onClick={() => setVoiceOn((v) => !v)}
           aria-label={voiceOn ? 'Mute copilot voice' : 'Unmute copilot voice'}
           id="m-live-mic"
           style={voiceOn ? undefined : { background: '#3a3d4a', boxShadow: 'none' }}

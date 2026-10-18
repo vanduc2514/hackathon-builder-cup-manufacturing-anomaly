@@ -129,4 +129,3 @@ def test_zero_credential_config_defaults():
     s = Settings()
     assert s.bigquery_fallback_to_mock is True
     assert s.rag_fallback_to_local is True
-    assert s.gemini_live_simulation_mode is True

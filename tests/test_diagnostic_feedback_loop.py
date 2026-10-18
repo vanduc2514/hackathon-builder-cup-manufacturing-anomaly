@@ -288,8 +288,11 @@ def test_upload_evidence_incidents_rest_endpoint():
     assert state.visual_evidence is not None
 
 
-def test_gemini_live_websocket_binary_image_frame():
-    """WebSocket binary image frame triggers visual evidence attachment to blackboard."""
+def test_gemini_live_websocket_binary_image_frame(monkeypatch):
+    """WebSocket binary image frame attaches visual evidence to the blackboard (Copilot offline)."""
+    import backend.api.routes_gemini_live as live_mod
+
+    monkeypatch.setattr(live_mod, "is_gemini_vision_available", lambda: False)
     client = TestClient(app)
     blackboard.update_status("awaiting_evidence", diagnostic_request="Cần chụp ảnh.")
 
@@ -303,9 +306,9 @@ def test_gemini_live_websocket_binary_image_frame():
         # Send binary JPEG frame
         ws.send_bytes(jpeg_bytes)
 
-        # Server content stream response
+        # Evidence is attached; with Gemini unavailable the Copilot reports it is offline
         resp = ws.receive_json()
-        assert resp["type"] == "server_content"
+        assert resp["type"] == "offline"
 
         # Check that visual evidence was attached to blackboard
         state = blackboard.get_state()
@@ -314,8 +317,11 @@ def test_gemini_live_websocket_binary_image_frame():
         assert state.visual_evidence.filename == "mobile_camera_frame.jpg"
 
 
-def test_gemini_live_websocket_realtime_media_chunks():
+def test_gemini_live_websocket_realtime_media_chunks(monkeypatch):
     """WebSocket JSON realtime_input with base64 image triggers visual evidence attachment."""
+    import backend.api.routes_gemini_live as live_mod
+
+    monkeypatch.setattr(live_mod, "is_gemini_vision_available", lambda: False)
     client = TestClient(app)
     blackboard.update_status("awaiting_evidence", diagnostic_request="Cần chụp ảnh.")
 
@@ -333,10 +339,8 @@ def test_gemini_live_websocket_realtime_media_chunks():
         }
         ws.send_text(json.dumps(payload))
 
-        # Input echo
-        echo = ws.receive_json()
-        assert echo["type"] == "server_content"
-        assert echo["server_content"]["input_transcription"] == "ảnh camera kiểm định"
+        # Evidence is attached; with Gemini unavailable the Copilot reports it is offline
+        assert ws.receive_json()["type"] == "offline"
 
         # Blackboard updated
         state = blackboard.get_state()

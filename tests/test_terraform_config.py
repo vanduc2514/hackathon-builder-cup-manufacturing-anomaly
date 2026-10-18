@@ -7,46 +7,29 @@ from pathlib import Path
 from backend.core.config import Settings
 
 
-def test_terraform_gemini_live_variables_and_backend_env() -> None:
-    """Verifies that Terraform defines gemini_live_simulation_mode (default false) and injects into Cloud Run."""
-    root_dir = Path(__file__).resolve().parent.parent
-    variables_tf = (root_dir / "infra" / "terraform" / "variables.tf").read_text(encoding="utf-8")
-    cloud_run_tf = (root_dir / "infra" / "terraform" / "cloud_run.tf").read_text(encoding="utf-8")
-    tfvars_example = (root_dir / "infra" / "terraform" / "terraform.tfvars.example").read_text(
-        encoding="utf-8"
-    )
+def test_terraform_copilot_uses_gemini_model_without_live_settings() -> None:
+    """The Copilot streams from GEMINI_MODEL; the retired Gemini Live variables are gone."""
+    tf_dir = Path(__file__).resolve().parent.parent / "infra" / "terraform"
+    variables_tf = (tf_dir / "variables.tf").read_text(encoding="utf-8")
+    cloud_run_tf = (tf_dir / "cloud_run.tf").read_text(encoding="utf-8")
+    tfvars_example = (tf_dir / "terraform.tfvars.example").read_text(encoding="utf-8")
 
-    # 1. variables.tf must define gemini_live_simulation_mode defaulted to false
-    assert 'variable "gemini_live_simulation_mode"' in variables_tf
-    assert "default     = false" in variables_tf
+    assert 'variable "gemini_model"' in variables_tf
+    assert "GEMINI_MODEL                = var.gemini_model" in cloud_run_tf
 
-    # 2. variables.tf must define gemini_live_model
-    assert 'variable "gemini_live_model"' in variables_tf
-    assert 'default     = "gemini-2.0-flash-exp"' in variables_tf
-
-    # 3. cloud_run.tf must inject both into locals.backend_env
-    assert "GEMINI_LIVE_MODEL           = var.gemini_live_model" in cloud_run_tf
-    assert (
-        "GEMINI_LIVE_SIMULATION_MODE = tostring(var.gemini_live_simulation_mode)" in cloud_run_tf
-    )
-
-    # 4. terraform.tfvars.example documents both variables
-    assert "gemini_live_model" in tfvars_example
-    assert "gemini_live_simulation_mode = false" in tfvars_example
+    for text in (variables_tf, cloud_run_tf, tfvars_example):
+        assert "gemini_live" not in text
+        assert "GEMINI_LIVE" not in text
 
 
-def test_gemini_live_settings_env_parsing(monkeypatch) -> None:
-    """Verifies that Settings parses GEMINI_LIVE_SIMULATION_MODE and GEMINI_LIVE_MODEL from env."""
-    monkeypatch.setenv("GEMINI_LIVE_SIMULATION_MODE", "false")
-    monkeypatch.setenv("GEMINI_LIVE_MODEL", "gemini-2.0-flash")
-
+def test_gemini_live_settings_are_retired() -> None:
+    """Settings no longer carries Gemini Live / simulation fields."""
     s = Settings()
-    assert s.gemini_live_simulation_mode is False
-    assert s.gemini_live_model == "gemini-2.0-flash"
-
-
-def test_gemini_live_settings_local_default() -> None:
-    """Verifies that in local environment without overrides, simulation mode defaults to True."""
-    s = Settings()
-    assert s.gemini_live_simulation_mode is True
-    assert s.gemini_live_model == "gemini-2.0-flash-exp"
+    for name in (
+        "gemini_live_model",
+        "gemini_live_endpoint",
+        "gemini_live_voice",
+        "gemini_live_language",
+        "gemini_live_simulation_mode",
+    ):
+        assert not hasattr(s, name)

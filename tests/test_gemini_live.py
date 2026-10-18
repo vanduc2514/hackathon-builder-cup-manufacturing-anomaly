@@ -1,301 +1,360 @@
-"""Tests for Gemini Live WebSocket Proxy and Copilot Gateway."""
+"""Tests for the Technician Copilot WebSocket: real Gemini streaming replies, no canned text."""
 
 from __future__ import annotations
 
-import base64
-import json
+import asyncio
+import logging
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from starlette.testclient import TestClient
 
+import backend.agents.agent_technician_copilot as copilot_mod
+import backend.api.routes_gemini_live as live_mod
 from backend.api.main import app
 from backend.core.blackboard import blackboard
+from backend.core.config import settings
+from backend.core.models import CitationReference, RAGSearchResult
+
+WORN_PRESET = "preset-cnc02-tool-worn-insert-commons-bautsch-cc0"
+SOP_SNIPPET = "Torque the T07 insert clamp screw to the value in table 4-2 (marker SOP-TORQUE-XYZ)."
+ROOT_CAUSE = "T07 flank wear beyond limit (marker ROOT-CAUSE-XYZ)"
+
+
+class FakeStreamingClient:
+    """Minimal google-genai client double: `aio.models.generate_content_stream` yields scripted chunks."""
+
+    def __init__(self, replies: list[list[str]], hold_after: bool = False) -> None:
+        self._replies = list(replies)
+        self._hold_after = hold_after
+        self.calls: list[dict[str, Any]] = []
+        self.aio = SimpleNamespace(
+            models=SimpleNamespace(generate_content_stream=self._generate_content_stream)
+        )
+
+    async def _generate_content_stream(self, *, model: str, contents: Any, config: Any) -> Any:
+        self.calls.append({"model": model, "contents": contents, "config": config})
+        chunks = self._replies.pop(0)
+        hold = self._hold_after
+
+        async def stream() -> Any:
+            for text in chunks:
+                yield SimpleNamespace(text=text)
+            if hold:
+                await asyncio.Event().wait()
+
+        return stream()
 
 
 @pytest.fixture
-def client():
+def client() -> TestClient:
     return TestClient(app)
 
 
-def test_gemini_live_status_endpoint(client: TestClient) -> None:
-    """Asserts that the Gemini Live status endpoint returns operational health and configs."""
-    response = client.get("/api/gemini-live/status")
-    assert response.status_code == 200
-    data = response.json()
+@pytest.fixture
+def gemini_available(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(live_mod, "is_gemini_vision_available", lambda: True)
+
+
+@pytest.fixture
+def incident(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Board in the repair phase plus a stubbed RAG lookup returning a recognisable SOP snippet."""
+    blackboard.reset()
+    blackboard.update_status(
+        "repairing",
+        suspect_machine="CNC-02",
+        suspect_tool="T07",
+        defect_type="scratch_vertical",
+        root_cause=ROOT_CAUSE,
+    )
+
+    async def fake_search(**kwargs: Any) -> RAGSearchResult:
+        fake_search.kwargs = kwargs  # type: ignore[attr-defined]
+        return RAGSearchResult(
+            defect_symptom="scratch_vertical",
+            suspect_asset="CNC-02",
+            query=str(kwargs.get("query")),
+            citations=[
+                CitationReference(
+                    document_id="manuals/cnc02.md",
+                    title="CNC-02 OEM Manual",
+                    page_number=112,
+                    snippet=SOP_SNIPPET,
+                )
+            ],
+            confidence=0.9,
+        )
+
+    monkeypatch.setattr(copilot_mod, "search_knowledge_base", fake_search)
+
+
+def _use_client(monkeypatch: pytest.MonkeyPatch, fake: FakeStreamingClient) -> None:
+    monkeypatch.setattr(live_mod, "get_gemini_client", lambda: fake)
+
+
+def _collect_turn(ws: Any) -> list[dict[str, Any]]:
+    """Receives messages up to and including the terminal one of a turn."""
+    messages: list[dict[str, Any]] = []
+    while True:
+        msg = ws.receive_json()
+        messages.append(msg)
+        if msg["type"] in ("turn_complete", "error", "offline"):
+            return messages
+
+
+def _text_of(content: Any) -> str:
+    return " ".join(p.text for p in content.parts if p.text)
+
+
+def test_status_endpoint_reports_copilot_availability(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(live_mod, "is_gemini_vision_available", lambda: False)
+    data = client.get("/api/gemini-live/status").json()
     assert data["status"] == "healthy"
-    assert "Gemini Live" in data["service"]
-    assert "default_model" in data
-    assert "default_voice" in data
-    assert "default_language" in data
+    assert data["copilot_available"] is False
+    assert data["model"] == settings.gemini_model
+    assert data["language"] == "en-US"
     assert isinstance(data["active_sessions"], int)
+    for retired in ("simulation_mode", "default_voice", "default_language", "default_model"):
+        assert retired not in data
 
 
-def test_gemini_live_session_management(client: TestClient) -> None:
-    """Asserts session creation and listing via REST endpoints."""
-    # Create session
-    create_resp = client.post("/api/gemini-live/session?mode=simulation")
-    assert create_resp.status_code == 200
-    session_data = create_resp.json()
-    session_id = session_data["session_id"]
-    assert session_id.startswith("live-sess-")
-    assert session_data["mode"] == "simulation"
-
-    # List sessions
-    list_resp = client.get("/api/gemini-live/sessions")
-    assert list_resp.status_code == 200
-    sessions = list_resp.json()
-    assert any(s["session_id"] == session_id for s in sessions)
+def test_session_management(client: TestClient) -> None:
+    created = client.post("/api/gemini-live/session")
+    assert created.status_code == 200
+    session = created.json()
+    assert session["status"] == "active"
+    assert "mode" not in session
+    sessions = client.get("/api/gemini-live/sessions").json()
+    assert any(s["session_id"] == session["session_id"] for s in sessions)
 
 
-def test_gemini_live_websocket_handshake(client: TestClient) -> None:
-    """Asserts initial connection handshake and setup_complete message."""
-    with client.websocket_connect("/api/gemini-live/ws?mode=simulation") as ws:
-        # First frame must be setup_complete
+def test_websocket_handshake(client: TestClient) -> None:
+    with client.websocket_connect("/api/gemini-live/ws?session_id=copilot-hs") as ws:
         data = ws.receive_json()
         assert data["type"] == "setup_complete"
-        assert "session_id" in data
-        assert "resumption_handle" in data
+        assert data["session_id"] == "copilot-hs"
+        assert data["resumption_handle"]
 
 
-def test_gemini_live_websocket_text_conversation(client: TestClient) -> None:
-    """Asserts end-to-end conversation with transcription and synthetic audio chunks."""
-    with client.websocket_connect("/api/gemini-live/ws?mode=simulation") as ws:
-        # Handshake
-        handshake = ws.receive_json()
-        assert handshake["type"] == "setup_complete"
-
-        # Send technician query
-        query_msg = {
-            "type": "client_content",
-            "client_content": {
-                "text": "Máy CNC-02 bị gì, sửa thế nào?",
-            },
-        }
-        ws.send_text(json.dumps(query_msg))
-
-        # 1. Expect input transcription
-        msg1 = ws.receive_json()
-        assert msg1["type"] == "server_content"
-        assert msg1["server_content"]["input_transcription"] == "Máy CNC-02 bị gì, sửa thế nào?"
-
-        # 2. Expect output transcription
-        msg2 = ws.receive_json()
-        assert msg2["type"] == "server_content"
-        output_text = msg2["server_content"]["output_transcription"]
-        assert "CNC-02" in output_text
-        assert "T07" in output_text
-        assert "SOP trang 112" in output_text
-
-        # 3. Expect streaming audio chunks
-        received_audio_bytes = 0
-        while True:
-            frame = ws.receive_json()
-            assert frame["type"] in ("server_content", "session_resumption_update")
-            if frame["type"] == "server_content":
-                sc = frame["server_content"]
-                if sc.get("audio_pcm_base64"):
-                    audio_raw = base64.b64decode(sc["audio_pcm_base64"])
-                    received_audio_bytes += len(audio_raw)
-                if sc.get("turn_complete"):
-                    break
-
-        assert received_audio_bytes > 0, "Expected non-empty PCM audio stream"
-
-        # 4. Expect session resumption update
-        resump_frame = ws.receive_json()
-        assert resump_frame["type"] == "session_resumption_update"
-        assert resump_frame["resumption_handle"].startswith("resume-")
-        assert resump_frame["last_consumed_client_message_index"] >= 1
-
-
-def test_gemini_live_websocket_dial_indicator_response(client: TestClient) -> None:
-    """Asserts domain guidance when technician provides dial indicator runout verification."""
-    with client.websocket_connect("/api/gemini-live/ws?mode=simulation") as ws:
-        ws.receive_json()  # setup_complete
-
-        # Send runout verification query
-        ws.send_text(json.dumps({"text": "Đã kiểm tra đồng hồ so độ đảo dao 0.008"}))
-
-        # Input transcription
-        ws.receive_json()
-
-        # Output transcription
-        msg = ws.receive_json()
-        output_text = msg["server_content"]["output_transcription"]
-        assert "0.008 mm" in output_text
-        assert "50 sản phẩm" in output_text
-
-
-def test_gemini_live_websocket_binary_audio_streaming(client: TestClient) -> None:
-    """Asserts handling of raw binary PCM 16kHz audio frames from microphone."""
-    with client.websocket_connect("/api/gemini-live/ws?mode=simulation") as ws:
-        ws.receive_json()  # setup_complete
-
-        # Send raw PCM 16-bit audio frame (e.g. 320 bytes = 10ms at 16kHz)
-        dummy_pcm = b"\x00\x00" * 160
-        ws.send_bytes(dummy_pcm)
-
-        # Expect streaming response triggered by audio
-        msg = ws.receive_json()
-        assert msg["type"] == "server_content"
-        assert "transcription" in str(msg)
-
-
-def test_gemini_live_websocket_binary_camera_frame(client: TestClient) -> None:
-    """Asserts handling of raw binary camera image frames (JPEG header)."""
-    blackboard.update_status("awaiting_evidence", diagnostic_request="Need a photo.")
-    with client.websocket_connect("/api/gemini-live/ws?mode=simulation") as ws:
-        ws.receive_json()  # setup_complete
-
-        # Send dummy JPEG frame starting with \xff\xd8\xff
-        jpeg_frame = b"\xff\xd8\xff\xe0" + b"\x00" * 128
-        ws.send_bytes(jpeg_frame)
-
-        msg = ws.receive_json()
-        assert msg["type"] == "server_content"
-        assert "camera" in str(msg) or "hình ảnh" in str(msg)
-
-
-def test_gemini_live_websocket_interruption(client: TestClient) -> None:
-    """Asserts that client interruption signal resets active model turn immediately."""
-    with client.websocket_connect("/api/gemini-live/ws?mode=simulation") as ws:
-        ws.receive_json()  # setup_complete
-
-        # Send query
-        ws.send_text(json.dumps({"text": "Máy CNC-02 bị gì"}))
-        ws.receive_json()  # input transcription
-
-        # Send interruption
-        ws.send_text(json.dumps({"type": "interrupt"}))
-
-        # Drain until interrupted message observed
-        interrupted_found = False
-        for _ in range(5):
-            msg = ws.receive_json()
-            if msg.get("server_content", {}).get("interrupted"):
-                interrupted_found = True
-                break
-
-        assert interrupted_found, "Expected server_content with interrupted=True"
-
-
-def test_gemini_live_websocket_ping_pong(client: TestClient) -> None:
-    """Asserts keep-alive ping/pong frame exchange."""
-    with client.websocket_connect("/api/gemini-live/ws?mode=simulation") as ws:
-        ws.receive_json()  # setup_complete
-        ws.send_text(json.dumps({"type": "ping"}))
-        pong = ws.receive_json()
-        assert pong["type"] == "pong"
-
-
-def test_gemini_live_session_resumption_workflow(client: TestClient) -> None:
-    """Asserts session resumption by handle across reconnects."""
-    resumption_handle = ""
-    session_id = ""
-
-    # Session 1: Get resumption handle
-    with client.websocket_connect("/api/gemini-live/ws?mode=simulation") as ws:
-        handshake = ws.receive_json()
-        session_id = handshake["session_id"]
-        resumption_handle = handshake["resumption_handle"]
-        assert resumption_handle.startswith("resume-")
-
-    # Session 2: Connect with resumption handle
-    url = f"/api/gemini-live/ws?resumption_handle={resumption_handle}"
-    with client.websocket_connect(url) as ws2:
-        handshake2 = ws2.receive_json()
-        assert handshake2["session_id"] == session_id, "Resumed session should keep same session_id"
-
-
-def test_gemini_live_status_simulation_mode_toggle(client: TestClient, monkeypatch) -> None:
-    """Asserts that the status endpoint reflects simulation mode toggle and configured model."""
-    from backend.core.config import settings
-
-    monkeypatch.setattr(settings, "gemini_live_simulation_mode", False)
-    monkeypatch.setattr(settings, "gemini_live_model", "gemini-2.0-flash")
-
-    response = client.get("/api/gemini-live/status")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["simulation_mode"] is False
-    assert data["default_model"] == "gemini-2.0-flash"
-
-
-def test_gemini_live_session_live_mode(client: TestClient) -> None:
-    """Asserts that sessions created in live mode report active status and live mode."""
-    create_resp = client.post("/api/gemini-live/session?mode=live")
-    assert create_resp.status_code == 200
-    session_data = create_resp.json()
-    assert session_data["mode"] == "live"
-    assert session_data["status"] == "active"
-
-
-def test_gemini_live_default_live_mode_when_simulation_disabled(
-    client: TestClient, monkeypatch
+def test_user_turn_streams_gemini_deltas_with_incident_sop_and_history(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    gemini_available: None,
+    incident: None,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Asserts that when simulation mode is disabled (as in prod Cloud Run), default mode is live."""
-    from backend.core.config import settings
+    fake = FakeStreamingClient(
+        [
+            ["The T07 insert shows flank wear. ", "Replace it per the SOP."],
+            ["Torque it as the manual says."],
+        ]
+    )
+    _use_client(monkeypatch, fake)
+    caplog.set_level(logging.INFO)
 
-    monkeypatch.setattr(settings, "gemini_live_simulation_mode", False)
+    with client.websocket_connect("/api/gemini-live/ws?session_id=copilot-turn") as ws:
+        assert ws.receive_json()["type"] == "setup_complete"
+        ws.send_json({"type": "user_turn", "text": "What is wrong with this machine?"})
+        first = _collect_turn(ws)
+        ws.send_json({"type": "user_turn", "text": "What torque do I use?"})
+        second = _collect_turn(ws)
 
-    create_resp = client.post("/api/gemini-live/session")
-    assert create_resp.status_code == 200
-    session_data = create_resp.json()
-    assert session_data["mode"] == "live"
-    assert session_data["status"] == "active"
+    assert [m["type"] for m in first] == ["text_delta", "text_delta", "turn_complete"]
+    assert [m["text"] for m in first[:2]] == [
+        "The T07 insert shows flank wear. ",
+        "Replace it per the SOP.",
+    ]
+    assert first[-1]["interrupted"] is False
+    assert [m["type"] for m in second] == ["text_delta", "turn_complete"]
+
+    call = fake.calls[0]
+    assert call["model"] == settings.gemini_model
+    system = call["config"].system_instruction
+    assert "CNC-02" in system
+    assert "T07" in system
+    assert "scratch_vertical" in system
+    assert "repairing" in system
+    assert "ROOT-CAUSE-XYZ" in system
+    assert "SOP-TORQUE-XYZ" in system
+    assert "CNC-02 OEM Manual" in system
+    assert len(call["contents"]) == 1
+    assert _text_of(call["contents"][-1]) == "What is wrong with this machine?"
+    assert call["contents"][-1].role == "user"
+
+    # Second turn carries the first exchange as chat history.
+    contents = fake.calls[1]["contents"]
+    assert [c.role for c in contents] == ["user", "model", "user"]
+    assert _text_of(contents[0]) == "What is wrong with this machine?"
+    assert _text_of(contents[1]) == "The T07 insert shows flank wear. Replace it per the SOP."
+    assert _text_of(contents[2]) == "What torque do I use?"
+
+    assert copilot_mod.search_knowledge_base.kwargs["query"] == "What torque do I use?"  # type: ignore[attr-defined]
+    assert any("gemini_call kind=copilot model=" in r.getMessage() for r in caplog.records)
 
 
-def test_gemini_live_websocket_live_mode_conversation(client: TestClient) -> None:
-    """Asserts bidirectional WebSocket communication in live mode."""
-    with client.websocket_connect("/api/gemini-live/ws?mode=live") as ws:
-        handshake = ws.receive_json()
-        assert handshake["type"] == "setup_complete"
+def test_user_turn_with_preset_attaches_the_image_without_touching_evidence(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    gemini_available: None,
+    incident: None,
+) -> None:
+    fake = FakeStreamingClient([["That insert is badly worn."]])
+    _use_client(monkeypatch, fake)
 
-        # Send query
-        query_msg = {
-            "type": "client_content",
-            "client_content": {
-                "text": "Kiểm tra tình trạng dao CNC-02",
-            },
-        }
-        ws.send_text(json.dumps(query_msg))
+    with client.websocket_connect("/api/gemini-live/ws?session_id=copilot-img") as ws:
+        ws.receive_json()
+        ws.send_json(
+            {"type": "user_turn", "text": "Here is the insert I removed.", "preset_id": WORN_PRESET}
+        )
+        messages = _collect_turn(ws)
 
-        # Input transcription
-        msg1 = ws.receive_json()
-        assert msg1["type"] == "server_content"
-        assert msg1["server_content"]["input_transcription"] == "Kiểm tra tình trạng dao CNC-02"
-
-        # Output transcription
-        msg2 = ws.receive_json()
-        assert msg2["type"] == "server_content"
-        assert msg2["server_content"]["output_transcription"]
+    assert messages[-1]["type"] == "turn_complete"
+    parts = fake.calls[0]["contents"][-1].parts
+    image_parts = [p for p in parts if p.inline_data is not None]
+    assert len(image_parts) == 1
+    assert image_parts[0].inline_data.mime_type == "image/jpeg"
+    assert image_parts[0].inline_data.data.startswith(b"\xff\xd8\xff")
+    assert any(p.text == "Here is the insert I removed." for p in parts)
+    assert blackboard.get_state().visual_evidence is None
+    assert blackboard.get_state().status == "repairing"
 
 
-@pytest.mark.asyncio
-async def test_gemini_live_guidance_async_real_model(monkeypatch) -> None:
-    """Asserts that generate_live_guidance_async queries Gemini Live model when live mode is active."""
-    from unittest.mock import MagicMock
+def test_unknown_preset_is_rejected(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    gemini_available: None,
+    incident: None,
+) -> None:
+    fake = FakeStreamingClient([["unused"]])
+    _use_client(monkeypatch, fake)
+    with client.websocket_connect("/api/gemini-live/ws?session_id=copilot-bad-preset") as ws:
+        ws.receive_json()
+        ws.send_json({"type": "user_turn", "text": "hi", "preset_id": "no-such-preset"})
+        msg = ws.receive_json()
+    assert msg["type"] == "error"
+    assert "no-such-preset" in msg["error_message"]
+    assert fake.calls == []
 
-    from backend.api.routes_gemini_live import SessionState, generate_live_guidance_async
-    from backend.core.config import settings
 
-    monkeypatch.setattr(settings, "gemini_live_simulation_mode", False)
-    monkeypatch.setattr(settings, "gemini_live_model", "gemini-2.0-flash-exp")
+def test_offline_message_when_gemini_unavailable(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(live_mod, "is_gemini_vision_available", lambda: False)
 
-    # Mock Gemini availability and client
-    monkeypatch.setattr("backend.api.routes_gemini_live.is_gemini_vision_available", lambda: True)
+    def must_not_be_called() -> Any:
+        raise AssertionError("no Gemini client may be created while offline")
 
-    mock_client = MagicMock()
-    mock_resp = MagicMock()
-    mock_resp.text = "Hướng dẫn thực tế từ Gemini Live: dừng trục chính và kiểm tra mòn dao."
-    mock_client.models.generate_content.return_value = mock_resp
-    monkeypatch.setattr("backend.api.routes_gemini_live.get_gemini_client", lambda: mock_client)
+    monkeypatch.setattr(live_mod, "get_gemini_client", must_not_be_called)
 
-    session = SessionState(session_id="test-live", mode="live")
-    result = await generate_live_guidance_async("sửa dao thế nào", session)
+    with client.websocket_connect("/api/gemini-live/ws?session_id=copilot-offline") as ws:
+        ws.receive_json()
+        ws.send_json({"type": "user_turn", "text": "What is wrong with this machine?"})
+        msg = ws.receive_json()
+    assert msg["type"] == "offline"
+    assert "offline" in msg["error_message"].lower()
+    assert "text" not in msg or not msg["text"]
 
-    assert "Hướng dẫn thực tế từ Gemini Live" in result["transcription"]
-    mock_client.models.generate_content.assert_called_once()
-    called_model = mock_client.models.generate_content.call_args.kwargs["model"]
-    assert called_model == "gemini-2.0-flash-exp"
 
+def test_gemini_failure_is_reported_not_papered_over(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    gemini_available: None,
+    incident: None,
+) -> None:
+    class Boom:
+        aio = SimpleNamespace(
+            models=SimpleNamespace(
+                generate_content_stream=lambda **_: (_ for _ in ()).throw(RuntimeError("quota"))
+            )
+        )
+
+    monkeypatch.setattr(live_mod, "get_gemini_client", lambda: Boom())
+    with client.websocket_connect("/api/gemini-live/ws?session_id=copilot-boom") as ws:
+        ws.receive_json()
+        ws.send_json({"type": "user_turn", "text": "What is wrong with this machine?"})
+        msg = ws.receive_json()
+    assert msg["type"] == "error"
+    assert "quota" not in msg["error_message"]
+
+
+def test_interrupt_cancels_streaming_reply(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    gemini_available: None,
+    incident: None,
+) -> None:
+    fake = FakeStreamingClient([["Step one: stop the machine. "]], hold_after=True)
+    _use_client(monkeypatch, fake)
+    with client.websocket_connect("/api/gemini-live/ws?session_id=copilot-int") as ws:
+        ws.receive_json()
+        ws.send_json({"type": "user_turn", "text": "What do I do first?"})
+        assert ws.receive_json()["type"] == "text_delta"
+        ws.send_json({"type": "interrupt"})
+        done = ws.receive_json()
+    assert done["type"] == "turn_complete"
+    assert done["interrupted"] is True
+
+
+def test_invalid_messages_yield_errors(client: TestClient) -> None:
+    with client.websocket_connect("/api/gemini-live/ws?session_id=copilot-invalid") as ws:
+        ws.receive_json()
+        ws.send_text("not json")
+        assert ws.receive_json()["type"] == "error"
+        ws.send_json({"type": "user_turn"})
+        assert ws.receive_json()["type"] == "error"
+        ws.send_json({"hello": "world"})
+        assert ws.receive_json()["type"] == "error"
+        ws.send_bytes(b"\x00\x01\x02\x03")
+        assert ws.receive_json()["type"] == "error"
+
+
+def test_ping_pong(client: TestClient) -> None:
+    with client.websocket_connect("/api/gemini-live/ws?session_id=copilot-ping") as ws:
+        ws.receive_json()
+        ws.send_json({"type": "ping"})
+        assert ws.receive_json()["type"] == "pong"
+
+
+def test_session_resumption_by_handle(client: TestClient) -> None:
+    with client.websocket_connect("/api/gemini-live/ws?session_id=copilot-resume") as ws:
+        first = ws.receive_json()
+    handle = first["resumption_handle"]
+    with client.websocket_connect(f"/api/gemini-live/ws?resumption_handle={handle}") as ws2:
+        second = ws2.receive_json()
+    assert second["session_id"] == "copilot-resume"
+
+
+def test_no_simulated_or_canned_copilot_paths_remain() -> None:
+    """The prod path has no keyword-matched replies, synthetic PCM audio or simulation switch."""
+    root = Path(__file__).resolve().parent.parent
+    sources = {
+        name: (root / name).read_text(encoding="utf-8")
+        for name in (
+            "backend/api/routes_gemini_live.py",
+            "backend/agents/agent_technician_copilot.py",
+            "backend/core/config.py",
+        )
+    }
+    for name, text in sources.items():
+        for needle in (
+            "generate_grounded_response",
+            "generate_synthetic_pcm_chunks",
+            "stream_simulated_speech",
+            "simulation_mode",
+            "audio_pcm_base64",
+            "440",
+        ):
+            assert needle not in text, f"{needle!r} still present in {name}"
+
+
+def test_interrupt_without_active_reply_is_acknowledged(client: TestClient) -> None:
+    with client.websocket_connect("/api/gemini-live/ws?session_id=copilot-idle-int") as ws:
+        ws.receive_json()
+        ws.send_json({"type": "interrupt"})
+        done = ws.receive_json()
+    assert done["type"] == "turn_complete"
+    assert done["interrupted"] is True

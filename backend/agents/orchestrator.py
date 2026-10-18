@@ -9,16 +9,18 @@ import time
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
-from google.adk import Workflow
+from google.adk import Context, Workflow
 from google.adk.agents import LlmAgent, RunConfig
+from google.adk.agents.invocation_context import LlmCallsLimitExceededError
 from google.adk.models import Gemini
 from google.adk.runners import InMemoryRunner
-from google.adk.workflow import JoinNode
+from google.adk.workflow import BaseNode, JoinNode, node
+from google.adk.workflow._errors import DynamicNodeFailError
 from google.genai import types
 from google.genai.errors import APIError
-from pydantic import ValidationError
 
 from backend.agents import (
     agent_continuous_learning,
@@ -29,6 +31,7 @@ from backend.agents import (
     agent_technician_copilot,
     agent_traceability,
 )
+from backend.agents.scenario_fallbacks import fallback_draft
 from backend.agents.workflow_nodes import (
     close_incident,
     dismiss_incident,
@@ -45,6 +48,7 @@ from backend.agents.workflow_nodes import (
     record_resolution,
     record_traceability,
     reopen_investigation,
+    source_key,
     trace_topology,
     verification_gate,
     verify_repair,
@@ -53,12 +57,8 @@ from backend.agents.workflow_nodes import (
 from backend.core.blackboard import blackboard
 from backend.core.config import settings
 from backend.core.models import (
-    FINDING_SAFE_DEFAULT_CONFIDENCE,
-    FINDING_SAFE_DEFAULT_EVIDENCE,
-    FINDING_SAFE_DEFAULT_TEXT,
     AgentFinding,
     DefectInjectionRequest,
-    FindingDraft,
     HandoverNote,
     IncidentState,
     SimulationStatusResponse,
@@ -97,6 +97,8 @@ else:
     logger.info("LLM provider=%s model=%s", settings.ai_provider, settings.llm_model)
 
 APP_NAME = "kaizen_orchestrator"
+# Attempts per LLM agent step: the first try plus one retry.
+MAX_AGENT_ATTEMPTS = 2
 WORKFLOW_NAME = "kaizen_incident"
 # Whole-incident ceiling (ADK default 500). A full run with evidence rounds and one reopen is
 # ~20 agent turns of at most 1 + MAX_TOOL_CALLS model calls each.
@@ -111,137 +113,84 @@ GENERIC_FAILURE_MESSAGE = (
 )
 
 
-def _safe_validate_finding_draft(
-    raw_text: str | Any,
-    schema: type[FindingDraft] = FindingDraft,
-    *,
-    agent_name: str,
-) -> FindingDraft:
-    """Parse an LLM-produced JSON blob into a ``FindingDraft`` with a single retry.
+class AgentStepError(Exception):
+    """An LLM agent step failed after its retry and no scripted fallback applies."""
 
-    Strategy (matches the brief in TKT-263):
+    def __init__(self, agent_module: ModuleType, cause: BaseException) -> None:
+        super().__init__(f"{agent_module.AGENT_NAME} failed: {cause!r}")
+        self.agent_name: str = agent_module.AGENT_NAME
+        self.cause = cause
 
-    1. Try ``schema.model_validate_json(raw_text)`` and return the model on success.
-    2. On ``ValidationError``, classify the failure:
-       - Truncated JSON (Pydantic ``error['type'] == 'json_invalid'``) -> log a warning
-         and retry exactly once. The brief budgets the retry at 1 for streaming
-         truncations that may resolve on a re-fetched payload from the same LLM call.
-       - Bare ``json.JSONDecodeError`` / ``ValueError`` -> same retry path.
-       - Other validation failures (missing required fields, wrong types, out-of-range
-         values) are NOT retried — they will fail again deterministically.
-    3. On retry failure (or non-retryable failure), return a safe-default
-       ``FindingDraft`` and log an error so the incident still reaches a terminal
-       state instead of hanging or surfacing a raw exception to the technician.
 
-    The returned safe default is attributed to ``agent_name`` so the Blackboard can
-    still tell which node produced the malformed payload.
+def _draft_source() -> str | None:
+    """Provenance of a successful agent draft; None for providers the schema has no label for."""
+    if settings.ai_provider in ("gemini", "mock"):
+        return settings.ai_provider
+    return None
+
+
+def guarded_agent(agent_module: ModuleType, agent: LlmAgent | None = None) -> BaseNode:
+    """Wraps an LLM agent node so one bad model turn does not fail the whole incident.
+
+    The agent runs up to `MAX_AGENT_ATTEMPTS` times (malformed output, 429, timeout or any other
+    error). If every attempt fails: with `settings.demo_scripted` the scenario's scripted draft
+    is returned (source "fallback"); otherwise `AgentStepError` is raised so the incident ends in
+    `error` naming the agent. The draft's source is published in workflow state for `_record`.
+    The node keeps the agent's name, so join nodes still key its output by that name.
     """
-    if not isinstance(raw_text, str):
-        # ADK usually feeds us a JSON string, but be defensive against pre-parsed objects.
-        raw_text = str(raw_text)
+    agent = agent or agent_module.agent
+    schema = agent.output_schema
+    state_key = source_key(agent_module)
 
-    # Step 1: first attempt.
-    try:
-        return schema.model_validate_json(raw_text)
-    except ValidationError as exc:
-        if _is_truncated_json(exc) or _is_decode_error(exc):
-            # Truncated JSON mid-stream or bare JSONDecodeError -> worth a single retry.
-            logger.warning(
-                "%s FindingDraft JSON decode/truncation detected; attempting one retry: %s",
-                agent_name,
-                exc,
-            )
-        else:
-            # Missing fields or wrong types are deterministic — no retry, go straight
-            # to the safe default and surface the failure in the logs.
-            logger.warning(
-                "%s FindingDraft validation failed on first attempt; "
-                "missing/wrong-type fields, falling back to safe default: %s",
-                agent_name,
-                exc,
-            )
-            return _fallback_finding_draft(agent_name=agent_name, exc=exc)
-    except (json.JSONDecodeError, ValueError) as exc:
-        # Bare JSONDecodeError / ValueError: brief permits a single retry.
-        logger.warning(
-            "%s FindingDraft JSON decode failed; attempting one retry: %s",
-            agent_name,
-            exc,
-        )
+    async def run_agent(ctx: Context, node_input: Any) -> dict[str, Any]:
+        failure: BaseException | None = None
+        for attempt in range(1, MAX_AGENT_ATTEMPTS + 1):
+            try:
+                output = await ctx.run_node(agent, node_input)
+                if output is None:
+                    raise ValueError("the model returned an empty reply")
+                draft = schema.model_validate(output)
+            except Exception as exc:
+                failure = exc.error if isinstance(exc, DynamicNodeFailError) else exc
+                if isinstance(failure, LlmCallsLimitExceededError):
+                    raise failure from None
+                logger.warning(
+                    "agent %s attempt %d/%d failed: %r",
+                    agent.name,
+                    attempt,
+                    MAX_AGENT_ATTEMPTS,
+                    failure,
+                )
+                continue
+            ctx.state[state_key] = _draft_source()
+            return draft.model_dump()
 
-    # Step 2: single retry on recoverable failure only. The brief is explicit that we do
-    # not retry missing/wrong-type validation errors — those already returned above.
-    try:
-        return schema.model_validate_json(raw_text)
-    except (ValidationError, json.JSONDecodeError, ValueError) as exc:
+        if not settings.demo_scripted:
+            raise AgentStepError(agent_module, failure) from failure
+        scenario = (ctx.state.get("trigger") or {}).get("scenario")
         logger.error(
-            "%s FindingDraft validation failed after retry; applying safe default: %s",
-            agent_name,
-            exc,
+            "agent %s failed %d attempts (%r); using scripted fallback for scenario %s",
+            agent.name,
+            MAX_AGENT_ATTEMPTS,
+            failure,
+            scenario,
         )
-        return _fallback_finding_draft(agent_name=agent_name, exc=exc)
+        ctx.state[state_key] = "fallback"
+        return fallback_draft(agent.name, scenario).model_dump()
+
+    return node(run_agent, name=agent.name, rerun_on_resume=True)
 
 
-def _is_truncated_json(exc: BaseException) -> bool:
-    """True if a pydantic ValidationError is from a malformed/truncated JSON payload.
-
-    Pydantic 2 reports the failure under ``error['type'] == 'json_invalid'`` and
-    carries the original ``json`` exception inside ``error['ctx']['error']``. We
-    recognise the common mid-stream truncations (EOF / Unterminated / Unexpected
-    end of data) plus the generic marker so a future pydantic release that
-    rewords the message cannot accidentally bypass retry.
-    """
-    if not isinstance(exc, ValidationError):
-        return False
-    markers = (
-        "json_invalid",
-        "unexpected eof",
-        "unterminated string",
-        "expecting value",
-        "extra data",
-        "invalid json",
-    )
-    for err in exc.errors():
-        etype = (err.get("type") or "").lower()
-        msg = (err.get("msg") or "").lower()
-        ctx_err = ""
-        ctx = err.get("ctx") or {}
-        if isinstance(ctx, dict):
-            ctx_err = str(ctx.get("error", "")).lower()
-        for m in markers:
-            if m in etype or m in msg or m in ctx_err:
-                return True
-    return False
-
-
-def _is_decode_error(exc: BaseException) -> bool:
-    """True if the exception is a bare ``json.JSONDecodeError`` (not via ValidationError)."""
-    if isinstance(exc, json.JSONDecodeError):
-        return True
-    # Some pydantic versions wrap a JSONDecodeError under RuntimeError; fall back to
-    # class-name sniff to keep us robust against upstream surprises.
-    return "JSONDecodeError" in type(exc).__name__
-
-
-def _fallback_finding_draft(*, agent_name: str, exc: BaseException | None = None) -> FindingDraft:
-    """Build the safe-default FindingDraft used when an LLM payload is unrecoverable.
-
-    The ``citation`` field is the producing agent's name so operators can still tell
-    which node produced the malformed payload. ``confidence=0.0`` keeps the orchestrator
-    gates (RCA confidence threshold, restart-loop guard) deterministic — the safe
-    default never accidentally satisfies a real confidence threshold.
-    """
-    return FindingDraft(
-        finding=FINDING_SAFE_DEFAULT_TEXT,
-        evidence=FINDING_SAFE_DEFAULT_EVIDENCE,
-        confidence=FINDING_SAFE_DEFAULT_CONFIDENCE,
-        citation=agent_name,
-    )
-
-
-# Module-level reference so tests can assert the citation placeholder without coupling
-# to the string in two places. The orchestrator never uses this constant at runtime —
-# the helper above overwrites ``citation`` with ``agent_name`` on every call.
+quality_inspector_node = guarded_agent(agent_quality_inspector)
+traceability_node = guarded_agent(agent_traceability)
+process_analyst_node = guarded_agent(agent_process_analyst)
+root_cause_node = guarded_agent(agent_root_cause)
+technician_copilot_node = guarded_agent(agent_technician_copilot)
+field_diagnostic_node = guarded_agent(
+    agent_technician_copilot, agent_technician_copilot.diagnostic_agent
+)
+incident_scribe_node = guarded_agent(agent_incident_scribe)
+continuous_learning_node = guarded_agent(agent_continuous_learning)
 
 resolution_join = JoinNode(name="resolution_join")
 
@@ -251,35 +200,35 @@ incident_workflow = Workflow(
         ("START", open_incident, inspect_production),
         (
             inspect_production,
-            {"BREACH": agent_quality_inspector.agent, "NO_BREACH": dismiss_incident},
+            {"BREACH": quality_inspector_node, "NO_BREACH": dismiss_incident},
         ),
         (
-            agent_quality_inspector.agent,
+            quality_inspector_node,
             record_detection,
             trace_topology,
-            agent_traceability.agent,
+            traceability_node,
             record_traceability,
-            agent_process_analyst.agent,
+            process_analyst_node,
             record_process_analysis,
-            agent_root_cause.agent,
+            root_cause_node,
             rca_gate,
         ),
         (
             rca_gate,
             {
-                "CONFIDENT": (agent_technician_copilot.agent, agent_incident_scribe.agent),
+                "CONFIDENT": (technician_copilot_node, incident_scribe_node),
                 "NEED_EVIDENCE": wait_for_evidence_node,
                 "ESCALATE": escalate_incident,
             },
         ),
         (
             wait_for_evidence_node,
-            agent_technician_copilot.diagnostic_agent,
+            field_diagnostic_node,
             record_field_evidence,
-            agent_root_cause.agent,
+            root_cause_node,
         ),
         (
-            (agent_technician_copilot.agent, agent_incident_scribe.agent),
+            (technician_copilot_node, incident_scribe_node),
             resolution_join,
             record_resolution,
             verify_repair,
@@ -294,7 +243,7 @@ incident_workflow = Workflow(
             },
         ),
         (reopen_investigation, trace_topology),
-        (close_incident, agent_continuous_learning.agent, record_learning),
+        (close_incident, continuous_learning_node, record_learning),
     ],
 )
 
@@ -408,27 +357,11 @@ class Orchestrator:
             ):
                 pass
             logger.info("incident workflow finished: status=%s", blackboard.get_state().status)
-        except APIError as exc:
-            logger.exception("incident workflow failed")
-            if exc.code == 429:
-                blackboard.update_status("error", status_reason=GEMINI_RATE_LIMIT_MESSAGE)
-            else:
-                blackboard.update_status("error", status_reason=GENERIC_FAILURE_MESSAGE)
-            dump_crash(blackboard.get_state(), exc)
-        except ValidationError as exc:
-            # ADK raises pydantic ValidationError when an agent's LLM output cannot be
-            # deserialised into the workflow node's typed input (FindingDraft, etc.).
-            # Surface as `error` with a stable operator-facing reason; the per-agent
-            # safe default is applied by ``_safe_validate_finding_draft`` (called from
-            # tool/run_async wrappers in agent modules) but the ADK runner raises before
-            # we get there on bare schema validation, so we still need this branch.
-            logger.exception(
-                "incident workflow LLM schema validation failed; safe default applied"
-            )
-            blackboard.update_status(
-                "error",
-                status_reason="LLM schema validation failed; safe default applied",
-            )
+        except AgentStepError as exc:
+            logger.exception("incident workflow failed in %s", exc.agent_name)
+            rate_limited = isinstance(exc.cause, APIError) and exc.cause.code == 429
+            reason = GEMINI_RATE_LIMIT_MESSAGE if rate_limited else GENERIC_FAILURE_MESSAGE
+            blackboard.update_status("error", status_reason=f"{exc.agent_name} failed: {reason}")
             dump_crash(blackboard.get_state(), exc)
         except Exception as exc:
             logger.exception("incident workflow failed")

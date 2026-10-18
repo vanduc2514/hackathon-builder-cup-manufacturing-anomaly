@@ -1737,17 +1737,6 @@ class FleetRegistryResponse(BaseModel):
 COMPETITION_OPERATING_STATUSES: tuple[str, ...] = ("RUNNING", "FAULT")
 
 
-# Safe-default text used by the orchestrator when an LLM agent's JSON output
-# cannot be parsed into a FindingDraft (e.g. truncated stream, malformed JSON).
-# Referenced from ``backend.agents.orchestrator._safe_validate_finding_draft``
-# so the wording lives next to the schema definition it replaces.
-FINDING_SAFE_DEFAULT_TEXT = (
-    "LLM output could not be parsed; deferring to operator review"
-)
-FINDING_SAFE_DEFAULT_EVIDENCE = ""
-FINDING_SAFE_DEFAULT_CONFIDENCE = 0.0
-
-
 def _coerce_competition_timestamp(raw: Any) -> Any:
     """Coerce a competition CSV timestamp string into ``YYYY-MM-DD HH:MM:SS``.
 

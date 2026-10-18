@@ -11,8 +11,9 @@ This file is the authoritative reference for AI coding agents and human contribu
 ├── backend/                    # Python — FastAPI server, AI agents, tools
 │   ├── agents/                 # orchestrator.py + one agent_<name>.py per LLM agent node
 │   │   ├── agent.py            # ADK CLI entry (root_agent) for `mise run adk-web` / `adk run`
-│   │   ├── orchestrator.py     # ADK graph Workflow (no LLM) + Orchestrator runner; routes the agent_* nodes
+│   │   ├── orchestrator.py     # ADK graph Workflow (no LLM) + Orchestrator runner; routes the agent_* nodes, each wrapped by `guarded_agent` (1 retry, then scripted fallback under DEMO_SCRIPTED or `error` naming the agent)
 │   │   ├── workflow_nodes.py   # Workflow function nodes: Blackboard writes + routing gates
+│   │   ├── scenario_fallbacks.py # Scripted per-scenario drafts for every agent (used when an LLM step fails with DEMO_SCRIPTED; findings carry source="fallback")
 │   │   ├── tool_guards.py      # Callbacks every tool-using agent sets: 3 tool calls/turn, ValueError → tool result
 │   │   ├── agent_quality_inspector.py
 │   │   ├── agent_traceability.py

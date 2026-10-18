@@ -43,8 +43,22 @@ MAX_REOPENS = 1
 VERIFICATION_CITATION = "End-of-line Camera Station #1 inspection buffer"
 
 
-def _record(agent: ModuleType, draft: FindingDraft, phase: str | None = None) -> None:
-    """Writes an LLM draft from `agent` to the Blackboard (confidence clamped to [0, 1])."""
+def source_key(agent: ModuleType) -> str:
+    """Workflow-state key where the agent guard publishes where `agent`'s latest draft came from."""
+    return f"source_{agent.AGENT_ID}"
+
+
+def _record(
+    agent: ModuleType,
+    draft: FindingDraft,
+    phase: str | None = None,
+    ctx: Context | None = None,
+) -> None:
+    """Writes an LLM draft from `agent` to the Blackboard (confidence clamped to [0, 1]).
+
+    The finding's `source` ("gemini", "fallback" or "mock") comes from the agent guard via `ctx`.
+    """
+    source = ctx.state.get(source_key(agent)) if ctx is not None else None
     blackboard.add_finding(
         AgentFinding(
             agent_id=agent.AGENT_ID,
@@ -56,6 +70,7 @@ def _record(agent: ModuleType, draft: FindingDraft, phase: str | None = None) ->
             citation=draft.citation,
             five_whys=getattr(draft, "five_whys", None),
             ishikawa=getattr(draft, "ishikawa", None),
+            source=source if source in ("gemini", "fallback", "mock") else None,
         )
     )
 
@@ -137,7 +152,7 @@ async def dismiss_incident(node_input: str) -> None:
 
 
 async def record_detection(ctx: Context, node_input: FindingDraft) -> IncidentState:
-    _record(agent_quality_inspector, node_input)
+    _record(agent_quality_inspector, node_input, ctx=ctx)
     report = QualityInspectionReport.model_validate(ctx.state["qi_report"])
     counts = report.defect_type_counts
     blackboard.update_status(
@@ -171,7 +186,7 @@ async def trace_topology(ctx: Context, node_input: IncidentState | dict) -> dict
 
 
 async def record_traceability(ctx: Context, node_input: FindingDraft) -> IncidentState:
-    _record(agent_traceability, node_input)
+    _record(agent_traceability, node_input, ctx=ctx)
     report_data = ctx.state.get("traceability_report")
     if report_data and report_data.get("suspects"):
         top = report_data["suspects"][0]
@@ -187,15 +202,15 @@ async def record_traceability(ctx: Context, node_input: FindingDraft) -> Inciden
     return blackboard.get_state()
 
 
-async def record_process_analysis(node_input: FindingDraft) -> IncidentState:
-    _record(agent_process_analyst, node_input)
+async def record_process_analysis(node_input: FindingDraft, ctx: Context | None = None) -> IncidentState:
+    _record(agent_process_analyst, node_input, ctx=ctx)
     blackboard.update_status("analyzing")
     return blackboard.get_state()
 
 
 async def rca_gate(ctx: Context, node_input: RootCauseFindingDraft) -> Event:
     """Routes on root-cause confidence: repair, gather field evidence, or escalate."""
-    _record(agent_root_cause, node_input)
+    _record(agent_root_cause, node_input, ctx=ctx)
     confidence = node_input.confidence
     rounds = ctx.state.get("evidence_rounds", 0)
 
@@ -270,18 +285,23 @@ async def wait_for_evidence_node(ctx: Context, node_input: Any) -> dict:
     return blackboard.get_state().model_dump()
 
 
-async def record_field_evidence(node_input: FindingDraft) -> IncidentState:
-    _record(agent_technician_copilot, node_input, phase=agent_technician_copilot.DIAGNOSTIC_PHASE)
+async def record_field_evidence(node_input: FindingDraft, ctx: Context | None = None) -> IncidentState:
+    _record(
+        agent_technician_copilot,
+        node_input,
+        phase=agent_technician_copilot.DIAGNOSTIC_PHASE,
+        ctx=ctx,
+    )
     blackboard.update_status("analyzing", diagnostic_request=None)
     return blackboard.get_state()
 
 
-async def record_resolution(node_input: dict) -> IncidentState:
+async def record_resolution(node_input: dict, ctx: Context | None = None) -> IncidentState:
     """Records the parallel copilot and scribe outputs in a fixed order."""
     copilot = FindingDraft.model_validate(node_input[agent_technician_copilot.agent.name])
     scribe = ScribeDraft.model_validate(node_input[agent_incident_scribe.agent.name])
-    _record(agent_technician_copilot, copilot)
-    _record(agent_incident_scribe, scribe)
+    _record(agent_technician_copilot, copilot, ctx=ctx)
+    _record(agent_incident_scribe, scribe, ctx=ctx)
     blackboard.set_repair_done(True)
     blackboard.update_status(
         "verifying",
@@ -342,8 +362,8 @@ async def close_incident(node_input: VerificationResult) -> IncidentState:
     return blackboard.get_state()
 
 
-async def record_learning(node_input: FindingDraft) -> None:
-    _record(agent_continuous_learning, node_input)
+async def record_learning(node_input: FindingDraft, ctx: Context | None = None) -> None:
+    _record(agent_continuous_learning, node_input, ctx=ctx)
     state = blackboard.get_state()
     impact = agent_continuous_learning.calculate_impact_metrics(state)
     blackboard.update_status("closed", impact=impact)

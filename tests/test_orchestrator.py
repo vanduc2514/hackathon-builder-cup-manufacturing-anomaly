@@ -187,7 +187,7 @@ def test_approval_rejected_on_escalated_incident():
 def test_agent_failure_surfaces_as_error_status():
     state = _run(FakeLlm(fail_on="You are the Process Analyst Agent"))
     assert state.status == "error"
-    assert state.status_reason == GENERIC_FAILURE_MESSAGE
+    assert state.status_reason == f"Process Analyst Agent failed: {GENERIC_FAILURE_MESSAGE}"
     assert "RuntimeError" not in state.status_reason
 
 
@@ -205,7 +205,7 @@ def test_gemini_429_surfaces_as_friendly_status_reason(caplog: pytest.LogCapture
     with caplog.at_level("ERROR", logger="backend.agents.orchestrator"):
         state = _run(FakeLlm(fail_on="You are the Process Analyst Agent", fail_with=err))
     assert state.status == "error"
-    assert state.status_reason == GEMINI_RATE_LIMIT_MESSAGE
+    assert state.status_reason == f"Process Analyst Agent failed: {GEMINI_RATE_LIMIT_MESSAGE}"
     assert "429" not in state.status_reason
     assert "RESOURCE_EXHAUSTED" not in state.status_reason
     assert "http" not in state.status_reason.lower()
@@ -218,7 +218,7 @@ def test_gemini_non_429_api_error_surfaces_as_friendly_status_reason():
     )
     state = _run(FakeLlm(fail_on="You are the Process Analyst Agent", fail_with=err))
     assert state.status == "error"
-    assert state.status_reason == GENERIC_FAILURE_MESSAGE
+    assert state.status_reason == f"Process Analyst Agent failed: {GENERIC_FAILURE_MESSAGE}"
     assert "400" not in state.status_reason
     assert "Invalid argument" not in state.status_reason
 
@@ -316,7 +316,7 @@ def test_tool_outage_still_fails_the_incident():
     ):
         state = _run(ToolLoopLlm())
     assert state.status == "error"
-    assert state.status_reason == GENERIC_FAILURE_MESSAGE
+    assert state.status_reason == f"Process Analyst Agent failed: {GENERIC_FAILURE_MESSAGE}"
     assert "BigQuery query failed" not in state.status_reason
 
 

@@ -259,7 +259,7 @@ class AgentFinding(BaseModel):
     evidence: str
     confidence: float = Field(ge=0.0, le=1.0)
     citation: str
-    timestamp: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     five_whys: Optional[List[FiveWhysStep]] = None
     ishikawa: Optional[Dict[str, List[str]]] = None
     # Where the finding came from: "gemini" (model output), "fallback" (scripted result
@@ -843,7 +843,7 @@ class IncidentState(BaseModel):
         default_factory=list,
         description="Technician shift handover notes recorded for this incident",
     )
-    updated_at: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     opened_at: Optional[str] = Field(
         default=None,
         description="ISO 8601 UTC timestamp when the incident was opened",

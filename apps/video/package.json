@@ -6,7 +6,8 @@
     "studio": "remotion studio src/index.ts",
     "render": "remotion render src/index.ts KaizenDemo out/kaizen-demo.mp4",
     "render:teaser": "remotion render src/index.ts KaizenTeaser out/kaizen-teaser.mp4",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "render:evidence": "remotion render src/index.ts KaizenEvidence out/kaizen-evidence.mp4"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.536",

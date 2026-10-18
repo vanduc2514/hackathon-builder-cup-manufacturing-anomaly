@@ -1,34 +1,7 @@
-import durations from './voiceover-durations.json';
-import narration from './narration.json';
-
 export const FPS = 30;
 
-type LineId = keyof typeof durations;
-
-/** Silence before the line starts and screen time kept after it ends, in seconds. */
-const PACING: Record<LineId, [lead: number, hold: number]> = {
-  'hook-1': [1.2, 1.0],
-  'hook-2': [0.4, 1.8],
-  'topo-1': [0.6, 1.0],
-  'topo-2': [0.3, 1.5],
-  'detect-1': [0.5, 1.0],
-  'detect-2': [0.3, 2.0],
-  'diag-1': [0.5, 1.2],
-  'diag-2': [0.3, 2.5],
-  'diag-3': [0.3, 2.0],
-  'diag-4': [0.3, 2.0],
-  'resolve-1': [0.5, 2.5],
-  'resolve-2': [0.3, 3.0],
-  'resolve-3': [0.3, 3.0],
-  'resolve-4': [0.3, 3.5],
-  'verify-1': [0.5, 2.0],
-  'verify-2': [0.3, 2.5],
-  'close-1': [0.5, 1.5],
-  'close-2': [0.5, 2.0],
-};
-
 export interface Line {
-  id: LineId;
+  id: string;
   text: string;
   /** Slot start in the composition (frames). */
   from: number;
@@ -40,27 +13,20 @@ export interface Line {
   speech: number;
 }
 
-const sec = (s: number): number => Math.round(s * FPS);
+export interface Caption {
+  text: string;
+  /** Frames relative to the shot. */
+  from: number;
+  to: number;
+}
 
-export const LINES: Record<LineId, Line> = (() => {
-  const out = {} as Record<LineId, Line>;
-  let cursor = 0;
-  for (const { id, text } of narration.lines) {
-    const key = id as LineId;
-    const [lead, hold] = PACING[key];
-    const speech = sec(durations[key]);
-    const duration = sec(lead) + speech + sec(hold);
-    out[key] = { id: key, text, from: cursor, duration, speechAt: sec(lead), speech };
-    cursor += duration;
-  }
-  return out;
-})();
-
-/** Frames spanned by consecutive lines `first`..`last`. */
-export function span(first: LineId, last: LineId = first): { from: number; duration: number } {
-  const a = LINES[first];
-  const b = LINES[last];
-  return { from: a.from, duration: b.from + b.duration - a.from };
+export interface Timeline<Id extends string> {
+  lines: Record<Id, Line>;
+  /** Frames spanned by consecutive lines `first`..`last`. */
+  span: (first: Id, last?: Id) => { from: number; duration: number };
+  /** Subtitles for `ids`, timed relative to a shot starting at `shotFrom`. */
+  captionsFor: (ids: Id[], shotFrom: number) => Caption[];
+  totalFrames: number;
 }
 
 /** Longest subtitle chunk (chars) that still fits two lines over a screen recording. */
@@ -78,21 +44,46 @@ function chunk(text: string): string[] {
 }
 
 /**
- * Subtitles for lines `ids`, timed relative to a shot starting at `shotFrom`.
- * Each line is split into short chunks paced by character count across its speech; the last chunk stays until the slot ends.
+ * Lays narration lines end to end: each slot is lead silence + measured speech + hold.
+ * `pacing` gives [lead, hold] seconds per line id; durations come from the voiceover generator.
  */
-export function captionsFor(ids: LineId[], shotFrom: number): { text: string; from: number; to: number }[] {
-  return ids.flatMap((id) => {
-    const l = LINES[id];
-    const parts = chunk(l.text);
-    const total = parts.reduce((n, p) => n + p.length, 0);
-    let at = l.from - shotFrom + l.speechAt;
-    return parts.map((text, i) => {
-      const from = at;
-      at += Math.round((l.speech * text.length) / total);
-      return { text, from, to: i === parts.length - 1 ? l.from - shotFrom + l.duration : at };
-    });
-  });
-}
+export function buildTimeline<Id extends string>(
+  narration: { lines: { id: string; text: string }[] },
+  durations: Record<Id, number>,
+  pacing: Record<Id, [lead: number, hold: number]>,
+): Timeline<Id> {
+  const sec = (s: number): number => Math.round(s * FPS);
+  const lines = {} as Record<Id, Line>;
+  let cursor = 0;
+  for (const { id, text } of narration.lines) {
+    const key = id as Id;
+    const [lead, hold] = pacing[key];
+    const speech = sec(durations[key]);
+    const duration = sec(lead) + speech + sec(hold);
+    lines[key] = { id, text, from: cursor, duration, speechAt: sec(lead), speech };
+    cursor += duration;
+  }
 
-export const TOTAL_FRAMES = Object.values(LINES).reduce((end, l) => Math.max(end, l.from + l.duration), 0);
+  return {
+    lines,
+    totalFrames: cursor,
+    span: (first, last = first) => {
+      const a = lines[first];
+      const b = lines[last];
+      return { from: a.from, duration: b.from + b.duration - a.from };
+    },
+    // Each line is split into short chunks paced by character count; the last chunk stays until the slot ends.
+    captionsFor: (ids, shotFrom) =>
+      ids.flatMap((id) => {
+        const l = lines[id];
+        const parts = chunk(l.text);
+        const total = parts.reduce((n, p) => n + p.length, 0);
+        let at = l.from - shotFrom + l.speechAt;
+        return parts.map((text, i) => {
+          const from = at;
+          at += Math.round((l.speech * text.length) / total);
+          return { text, from, to: i === parts.length - 1 ? l.from - shotFrom + l.duration : at };
+        });
+      }),
+  };
+}

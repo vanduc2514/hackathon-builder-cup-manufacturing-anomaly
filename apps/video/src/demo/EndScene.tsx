@@ -13,6 +13,7 @@ const STACK: [string, string][] = [
   ['BigQuery', 'part genealogy'],
   ['Cloud Pub/Sub', 'edge → cloud events'],
   ['Firestore', 'incident board'],
+  ['Cloud Storage', '8D & SOP documents'],
   ['Cloud Run', 'agents & API'],
   ['Firebase Hosting', 'web & mobile apps'],
   ['Gemini TTS', 'this voiceover'],
@@ -43,7 +44,7 @@ const EndSceneInner = ({ caption, captionFrom }: { caption: string; captionFrom:
           The product tells the truth. AI traces it back.
         </div>
         <div style={{ ...eyebrow, marginTop: 56, ...fadeUp(frame, 16) }}>Built on Google Cloud</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, auto)', gap: 16, marginTop: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, auto)', gap: 16, marginTop: 20 }}>
           {STACK.map(([name, role], i) => (
             <div key={name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, ...fadeUp(frame, 18 + i * 3) }}>
               <Chip tone="accent" style={{ fontSize: 24, padding: '10px 22px' }}>
@@ -53,8 +54,16 @@ const EndSceneInner = ({ caption, captionFrom }: { caption: string; captionFrom:
             </div>
           ))}
         </div>
-        <div style={{ fontFamily: FONT.mono, fontSize: 24, color: C.text, marginTop: 44, ...fadeUp(frame, 50) }}>
-          github.com/vanduc2514/hackathon-builder-cup-manufacturing-anomaly
+        <div style={{ display: 'flex', gap: 48, marginTop: 44, ...fadeUp(frame, 50) }}>
+          {[
+            ['Live demo', 'kaizen-lab-demo.web.app'],
+            ['Source', 'github.com/vanduc2514/hackathon-builder-cup-manufacturing-anomaly'],
+          ].map(([label, link]) => (
+            <div key={link} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <span style={{ ...eyebrow, fontSize: 16 }}>{label}</span>
+              <span style={{ fontFamily: FONT.mono, fontSize: 26, fontWeight: 700, color: C.accent }}>{link}</span>
+            </div>
+          ))}
         </div>
       </div>
       <Subtitle text={caption} from={captionFrom} />

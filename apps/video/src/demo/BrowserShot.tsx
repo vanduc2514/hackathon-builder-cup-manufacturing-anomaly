@@ -5,21 +5,17 @@ import Chip from '../components/Chip';
 import Subtitle from '../components/Subtitle';
 import { C, FONT, GLASS_SHADOW, RADIUS } from '../theme';
 import ShotChrome from './ShotChrome';
+import type { Caption } from './timeline';
 import ZoomVideo, { type FootageProps } from './ZoomVideo';
 
 const WIN_W = 1280;
 const WIN_H = 720;
 const BAR_H = 48;
 
-export interface Caption {
-  text: string;
-  /** Frames relative to the shot. */
-  from: number;
-  to: number;
-}
-
 interface BrowserShotProps {
-  url: string;
+  /** Live host shown in the address bar; omit to show `windowTitle` instead. */
+  url?: string;
+  windowTitle?: string;
   step: string;
   title: string;
   services: string[];
@@ -27,8 +23,8 @@ interface BrowserShotProps {
   captions: Caption[];
 }
 
-/** Prod screen recording inside a glass browser window with its live URL. */
-const BrowserShotInner = ({ url, step, title, services, footage, captions }: BrowserShotProps): React.ReactElement => (
+/** Screen recording inside a glass browser window, with its live URL when given. */
+const BrowserShotInner = ({ url, windowTitle, step, title, services, footage, captions }: BrowserShotProps): React.ReactElement => (
   <>
     <Backdrop />
     <ShotChrome step={step} title={title} services={services} start={footage.start} end={footage.end} />
@@ -66,15 +62,23 @@ const BrowserShotInner = ({ url, step, title, services, footage, captions }: Bro
             color: C.text,
           }}
         >
-          <svg width={14} height={16} viewBox="0 0 14 16">
-            <rect x={1} y={7} width={12} height={8} rx={2} fill={C.successText} />
-            <path d="M4 7 V5 a3 3 0 0 1 6 0 V7" fill="none" stroke={C.successText} strokeWidth={1.8} />
-          </svg>
-          https://{url}
+          {url ? (
+            <>
+              <svg width={14} height={16} viewBox="0 0 14 16">
+                <rect x={1} y={7} width={12} height={8} rx={2} fill={C.successText} />
+                <path d="M4 7 V5 a3 3 0 0 1 6 0 V7" fill="none" stroke={C.successText} strokeWidth={1.8} />
+              </svg>
+              https://{url}
+            </>
+          ) : (
+            <span style={{ fontFamily: FONT.main, fontWeight: 600 }}>{windowTitle}</span>
+          )}
         </div>
-        <Chip tone="success" dot style={{ fontSize: 16, padding: '4px 12px' }}>
-          Live on Google Cloud
-        </Chip>
+        {url ? (
+          <Chip tone="success" dot style={{ fontSize: 16, padding: '4px 12px' }}>
+            Live on Google Cloud
+          </Chip>
+        ) : null}
       </div>
       <ZoomVideo {...footage} width={WIN_W} height={WIN_H} />
     </div>

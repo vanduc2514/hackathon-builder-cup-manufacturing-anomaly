@@ -5,7 +5,7 @@ import Chip from '../components/Chip';
 import GlassCard from '../components/GlassCard';
 import Subtitle from '../components/Subtitle';
 import { C, FONT, fadeUp } from '../theme';
-import type { Caption } from './BrowserShot';
+import type { Caption } from './timeline';
 import ShotChrome from './ShotChrome';
 import ZoomVideo, { type FootageProps } from './ZoomVideo';
 
@@ -20,7 +20,8 @@ export interface Callout {
 }
 
 interface PhoneShotProps {
-  url: string;
+  /** Live host shown above the callouts; omit to hide it. */
+  url?: string;
   step: string;
   title: string;
   services: string[];
@@ -52,11 +53,13 @@ const PhoneShotInner = ({ url, step, title, services, footage, captions, callout
         </div>
       </div>
       <div style={{ position: 'absolute', left: 800, top: 150, width: 780, display: 'flex', flexDirection: 'column', gap: 22 }}>
-        <div>
-          <Chip tone="success" dot style={{ fontSize: 18, padding: '6px 14px' }}>
-            https://{url} · live on Google Cloud
-          </Chip>
-        </div>
+        {url ? (
+          <div>
+            <Chip tone="success" dot style={{ fontSize: 18, padding: '6px 14px' }}>
+              https://{url} · live on Google Cloud
+            </Chip>
+          </div>
+        ) : null}
         {callouts
           .filter((c) => frame >= c.at)
           .map((c) => (

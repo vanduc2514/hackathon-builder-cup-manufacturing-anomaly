@@ -1,0 +1,13 @@
+{
+  "voice": "Puck",
+  "model": "gemini-2.5-flash-tts",
+  "style": "Read this in a clear, upbeat, professional product-demo voice, at a steady pace:",
+  "lines": [
+    { "id": "ev-1", "text": "Kaizen Agent does not guess. When the agents need proof, the Root Cause agent pauses the incident and asks for field evidence." },
+    { "id": "ev-2", "text": "The request lands on the technician's phone, with exactly what the AI needs to see: a close-up of insert T07." },
+    { "id": "ev-3", "text": "The technician picks the photo from the evidence library, and checks the shot before saving it." },
+    { "id": "ev-4", "text": "The evidence goes straight back to the agents, and the job shows the AI re-checking." },
+    { "id": "ev-5", "text": "Gemini reads the photo, confirms severe chipping on the insert, and confidence rises from ninety to ninety-eight percent. Only then does the repair begin." },
+    { "id": "ev-6", "text": "Every decision is backed by product evidence. Kaizen Agent, built on Google Cloud." }
+  ]
+}

@@ -17,9 +17,7 @@ from google.genai import types
 logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[1]
-NARRATION = ROOT / "src" / "demo" / "narration.json"
 OUT_DIR = ROOT / "public" / "voiceover"
-DURATIONS = ROOT / "src" / "demo" / "voiceover-durations.json"
 SAMPLE_RATE = 24000
 
 
@@ -67,13 +65,20 @@ def to_mp3(pcm: bytes, target: Path) -> float:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--script",
+        default="demo",
+        help="Folder under src/ holding narration.json; durations are written next to it",
+    )
     parser.add_argument("--only", nargs="*", help="Regenerate only these line ids")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
-    spec = json.loads(NARRATION.read_text())
+    narration = ROOT / "src" / args.script / "narration.json"
+    durations_path = narration.with_name("voiceover-durations.json")
+    spec = json.loads(narration.read_text())
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    durations: dict[str, float] = json.loads(DURATIONS.read_text()) if DURATIONS.exists() else {}
+    durations: dict[str, float] = json.loads(durations_path.read_text()) if durations_path.exists() else {}
     client = genai.Client(
         vertexai=True,
         project=os.environ.get("TF_VAR_project_id") or os.environ.get("GCP_PROJECT_ID"),
@@ -86,7 +91,7 @@ def main() -> None:
         durations[line["id"]] = to_mp3(pcm, OUT_DIR / f"{line['id']}.mp3")
         logger.info("%s %.2fs", line["id"], durations[line["id"]])
     ordered = {line["id"]: durations[line["id"]] for line in spec["lines"] if line["id"] in durations}
-    DURATIONS.write_text(json.dumps(ordered, indent=2) + "\n")
+    durations_path.write_text(json.dumps(ordered, indent=2) + "\n")
 
 
 if __name__ == "__main__":

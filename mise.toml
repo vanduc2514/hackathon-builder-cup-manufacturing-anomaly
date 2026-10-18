@@ -169,13 +169,18 @@ description = "Render the 3-minute demo video to apps/video/out/kaizen-demo.mp4"
 dir = "{{config_root}}/apps/video"
 run = "npm run render"
 
+[tasks."video:render:evidence"]
+description = "Render the evidence-loop supplement to apps/video/out/kaizen-evidence.mp4"
+dir = "{{config_root}}/apps/video"
+run = "npm run render:evidence"
+
 [tasks."video:render:teaser"]
 description = "Render the 30 s animated teaser to apps/video/out/kaizen-teaser.mp4"
 dir = "{{config_root}}/apps/video"
 run = "npm run render:teaser"
 
 [tasks."video:voiceover"]
-description = "Regenerate the demo voiceover with Gemini TTS on Vertex AI (pass --only <line-id> to redo single lines)"
+description = "Regenerate voiceover with Gemini TTS on Vertex AI (--script evidence for the supplement, --only <line-id> for single lines)"
 dir = "{{config_root}}/apps/video"
 run = "{{config_root}}/.venv/bin/python scripts/generate_voiceover.py"
 

@@ -1,23 +1,28 @@
 import React from 'react';
-import { Audio } from '@remotion/media';
-import { Sequence, Track, staticFile } from 'remotion';
+import { Track } from 'remotion';
 import { ProblemScene } from '../scenes/ProblemScene';
 import { BrowserShot } from './BrowserShot';
+import { DEMO } from './demoTimeline';
 import { EndScene } from './EndScene';
 import { ImpactScene } from './ImpactScene';
 import { InsightScene } from './InsightScene';
+import { LearnScene } from './LearnScene';
 import { PhoneShot } from './PhoneShot';
-import { LINES, captionsFor, span } from './timeline';
+import Voiceover from './Voiceover';
 
-const WEB = { src: 'A-web.mp4', sourceWidth: 1920, sourceHeight: 1080 };
-const MOBILE = { src: 'A-mobile.mp4', sourceWidth: 860, sourceHeight: 1864 };
+// Prod recordings of INC-1028C4 (run C), its close-out (C2), the manual step card (F) and the knowledge pages (E).
+const WEB = { src: 'C-web.mp4', sourceWidth: 1920, sourceHeight: 1080 };
+const WEB_CLOSE = { src: 'C2-web.mp4', sourceWidth: 1920, sourceHeight: 1080 };
+const MOBILE = { src: 'C-mobile.mp4', sourceWidth: 860, sourceHeight: 1864 };
+const MOBILE_CLOSE = { src: 'C2-mobile.mp4', sourceWidth: 860, sourceHeight: 1864 };
 const S = 30; // fps: seconds → frames for callout timing
 
-/** 3:15 product demo: prod screen recordings of one real incident, Gemini TTS voiceover, burned-in subtitles. */
+/** ~3:38 product demo: prod screen recordings of one real incident, Gemini TTS voiceover, burned-in subtitles. */
 export default function KaizenDemo(): React.ReactElement {
+  const { lines: l, span, captionsFor } = DEMO;
   const topo = span('topo-1', 'topo-2');
   const detect = span('detect-1', 'detect-2');
-  const l = LINES;
+  const learn = span('learn-2', 'learn-3');
 
   return (
     <>
@@ -38,7 +43,7 @@ export default function KaizenDemo(): React.ReactElement {
           step="System topology"
           title="Edge to cloud, one incident loop"
           services={['Gemma 3', 'Pub/Sub', 'Google ADK', 'Gemini', 'BigQuery', 'Vertex AI Search', 'Firestore']}
-          footage={{ src: 'topology.mp4', sourceWidth: 1920, sourceHeight: 1080, start: 1, end: 52, zoom: [{ t: 0, scale: 1.5, x: 980, y: 560 }] }}
+          footage={{ src: 'topology.mp4', sourceWidth: 1920, sourceHeight: 1080, start: 1, end: 46, zoom: [{ t: 0, scale: 1.5, x: 980, y: 560 }] }}
           captions={captionsFor(['topo-1', 'topo-2'], topo.from)}
         />
         <BrowserShot
@@ -50,17 +55,17 @@ export default function KaizenDemo(): React.ReactElement {
           title="A worn tool on CNC-02"
           services={['Gemma 3 edge', 'Cloud Pub/Sub']}
           footage={{
-            src: 'A-factory.mp4',
+            src: 'C-factory.mp4',
             sourceWidth: 1920,
             sourceHeight: 1080,
-            start: 2,
-            end: 25,
+            start: 3,
+            end: 26,
             zoom: [
-              { t: 0, scale: 1, x: 960, y: 540 },
-              { t: 3.5, scale: 1.6, x: 795, y: 570 },
-              { t: 8, scale: 1.5, x: 915, y: 790 },
-              { t: 12.5, scale: 1.9, x: 1600, y: 860 },
-              { t: 17.5, scale: 1.6, x: 960, y: 345 },
+              { t: 0, scale: 1.4, x: 700, y: 240 },
+              { t: 5, scale: 1.7, x: 800, y: 570 },
+              { t: 9, scale: 1.5, x: 790, y: 830 },
+              { t: 13, scale: 1.8, x: 1425, y: 830 },
+              { t: 17.5, scale: 1.6, x: 950, y: 330 },
             ],
           }}
           captions={captionsFor(['detect-1', 'detect-2'], detect.from)}
@@ -70,31 +75,20 @@ export default function KaizenDemo(): React.ReactElement {
           from={l['diag-1'].from}
           durationInFrames={l['diag-1'].duration}
           url="kaizen-lab-web.web.app"
-          step="2 · Diagnose"
+          step="2 · Diagnose · Quality Inspector"
           title="One clear alert on Plant Ops"
-          services={['Google ADK', 'Firestore', 'Cloud Run']}
+          services={['Gemini', 'Google ADK', 'Firestore']}
           footage={{
             ...WEB,
-            start: 3,
-            end: 14.5,
+            start: 2,
+            end: 17,
             zoom: [
               { t: 0, scale: 1, x: 960, y: 540 },
-              { t: 2.5, scale: 1.7, x: 700, y: 250 },
-              { t: 8.5, scale: 1, x: 960, y: 540 },
+              { t: 2.5, scale: 1.6, x: 700, y: 160 },
+              { t: 7.5, scale: 1.2, x: 1075, y: 480 },
             ],
           }}
           captions={captionsFor(['diag-1'], l['diag-1'].from)}
-        />
-        <BrowserShot
-          name="Inspection"
-          from={l['diag-2'].from}
-          durationInFrames={l['diag-2'].duration}
-          url="kaizen-lab-web.web.app"
-          step="2 · Diagnose · Quality Inspector"
-          title="Defect confirmed from camera frames"
-          services={['Gemini']}
-          footage={{ ...WEB, start: 14.5, end: 21.5, zoom: [{ t: 0, scale: 1.2, x: 1075, y: 480 }] }}
-          captions={captionsFor(['diag-2'], l['diag-2'].from)}
         />
         <BrowserShot
           name="Traceability"
@@ -104,15 +98,7 @@ export default function KaizenDemo(): React.ReactElement {
           step="2 · Diagnose · Traceability"
           title="Traced to CNC-02, tool T07"
           services={['BigQuery']}
-          footage={{
-            ...WEB,
-            start: 22,
-            end: 34,
-            zoom: [
-              { t: 0, scale: 1, x: 960, y: 540 },
-              { t: 1.5, scale: 1.2, x: 1075, y: 470 },
-            ],
-          }}
+          footage={{ ...WEB, start: 18, end: 31, zoom: [{ t: 0, scale: 1.25, x: 1075, y: 420 }] }}
           captions={captionsFor(['diag-3'], l['diag-3'].from)}
         />
         <BrowserShot
@@ -121,15 +107,15 @@ export default function KaizenDemo(): React.ReactElement {
           durationInFrames={l['diag-4'].duration}
           url="kaizen-lab-web.web.app"
           step="2 · Diagnose · Root Cause"
-          title="Root cause found, 85% confident"
+          title="Chipped edge on T07, 95% confident"
           services={['Vertex AI Search', 'Gemini']}
           footage={{
             ...WEB,
-            start: 36,
-            end: 55,
+            start: 32,
+            end: 61,
             zoom: [
               { t: 0, scale: 1.2, x: 1075, y: 620 },
-              { t: 14, scale: 1.7, x: 1450, y: 435 },
+              { t: 12, scale: 1.7, x: 1450, y: 440 },
             ],
           }}
           captions={captionsFor(['diag-4'], l['diag-4'].from)}
@@ -142,11 +128,11 @@ export default function KaizenDemo(): React.ReactElement {
           step="3 · Resolve · technician app"
           title="The job reaches the technician"
           services={['Gemini', 'Firestore']}
-          footage={{ ...MOBILE, start: 50, end: 63 }}
+          footage={{ ...MOBILE, start: 54, end: 66 }}
           captions={captionsFor(['resolve-1'], l['resolve-1'].from)}
           callouts={[
-            { at: 1 * S, title: 'Repair brief · 85% AI sure', body: 'Root cause and suspect tool T07, straight from the agent findings.' },
-            { at: 5 * S, title: 'Work order · Incident Scribe', body: 'Drafted by Gemini from the incident board: equipment, tool station, parts.' },
+            { at: 1 * S, title: 'Repair brief · 95% AI sure', body: 'A chipped edge on tool T07, straight from the agent findings.' },
+            { at: 5 * S, title: 'Work order · Incident Scribe', body: 'Drafted by Gemini from the incident board: tools, parts and a five-step repair plan.' },
           ]}
         />
         <PhoneShot
@@ -157,10 +143,10 @@ export default function KaizenDemo(): React.ReactElement {
           step="3 · Resolve · Copilot"
           title="Guided repair with Gemini"
           services={['Gemini']}
-          footage={{ ...MOBILE, start: 64, end: 82 }}
+          footage={{ ...MOBILE, start: 71, end: 92 }}
           captions={captionsFor(['resolve-2'], l['resolve-2'].from)}
           callouts={[
-            { at: 1 * S, title: '"What is wrong?"', body: 'A real Gemini reply, streamed from the live incident context: CNC-02, tool T07, the vibration evidence.' },
+            { at: 1 * S, title: '"What is wrong?"', body: 'A real Gemini reply, streamed from the live incident context: CNC-02, tool T07, the chipped edge.' },
           ]}
         />
         <PhoneShot
@@ -171,39 +157,49 @@ export default function KaizenDemo(): React.ReactElement {
           step="3 · Resolve · Copilot"
           title="Gemini looks at the removed insert"
           services={['Gemini']}
-          footage={{ ...MOBILE, start: 84, end: 104 }}
+          footage={{ ...MOBILE, start: 92, end: 110 }}
           captions={captionsFor(['resolve-3'], l['resolve-3'].from)}
           callouts={[
-            { at: 1 * S, title: 'Multimodal check', body: '"I see a triangular cutting insert with severe chipping and wear on its top corner."' },
+            { at: 1 * S, title: 'Multimodal check', body: '"I see a triangular insert with a severely chipped and fractured top corner."' },
           ]}
         />
         <PhoneShot
-          name="Repair steps"
+          name="Manual steps"
           from={l['resolve-4'].from}
           durationInFrames={l['resolve-4'].duration}
           url="kaizen-lab-mobile.web.app"
-          step="3 · Resolve · guided steps"
-          title="Five cited steps, then submit"
-          services={['Gemini']}
-          footage={{ ...MOBILE, start: 104, end: 124 }}
+          step="3 · Resolve · OEM manual"
+          title="Every step cites the manual"
+          services={['Vertex AI Search']}
+          footage={{ src: 'F-mobile-book.mp4', sourceWidth: 860, sourceHeight: 1864, start: 0.5, end: 17 }}
           captions={captionsFor(['resolve-4'], l['resolve-4'].from)}
           callouts={[
-            { at: 1 * S, title: 'Every step cites its source', body: 'e.g. LOTO lockout: CNC-02 manual, p.112, sec. 4.2.1. No source, no guess.' },
+            { at: 1 * S, title: 'Tap the manual icon', body: 'Step 1/5 · LOTO lockout & power isolation · CNC-02 manual, p.112, sec. 4.2.1.' },
+            { at: 6 * S, title: 'Target and check per step', body: 'Each card says what "done" means and how it is checked, so nothing is guessed.' },
           ]}
         />
         <PhoneShot
+          name="Submit"
+          from={l['resolve-5'].from}
+          durationInFrames={l['resolve-5'].duration}
+          url="kaizen-lab-mobile.web.app"
+          step="3 · Resolve · submit"
+          title="All five steps done"
+          services={['Firestore']}
+          footage={{ ...MOBILE_CLOSE, start: 12, end: 25 }}
+          captions={captionsFor(['resolve-5'], l['resolve-5'].from)}
+          callouts={[{ at: 1 * S, title: 'Repair submitted', body: 'A handover note goes to the shift leader; the inline camera starts checking parts.' }]}
+        />
+        <BrowserShot
           name="Streak"
           from={l['verify-1'].from}
           durationInFrames={l['verify-1'].duration}
-          url="kaizen-lab-mobile.web.app"
+          url="kaizen-lab-web.web.app"
           step="4 · Verify"
           title="The product proves the fix"
-          services={['Firestore']}
-          footage={{ ...MOBILE, start: 180, end: 196 }}
+          services={['Gemini', 'Firestore']}
+          footage={{ ...WEB_CLOSE, start: 18, end: 36, zoom: [{ t: 0, scale: 1.3, x: 1250, y: 480 }] }}
           captions={captionsFor(['verify-1'], l['verify-1'].from)}
-          callouts={[
-            { at: 1 * S, title: 'Optical streak gate', body: '50 defect-free parts in a row close the incident. One bad part resets the count.' },
-          ]}
         />
         <BrowserShot
           name="Sign-off"
@@ -213,15 +209,43 @@ export default function KaizenDemo(): React.ReactElement {
           step="4 · Sign off"
           title="8D report, approved by a human"
           services={['Gemini', 'Firestore']}
-          footage={{ src: 'B-web-approve.mp4', sourceWidth: 1920, sourceHeight: 1080, start: 3, end: 25 }}
+          footage={{ ...WEB_CLOSE, start: 36, end: 53 }}
           captions={captionsFor(['verify-2'], l['verify-2'].from)}
+        />
+        <LearnScene
+          name="Documents"
+          from={l['learn-1'].from}
+          durationInFrames={l['learn-1'].duration}
+          incidentId="INC-1028C4"
+          captions={captionsFor(['learn-1'], l['learn-1'].from)}
+        />
+        <BrowserShot
+          name="Knowledge"
+          from={learn.from}
+          durationInFrames={learn.duration}
+          url="kaizen-lab-web.web.app"
+          step="5 · Learn · knowledge loop"
+          title="Knowledge Base and SOP Change Log"
+          services={['Vertex AI Search', 'Gemini', 'Cloud Storage']}
+          footage={{
+            src: 'E-web-knowledge.mp4',
+            sourceWidth: 1920,
+            sourceHeight: 1080,
+            start: 3.5,
+            end: 39,
+            zoom: [
+              { t: 0, scale: 1.2, x: 1075, y: 640 },
+              { t: 7, scale: 1.2, x: 1075, y: 460 },
+              { t: 12, scale: 1, x: 960, y: 540 },
+            ],
+          }}
+          captions={captionsFor(['learn-2', 'learn-3'], learn.from)}
         />
         <ImpactScene
           name="Impact"
           from={l['close-1'].from}
           durationInFrames={l['close-1'].duration}
-          caption={l['close-1'].text}
-          captionFrom={l['close-1'].speechAt}
+          captions={captionsFor(['close-1'], l['close-1'].from)}
         />
         <EndScene
           name="End"
@@ -231,13 +255,7 @@ export default function KaizenDemo(): React.ReactElement {
           captionFrom={l['close-2'].speechAt}
         />
       </Track>
-      <Track name="Voiceover">
-        {Object.values(LINES).map((line) => (
-          <Sequence key={line.id} name={line.id} from={line.from + line.speechAt} durationInFrames={line.speech + 6}>
-            <Audio src={staticFile(`voiceover/${line.id}.mp3`)} />
-          </Sequence>
-        ))}
-      </Track>
+      <Voiceover lines={Object.values(l)} />
     </>
   );
 }

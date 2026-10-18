@@ -65,6 +65,8 @@ from backend.core.models import (
     SimulationStatusResponse,
     VisualEvidencePayload,
 )
+from backend.tools.document_export import schedule_documents_export
+from backend.tools.learning_writeback import schedule_learning_writeback
 
 logger = logging.getLogger(__name__)
 
@@ -431,11 +433,22 @@ class Orchestrator:
         )
 
     def approve(self, approver: str | None = None) -> IncidentState | None:
-        """Records shift-leader approval; only a verified-closed, not-yet-approved incident qualifies."""
+        """Records shift-leader approval; only a learning-complete, not-yet-approved incident qualifies."""
         state = blackboard.get_state()
-        if state.status != "closed" or state.approved:
+        if state.status != "pending_approval" or state.approved:
             return None
-        return blackboard.update_status("closed", approved=True)
+        approved_state = blackboard.update_status(
+            "closed",
+            approved=True,
+            approved_by=approver,
+            approved_at=datetime.now(timezone.utc).isoformat(),
+        )
+        # #333: export the approved documents (Markdown to GCS) off the approval path.
+        schedule_documents_export(approved_state)
+        # #334: write the learned knowledge entry back into RAG (GCS import or
+        # local BM25 reindex) off the approval path.
+        schedule_learning_writeback(approved_state)
+        return approved_state
 
     def add_handover_note(self, author: str, note: str) -> HandoverNote:
         """Dispatches a technician handover note addition through the workflow node."""

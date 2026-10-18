@@ -106,7 +106,7 @@ def test_malformed_root_cause_falls_back_to_scripted_draft_and_closes(
     monkeypatch.setattr(settings, "demo_scripted", True)
     state = _run(BrokenLlm(broken={ROOT_CAUSE: -1}))
 
-    assert state.status == "closed"
+    assert state.status == "pending_approval"
     assert [f.agent_id for f in state.findings] == EXPECTED_AGENT_IDS
     rca = _finding(state, "RCA")
     assert rca.source == "fallback"
@@ -122,7 +122,7 @@ def test_every_agent_falls_back_and_the_scripted_cnc_flow_closes(monkeypatch: py
     monkeypatch.setattr(settings, "demo_scripted", True)
     state = _run(BrokenLlm(broken={marker: -1 for marker in ALL_AGENT_PREFIXES}))
 
-    assert state.status == "closed"
+    assert state.status == "pending_approval"
     assert [f.agent_id for f in state.findings] == EXPECTED_AGENT_IDS
     scripted = [f for f in state.findings if f.phase != VERIFICATION_PHASE]
     assert scripted and all(f.source == "fallback" for f in scripted)
@@ -136,7 +136,7 @@ def test_every_agent_falls_back_in_the_im_scenario(monkeypatch: pytest.MonkeyPat
     )
     state = _run(BrokenLlm(broken={marker: -1 for marker in ALL_AGENT_PREFIXES}), request)
 
-    assert state.status == "closed"
+    assert state.status == "pending_approval"
     assert "Dryer-03" in _finding(state, "RCA").finding
     assert state.documents["work_order"].startswith("WO-2026-1005")
 
@@ -150,7 +150,7 @@ def test_field_diagnostic_fallback_passes_the_secondary_convergence_gate(
         DefectInjectionRequest(mode="fast", require_evidence=True),
     )
 
-    assert state.status == "closed"
+    assert state.status == "pending_approval"
     probe = _finding(state, "COPILOT", "Phase B - Field Evidence")
     assert probe.source == "fallback"
     assert "VB > 0.3 mm" in probe.evidence
@@ -165,7 +165,7 @@ def test_transient_malformed_reply_is_retried_without_fallback(
     llm = BrokenLlm(broken={PROCESS_ANALYST: failures})
     state = _run(llm)
 
-    assert state.status == "closed"
+    assert state.status == "pending_approval"
     assert _finding(state, "PA").source == "gemini"
     assert _finding(state, "PA").finding == "fake finding"
 
@@ -209,7 +209,7 @@ def test_rate_limit_falls_back_when_scripted(monkeypatch: pytest.MonkeyPatch):
     )
     state = _run(FakeLlm(fail_on=PROCESS_ANALYST, fail_with=err))
 
-    assert state.status == "closed"
+    assert state.status == "pending_approval"
     assert _finding(state, "PA").source == "fallback"
     assert "vibration" in _finding(state, "PA").finding
 
@@ -246,6 +246,6 @@ def test_provider_labels_successful_findings(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(settings, "ai_provider", "mock")
     state = _run(FakeLlm())
 
-    assert state.status == "closed"
+    assert state.status == "pending_approval"
     sources = {f.agent_id: f.source for f in state.findings if f.phase != VERIFICATION_PHASE}
     assert set(sources.values()) == {"mock"}

@@ -29,7 +29,7 @@ export default function AnomalyBanner({ incident, row, onOpenIncident, onDismiss
   const tool = incident.suspect_tool ? ` on Tool ${incident.suspect_tool}` : '';
   const breach = incident.defect_rate > incident.spc_ucl;
   const action = latestAction(incident);
-  const signoff = incident.status === 'closed';
+  const signoff = incident.status === 'closed' || incident.status === 'pending_approval';
 
   return (
     <section className="glass tone-red anomaly-banner" aria-live="polite">

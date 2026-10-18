@@ -26,6 +26,7 @@ from backend.core.models import (
     DefectInjectionRequest,
     FindingDraft,
     HandoverNote,
+    ImpactMetrics,
     IncidentState,
     QualityInspectionReport,
     RootCauseFindingDraft,
@@ -414,7 +415,27 @@ async def record_learning(node_input: FindingDraft, ctx: Context | None = None) 
     _record(agent_continuous_learning, node_input, ctx=ctx)
     state = blackboard.get_state()
     impact = agent_continuous_learning.calculate_impact_metrics(state)
-    blackboard.update_status("closed", impact=impact)
+    # Learning complete: the incident now awaits shift-leader sign-off before it is closed.
+    blackboard.update_status("pending_approval", impact=impact)
+    _persist_sustainability_impact(blackboard.get_state(), impact)
+
+
+def _persist_sustainability_impact(state: IncidentState, impact: ImpactMetrics) -> None:
+    """Books one impact row into BigQuery ``sustainability_impact`` (best-effort, issue #335).
+
+    Only when a BigQuery client is available (live project or emulator); any
+    failure logs a warning and never fails the incident — the impact is
+    already recorded on the Blackboard.
+    """
+    from backend.tools.bigquery_tool import stream_sustainability_impact
+
+    try:
+        persisted = stream_sustainability_impact(state.incident_id, state.closed_at, impact)
+    except Exception as exc:  # noqa: BLE001 — warehouse outage must not fail the incident
+        logger.warning("sustainability_impact persistence skipped for %s: %s", state.incident_id, exc)
+        return
+    if persisted:
+        logger.info("sustainability_impact row persisted for %s", state.incident_id)
 
 
 async def escalate_incident(node_input: str) -> None:

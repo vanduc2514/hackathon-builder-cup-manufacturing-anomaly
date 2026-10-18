@@ -12,6 +12,7 @@ export type IncidentStatus =
   | 'awaiting_evidence'
   | 'repairing'
   | 'verifying'
+  | 'pending_approval'
   | 'closed'
   | 'dismissed'
   | 'escalated'
@@ -161,9 +162,13 @@ export interface IncidentState {
   verification_target: number;
   repair_done?: boolean;
   approved: boolean;
+  approved_by?: string | null;
+  approved_at?: string | null;
   findings: AgentFinding[];
   impact: ImpactMetrics | null;
   documents: Record<string, unknown>;
+  documents_exported?: boolean;
+  documents_export_error?: string | null;
   latest_telemetry?: MachineTelemetryPayload | null;
   telemetry_alerts?: TelemetryAlert[];
   diagnostic_request?: string | null;
@@ -196,6 +201,22 @@ export interface IncidentSummary {
   closed_at?: string | null;
   updated_at?: string | null;
   impact?: ImpactMetrics | null;
+}
+
+export interface IncidentDocumentLink {
+  name: string;
+  title: string;
+  uri: string;
+}
+
+export interface IncidentDocumentsResponse {
+  incident_id: string;
+  exported: boolean;
+  export_error: string | null;
+  destination: 'gcs' | 'local';
+  bucket: string | null;
+  console_url: string | null;
+  documents: IncidentDocumentLink[];
 }
 
 export interface TelemetryPoint {
@@ -471,6 +492,8 @@ export interface EsgLedgerResponse {
   totals: EsgLedgerTotals;
   entries: EsgLedgerEntryResponse[];
   factory_type: string;
+  /** Origin of impact inputs: benchmark estimates or measured production data. */
+  basis: 'benchmark' | 'measured';
 }
 
 export type DashboardTab = 'overview' | 'incident-detail' | 'impact' | 'walkthroughs' | 'sops';

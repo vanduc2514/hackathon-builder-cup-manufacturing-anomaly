@@ -128,6 +128,7 @@ export const STEP_OF_STATUS: Record<IncidentStatus, number> = {
   escalated: 3,
   repairing: 4,
   verifying: 4,
+  pending_approval: 5,
   closed: 5,
   dismissed: 5,
 };
@@ -250,7 +251,7 @@ export const PHASES: AndonPhaseDetails[] = [
     activities: ['Continuous Learning', 'Impact Calculator', 'Shift-leader approval'],
     inputs: ['Closed incident board', 'Emission benchmarks'],
     outputs: ['8D report', 'Scrap / CO₂ avoided', 'Sign-off recorded'],
-    statuses: ['closed'],
+    statuses: ['pending_approval', 'closed'],
   },
 ];
 
@@ -283,6 +284,7 @@ export const STATUS_LABEL: Record<IncidentStatus, string> = {
   awaiting_evidence: 'Awaiting Evidence',
   repairing: 'Repairing',
   verifying: 'Verifying',
+  pending_approval: 'Pending Approval',
   closed: 'Closed',
   dismissed: 'Dismissed',
   escalated: 'Escalated',

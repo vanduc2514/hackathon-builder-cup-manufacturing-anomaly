@@ -91,6 +91,7 @@ function statusNotification(incident: IncidentState): NewNotification | null {
         workId,
       };
     case 'closed':
+    case 'pending_approval':
       return incident.approved
         ? null
         : {

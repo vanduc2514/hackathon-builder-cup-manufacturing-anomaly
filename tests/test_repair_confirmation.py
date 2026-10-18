@@ -55,7 +55,7 @@ async def test_wait_confirm_verify_closed(monkeypatch: pytest.MonkeyPatch):
     assert state.verification_count == 0
 
     orchestrator.confirm_repair()
-    await _until(lambda: blackboard.get_state().status == "closed")
+    await _until(lambda: blackboard.get_state().status == "pending_approval")
     final = blackboard.get_state()
     assert final.repair_done is True
     assert final.verification_count >= final.verification_target

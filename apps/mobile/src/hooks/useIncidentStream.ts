@@ -69,7 +69,7 @@ export function useIncidentStream(): IncidentStream {
         try {
           const updated = JSON.parse(event.data) as IncidentState;
           setIncident(updated);
-          if (updated.status === 'closed' || updated.status === 'normal') {
+          if (['closed', 'pending_approval', 'normal'].includes(updated.status)) {
             void refreshHistory();
           }
         } catch (err) {

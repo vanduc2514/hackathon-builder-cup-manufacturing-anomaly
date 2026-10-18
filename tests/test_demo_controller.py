@@ -189,7 +189,7 @@ def test_e2e_fast_forward_verifies_streak_and_closure() -> None:
             asyncio.run(Orchestrator(step_delay=0).run_incident(req))
 
         state = blackboard.get_state()
-        assert state.status == "closed"
+        assert state.status == "pending_approval"
         assert state.verification_target == 50
         assert state.verification_count >= state.verification_target
         assert len(state.findings) >= 7

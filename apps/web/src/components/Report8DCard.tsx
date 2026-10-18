@@ -22,7 +22,8 @@ function build8D(incident: IncidentState) {
   const machine = incident.suspect_machine;
   const tool = incident.suspect_tool;
   const stage = STAGE_ORDER.indexOf(incident.status);
-  const done = (minStage: string) => incident.status === 'closed' || (stage >= 0 && stage >= STAGE_ORDER.indexOf(minStage));
+  const signoffReady = incident.status === 'closed' || incident.status === 'pending_approval';
+  const done = (minStage: string) => signoffReady || (stage >= 0 && stage >= STAGE_ORDER.indexOf(minStage));
   return [
     { code: 'D1', title: 'Team', desc: 'Kaizen agent team + Marcus Vance (TECH-902), Devon Vance (Lead Ops)', done: done('detecting') },
     { code: 'D2', title: 'Problem', desc: `${friendlyDefectName(incident.defect_type)} spike ${(incident.defect_rate * 100).toFixed(2)}% > UCL ${(incident.spc_ucl * 100).toFixed(1)}%`, done: done('detecting') },
@@ -39,7 +40,7 @@ export default function Report8DCard({ incident, isLive, onNotify }: Report8DCar
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [showAudit, setShowAudit] = useState<boolean>(false);
   const steps = build8D(incident);
-  const closed = incident.status === 'closed';
+  const closed = incident.status === 'closed' || incident.status === 'pending_approval';
   const approved = incident.approved;
   const canApprove = isLive && closed && !approved;
   const findings = resolveFindings(isLive ? incident : null);
@@ -140,7 +141,10 @@ export default function Report8DCard({ incident, isLive, onNotify }: Report8DCar
               LINE RELEASED &amp; SIGNED
             </div>
             <div style={{ fontSize: '0.74rem', color: 'var(--text)', marginTop: 3 }}>
-              Approved by <strong>Devon Vance</strong> (Lead Plant Ops) · {formatIncidentDate(incident.updated_at)} · {formatClock(incident.updated_at)} UTC
+              Approved by <strong>{incident.approved_by ?? 'Shift Leader'}</strong>
+              {incident.approved_at ? (
+                <> · {formatIncidentDate(incident.approved_at)} · {formatClock(incident.approved_at)} UTC</>
+              ) : null}
             </div>
           </>
         ) : (

@@ -112,7 +112,7 @@ def _ids(state: IncidentState) -> list[str]:
 
 def test_confident_root_cause_closes_on_verified_product_evidence():
     state = _run(FakeLlm(rca_confidences=[0.87]))
-    assert state.status == "closed"
+    assert state.status == "pending_approval"
     assert state.verification_count >= state.verification_target
     assert state.impact is not None
     assert state.suspect_machine == "CNC-02"
@@ -122,7 +122,7 @@ def test_confident_root_cause_closes_on_verified_product_evidence():
 
 def test_low_confidence_gathers_field_evidence_then_reruns_root_cause():
     state = _run(FakeLlm(rca_confidences=[0.5, 0.9]))
-    assert state.status == "closed"
+    assert state.status == "pending_approval"
     assert _ids(state)[:6] == ["QA", "TRA", "PA", "RCA", "COPILOT", "RCA"]
     assert state.findings[4].phase == "Phase B - Field Evidence"
 
@@ -173,8 +173,13 @@ def test_approval_accepted_only_once_after_verified_close():
     LlmAgent.set_default_model(FakeLlm(rca_confidences=[0.87]))
     asyncio.run(orch.run_incident(DefectInjectionRequest(mode="fast")))
     assert blackboard.get_state().approved is False
+    assert blackboard.get_state().status == "pending_approval"
 
-    assert orch.approve().approved is True
+    approved_state = orch.approve(approver="shift-lead-01")
+    assert approved_state.approved is True
+    assert approved_state.status == "closed"
+    assert approved_state.approved_by == "shift-lead-01"
+    assert approved_state.approved_at is not None
     assert orch.approve() is None
 
 
@@ -282,7 +287,7 @@ def test_tool_happy_agent_is_cut_off_after_budget_and_incident_closes():
     ) as query:
         state = _run(ToolLoopLlm())
     assert query.call_count == MAX_TOOL_CALLS
-    assert state.status == "closed"
+    assert state.status == "pending_approval"
     assert "PA" in _ids(state)
 
 
@@ -306,7 +311,7 @@ def test_rejected_tool_arguments_go_back_to_the_model_and_incident_closes():
     ) as query:
         state = _run(ToolLoopLlm())
     assert query.call_count == MAX_TOOL_CALLS
-    assert state.status == "closed"
+    assert state.status == "pending_approval"
 
 
 def test_tool_outage_still_fails_the_incident():

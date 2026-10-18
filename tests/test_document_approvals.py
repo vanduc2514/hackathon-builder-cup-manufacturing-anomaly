@@ -16,6 +16,7 @@ from backend.api.main import app
 from backend.core.blackboard import blackboard
 from backend.core.models import (
     EightDReport,
+    ImpactMetrics,
     SOPRevisionProposal,
     WorkOrder,
 )
@@ -30,34 +31,45 @@ def clean_test_environment() -> Generator[None, None, None]:
 
 
 def test_backend_shift_leader_approval_workflow_invariant_gatekeeping() -> None:
-    """Tests POST /api/incidents/approve gatekeeping: only closed incidents can be approved."""
+    """Tests POST /api/incidents/approve gatekeeping: only learning-complete incidents can be approved."""
     client = TestClient(app)
 
     # 1. When status is 'normal' or 'detecting', approval must fail with 409 Conflict
     blackboard.update_status("detecting")
     resp_premature = client.post("/api/incidents/approve")
     assert resp_premature.status_code == 409
-    assert "No closed incident awaiting approval" in resp_premature.json()["detail"]
+    assert "No incident awaiting approval" in resp_premature.json()["detail"]
 
-    # 2. Transition incident to closed (simulating 50/50 streak completion)
+    # 2. Approval before learning finishes (status 'closed' after close_incident) is rejected
     blackboard.update_status("closed")
-    snap = blackboard.get_state()
-    assert snap.status == "closed"
-    assert not snap.approved
+    resp_pre_learning = client.post("/api/incidents/approve")
+    assert resp_pre_learning.status_code == 409
+    assert not blackboard.get_state().approved
 
-    # 3. Approving closed incident succeeds
+    # 3. Learning completes: the incident moves to 'pending_approval'
+    blackboard.update_status("pending_approval", impact=ImpactMetrics())
+    snap = blackboard.get_state()
+    assert snap.status == "pending_approval"
+    assert not snap.approved
+    assert snap.approved_by is None
+
+    # 4. Approving the learning-complete incident succeeds and records the signed-in user
     resp_approve = client.post("/api/incidents/approve")
     assert resp_approve.status_code == 200
     approved_data = resp_approve.json()
-    assert "Incident approved by Shift Leader" in approved_data["message"]
+    assert approved_data["message"] == "Incident approved by test"
     assert approved_data["state"]["approved"] is True
     assert approved_data["state"]["status"] == "closed"
+    assert approved_data["state"]["approved_by"] == "test"
+    assert approved_data["state"]["approved_at"] is not None
 
-    # Verify blackboard state is now approved
+    # Verify blackboard state is now approved with the approver identity
     updated_snap = blackboard.get_state()
     assert updated_snap.approved is True
+    assert updated_snap.approved_by == "test"
+    assert updated_snap.approved_at is not None
 
-    # 4. Subsequent approval request returns 409 (already approved)
+    # 5. Subsequent approval request returns 409 (already approved)
     resp_repeat = client.post("/api/incidents/approve")
     assert resp_repeat.status_code == 409
 

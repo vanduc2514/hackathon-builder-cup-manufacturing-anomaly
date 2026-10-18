@@ -128,7 +128,7 @@ async def test_decoupled_two_window_full_loop_scenario_1():
             mock_msg.ack.assert_called_once()
             mock_msg.nack.assert_not_called()
 
-            # 4. Window 2: Monitor passive incident progression to 'closed'
+            # 4. Window 2: Monitor passive incident progression to 'pending_approval'
             timeout = 10.0
             start_time = asyncio.get_event_loop().time()
             final_state: dict[str, Any] | None = None
@@ -137,15 +137,15 @@ async def test_decoupled_two_window_full_loop_scenario_1():
                 resp_poll = await backend_client.get("/api/incidents/current")
                 assert resp_poll.status_code == 200
                 data = resp_poll.json()
-                if data["status"] == "closed":
+                if data["status"] == "pending_approval":
                     final_state = data
                     break
                 await asyncio.sleep(0.1)
 
             assert final_state is not None, (
-                "Decoupled incident workflow did not close within timeout"
+                "Decoupled incident workflow did not reach pending approval within timeout"
             )
-            assert final_state["status"] == "closed"
+            assert final_state["status"] == "pending_approval"
             assert final_state["verification_count"] >= 50
             assert final_state["repair_done"] is True
             assert "WO-2026-1004" in final_state.get("documents", {}).get("work_order", "")
@@ -160,6 +160,8 @@ async def test_decoupled_two_window_full_loop_scenario_1():
             approved_data = resp_approve.json()["state"]
             assert approved_data["status"] == "closed"
             assert approved_data["approved"] is True
+            assert approved_data["approved_by"] == "test"
+            assert approved_data["approved_at"] is not None
 
             # 6. Reset both windows back to nominal baseline
             resp_fact_reset = await factory_client.post("/api/factory/reset")
@@ -230,13 +232,13 @@ async def test_decoupled_two_window_full_loop_scenario_2():
                 resp_poll = await backend_client.get("/api/incidents/current")
                 assert resp_poll.status_code == 200
                 data = resp_poll.json()
-                if data["status"] == "closed":
+                if data["status"] == "pending_approval":
                     final_state = data
                     break
                 await asyncio.sleep(0.1)
 
             assert final_state is not None
-            assert final_state["status"] == "closed"
+            assert final_state["status"] == "pending_approval"
             assert final_state["verification_count"] >= 50
             assert "WO-2026-1005" in final_state.get("documents", {}).get("work_order", "")
 

@@ -283,8 +283,8 @@ async def test_orchestrator_workflow_with_bound_tools():
         )
         final_state = await orchestrator.run_incident(request)
 
-        # Confirm successful closed-loop completion
-        assert final_state.status == "closed"
+        # Confirm successful closed-loop completion (awaiting shift-leader sign-off)
+        assert final_state.status == "pending_approval"
         assert len(final_state.findings) >= 5
 
         # Verify findings from all agents are recorded on the Blackboard

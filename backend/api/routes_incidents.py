@@ -23,12 +23,14 @@ from backend.core.models import (
     AuthUser,
     HandoverNote,
     HandoverNoteRequest,
+    IncidentDocumentsResponse,
     IncidentState,
     IncidentSummary,
     PresetEvidenceRequest,
     VisualEvidencePayload,
     VisualEvidencePreset,
 )
+from backend.tools.document_export import documents_response
 from backend.tools.gemini_vision_tool import (
     SCRIPTED_CONFIDENCE,
     analyze_visual_evidence_frame,
@@ -140,12 +142,21 @@ async def incident_events(request: Request):
 
 
 @router.post("/approve")
-async def approve_incident():
-    """Shift-leader approval input, handed to the Orchestrator (closed incidents only)."""
-    state = orchestrator.approve()
+async def approve_incident(current_user: AuthUser = Depends(require_user)) -> Dict[str, Any]:
+    """Shift-leader approval input, handed to the Orchestrator (learning-complete incidents only)."""
+    approver = current_user.username
+    state = orchestrator.approve(approver=approver)
     if state is None:
-        raise HTTPException(status_code=409, detail="No closed incident awaiting approval")
-    return {"message": "Incident approved by Shift Leader", "state": state}
+        raise HTTPException(status_code=409, detail="No incident awaiting approval")
+    return {
+        "message": f"Incident approved by {approver}",
+        "state": state,
+    }
+
+@router.get("/documents", response_model=IncidentDocumentsResponse)
+async def get_incident_documents() -> IncidentDocumentsResponse:
+    """Returns the exported Markdown documents (URIs + console link) for the current incident (#333)."""
+    return documents_response(blackboard.get_state())
 
 
 @router.post("/repair-done")

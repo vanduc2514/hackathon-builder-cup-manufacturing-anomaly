@@ -12,6 +12,7 @@ export type IncidentStatus =
   | 'awaiting_evidence'
   | 'repairing'
   | 'verifying'
+  | 'pending_approval'
   | 'closed'
   | 'dismissed'
   | 'escalated'

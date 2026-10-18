@@ -131,7 +131,7 @@ function toReason(f?: AgentFinding): AiReason | undefined {
     finding: f.finding,
     evidence: f.evidence,
     citation: f.citation,
-    timestamp: f.timestamp,
+    timestamp: formatTime(f.timestamp),
     fiveWhys: f.five_whys,
   };
 }

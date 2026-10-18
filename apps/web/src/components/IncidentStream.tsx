@@ -1,7 +1,7 @@
 // IncidentStream: reverse-chronological multi-agent findings feed with confidence, evidence and SOP citations.
 import React, { useState } from 'react';
 import type { AgentFinding } from '../types';
-import { agentIcon, formatClock } from '../lib/incident';
+import { agentIcon, formatLocalClock } from '../lib/incident';
 
 interface IncidentStreamProps {
   findings: AgentFinding[];
@@ -93,7 +93,7 @@ export default function IncidentStream({ findings, maxHeight = 560 }: IncidentSt
                         </span>
                       </span>
                       <span className="mono muted" style={{ fontSize: '0.66rem' }}>
-                        {formatClock(f.timestamp)}
+                        {formatLocalClock(f.timestamp, true)}
                       </span>
                     </span>
                     <span style={{ fontSize: '0.78rem', color: 'var(--ink-2)', lineHeight: 1.45 }}>{f.finding}</span>

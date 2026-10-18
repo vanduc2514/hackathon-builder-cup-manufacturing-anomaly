@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from fastapi import APIRouter, Query
@@ -37,4 +38,6 @@ async def get_line_oee(
     sensor telemetry spindle speed, and active incident repair downtime.
     """
     logger.info("Computing real OEE metrics for line=%s, window=%d min", line_id, window_minutes)
-    return calculate_production_stats(line_id=line_id, window_minutes=window_minutes)
+    return await asyncio.to_thread(
+        calculate_production_stats, line_id=line_id, window_minutes=window_minutes
+    )

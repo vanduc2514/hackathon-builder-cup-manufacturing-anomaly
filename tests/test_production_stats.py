@@ -276,6 +276,39 @@ def test_get_inspection_window_with_source_bigquery_parameterized():
         assert param_names["machine_id"].type_ == "STRING"
 
 
+def test_fetch_telemetry_from_bigquery_parameterized_and_bounded():
+    """User input reaches BigQuery only as parameters; no start_time means a bounded window."""
+    from unittest.mock import MagicMock, patch
+
+    from backend.tools.production_stats import (
+        TELEMETRY_DEFAULT_WINDOW_HOURS,
+        fetch_telemetry_from_bigquery,
+    )
+
+    mock_client = MagicMock()
+    mock_client.project = "test-project"
+    hostile = "x' OR '1'='1"
+
+    with (
+        patch("backend.tools.production_stats.get_bigquery_client", return_value=mock_client),
+        patch("backend.tools.bigquery_tool._run_query", return_value=[]) as mock_run_query,
+    ):
+        assert fetch_telemetry_from_bigquery(machine_id=hostile) is None
+        sql, params = mock_run_query.call_args[0][1:3]
+        by_name = {p.name: p for p in params}
+        assert hostile not in sql
+        assert by_name["machine_id"].value == hostile
+        assert "@window_hours" in sql
+        assert by_name["window_hours"].value == TELEMETRY_DEFAULT_WINDOW_HOURS == 6
+
+        fetch_telemetry_from_bigquery(start_time="2026-10-05T09:00:00Z' --")
+        sql, params = mock_run_query.call_args[0][1:3]
+        by_name = {p.name: p for p in params}
+        assert "--" not in sql
+        assert "@window_hours" not in sql
+        assert set(by_name) == {"start_time"}
+
+
 def test_get_inspection_window_wrapper():
     records = get_inspection_window(limit=5)
     assert isinstance(records, list)

@@ -107,7 +107,7 @@ resource "google_cloud_run_v2_service" "backend" {
         initial_delay_seconds = 10
         period_seconds        = 15
         failure_threshold     = 5
-        timeout_seconds       = 2
+        timeout_seconds       = 5
       }
 
       dynamic "env" {

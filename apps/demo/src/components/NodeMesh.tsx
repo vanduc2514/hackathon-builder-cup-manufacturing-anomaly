@@ -76,9 +76,13 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
     if (!group.current) return;
     const active = isNodeActive(node.id, scenarioNow());
     const isLit = hovered || active;
-    const targetY = hovered ? HOVER_LIFT : (active ? 0.2 : 0);
+    const targetY = active ? 0.55 : (hovered ? HOVER_LIFT : 0);
+    const targetScale = active ? 1.15 : (hovered ? 1.05 : 1.0);
     const y = group.current.position.y;
     group.current.position.y = y + (targetY - y) * 0.15;
+    const s = group.current.scale.x;
+    const nextScale = s + (targetScale - s) * 0.15;
+    group.current.scale.set(nextScale, nextScale, nextScale);
     if (ring.current) {
       const m = ring.current.material as MeshStandardMaterial;
       const targetOpacity = isLit ? 0.95 : (isRobot ? 0.15 : 0.0);

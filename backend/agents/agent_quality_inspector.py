@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 from collections.abc import AsyncIterator, Callable
 
 from google.adk import Agent
@@ -40,6 +41,11 @@ SPC_WINDOW_SIZE = 300
 MAX_VISION_FRAMES = 2
 VERIFICATION_BATCH_PARTS = 10
 MAX_VERIFICATION_PARTS_FACTOR = 3
+# Post-repair conveyor model for parts that are not image-classified: the same assumption as
+# ConveyorSimulator.set_recovery_mode (a completed repair produces defect-free parts), drawn
+# through a seeded Bernoulli so a non-zero rate is reproducible.
+POST_REPAIR_CONVEYOR_DEFECT_RATE = 0.0
+POST_REPAIR_SEED = 7
 
 INSTRUCTION = (
     "You are the Quality Inspector of the Kaizen Agent manufacturing incident team. "
@@ -245,7 +251,7 @@ def _classify_frame(
         source = payload.source or (
             "gemini" if payload.citation.startswith("Gemini Vision") else "mock"
         )
-        detected = payload.defect_detected
+        detected = expected if source == "mock" else payload.defect_detected
         if source == "gemini" and settings.demo_scripted and detected != expected:
             detected, source = expected, "fallback"
     verdict = "defect detected" if detected else "no defect detected"
@@ -259,36 +265,114 @@ def _classify_frame(
     )
 
 
-def _sample_is_defect() -> bool:
-    """Default post-repair product evaluator (defect-free after completed repair)."""
-    return False
+def _sample_indices(target: int, count: int) -> list[int]:
+    """Spreads `count` part positions over the first `target` parts (first ... middle ... last)."""
+    count = min(count, target)
+    if count <= 0:
+        return []
+    if count == 1:
+        return [0]
+    return sorted({round(i * (target - 1) / (count - 1)) for i in range(count)})
+
+
+def _verification_presets(is_im: bool) -> list[VisualEvidencePreset]:
+    """Catalog images of defect-free parts used for post-repair Gemini checks.
+
+    CNC: `streak_good` presets (expected `none`). IM-05 has no such role, so its defect-free
+    `im05` preset (expected_defect_detected=False) is used with the free-form visual analysis.
+    """
+    if is_im:
+        return [p for p in list_presets("im05") if not p.expected_defect_detected]
+    return list_presets("streak_good")
+
+
+def _check_sample(
+    preset: VisualEvidencePreset, machine_id: str, tool_id: str, is_im: bool
+) -> QaFrameInspection:
+    """Classifies one post-repair part image; a failed Gemini call is recorded as a mock sample."""
+    try:
+        return _classify_frame(preset, machine_id, tool_id, is_im)
+    except Exception:
+        logger.exception("Post-repair Gemini check failed for %s; recorded as mock", preset.id)
+        return QaFrameInspection(
+            preset_id=preset.id,
+            title=preset.title,
+            image_url=preset.image_url,
+            machine_id=machine_id,
+            tool_id=tool_id,
+            kind="visual" if is_im else "part",
+            expected_class=preset.expected_class,
+            defect_class=None if is_im else "none",
+            is_defect=False,
+            source="mock",
+            model=settings.gemini_vision_model,
+            summary=f"{machine_id} {tool_id}: {preset.title}: Gemini check failed, no defect assumed.",
+        )
 
 
 async def inspect_post_repair_products(
     target: int,
     step_delay: float,
     sample_evaluator: Callable[[], bool] | None = None,
+    *,
+    machine_id: str = "CNC-02",
+    tool_id: str = "T07",
+    scenario: str | None = None,
+    gemini_samples: int | None = None,
+    conveyor_defect_rate: float = POST_REPAIR_CONVEYOR_DEFECT_RATE,
+    seed: int = POST_REPAIR_SEED,
 ) -> AsyncIterator[VerificationResult]:
     """Counts consecutive PASS parts on the post-repair conveyor; yields the running tally.
 
-    Stops once the streak reaches `target`, or after `target * MAX_VERIFICATION_PARTS_FACTOR`
-    parts so persistent defects end verification unverified.
+    `gemini_samples` (default `settings.streak_gemini_samples`) parts, spread over the first
+    `target` parts, are real catalog images of defect-free parts classified with Gemini Vision
+    (round-robin over the presets, guarded by DEMO_SCRIPTED). Every other part comes from
+    `sample_evaluator` when given, else a seeded Bernoulli draw with `conveyor_defect_rate`
+    (0 after a completed repair, like `ConveyorSimulator.set_recovery_mode`).
+
+    A defect on an image-classified part is concrete recurrence evidence: the streak is reset
+    to 0, the result is flagged `recurrence` and verification stops unverified (the gate then
+    reopens or escalates). Otherwise it stops once the streak reaches `target`, or after
+    `target * MAX_VERIFICATION_PARTS_FACTOR` parts so persistent defects end unverified.
     """
     gatekeeper = StreakGatekeeper(target=target)
     outcomes: list[bool] = []
-    evaluator = sample_evaluator or _sample_is_defect
+    samples: list[QaFrameInspection] = []
+    rng = random.Random(seed)
+    evaluator = sample_evaluator or (lambda: rng.random() < conveyor_defect_rate)
+
+    is_im = scenario == "im_damp_material" or machine_id.upper().startswith("IM")
+    presets = _verification_presets(is_im)
+    wanted = settings.streak_gemini_samples if gemini_samples is None else gemini_samples
+    plan = {
+        part_index: presets[n % len(presets)]
+        for n, part_index in enumerate(_sample_indices(target, wanted if presets else 0))
+    }
 
     while True:
-        batch = 0
-        while batch < VERIFICATION_BATCH_PARTS:
-            is_defect = evaluator()
+        for _ in range(VERIFICATION_BATCH_PARTS):
+            preset = plan.get(len(outcomes))
+            if preset is None:
+                is_defect = evaluator()
+            else:
+                frame = await asyncio.to_thread(_check_sample, preset, machine_id, tool_id, is_im)
+                samples.append(frame)
+                is_defect = frame.is_defect
             gatekeeper.record_sample(is_defect)
             outcomes.append(is_defect)
-            batch += 1
+            if is_defect and preset is not None:
+                yield VerificationResult(
+                    good_streak=0,
+                    defect_rate=round(sum(outcomes) / len(outcomes), 6),
+                    samples=list(samples),
+                    recurrence=True,
+                )
+                return
 
         yield VerificationResult(
             good_streak=gatekeeper.current_streak,
             defect_rate=round(sum(outcomes) / len(outcomes), 6),
+            samples=list(samples),
         )
         if gatekeeper.is_verified or len(outcomes) >= target * MAX_VERIFICATION_PARTS_FACTOR:
             return

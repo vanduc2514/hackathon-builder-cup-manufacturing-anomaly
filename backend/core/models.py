@@ -1,4 +1,4 @@
-"""Core Models: Pydantic schemas for findings, evidence, confidence, citations, incident state, and Gemini Live streaming."""
+"""Core Models: Pydantic schemas for findings, evidence, confidence, citations, incident state, and Copilot streaming."""
 
 from __future__ import annotations
 
@@ -411,6 +411,14 @@ class VerificationResult(BaseModel):
 
     good_streak: int
     defect_rate: float
+    samples: List["QaFrameInspection"] = Field(
+        default_factory=list,
+        description="Parts classified from real catalog images (Gemini Vision or guarded/mock) so far",
+    )
+    recurrence: bool = Field(
+        default=False,
+        description="True when an image-classified part was a defect and verification stopped",
+    )
 
 
 class ImpactMetrics(BaseModel):
@@ -1364,6 +1372,9 @@ class QaFrameInspection(BaseModel):
     summary: str = Field(description="Template-rendered display text, never model free text")
 
 
+VerificationResult.model_rebuild()
+
+
 class QualityInspectionReport(BaseModel):
     """Quality Inspector Phase A evidence: SPC on the latest conveyor window plus vision-classified frames."""
 
@@ -1397,67 +1408,37 @@ class EdgeFilterStatistics(BaseModel):
     estimated_bandwidth_saved_mb: float = 0.0
 
 
-class GeminiLiveModality(str, Enum):
-    AUDIO = "AUDIO"
-    TEXT = "TEXT"
+class CopilotTurnRequest(BaseModel):
+    """Technician turn sent over `WS /api/gemini-live/ws` (typed text, optionally with a preset photo)."""
 
-
-class GeminiLiveBlob(BaseModel):
-    mime_type: str = "audio/pcm;rate=16000"
-    data: str  # Base64 encoded payload
-
-
-class GeminiLiveRealtimeInput(BaseModel):
-    media_chunks: List[GeminiLiveBlob] = Field(default_factory=list)
-
-
-class GeminiLiveClientContent(BaseModel):
-    text: Optional[str] = None
-    end_of_turn: bool = True
-
-
-class GeminiLiveSetup(BaseModel):
-    model: str = "gemini-2.0-flash-exp"
-    voice_name: str = "Aoede"
-    language_code: str = "vi-VN"
-    system_instruction: Optional[str] = None
-    session_id: Optional[str] = None
-    mode: str = "live"  # "live" or "simulation"
-    session_resumption_handle: Optional[str] = None
-
-
-class GeminiLiveClientMessage(BaseModel):
-    setup: Optional[GeminiLiveSetup] = None
-    realtime_input: Optional[GeminiLiveRealtimeInput] = None
-    client_content: Optional[GeminiLiveClientContent] = None
-    interrupt: bool = False
-    message_index: Optional[int] = None
-
-
-class GeminiLiveServerContent(BaseModel):
-    text: Optional[str] = None
-    audio_pcm_base64: Optional[str] = None
-    input_transcription: Optional[str] = None
-    output_transcription: Optional[str] = None
-    interrupted: bool = False
-    turn_complete: bool = False
-    generation_complete: bool = False
+    type: Literal["user_turn"] = "user_turn"
+    text: str = Field(min_length=1, max_length=2000)
+    preset_id: Optional[str] = Field(
+        default=None, description="Catalog preset whose image is attached to the turn"
+    )
 
 
 class GeminiLiveServerMessage(BaseModel):
-    type: str  # "setup_complete", "server_content", "session_resumption_update", "go_away", "error", "pong"
+    """Server -> client message of the Technician Copilot WebSocket.
+
+    `type`: setup_complete, text_delta (one streamed text chunk in `text`), turn_complete
+    (`interrupted` set when the technician cut the reply), offline / error (terminal for the
+    turn, reason in `error_message`) and pong.
+    """
+
+    type: str
     session_id: Optional[str] = None
-    server_content: Optional[GeminiLiveServerContent] = None
+    text: Optional[str] = None
+    model: Optional[str] = None
+    interrupted: bool = False
     resumption_handle: Optional[str] = None
-    last_consumed_client_message_index: Optional[int] = None
     error_message: Optional[str] = None
     timestamp: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
 
 
 class GeminiLiveSessionStatus(BaseModel):
     session_id: str
-    status: str  # "active", "resumed", "closed", "simulated"
-    mode: str  # "live", "simulation"
+    status: str  # "active"
     client_messages_received: int = 0
     server_messages_sent: int = 0
     created_at: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))

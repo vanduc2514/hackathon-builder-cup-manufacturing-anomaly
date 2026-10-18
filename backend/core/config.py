@@ -85,13 +85,8 @@ class Settings(BaseSettings):
     gdrive_service_account_path: str | None = None
     gdrive_cache_dir: str = ".cache/gdrive"
 
-    # Gemini Live settings
-    gemini_live_model: str = "gemini-2.0-flash-exp"
-    gemini_live_endpoint: str | None = None
+    # Gemini API key (Technician Copilot and vision calls use `gemini_model` / `gemini_vision_model`)
     gemini_api_key: str | None = None
-    gemini_live_voice: str = "Aoede"
-    gemini_live_language: str = "vi-VN"
-    gemini_live_simulation_mode: bool = True
 
     # Gemini Vision settings
     gemini_vision_model: str = "gemini-3.5-flash"
@@ -116,6 +111,9 @@ class Settings(BaseSettings):
 
     # Pause between simulated conveyor verification batches (seconds)
     simulation_step_delay: float = 0.4
+    # Post-repair verification parts classified from real catalog images (Gemini Vision),
+    # spread over the first `verification_target` parts; the rest come from the conveyor model.
+    streak_gemini_samples: int = 3
     # Maximum seconds to await physical/preset visual evidence before timeout
     evidence_wait_seconds: float = 90.0
     repair_wait_seconds: float = 900.0

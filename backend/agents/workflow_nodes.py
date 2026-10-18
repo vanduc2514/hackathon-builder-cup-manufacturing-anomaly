@@ -75,7 +75,9 @@ def _record(
     )
 
 
-def _record_verification(finding: str, evidence: str, confidence: float) -> None:
+def _record_verification(
+    finding: str, evidence: str, confidence: float, source: str | None = None
+) -> None:
     """Writes a post-repair verification finding from the Quality Inspector gatekeeper."""
     blackboard.add_finding(
         AgentFinding(
@@ -86,6 +88,7 @@ def _record_verification(finding: str, evidence: str, confidence: float) -> None
             evidence=evidence,
             confidence=confidence,
             citation=VERIFICATION_CITATION,
+            source=source if source in ("gemini", "fallback", "mock") else None,
         )
     )
 
@@ -339,24 +342,46 @@ async def wait_for_repair_node(ctx: Context, node_input: Any) -> Event:
 
 async def verify_repair(ctx: Context, node_input: dict) -> VerificationResult:
     """Records the Quality Inspector's post-repair tally on the Blackboard as it streams in."""
-    result = VerificationResult(good_streak=0, defect_rate=blackboard.get_state().defect_rate)
+    state = blackboard.get_state()
+    trigger = ctx.state.get("trigger", {})
+    result = VerificationResult(good_streak=0, defect_rate=state.defect_rate)
     async for result in agent_quality_inspector.inspect_post_repair_products(
-        blackboard.get_state().verification_target, ctx.state["step_delay"]
+        state.verification_target,
+        ctx.state["step_delay"],
+        machine_id=state.suspect_machine or trigger.get("machine_id") or "CNC-02",
+        tool_id=state.suspect_tool or trigger.get("tool_id") or "T07",
+        scenario=trigger.get("scenario"),
     ):
         blackboard.update_status("verifying", verification_count=result.good_streak)
     return result
+
+
+def _sample_evidence(result: VerificationResult) -> tuple[str, str | None]:
+    """Describes the image-classified parts behind a verification result and their source."""
+    samples = result.samples
+    if not samples:
+        return "No part was image-checked.", None
+    sources = {s.source for s in samples}
+    source = next(s for s in ("gemini", "fallback", "mock") if s in sources)
+    checked = "; ".join(
+        f"{s.preset_id} -> {s.defect_class or ('defect' if s.is_defect else 'none')} ({s.source})"
+        for s in samples
+    )
+    return f"{len(samples)} part(s) image-checked ({source}): {checked}.", source
 
 
 async def verification_gate(ctx: Context, node_input: VerificationResult) -> Event:
     """Closes only on Blackboard product evidence (Key Invariant 3); else reopens or escalates."""
     state = blackboard.get_state()
     count, target = state.verification_count, state.verification_target
+    sample_text, sample_source = _sample_evidence(node_input)
     if count >= target:
         _record_verification(
             f"Physical recovery verified: {count} consecutive defect-free products passed.",
             f"Defect rate dropped to {node_input.defect_rate:.1%}, "
-            f"below SPC UCL {state.spc_ucl:.1%}.",
+            f"below SPC UCL {state.spc_ucl:.1%}. {sample_text}",
             confidence=0.99,
+            source=sample_source,
         )
         return Event(route="VERIFIED", output=node_input.model_dump())
     if ctx.state["reopen_count"] < MAX_REOPENS:
@@ -364,8 +389,9 @@ async def verification_gate(ctx: Context, node_input: VerificationResult) -> Eve
         _record_verification(
             "Defects persist after repair; reopening Phase B",
             f"Only {count}/{target} consecutive good parts; "
-            f"defect rate {node_input.defect_rate:.1%}.",
+            f"defect rate {node_input.defect_rate:.1%}. {sample_text}",
             confidence=0.9,
+            source=sample_source,
         )
         return Event(route="NOT_VERIFIED", output=blackboard.get_state().model_dump())
     return Event(

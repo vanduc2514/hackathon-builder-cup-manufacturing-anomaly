@@ -152,7 +152,7 @@ def test_failed_verification_reopens_once_then_escalates_never_closes(
         statuses.append(status)
         return original_update(status, **kwargs)
 
-    async def failing_verification(target: int, step_delay: float):
+    async def failing_verification(target: int, step_delay: float, **_: object):
         yield VerificationResult(good_streak=10, defect_rate=0.05)
 
     monkeypatch.setattr(blackboard, "update_status", tracking_update)

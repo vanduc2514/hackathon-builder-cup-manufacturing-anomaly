@@ -4,7 +4,7 @@ Programmatic videos for the AI Builder Cup submission, styled with the Lumina Sl
 
 | Composition | Length | What it is |
 |---|---|---|
-| `KaizenDemo` | ~3:39 | Submission video: the 31 s intro film (its title card replaced by the kAIzen logo card), then prod screen recordings of one real incident (INC-1028C4) from detection to sign-off and the knowledge loop, Gemini TTS voiceover, burned-in English subtitles, Google service badges per shot |
+| `KaizenDemo` | ~3:41 | Submission video: the intro film re-voiced with the same Gemini TTS voice, no subtitles (its title card replaced by the kAIzen logo card), then prod screen recordings of one real incident (INC-1028C4) from detection to sign-off and the knowledge loop, Gemini TTS voiceover, burned-in English subtitles, Google service badges per shot |
 | `KaizenEvidence` | ~1:02 | Supplement: the evidence loop — the Root Cause agent pauses for a photo, the technician picks it from the evidence library, Gemini re-checks (90% → 98%) before repair |
 | `KaizenTeaser` | 0:30 | Fully animated teaser (no footage) |
 
@@ -17,7 +17,7 @@ mise run video:render:evidence             # out/kaizen-evidence.mp4
 mise run video:render:teaser               # out/kaizen-teaser.mp4
 mise run video:voiceover                   # regenerate the KaizenDemo narration (Gemini TTS on Vertex AI)
 mise run video:voiceover -- --only diag-4  # regenerate one line
-mise run video:voiceover -- --script evidence
+mise run video:voiceover -- --script evidence   # or --script intro
 mise run video:typecheck
 ```
 
@@ -25,7 +25,7 @@ mise run video:typecheck
 
 | Path | Purpose |
 |---|---|
-| `src/demo/narration.json`, `src/evidence/narration.json` | Voiceover script, voice (`Puck`) and TTS model; also the subtitle text |
+| `src/{demo,evidence,intro}/narration.json` | Voiceover script, voice (`Puck`) and TTS model; also the subtitle text (the intro has none) |
 | `src/*/voiceover-durations.json` | Measured line lengths written by the generator; drive all timing |
 | `src/demo/timeline.ts` | `buildTimeline`: lead/hold pacing per line, slot frames, subtitle chunking |
 | `src/demo/demoTimeline.ts` | KaizenDemo pacing |

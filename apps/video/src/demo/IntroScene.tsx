@@ -1,23 +1,24 @@
 import React from 'react';
-import { Video } from '@remotion/media';
+import { Audio, Video } from '@remotion/media';
 import { AbsoluteFill, Img, Interactive, interpolate, Sequence, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import Backdrop from '../components/Backdrop';
-import Subtitle from '../components/Subtitle';
 import { C, FONT, eyebrow, fadeUp, progress } from '../theme';
+import durations from '../intro/voiceover-durations.json';
 
-/** Length of the intro film used, and where its own title card starts (it is replaced by the kAIzen card). */
-export const INTRO_SECONDS = 31.3;
+/** Intro length: the film up to its own title card, then our kAIzen card held until the last line ends. */
+export const INTRO_SECONDS = 33.6;
+/** Where the film's own title card starts (covered by the kAIzen card); the film is used up to here. */
 const TITLE_AT_SECONDS = 26.83;
 
-// Narration of the intro film (Gemini transcript), timed to its voice track.
-const CAPTIONS: [from: number, to: number, text: string][] = [
-  [0.2, 2.8, 'The machine never stopped.'],
-  [3.0, 5.8, 'No alarm went off.'],
-  [6.0, 12.6, 'But for two hours, it quietly made scrap.'],
-  [13.0, 20.6, 'In small and mid-sized factories, defects are found at the end of the shift or by the customer.'],
-  [21.0, 24.7, 'Finding the cause takes hours.'],
-  [25.0, 31.3, 'The one expert who knows is on another shift, and the manuals are in English or Japanese.'],
-];
+// Start (seconds) of each re-voiced intro line, following the film's original narration beats.
+const VOICE_AT: Record<keyof typeof durations, number> = {
+  'intro-1': 0.3,
+  'intro-2': 3.2,
+  'intro-3': 6.2,
+  'intro-4': 12.0,
+  'intro-5': 20.8,
+  'intro-6': 24.6,
+};
 
 /** kAIzen title card in the Lumina Slate style: app logo tile + wordmark over the pastel backdrop. */
 function TitleCard(): React.ReactElement {
@@ -61,24 +62,21 @@ function TitleCard(): React.ReactElement {
   );
 }
 
-/** Opening film (problem story, with its own narration and music); its title card is replaced by the kAIzen card. */
+/** Opening film (problem story), re-voiced with the demo's Gemini TTS voice; its title card is replaced by the kAIzen card. */
 const IntroSceneInner = (): React.ReactElement => {
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps } = useVideoConfig();
+  const titleAt = Math.round(TITLE_AT_SECONDS * fps);
   return (
     <>
-      <Video
-        src={staticFile('footage/clips/intro.mp4')}
-        trimAfter={durationInFrames}
-        objectFit="cover"
-        style={{ width: '100%', height: '100%' }}
-        // Fade the music out over the last 0.6 s so the cut into the demo is clean.
-        volume={(f) => interpolate(f, [durationInFrames - 18, durationInFrames], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}
-      />
-      <Sequence name="kAIzen title card" from={Math.round(TITLE_AT_SECONDS * fps)}>
+      {/* The film's own audio mixes its old voice-over with the music, so it is muted. */}
+      <Video src={staticFile('footage/clips/intro.mp4')} trimAfter={titleAt + 6} muted objectFit="cover" style={{ width: '100%', height: '100%' }} />
+      <Sequence name="kAIzen title card" from={titleAt}>
         <TitleCard />
       </Sequence>
-      {CAPTIONS.map(([from, to, text]) => (
-        <Subtitle key={from} text={text} from={Math.round(from * fps)} to={Math.round(to * fps)} />
+      {Object.entries(VOICE_AT).map(([id, at]) => (
+        <Sequence key={id} name={id} from={Math.round(at * fps)} durationInFrames={Math.round((durations[id as keyof typeof durations] + 0.2) * fps)}>
+          <Audio src={staticFile(`voiceover/${id}.mp3`)} />
+        </Sequence>
       ))}
     </>
   );

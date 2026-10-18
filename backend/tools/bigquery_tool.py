@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -13,6 +13,7 @@ from backend.core.config import settings
 from backend.core.models import (
     BigQueryIngestionSummary,
     FactorDistribution,
+    ImpactMetrics,
     MachineTelemetryPayload,
     SensorBaseline,
     SensorMetrics,
@@ -788,9 +789,9 @@ def reset_buffers() -> Dict[str, Any]:
     return {"status": "reset", "message": "BigQuery buffers and mock datasets restored to baseline"}
 
 
-def stream_sensor_telemetry(telemetry: MachineTelemetryPayload) -> bool:
-    """Streams a normalized sensor telemetry record to BigQuery or in-memory mock buffer."""
-    row = {
+def build_sensor_telemetry_row(telemetry: MachineTelemetryPayload) -> Dict[str, Any]:
+    """Maps a telemetry payload to the flat sensor_telemetry row used by Pub/Sub->BigQuery."""
+    return {
         "timestamp": telemetry.timestamp,
         "machine_id": telemetry.machine_id,
         "vibration_mm_s": float(telemetry.spindle_vibration),
@@ -798,6 +799,10 @@ def stream_sensor_telemetry(telemetry: MachineTelemetryPayload) -> bool:
         "current_a": float(telemetry.motor_current),
         "spindle_speed_rpm": int(telemetry.rpm),
     }
+
+
+def insert_sensor_row(row: Dict[str, Any]) -> bool:
+    """Validates and inserts one sensor_telemetry row (BigQuery or in-memory mock buffer)."""
     # Validate every row key against the schema allowlist before any client.
     _validate_insert_payload(f"{settings.bigquery_dataset}.sensor_telemetry", row)
 
@@ -820,6 +825,11 @@ def stream_sensor_telemetry(telemetry: MachineTelemetryPayload) -> bool:
     return True
 
 
+def stream_sensor_telemetry(telemetry: MachineTelemetryPayload) -> bool:
+    """Streams a normalized sensor telemetry record to BigQuery or in-memory mock buffer."""
+    return insert_sensor_row(build_sensor_telemetry_row(telemetry))
+
+
 def get_mock_sensor_telemetry() -> List[Dict[str, Any]]:
     """Returns buffered in-memory sensor telemetry records."""
     return list(MOCK_SENSOR_TELEMETRY)
@@ -830,9 +840,9 @@ def clear_mock_sensor_telemetry() -> None:
     MOCK_SENSOR_TELEMETRY.clear()
 
 
-def stream_traceability_record(record: TraceabilityEventPayload) -> bool:
-    """Streams a discrete traceability event to BigQuery or in-memory mock buffer."""
-    row = {
+def build_traceability_row(record: TraceabilityEventPayload) -> Dict[str, Any]:
+    """Maps a traceability event to the flat traceability row used by Pub/Sub->BigQuery."""
+    return {
         "product_id": record.product_id,
         "timestamp": record.timestamp,
         "machine_id": record.machine_id,
@@ -841,6 +851,10 @@ def stream_traceability_record(record: TraceabilityEventPayload) -> bool:
         "operator_id": record.operator_id,
         "status": record.status,
     }
+
+
+def insert_traceability_row(row: Dict[str, Any]) -> bool:
+    """Validates and inserts one traceability row (BigQuery or in-memory mock buffer)."""
     _validate_insert_payload(f"{settings.bigquery_dataset}.traceability", row)
 
     # In-memory buffer fallback and inspection
@@ -860,6 +874,93 @@ def stream_traceability_record(record: TraceabilityEventPayload) -> bool:
         logger.warning("BigQuery streaming insert failed (%s); buffered locally", exc)
 
     return True
+
+
+def stream_traceability_record(record: TraceabilityEventPayload) -> bool:
+    """Streams a discrete traceability event to BigQuery or in-memory mock buffer."""
+    return insert_traceability_row(build_traceability_row(record))
+
+
+# Issue #335 — sustainability_impact ledger persistence
+#
+# ``record_learning`` books one row per closed incident into
+# ``<project>.<dataset>.sustainability_impact`` (columns mirrored from the
+# DDL in ``data/schemas/bigquery_tables.sql``) so the ESG ledger endpoint can
+# aggregate straight from the warehouse. Both helpers are best-effort on the
+# write side: persistence failures are logged, never fatal to the incident.
+# ---------------------------------------------------------------------------
+
+
+def stream_sustainability_impact(
+    incident_id: str,
+    closed_at: Optional[str],
+    impact: ImpactMetrics,
+) -> bool:
+    """Persists one incident's impact card to ``sustainability_impact`` (best-effort).
+
+    Returns ``True`` when the row landed in BigQuery; ``False`` (with a logged
+    warning) when the client is unavailable or the insert fails. Never raises
+    so a warehouse outage cannot fail an already-closed incident.
+    """
+    row = {
+        "incident_id": incident_id,
+        "timestamp": closed_at or datetime.now(timezone.utc).isoformat(),
+        "scrap_pieces_avoided": int(impact.scrap_avoided),
+        "co2_kg_saved": float(impact.co2_kg),
+        "downtime_minutes_saved": float(impact.downtime_minutes),
+        "energy_kwh_saved": float(impact.energy_kwh),
+    }
+    _validate_insert_payload(f"{settings.bigquery_dataset}.sustainability_impact", row)
+
+    try:
+        client = get_bigquery_client()
+        table_ref = f"{client.project}.{settings.bigquery_dataset}.sustainability_impact"
+        errors = client.insert_rows_json(table_ref, [row])
+        if not errors:
+            return True
+        logger.warning("BigQuery sustainability_impact insert error: %s", errors)
+    except Exception as exc:
+        logger.warning("BigQuery sustainability_impact insert failed (%s)", exc)
+    return False
+
+
+def query_sustainability_impact_rows(limit: int = 100) -> List[Dict[str, Any]]:
+    """Reads persisted sustainability impact ledger rows (newest first).
+
+    Raises ``RuntimeError`` when the BigQuery client is unavailable so the
+    ledger route can fall back to the in-memory Blackboard aggregation.
+    """
+    client = get_bigquery_client()
+    safe_limit = max(1, min(int(limit), 200))
+    dataset_id = f"{client.project}.{settings.bigquery_dataset}"
+    query = (
+        "SELECT incident_id, timestamp, scrap_pieces_avoided, co2_kg_saved, "
+        "downtime_minutes_saved, energy_kwh_saved "
+        f"FROM `{dataset_id}.sustainability_impact` "
+        f"ORDER BY timestamp DESC LIMIT {safe_limit}"
+    )
+    _assert_query_safe(query, default_dataset_id=settings.bigquery_dataset)
+    try:
+        results = _run_query(client, query, [])
+    except Exception as exc:
+        logger.error("BigQuery sustainability_impact query failed: %s", exc)
+        raise RuntimeError(f"BigQuery sustainability_impact query failed: {exc}") from exc
+
+    rows: List[Dict[str, Any]] = []
+    for result in results:
+        ts = result["timestamp"]
+        rows.append(
+            {
+                "incident_id": result["incident_id"],
+                "timestamp": ts.isoformat() if hasattr(ts, "isoformat") else ts,
+                "scrap_pieces_avoided": int(result["scrap_pieces_avoided"] or 0),
+                "co2_kg_saved": float(result["co2_kg_saved"] or 0.0),
+                "downtime_minutes_saved": float(result["downtime_minutes_saved"] or 0.0),
+                "energy_kwh_saved": float(result["energy_kwh_saved"] or 0.0),
+            }
+        )
+    return rows
+
 
 
 # ---------------------------------------------------------------------------

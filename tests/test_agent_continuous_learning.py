@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -344,7 +345,7 @@ def test_record_learning_workflow_node_integration():
     asyncio.run(record_learning(learning_draft))
 
     state = blackboard.get_state()
-    assert state.status == "closed"
+    assert state.status == "pending_approval"
     assert state.impact is not None
     assert state.impact.scrap_avoided == 240
     assert state.impact.downtime_minutes == 45
@@ -371,3 +372,68 @@ def test_calculate_impact_metrics_without_board_has_no_scenario_defaults():
         calculate_impact_metrics({"suspect_machine": "IM-05"}).factory_type
         == "abs_injection_molding"
     )
+
+
+# Issue #335 — sustainability_impact persistence on record_learning
+# ---------------------------------------------------------------------------
+
+
+def _fake_bq_client():
+    client = MagicMock()
+    client.project = "kaizen-lab-2026"
+    client.insert_rows_json.return_value = []
+    return client
+
+
+def test_record_learning_persists_sustainability_impact_row(monkeypatch):
+    """record_learning books one DDL-column row into sustainability_impact when BigQuery is up."""
+    client = _fake_bq_client()
+    monkeypatch.setattr("backend.tools.bigquery_tool.get_bigquery_client", lambda: client)
+    blackboard.update_status("verifying", suspect_machine="CNC-02", defect_type="scratch_vertical")
+    learning_draft = build_learning_draft(blackboard.get_state())
+
+    asyncio.run(record_learning(learning_draft))
+
+    state = blackboard.get_state()
+    assert state.status == "pending_approval"
+    assert state.impact is not None
+    client.insert_rows_json.assert_called_once()
+    table_ref, rows = client.insert_rows_json.call_args.args
+    assert table_ref.endswith(".sustainability_impact")
+    assert len(rows) == 1
+    row = rows[0]
+    assert set(row) == {
+        "incident_id",
+        "timestamp",
+        "scrap_pieces_avoided",
+        "co2_kg_saved",
+        "downtime_minutes_saved",
+        "energy_kwh_saved",
+    }
+    assert row["incident_id"] == state.incident_id
+    assert row["timestamp"] == (state.closed_at or row["timestamp"]) and row["timestamp"]
+    assert row["scrap_pieces_avoided"] == state.impact.scrap_avoided
+    assert row["co2_kg_saved"] == state.impact.co2_kg
+    assert row["downtime_minutes_saved"] == float(state.impact.downtime_minutes)
+    assert row["energy_kwh_saved"] == state.impact.energy_kwh
+
+
+def test_record_learning_skips_insert_when_client_unavailable(monkeypatch, caplog):
+    """No insert is attempted (and the incident still closes) when the client is unavailable."""
+    client = _fake_bq_client()
+
+    def _no_client():
+        raise RuntimeError("BigQuery client initialization failed: no credentials")
+
+    monkeypatch.setattr("backend.tools.bigquery_tool.get_bigquery_client", _no_client)
+    blackboard.update_status("verifying", suspect_machine="CNC-02", defect_type="scratch_vertical")
+    learning_draft = build_learning_draft(blackboard.get_state())
+
+    with caplog.at_level("WARNING"):
+        asyncio.run(record_learning(learning_draft))
+
+    state = blackboard.get_state()
+    assert state.status == "pending_approval"
+    assert state.impact is not None
+    client.insert_rows_json.assert_not_called()
+    assert any("sustainability_impact" in message for message in caplog.messages)

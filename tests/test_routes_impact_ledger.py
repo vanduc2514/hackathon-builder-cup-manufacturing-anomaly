@@ -12,7 +12,7 @@ from backend.core.models import (
     ImpactMetrics,
     IncidentState,
 )
-from backend.tools.impact_calculator import build_esg_ledger
+from backend.tools.impact_calculator import build_esg_ledger, build_esg_ledger_from_rows
 
 client = TestClient(app)
 
@@ -265,3 +265,120 @@ def test_get_esg_ledger_requires_auth():
     """Verify /api/impact/ledger endpoint requires authentication under real_auth."""
     response = client.get("/api/impact/ledger")
     assert response.status_code == 401
+def test_build_esg_ledger_basis_is_benchmark_for_default_inputs():
+    """Ledger basis is 'benchmark' because impact inputs come from manufacturing benchmarks."""
+    res = build_esg_ledger([_make_incident("INC-BASIS", scrap_avoided=120)])
+    assert res.basis == "benchmark"
+
+
+def test_get_esg_ledger_reports_benchmark_basis(monkeypatch):
+    """GET /api/impact/ledger exposes basis='benchmark' for benchmark-derived figures."""
+    seeded = [_make_incident("INC-BASIS-01", status="closed", approved=True)]
+    monkeypatch.setattr(
+        blackboard,
+        "list_incidents",
+        lambda limit=100, status=None: seeded[:limit],
+    )
+    response = client.get("/api/impact/ledger")
+    assert response.status_code == 200
+    assert response.json()["basis"] == "benchmark"
+
+
+# Issue #335 — BigQuery sustainability_impact ledger aggregation
+# ---------------------------------------------------------------------------
+
+
+def _bq_row(
+    incident_id: str,
+    scrap: int = 100,
+    co2: float = 10.0,
+    downtime: float = 30.0,
+    energy: float = 15.0,
+    timestamp: str = "2026-10-18T08:00:00+00:00",
+):
+    return {
+        "incident_id": incident_id,
+        "timestamp": timestamp,
+        "scrap_pieces_avoided": scrap,
+        "co2_kg_saved": co2,
+        "downtime_minutes_saved": downtime,
+        "energy_kwh_saved": energy,
+    }
+
+
+def test_build_esg_ledger_from_rows_partial_cards():
+    """Warehouse rows book partial impact cards when the incident left the Blackboard."""
+    rows = [_bq_row("INC-BQ-1", scrap=240, co2=25.0, downtime=45.0, energy=38.0)]
+    res = build_esg_ledger_from_rows(rows, incidents=[])
+    assert res.totals.incidents == 1
+    assert res.totals.scrap_avoided == 240
+    assert res.totals.downtime_minutes == 45
+    assert res.totals.energy_kwh == 38.0
+    assert res.totals.co2_kg == 25.0
+    assert res.totals.cost_savings_usd == 0.0
+    assert res.entries[0].impact.cost_savings_usd == 0.0
+    assert res.entries[0].incident.status == "closed"
+
+
+def test_build_esg_ledger_from_rows_board_card_wins():
+    """A matching Blackboard incident keeps its full impact card (cost, CO2 split)."""
+    board = _make_incident(
+        "INC-BQ-1", scrap_avoided=240, co2_kg=25.0, downtime_minutes=45,
+        energy_kwh=38.0, cost_savings_usd=3600.0, energy_co2_kg=15.2, material_co2_kg=9.8,
+    )
+    rows = [_bq_row("INC-BQ-1"), _bq_row("INC-BQ-2", scrap=10, co2=1.0, downtime=5, energy=2.0)]
+    res = build_esg_ledger_from_rows(rows, incidents=[board])
+    assert res.totals.incidents == 2
+    assert res.totals.scrap_avoided == 250
+    assert res.totals.cost_savings_usd == 3600.0
+    entry1 = next(e for e in res.entries if e.incident_id == "INC-BQ-1")
+    assert entry1.impact.cost_savings_usd == 3600.0
+    assert entry1.impact.energy_co2_kg == 15.2
+
+
+def test_get_esg_ledger_aggregates_from_bigquery(monkeypatch):
+    """GET /api/impact/ledger aggregates from sustainability_impact when BigQuery is available."""
+    rows = [_bq_row("INC-BQ-1", scrap=240, co2=25.0, downtime=45.0, energy=38.0)]
+    recorded_limit = {}
+
+    def mock_rows(limit=100):
+        recorded_limit["limit"] = limit
+        return rows[:limit]
+
+    monkeypatch.setattr(
+        "backend.api.routes_impact.query_sustainability_impact_rows", mock_rows
+    )
+    monkeypatch.setattr(
+        blackboard, "list_incidents", lambda limit=100, status=None: []
+    )
+
+    response = client.get("/api/impact/ledger?limit=50")
+    assert response.status_code == 200
+    assert recorded_limit["limit"] == 50
+
+    parsed = EsgLedgerResponse.model_validate(response.json())
+    assert parsed.totals.incidents == 1
+    assert parsed.totals.scrap_avoided == 240
+    assert parsed.entries[0].incident_id == "INC-BQ-1"
+    assert parsed.entries[0].closed_at == "2026-10-18T08:00:00+00:00"
+
+
+def test_get_esg_ledger_falls_back_when_bigquery_unavailable(monkeypatch):
+    """Warehouse read failure falls back to the Blackboard aggregation (dev mock mode)."""
+    seeded = [
+        _make_incident("INC-FB-1", status="closed", approved=True, scrap_avoided=120),
+    ]
+    monkeypatch.setattr(
+        "backend.api.routes_impact.query_sustainability_impact_rows",
+        lambda limit=100: (_ for _ in ()).throw(RuntimeError("no client")),
+    )
+    monkeypatch.setattr(
+        blackboard, "list_incidents", lambda limit=100, status=None: seeded[:limit]
+    )
+
+    response = client.get("/api/impact/ledger")
+    assert response.status_code == 200
+    parsed = EsgLedgerResponse.model_validate(response.json())
+    assert parsed.totals.incidents == 1
+    assert parsed.totals.scrap_avoided == 120
+    assert parsed.entries[0].incident_id == "INC-FB-1"

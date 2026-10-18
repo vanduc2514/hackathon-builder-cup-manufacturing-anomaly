@@ -803,7 +803,7 @@ class IncidentState(BaseModel):
     # Firestore snapshot echoes with revision <= the local one are stale and ignored.
     revision: int = 0
     # normal, detecting, tracing, investigating, analyzing, awaiting_evidence, repairing,
-    # verifying, closed, dismissed, escalated, error
+    # verifying, pending_approval, closed, dismissed, escalated, error
     status: str = "normal"
     status_reason: Optional[str] = None  # escalation or error reason
     defect_type: Optional[str] = None
@@ -815,7 +815,23 @@ class IncidentState(BaseModel):
     verification_count: int = 0
     verification_target: int = 50
     repair_done: bool = False
-    approved: bool = False  # shift-leader sign-off, recorded by the Orchestrator after close
+    approved: bool = False  # shift-leader sign-off, recorded by the Orchestrator after learning
+    approved_by: Optional[str] = Field(
+        default=None,
+        description="Username of the shift leader who signed off the incident",
+    )
+    approved_at: Optional[str] = Field(
+        default=None,
+        description="ISO 8601 UTC timestamp of the shift-leader sign-off",
+    )
+    documents_exported: bool = Field(
+        default=False,
+        description="#333: approved documents rendered to Markdown and uploaded to GCS",
+    )
+    documents_export_error: Optional[str] = Field(
+        default=None,
+        description="Reason the document export failed; approval itself still succeeded",
+    )
     findings: List[AgentFinding] = Field(default_factory=list)
     impact: Optional[ImpactMetrics] = None
     documents: Dict[str, Any] = Field(default_factory=dict)
@@ -950,6 +966,12 @@ class EsgLedgerResponse(BaseModel):
         default="aluminum_cnc",
         description="Factory type of the newest entry, or aluminum_cnc if empty",
     )
+    basis: Literal["benchmark", "measured"] = Field(
+        default="benchmark",
+        description=(
+            "Origin of impact inputs: benchmark estimates or measured production data"
+        ),
+    )
 
 
 class DefectInjectionRequest(BaseModel):
@@ -1034,6 +1056,52 @@ class SimulationResetResponse(BaseModel):
     state: dict[str, Any] = Field(default_factory=dict)
     bigquery: dict[str, Any] = Field(default_factory=dict)
     factory_sync: Optional[FactorySyncResult] = None
+
+# ---------------------------------------------------------------------------
+# Issue #333 — approved incident document export (Markdown to GCS)
+#
+# On shift-leader approval the four documents (work order, 8D report, SOP
+# proposal, impact card) are rendered to Markdown and written to
+# gs://<documents_bucket>/incidents/<incident_id>/ (artifacts/documents/
+# outside production). The blobs are private, so the dashboard links to the
+# Cloud Console browser path instead.
+# ---------------------------------------------------------------------------
+
+
+class IncidentDocumentsExportResult(BaseModel):
+    """Outcome of exporting one approved incident's documents as Markdown."""
+
+    incident_id: str
+    destination: Literal["gcs", "local"]
+    bucket: Optional[str] = None
+    prefix: str = Field(description="Object/folder prefix, e.g. incidents/INC-0412/")
+    uris: List[str] = Field(
+        default_factory=list, description="gs:// object URIs or local file paths"
+    )
+    console_url: Optional[str] = None
+    note: str = Field(
+        default="", description="Human-readable detail, e.g. the local fallback reason"
+    )
+
+
+class IncidentDocumentLink(BaseModel):
+    """One exported Markdown document with its storage URI."""
+
+    name: str = Field(description="Markdown file name, e.g. work_order.md")
+    title: str = Field(description="Display title, e.g. Work Order")
+    uri: str = Field(description="gs:// object URI (GCS) or local file path (dev)")
+
+
+class IncidentDocumentsResponse(BaseModel):
+    """GET /api/incidents/documents payload for the current incident (#333)."""
+
+    incident_id: str
+    exported: bool
+    export_error: Optional[str] = None
+    destination: Literal["gcs", "local"]
+    bucket: Optional[str] = None
+    console_url: Optional[str] = None
+    documents: List[IncidentDocumentLink] = Field(default_factory=list)
 
 
 class SuspectCorrelation(BaseModel):

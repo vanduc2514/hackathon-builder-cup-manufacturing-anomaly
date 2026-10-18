@@ -7,7 +7,7 @@ import base64
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import (
@@ -65,14 +65,14 @@ class SessionState:
         self.resumption_handle: str = f"resume-{session_id}-{uuid.uuid4().hex[:8]}"
         self.client_messages_received: int = 0
         self.server_messages_sent: int = 0
-        self.created_at: str = datetime.now().strftime("%H:%M:%S")
-        self.last_active_at: str = datetime.now().strftime("%H:%M:%S")
+        self.created_at: str = datetime.now(timezone.utc).isoformat()
+        self.last_active_at: str = datetime.now(timezone.utc).isoformat()
         # (role, text) pairs, role "user" or "model", oldest first.
         self.history: List[tuple[str, str]] = []
         self.active_generation_task: Optional[asyncio.Task[None]] = None
 
     def record_activity(self) -> None:
-        self.last_active_at = datetime.now().strftime("%H:%M:%S")
+        self.last_active_at = datetime.now(timezone.utc).isoformat()
 
     def to_status(self) -> GeminiLiveSessionStatus:
         return GeminiLiveSessionStatus(
@@ -147,7 +147,7 @@ async def get_live_status() -> Dict[str, Any]:
         "active_sessions": manager.count(),
         "model": settings.gemini_model,
         "language": COPILOT_LANGUAGE,
-        "timestamp": datetime.now().strftime("%H:%M:%S"),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 

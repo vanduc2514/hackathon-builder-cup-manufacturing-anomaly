@@ -1501,7 +1501,7 @@ class GeminiLiveServerMessage(BaseModel):
     interrupted: bool = False
     resumption_handle: Optional[str] = None
     error_message: Optional[str] = None
-    timestamp: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 class GeminiLiveSessionStatus(BaseModel):
@@ -1509,8 +1509,8 @@ class GeminiLiveSessionStatus(BaseModel):
     status: str  # "active"
     client_messages_received: int = 0
     server_messages_sent: int = 0
-    created_at: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
-    last_active_at: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    last_active_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 class RepairCheckpoint(BaseModel):
@@ -1559,7 +1559,7 @@ class CopilotTurn(BaseModel):
     step_number: Optional[int] = None
     checkpoint_verified: Optional[bool] = None
     metric_value: Optional[float] = None
-    timestamp: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 class CopilotSessionTelemetry(BaseModel):
@@ -1576,7 +1576,7 @@ class CopilotSessionTelemetry(BaseModel):
     hallucination_refusals: int = 0
     verified_metrics: Dict[str, float] = Field(default_factory=dict)
     transcript: List[CopilotTurn] = Field(default_factory=list)
-    started_at: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
+    started_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     completed_at: Optional[str] = None
 
 

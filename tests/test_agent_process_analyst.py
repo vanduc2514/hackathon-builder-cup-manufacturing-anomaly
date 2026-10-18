@@ -11,10 +11,12 @@ from backend.agents.agent_process_analyst import (
     AGENT_ID,
     AGENT_NAME,
     CITATION,
+    INSTRUCTION,
     PHASE,
     _supports_tools,
     agent,
     analyze_machine_telemetry,
+    pre_incident_window,
 )
 from backend.agents.workflow_nodes import record_process_analysis
 from backend.core.blackboard import blackboard
@@ -138,3 +140,45 @@ def test_record_process_analysis_workflow_node():
     assert state.findings[0].agent_id == "PA"
     assert "35%" in state.findings[0].evidence
     assert state.findings[0].citation == CITATION
+
+
+def test_pre_incident_window_is_60_minutes_before_opened_at():
+    start, end = pre_incident_window("2026-10-18T14:30:00Z")
+    assert end == "2026-10-18T14:30:00+00:00"
+    assert start == "2026-10-18T13:30:00+00:00"
+
+
+def test_pre_incident_window_rejects_malformed_timestamp():
+    with pytest.raises(ValueError):
+        pre_incident_window("not-a-timestamp")
+
+
+def test_analyze_machine_telemetry_derives_window_from_opened_at():
+    mock_response = load_mock_sensor_telemetry("CNC-02")
+    with patch(
+        "backend.agents.agent_process_analyst.query_sensor_telemetry_window",
+        return_value=mock_response,
+    ) as query:
+        asyncio.run(analyze_machine_telemetry("CNC-02", opened_at="2026-10-18T14:30:00+00:00"))
+    kwargs = query.call_args.kwargs
+    assert kwargs["start_time"] == "2026-10-18T13:30:00+00:00"
+    assert kwargs["end_time"] == "2026-10-18T14:30:00+00:00"
+    assert kwargs["time_window"] is None
+
+
+def test_analyze_machine_telemetry_defaults_to_trailing_hour_without_opened_at():
+    mock_response = load_mock_sensor_telemetry("CNC-02")
+    with patch(
+        "backend.agents.agent_process_analyst.query_sensor_telemetry_window",
+        return_value=mock_response,
+    ) as query:
+        asyncio.run(analyze_machine_telemetry("CNC-02"))
+    kwargs = query.call_args.kwargs
+    assert kwargs["time_window"] == "60 MINUTE"
+    assert kwargs["start_time"] is None and kwargs["end_time"] is None
+
+
+def test_instruction_has_no_fixed_window_or_confidence():
+    assert "09:00" not in INSTRUCTION
+    assert "0.89" not in INSTRUCTION
+    assert "opened_at" in INSTRUCTION

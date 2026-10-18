@@ -26,6 +26,7 @@ from backend.core.models import (
     DefectInjectionRequest,
     FindingDraft,
     HandoverNote,
+    ImpactMetrics,
     IncidentState,
     QualityInspectionReport,
     RootCauseFindingDraft,
@@ -43,8 +44,22 @@ MAX_REOPENS = 1
 VERIFICATION_CITATION = "End-of-line Camera Station #1 inspection buffer"
 
 
-def _record(agent: ModuleType, draft: FindingDraft, phase: str | None = None) -> None:
-    """Writes an LLM draft from `agent` to the Blackboard (confidence clamped to [0, 1])."""
+def source_key(agent: ModuleType) -> str:
+    """Workflow-state key where the agent guard publishes where `agent`'s latest draft came from."""
+    return f"source_{agent.AGENT_ID}"
+
+
+def _record(
+    agent: ModuleType,
+    draft: FindingDraft,
+    phase: str | None = None,
+    ctx: Context | None = None,
+) -> None:
+    """Writes an LLM draft from `agent` to the Blackboard (confidence clamped to [0, 1]).
+
+    The finding's `source` ("gemini", "fallback" or "mock") comes from the agent guard via `ctx`.
+    """
+    source = ctx.state.get(source_key(agent)) if ctx is not None else None
     blackboard.add_finding(
         AgentFinding(
             agent_id=agent.AGENT_ID,
@@ -56,11 +71,14 @@ def _record(agent: ModuleType, draft: FindingDraft, phase: str | None = None) ->
             citation=draft.citation,
             five_whys=getattr(draft, "five_whys", None),
             ishikawa=getattr(draft, "ishikawa", None),
+            source=source if source in ("gemini", "fallback", "mock") else None,
         )
     )
 
 
-def _record_verification(finding: str, evidence: str, confidence: float) -> None:
+def _record_verification(
+    finding: str, evidence: str, confidence: float, source: str | None = None
+) -> None:
     """Writes a post-repair verification finding from the Quality Inspector gatekeeper."""
     blackboard.add_finding(
         AgentFinding(
@@ -71,6 +89,7 @@ def _record_verification(finding: str, evidence: str, confidence: float) -> None
             evidence=evidence,
             confidence=confidence,
             citation=VERIFICATION_CITATION,
+            source=source if source in ("gemini", "fallback", "mock") else None,
         )
     )
 
@@ -111,6 +130,9 @@ async def inspect_production(ctx: Context, node_input: dict) -> Event:
         state.spc_ucl,
         defect_rate=rate,
         defect_type=dtype,
+        machine_id=trigger.get("machine_id"),
+        tool_id=trigger.get("tool_id"),
+        scenario=trigger.get("scenario"),
     )
     ctx.state["qi_report"] = report.model_dump()
     spc = report.spc
@@ -137,7 +159,7 @@ async def dismiss_incident(node_input: str) -> None:
 
 
 async def record_detection(ctx: Context, node_input: FindingDraft) -> IncidentState:
-    _record(agent_quality_inspector, node_input)
+    _record(agent_quality_inspector, node_input, ctx=ctx)
     report = QualityInspectionReport.model_validate(ctx.state["qi_report"])
     counts = report.defect_type_counts
     blackboard.update_status(
@@ -149,19 +171,21 @@ async def record_detection(ctx: Context, node_input: FindingDraft) -> IncidentSt
 
 
 async def trace_topology(ctx: Context, node_input: IncidentState | dict) -> dict:
-    """Traceability Agent queries discrete topology and passes the evidence report to the reasoner."""
-    qi_report_data = ctx.state.get("qi_report")
-    product_ids = None
-    if qi_report_data:
-        frames = qi_report_data.get("defect_frames", [])
-        product_ids = [f["product_id"] for f in frames if f.get("product_id")]
+    """Traceability Agent queries discrete topology and passes the evidence report to the reasoner.
 
+    The query covers this incident only: from the pre-incident window start (opened_at minus
+    the Process Analyst lookback) until now, unless the trigger names an explicit time_window.
+    """
     trigger = ctx.state.get("trigger", {})
-    time_window = trigger.get("time_window", "09:30-10:00")
+    time_window = trigger.get("time_window")
+    start_time = None
+    opened_at = blackboard.get_state().opened_at
+    if not time_window and opened_at:
+        start_time, _ = agent_process_analyst.pre_incident_window(opened_at)
 
     report = await agent_traceability.trace_line_topology(
         time_window=time_window,
-        product_ids=product_ids,
+        start_time=start_time,
     )
     ctx.state["traceability_report"] = report.model_dump()
     return {
@@ -171,7 +195,7 @@ async def trace_topology(ctx: Context, node_input: IncidentState | dict) -> dict
 
 
 async def record_traceability(ctx: Context, node_input: FindingDraft) -> IncidentState:
-    _record(agent_traceability, node_input)
+    _record(agent_traceability, node_input, ctx=ctx)
     report_data = ctx.state.get("traceability_report")
     if report_data and report_data.get("suspects"):
         top = report_data["suspects"][0]
@@ -187,15 +211,15 @@ async def record_traceability(ctx: Context, node_input: FindingDraft) -> Inciden
     return blackboard.get_state()
 
 
-async def record_process_analysis(node_input: FindingDraft) -> IncidentState:
-    _record(agent_process_analyst, node_input)
+async def record_process_analysis(node_input: FindingDraft, ctx: Context | None = None) -> IncidentState:
+    _record(agent_process_analyst, node_input, ctx=ctx)
     blackboard.update_status("analyzing")
     return blackboard.get_state()
 
 
 async def rca_gate(ctx: Context, node_input: RootCauseFindingDraft) -> Event:
     """Routes on root-cause confidence: repair, gather field evidence, or escalate."""
-    _record(agent_root_cause, node_input)
+    _record(agent_root_cause, node_input, ctx=ctx)
     confidence = node_input.confidence
     rounds = ctx.state.get("evidence_rounds", 0)
 
@@ -270,22 +294,26 @@ async def wait_for_evidence_node(ctx: Context, node_input: Any) -> dict:
     return blackboard.get_state().model_dump()
 
 
-async def record_field_evidence(node_input: FindingDraft) -> IncidentState:
-    _record(agent_technician_copilot, node_input, phase=agent_technician_copilot.DIAGNOSTIC_PHASE)
+async def record_field_evidence(node_input: FindingDraft, ctx: Context | None = None) -> IncidentState:
+    _record(
+        agent_technician_copilot,
+        node_input,
+        phase=agent_technician_copilot.DIAGNOSTIC_PHASE,
+        ctx=ctx,
+    )
     blackboard.update_status("analyzing", diagnostic_request=None)
     return blackboard.get_state()
 
 
-async def record_resolution(node_input: dict) -> IncidentState:
+async def record_resolution(node_input: dict, ctx: Context | None = None) -> IncidentState:
     """Records the parallel copilot and scribe outputs in a fixed order."""
     copilot = FindingDraft.model_validate(node_input[agent_technician_copilot.agent.name])
     scribe = ScribeDraft.model_validate(node_input[agent_incident_scribe.agent.name])
-    _record(agent_technician_copilot, copilot)
-    _record(agent_incident_scribe, scribe)
-    blackboard.set_repair_done(True)
+    _record(agent_technician_copilot, copilot, ctx=ctx)
+    _record(agent_incident_scribe, scribe, ctx=ctx)
     blackboard.update_status(
-        "verifying",
-        repair_done=True,
+        "repairing",
+        repair_done=False,
         documents={
             "work_order": scribe.work_order,
             "report_8d": scribe.report_8d,
@@ -295,26 +323,66 @@ async def record_resolution(node_input: dict) -> IncidentState:
     return blackboard.get_state()
 
 
+async def wait_for_repair_node(ctx: Context, node_input: Any) -> Event:
+    """Holds the workflow until the technician confirms 'Repair done' (Key Invariant 3)."""
+    from backend.agents.orchestrator import orchestrator
+
+    timeout = float(settings.repair_wait_seconds)
+    if timeout <= 0:
+        logger.info("repair_wait_seconds <= 0: proceeding without technician confirmation")
+    else:
+        outcome = await orchestrator.wait_for_repair(timeout=timeout)
+        if outcome == "cancelled":
+            return Event(route="ESCALATE", output="Incident cancelled while awaiting repair")
+        if outcome == "timeout":
+            reason = f"Technician did not confirm the repair within {timeout:g} s"
+            return Event(route="ESCALATE", output=reason)
+    blackboard.update_status("verifying", repair_done=True)
+    return Event(route="CONFIRMED", output=blackboard.get_state().model_dump())
+
+
 async def verify_repair(ctx: Context, node_input: dict) -> VerificationResult:
     """Records the Quality Inspector's post-repair tally on the Blackboard as it streams in."""
-    result = VerificationResult(good_streak=0, defect_rate=blackboard.get_state().defect_rate)
+    state = blackboard.get_state()
+    trigger = ctx.state.get("trigger", {})
+    result = VerificationResult(good_streak=0, defect_rate=state.defect_rate)
     async for result in agent_quality_inspector.inspect_post_repair_products(
-        blackboard.get_state().verification_target, ctx.state["step_delay"]
+        state.verification_target,
+        ctx.state["step_delay"],
+        machine_id=state.suspect_machine or trigger.get("machine_id") or "CNC-02",
+        tool_id=state.suspect_tool or trigger.get("tool_id") or "T07",
+        scenario=trigger.get("scenario"),
     ):
         blackboard.update_status("verifying", verification_count=result.good_streak)
     return result
+
+
+def _sample_evidence(result: VerificationResult) -> tuple[str, str | None]:
+    """Describes the image-classified parts behind a verification result and their source."""
+    samples = result.samples
+    if not samples:
+        return "No part was image-checked.", None
+    sources = {s.source for s in samples}
+    source = next(s for s in ("gemini", "fallback", "mock") if s in sources)
+    checked = "; ".join(
+        f"{s.preset_id} -> {s.defect_class or ('defect' if s.is_defect else 'none')} ({s.source})"
+        for s in samples
+    )
+    return f"{len(samples)} part(s) image-checked ({source}): {checked}.", source
 
 
 async def verification_gate(ctx: Context, node_input: VerificationResult) -> Event:
     """Closes only on Blackboard product evidence (Key Invariant 3); else reopens or escalates."""
     state = blackboard.get_state()
     count, target = state.verification_count, state.verification_target
+    sample_text, sample_source = _sample_evidence(node_input)
     if count >= target:
         _record_verification(
             f"Physical recovery verified: {count} consecutive defect-free products passed.",
             f"Defect rate dropped to {node_input.defect_rate:.1%}, "
-            f"below SPC UCL {state.spc_ucl:.1%}.",
+            f"below SPC UCL {state.spc_ucl:.1%}. {sample_text}",
             confidence=0.99,
+            source=sample_source,
         )
         return Event(route="VERIFIED", output=node_input.model_dump())
     if ctx.state["reopen_count"] < MAX_REOPENS:
@@ -322,8 +390,9 @@ async def verification_gate(ctx: Context, node_input: VerificationResult) -> Eve
         _record_verification(
             "Defects persist after repair; reopening Phase B",
             f"Only {count}/{target} consecutive good parts; "
-            f"defect rate {node_input.defect_rate:.1%}.",
+            f"defect rate {node_input.defect_rate:.1%}. {sample_text}",
             confidence=0.9,
+            source=sample_source,
         )
         return Event(route="NOT_VERIFIED", output=blackboard.get_state().model_dump())
     return Event(
@@ -342,11 +411,31 @@ async def close_incident(node_input: VerificationResult) -> IncidentState:
     return blackboard.get_state()
 
 
-async def record_learning(node_input: FindingDraft) -> None:
-    _record(agent_continuous_learning, node_input)
+async def record_learning(node_input: FindingDraft, ctx: Context | None = None) -> None:
+    _record(agent_continuous_learning, node_input, ctx=ctx)
     state = blackboard.get_state()
     impact = agent_continuous_learning.calculate_impact_metrics(state)
-    blackboard.update_status("closed", impact=impact)
+    # Learning complete: the incident now awaits shift-leader sign-off before it is closed.
+    blackboard.update_status("pending_approval", impact=impact)
+    _persist_sustainability_impact(blackboard.get_state(), impact)
+
+
+def _persist_sustainability_impact(state: IncidentState, impact: ImpactMetrics) -> None:
+    """Books one impact row into BigQuery ``sustainability_impact`` (best-effort, issue #335).
+
+    Only when a BigQuery client is available (live project or emulator); any
+    failure logs a warning and never fails the incident — the impact is
+    already recorded on the Blackboard.
+    """
+    from backend.tools.bigquery_tool import stream_sustainability_impact
+
+    try:
+        persisted = stream_sustainability_impact(state.incident_id, state.closed_at, impact)
+    except Exception as exc:  # noqa: BLE001 — warehouse outage must not fail the incident
+        logger.warning("sustainability_impact persistence skipped for %s: %s", state.incident_id, exc)
+        return
+    if persisted:
+        logger.info("sustainability_impact row persisted for %s", state.incident_id)
 
 
 async def escalate_incident(node_input: str) -> None:

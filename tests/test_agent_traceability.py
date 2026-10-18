@@ -351,22 +351,19 @@ def test_build_finding_from_report():
 def test_trace_topology_workflow_node():
     """Verifies workflow node queries topology, records in state, and formats prompt payload."""
     ctx = MagicMock()
-    ctx.state = {
-        "qi_report": {
-            "defect_frames": [
-                {"product_id": "PRD-1004"},
-                {"product_id": "PRD-1005"},
-            ]
-        },
-        "trigger": {"time_window": "09:30-10:00"},
-    }
+    ctx.state = {"trigger": {}}
+    blackboard.reset()
+    blackboard.update_status("detecting", opened_at="2026-10-18T07:00:00+00:00")
 
     mock_report = load_mock_traceability(product_ids=["PRD-1004", "PRD-1005"])
     with patch(
         "backend.agents.agent_traceability.query_traceability_topology",
         return_value=mock_report,
-    ):
+    ) as query:
         result = asyncio.run(trace_topology(ctx, {}))
+        # Incident-scoped window: from opened_at minus the lookback, no fixed clock range.
+        assert query.call_args.kwargs["time_window"] is None
+        assert query.call_args.kwargs["start_time"].startswith("2026-10-18T06:00:00")
         assert "board" in result
         assert "traceability" in result
         assert "traceability_report" in ctx.state

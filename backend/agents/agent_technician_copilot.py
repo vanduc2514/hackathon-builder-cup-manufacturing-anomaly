@@ -1,32 +1,36 @@
-"""Technician Copilot: Vietnamese interactive repair guidance with strict OEM grounding."""
+"""Technician Copilot: streamed English repair guidance with strict OEM grounding."""
 
 from __future__ import annotations
 
-import datetime
 import logging
 import re
+from collections.abc import AsyncIterator
 from typing import Any
 
 from google.adk import Agent
 from google.genai import types
 
-from backend.agents.tool_guards import limit_tool_calls, return_argument_errors
-from backend.core.blackboard import blackboard
+from backend.agents.tool_guards import (
+    AGENT_MAX_OUTPUT_TOKENS,
+    limit_tool_calls,
+    return_argument_errors,
+)
 from backend.core.config import settings
 from backend.core.models import (
-    AgentFinding,
-    CopilotSessionTelemetry,
-    CopilotTurn,
     FindingDraft,
+    IncidentState,
     RAGSearchResult,
     RepairCheckpoint,
-    VisualEvidencePayload,
 )
 from backend.tools.gemini_vision_tool import (
     analyze_visual_evidence_frame as analyze_visual_evidence_frame,
 )
 from backend.tools.gemini_vision_tool import (
     analyze_visual_evidence_frame_async as analyze_visual_evidence_frame_async,
+)
+from backend.tools.gemini_vision_tool import (
+    get_gemini_client,
+    normalize_image,
 )
 from backend.tools.gemini_vision_tool import (
     mock_visual_evidence_analysis as mock_visual_evidence_analysis,
@@ -40,125 +44,157 @@ from backend.tools.rag_search_tool import search_knowledge_base
 logger = logging.getLogger(__name__)
 
 # =============================================================================
-# Vietnamese Manufacturing Domain Vocabulary
-# =============================================================================
-
-VIETNAMESE_MANUFACTURING_VOCABULARY: dict[str, dict[str, str]] = {
-    "dau_dao": {
-        "term_vi": "đầu dao",
-        "term_en": "tool head / tool holder",
-        "definition_vi": "Bộ phận gá kẹp mảnh cắt insert hoặc chuôi dao vào trục chính CNC.",
-    },
-    "manh_cat_insert": {
-        "term_vi": "mảnh cắt insert",
-        "term_en": "cutting insert / indexable insert",
-        "definition_vi": "Chíp tiện/phay hợp kim cắt gọt kim loại, thay thế khi mòn quá định mức.",
-    },
-    "do_dao_spindle_runout": {
-        "term_vi": "độ đảo trục chính spindle runout",
-        "term_en": "spindle / tool runout",
-        "definition_vi": "Độ sai lệch tâm quay của trục chính hoặc cán dao so với trục quay lý thuyết.",
-    },
-    "dung_sai": {
-        "term_vi": "dung sai",
-        "term_en": "tolerance",
-        "definition_vi": "Khoảng sai lệch cho phép của kích thước hình học hoặc độ đảo cơ khí.",
-    },
-    "dong_ho_so": {
-        "term_vi": "đồng hồ so",
-        "term_en": "dial indicator / runout gauge",
-        "definition_vi": "Dụng cụ đo cơ khí chính xác dùng kiểm tra độ phẳng và độ đảo trục chính.",
-    },
-    "do_ga": {
-        "term_vi": "đồ gá",
-        "term_en": "fixture / jig",
-        "definition_vi": "Cơ cấu định vị và kẹp chặt phôi gia công trên bàn máy.",
-    },
-    "luc_siet": {
-        "term_vi": "lực siết bu-lông",
-        "term_en": "tightening torque",
-        "definition_vi": "Mô-men xoắn cần thiết khi siết vít kẹp mảnh cắt (ví dụ: 4.2 N·m).",
-    },
-    "nap_chan_an_toan": {
-        "term_vi": "nắp chắn an toàn",
-        "term_en": "safety enclosure guard / door",
-        "definition_vi": "Cửa chắn bảo vệ vùng gia công, ngăn phoi bắn và bảo vệ người vận hành.",
-    },
-    "truc_chinh": {
-        "term_vi": "trục chính",
-        "term_en": "main spindle",
-        "definition_vi": "Trục quay mang đầu gá dao hoặc mâm cặp chi tiết.",
-    },
-    "bo_loc_may_say": {
-        "term_vi": "bộ lọc máy sấy",
-        "term_en": "dryer filter",
-        "definition_vi": "Bộ lọc tách ẩm và dầu cho phễu sấy hạt nhựa nguyên sinh.",
-    },
-    "diem_suong": {
-        "term_vi": "điểm sương",
-        "term_en": "dew point",
-        "definition_vi": "Nhiệt độ đọng sương của luồng khí sấy (ngưỡng tiêu chuẩn dưới -30 °C).",
-    },
-}
-
-# =============================================================================
 # Verified OEM Equipment Manuals Database (Strict Grounding Sources)
 # =============================================================================
 
 OEM_REPAIR_MANUALS: dict[str, dict[str, Any]] = load_oem_repair_manuals_dict()
 
-REFUSAL_MESSAGE_VI = (
-    "Không có quy trình chính thức được ghi nhận trong tài liệu hướng dẫn OEM cho yêu cầu này. "
-    "Để đảm bảo an toàn kỹ thuật và tiêu chuẩn vận hành, vui lòng liên hệ ngay kỹ sư bảo trì "
-    "cấp cao hoặc bộ phận kỹ thuật nhà máy."
+REFUSAL_MESSAGE = (
+    "There is no documented OEM procedure for this request. "
+    "To keep the work safe and within spec, please contact the senior maintenance engineer "
+    "or the plant engineering department."
 )
 
+# =============================================================================
+# Technician Copilot runtime: real Gemini streaming replies (spoken by the mobile browser)
+# =============================================================================
 
-# =============================================================================
-# System Prompt Generation
-# =============================================================================
+COPILOT_LANGUAGE = "en-US"
+COPILOT_TEMPERATURE = 0.3
+COPILOT_MAX_OUTPUT_TOKENS = 1024
+COPILOT_HISTORY_TURNS = 8
+COPILOT_SOP_RESULTS = 3
+COPILOT_FINDINGS_IN_CONTEXT = 4
+COPILOT_EVIDENCE_CHARS = 300
+NO_SOP_CONTEXT = "No SOP excerpts were retrieved for this request."
 
 
 def build_technician_copilot_system_prompt(equipment_id: str = "CNC-02") -> str:
-    """Constructs the Vietnamese system prompt with strict grounding and persona."""
-    manual_info = OEM_REPAIR_MANUALS.get(equipment_id, {})
-    manual_title = manual_info.get("manual_title", "Sổ tay thiết bị OEM")
-    citation = manual_info.get("primary_citation", "Tài liệu OEM")
+    """Constructs the English system prompt: spoken persona, strict grounding and refusal rules."""
+    return f"""You are Kaizen Copilot, a senior maintenance engineer guiding a frontline technician at {equipment_id} by voice on a phone.
 
-    vocabulary_summary = "\n".join(
-        f"- {item['term_vi']} ({item['term_en']}): {item['definition_vi']}"
-        for item in VIETNAMESE_MANUFACTURING_VOCABULARY.values()
+SPOKEN STYLE:
+1. Your reply is read aloud: plain English, 2-4 short sentences, no markdown, no bullet lists, no emoji.
+2. One step at a time. Wait for the technician to confirm a step or report a measurement before moving on.
+
+STRICT GROUNDING:
+1. Take every procedure step, part number, torque, tolerance and measurement limit only from the SOP excerpts or the incident context below. Name the source when you give a step, for example "According to the OEM manual, page 112".
+2. If the SOP excerpts do not contain a value, say there is no documented value and tell the technician to ask the shift leader. Never invent numbers.
+3. When a photo is attached, describe what you actually see on the part or insert and relate it to the incident. Do not assume anything the photo does not show.
+
+REFUSAL:
+If the technician asks for something outside the documented design (for example overriding a safety sensor or running the spindle beyond its limits), refuse with: "{REFUSAL_MESSAGE}"
+"""
+
+
+def build_copilot_incident_context(state: IncidentState) -> str:
+    """Renders the incident board (status, suspect, root cause, findings, photo evidence) as prompt text."""
+    lines = [
+        f"Incident {state.incident_id}, status: {state.status}",
+        f"Machine: {state.suspect_machine or 'unknown'}; tool: {state.suspect_tool or 'unknown'}",
+        f"Reported defect: {state.defect_type or 'none recorded'} "
+        f"(defect rate {state.defect_rate:.1%}, SPC upper limit {state.spc_ucl:.1%})",
+        f"Root cause: {state.root_cause or 'not determined yet'}",
+        f"Repair done: {'yes' if state.repair_done else 'no'}; "
+        f"post-repair verification {state.verification_count}/{state.verification_target} good parts",
+    ]
+    if state.diagnostic_request:
+        lines.append(f"Open diagnostic request to the technician: {state.diagnostic_request}")
+    evidence = state.visual_evidence
+    if evidence is not None and evidence.analysis:
+        lines.append(f"Visual evidence on the board: {evidence.analysis}")
+    recent = state.findings[-COPILOT_FINDINGS_IN_CONTEXT:]
+    if recent:
+        lines.append("Latest agent findings:")
+        lines.extend(
+            f"- {f.agent_name} ({f.phase}): {f.finding} "
+            f"Evidence: {f.evidence[:COPILOT_EVIDENCE_CHARS]}"
+            for f in recent
+        )
+    return "\n".join(lines)
+
+
+async def fetch_copilot_sop_context(state: IncidentState, user_text: str) -> str:
+    """RAG lookup of SOP snippets for the incident symptom/asset and the technician's question."""
+    try:
+        result = await search_knowledge_base(
+            defect_symptom=state.defect_type,
+            suspect_asset=state.suspect_machine,
+            query=user_text,
+            max_results=COPILOT_SOP_RESULTS,
+        )
+    except Exception as exc:
+        logger.warning("Copilot SOP lookup failed: %s", exc)
+        return NO_SOP_CONTEXT
+    if not result.citations:
+        return NO_SOP_CONTEXT
+    return "\n".join(
+        f'{i}. [{c.formatted_citation()}] "{c.snippet}"'
+        for i, c in enumerate(result.citations, 1)
     )
 
-    return f"""Bạn là Kaizen Copilot — Kỹ sư bảo trì cơ khí cấp cao, chuyên gia hướng dẫn kỹ thuật viên tiền tuyến qua giao diện đàm thoại thời gian thực (Gemini Live) tại nhà máy thông minh.
 
-NGÔN NGỮ VÀ VĂN PHONG (VIETNAMESE PERSONA):
-1. Giao tiếp bằng tiếng Việt tự nhiên, chuẩn mực nhà xưởng cơ khí, điềm tĩnh và súc tích.
-2. Sử dụng chính xác thuật ngữ cơ khí chế tạo:
-{vocabulary_summary}
+def build_copilot_system_instruction(
+    equipment_id: str, incident_context: str, sop_context: str
+) -> str:
+    """System prompt plus the per-turn incident board and SOP excerpts."""
+    return (
+        f"{build_technician_copilot_system_prompt(equipment_id)}\n"
+        f"INCIDENT CONTEXT:\n{incident_context}\n\n"
+        f"SOP EXCERPTS:\n{sop_context}\n"
+    )
 
-NGUYÊN TẮC BẮT BUỘC VỀ TRÍCH DẪN (STRICT RAG GROUNDING):
-1. MỌI bước hướng dẫn sửa chữa cơ khí PHẢI trích dẫn chính xác tài liệu nguồn OEM.
-   Ví dụ: "Theo {citation}, hãy tháo nắp chắn bên trái..."
-2. Thiết bị hiện tại: {equipment_id} — {manual_title}.
-3. Tuyệt đối không đưa ra chỉ dẫn không có nguồn trích dẫn từ tài liệu OEM đã kiểm chứng.
 
-TỪ CHỐI BỊA ĐẶT (REFUSAL TO HALLUCINATE):
-1. Nếu kỹ thuật viên yêu cầu sửa đổi thông số ngoài thiết kế (như ép xung trục chính quá mức, ngắt cảm biến an toàn) hoặc thao tác trên thiết bị chưa có tài liệu OEM, bạn BẮT BUỘC PHẢI TỪ CHỐI.
-2. Câu trả lời từ chối chuẩn mực:
-   "{REFUSAL_MESSAGE_VI}"
+def build_copilot_contents(
+    history: list[tuple[str, str]], user_text: str, image_bytes: bytes | None
+) -> list[types.Content]:
+    """Chat history (last N turns) plus the current technician turn, with the photo when sent."""
+    contents = [
+        types.Content(role=role, parts=[types.Part.from_text(text=text)])
+        for role, text in history[-COPILOT_HISTORY_TURNS:]
+    ]
+    parts = [types.Part.from_text(text=user_text)]
+    if image_bytes:
+        parts.append(
+            types.Part.from_bytes(data=normalize_image(image_bytes), mime_type="image/jpeg")
+        )
+    contents.append(types.Content(role="user", parts=parts))
+    return contents
 
-QUY TRÌNH KIỂM SOÁT TỪNG BƯỚC (INTERACTIVE MULTI-TURN CHECKPOINTS):
-1. Hướng dẫn từng bước một (single-step guidance). Không liệt kê tất cả các bước cùng lúc.
-2. Chờ kỹ thuật viên xác nhận hoàn thành từng bước hoặc cung cấp số đo kiểm tra mới chuyển bước tiếp theo.
-3. Khi đến bước đo kiểm (ví dụ: dùng đồng hồ so đo độ đảo trục chính / đầu dao):
-   - Ngưỡng cho phép: <= 0.005 mm.
-   - Nếu kết quả vượt quá dung sai: giải thích lỗi, hướng dẫn vệ sinh gá kẹp và yêu cầu đo lại.
-   - Chỉ khi kết quả đo đạt chuẩn mới chuyển sang bước đóng nắp và chạy thử.
 
-KẾT THÚC VÀ PHÁT TÍN HIỆU (SESSION EMISSION):
-Khi tất cả các bước hoàn thành, phát tín hiệu xác nhận sửa chữa hoàn tất để hệ thống chuyển trạng thái sang xác minh 50 sản phẩm đạt chuẩn.
-"""
+async def stream_copilot_reply(
+    *,
+    state: IncidentState,
+    user_text: str,
+    history: list[tuple[str, str]],
+    image_bytes: bytes | None = None,
+    client: Any | None = None,
+) -> AsyncIterator[str]:
+    """One real Gemini `generate_content_stream` call; yields the reply text chunk by chunk.
+
+    `history` holds `(role, text)` pairs with role "user" or "model", oldest first. Raises on
+    API failure; the caller reports it to the technician.
+    """
+    equipment_id = state.suspect_machine or "CNC-02"
+    sop_context = await fetch_copilot_sop_context(state, user_text)
+    config = types.GenerateContentConfig(
+        system_instruction=build_copilot_system_instruction(
+            equipment_id, build_copilot_incident_context(state), sop_context
+        ),
+        temperature=COPILOT_TEMPERATURE,
+        max_output_tokens=COPILOT_MAX_OUTPUT_TOKENS,
+    )
+    contents = build_copilot_contents(history, user_text, image_bytes)
+    gemini_client = client or get_gemini_client()
+    logger.info(
+        "gemini_call kind=copilot model=%s image=%s", settings.gemini_model, bool(image_bytes)
+    )
+    stream = await gemini_client.aio.models.generate_content_stream(
+        model=settings.gemini_model, contents=contents, config=config
+    )
+    async for chunk in stream:
+        if chunk.text:
+            yield chunk.text
 
 
 # =============================================================================
@@ -192,7 +228,7 @@ def is_action_grounded(equipment_id: str, query: str) -> bool:
 
 def generate_refusal(query: str, equipment_id: str | None = None) -> str:
     """Generates standard refusal message when query lacks OEM grounding."""
-    return REFUSAL_MESSAGE_VI
+    return REFUSAL_MESSAGE
 
 
 def parse_metric_from_text(text: str) -> float | None:
@@ -299,525 +335,6 @@ def build_contextual_diagnostic_probe_vi(
 
 
 # =============================================================================
-# Technician Copilot Session Class
-# =============================================================================
-
-
-class TechnicianCopilot:
-    """Interactive multi-turn repair guidance session manager."""
-
-    def __init__(
-        self,
-        incident_id: str = "INC-0412",
-        machine_id: str = "CNC-02",
-        tool_id: str | None = "T07",
-        root_cause: str | None = "Tool T07 worn past 2,000 part limit",
-    ):
-        self.incident_id = incident_id
-        self.machine_id = machine_id
-        self.tool_id = tool_id
-        self.root_cause = root_cause
-
-        now_str = datetime.datetime.now().strftime("%H:%M:%S")
-        self.session_id = f"VN-COPILOT-{machine_id}-{int(datetime.datetime.now().timestamp())}"
-
-        self.checkpoints: list[RepairCheckpoint] = self._load_checkpoints()
-        self.current_step_index: int = 0
-
-        self.telemetry = CopilotSessionTelemetry(
-            session_id=self.session_id,
-            incident_id=incident_id,
-            machine_id=machine_id,
-            tool_id=tool_id,
-            checkpoints_total=len(self.checkpoints),
-            checkpoints_passed=0,
-            repair_done=False,
-            hallucination_refusals=0,
-            transcript=[],
-            started_at=now_str,
-        )
-
-    def _load_checkpoints(self) -> list[RepairCheckpoint]:
-        """Loads checkpoints from verified OEM database for target machine."""
-        manual = get_oem_repair_manual(self.machine_id)
-        if manual:
-            return manual.checkpoints
-        manual_data = OEM_REPAIR_MANUALS.get(self.machine_id)
-        if not manual_data:
-            return []
-        raw_checkpoints = manual_data.get("checkpoints", [])
-        return [RepairCheckpoint(**cp) for cp in raw_checkpoints]
-
-    def get_checkpoints(self) -> list[RepairCheckpoint]:
-        return self.checkpoints
-
-    def get_current_checkpoint(self) -> RepairCheckpoint | None:
-        if 0 <= self.current_step_index < len(self.checkpoints):
-            return self.checkpoints[self.current_step_index]
-        return None
-
-    def is_repair_completed(self) -> bool:
-        return self.telemetry.repair_done
-
-    def get_initial_greeting(self) -> CopilotTurn:
-        """Returns the first turn welcoming technician and presenting Step 1."""
-        step = self.get_current_checkpoint()
-        if not step:
-            greeting = f"Xin chào, hệ thống chưa có dữ liệu OEM cho thiết bị {self.machine_id}."
-            citation = "OEM Database"
-            step_num = None
-        else:
-            greeting = (
-                f"Xin chào kỹ thuật viên, tôi là Kaizen Copilot. Đang hướng dẫn xử lý sự cố "
-                f"máy {self.machine_id} (nguyên nhân: {self.root_cause or 'mòn chi tiết'}).\n\n"
-                f"Bước 1: {step.title_vi}\n{step.instruction_vi}\n\n"
-                f"Vui lòng hoàn thành và phản hồi 'Đã xong' để chuyển sang bước tiếp theo."
-            )
-            citation = step.citation
-            step_num = step.step_number
-
-        turn = CopilotTurn(
-            turn_id=len(self.telemetry.transcript) + 1,
-            speaker="copilot",
-            message_vi=greeting,
-            citation=citation,
-            step_number=step_num,
-            checkpoint_verified=False,
-        )
-        self.telemetry.transcript.append(turn)
-        self.telemetry.total_turns = len(self.telemetry.transcript)
-        return turn
-
-    def get_diagnostic_probe(
-        self, confidence: float = 0.65, diagnostic_request: str | None = None
-    ) -> CopilotTurn:
-        """Returns the diagnostic probe turn verbalizing the photo evidence request in Vietnamese."""
-        message_vi = build_contextual_diagnostic_probe_vi(
-            confidence=confidence,
-            machine_id=self.machine_id,
-            tool_id=self.tool_id,
-            diagnostic_request=diagnostic_request,
-        )
-        citation = (
-            DEFAULT_DIAGNOSTIC_IM_CITATION
-            if "IM" in self.machine_id.upper()
-            else DEFAULT_DIAGNOSTIC_CNC_CITATION
-        )
-        turn = CopilotTurn(
-            turn_id=len(self.telemetry.transcript) + 1,
-            speaker="copilot",
-            message_vi=message_vi,
-            citation=citation,
-            checkpoint_verified=False,
-        )
-        self.telemetry.transcript.append(turn)
-        self.telemetry.total_turns = len(self.telemetry.transcript)
-        return turn
-
-    async def process_field_evidence(
-        self,
-        image_bytes: bytes,
-        filename: str | None = None,
-        notes: str | None = None,
-    ) -> tuple[CopilotTurn, VisualEvidencePayload, AgentFinding]:
-        """Ingests visual photo evidence from technician, updates blackboard, and appends turn."""
-        evidence_payload = await analyze_visual_evidence_frame_async(
-            image_bytes=image_bytes,
-            machine_id=self.machine_id,
-            tool_id=self.tool_id,
-            filename=filename,
-        )
-
-        is_im = "IM" in self.machine_id.upper()
-        if is_im:
-            response_vi = (
-                "Đã nhận hình ảnh cụm sấy Dryer-03. Nhận diện hạt hút ẩm bão hòa (đổi màu) "
-                "và gioăng lọc FLT-ABS-04 bám cặn dầu, khớp với nguyên nhân gây thiếu liệu."
-            )
-        else:
-            tool = self.tool_id or "T07"
-            response_vi = (
-                f"Đã nhận hình ảnh trực tiếp từ camera trạm {self.machine_id}. "
-                f"Nhận diện mảnh dao {tool} mòn mặt sau VB=0.35mm và mẻ mép cắt, "
-                f"khớp với tọa độ vết xước dọc trên phôi nhôm AL-5083."
-            )
-
-        turn = CopilotTurn(
-            turn_id=len(self.telemetry.transcript) + 1,
-            speaker="copilot",
-            message_vi=response_vi,
-            citation=evidence_payload.citation,
-            checkpoint_verified=True,
-        )
-        self.telemetry.transcript.append(turn)
-        self.telemetry.total_turns = len(self.telemetry.transcript)
-
-        finding = AgentFinding(
-            agent_id=AGENT_ID,
-            agent_name=AGENT_NAME,
-            phase=DIAGNOSTIC_PHASE,
-            finding=f"Frontline technician submitted close-up photo confirming defect root cause on {self.machine_id}.",
-            evidence=evidence_payload.analysis + (f" Ghi chú: {notes}" if notes else ""),
-            confidence=0.92,
-            citation=evidence_payload.citation,
-        )
-        blackboard.attach_field_evidence(finding, evidence_payload)
-
-        return turn, evidence_payload, finding
-
-    async def process_technician_input(
-        self, message_vi: str, measured_metric: float | None = None
-    ) -> CopilotTurn:
-        """Processes a single conversational turn from the technician."""
-        # 1. Record technician input
-        tech_turn = CopilotTurn(
-            turn_id=len(self.telemetry.transcript) + 1,
-            speaker="technician",
-            message_vi=message_vi,
-            metric_value=measured_metric,
-        )
-        self.telemetry.transcript.append(tech_turn)
-
-        # 1.5 Check if in diagnostic mode and responding to diagnostic prompt
-        state = blackboard.get_state()
-        lower_msg = message_vi.lower()
-        if (state.status == "awaiting_evidence" or state.diagnostic_request) and any(
-            k in lower_msg for k in ["bị gì", "sao thế", "làm gì", "kiểm tra", "yêu cầu"]
-        ):
-            return self.get_diagnostic_probe(
-                confidence=0.65, diagnostic_request=state.diagnostic_request
-            )
-
-        # 2. Check for ungrounded/hallucination query
-        hallucination_triggers = [
-            "tăng tốc độ lên 50000",
-            "bỏ qua cảm biến",
-            "tháo phanh an toàn",
-            "không cần khóa nguồn",
-            "không cần loto",
-            "chế độ tự do",
-            "ép xung",
-        ]
-        if any(trigger in lower_msg for trigger in hallucination_triggers):
-            self.telemetry.hallucination_refusals += 1
-            refusal_turn = CopilotTurn(
-                turn_id=len(self.telemetry.transcript) + 1,
-                speaker="copilot",
-                message_vi=REFUSAL_MESSAGE_VI,
-                citation="Chính sách an toàn & tiêu chuẩn OEM",
-                checkpoint_verified=False,
-            )
-            self.telemetry.transcript.append(refusal_turn)
-            self.telemetry.total_turns = len(self.telemetry.transcript)
-            return refusal_turn
-
-        # 3. Check current checkpoint state
-        current_step = self.get_current_checkpoint()
-        if not current_step:
-            # Already completed or no steps
-            done_msg = (
-                "Toàn bộ quy trình sửa chữa đã hoàn thành. Hệ thống đang chuyển sang "
-                "bước xác minh chất lượng sản phẩm trên chuyền."
-            )
-            turn = CopilotTurn(
-                turn_id=len(self.telemetry.transcript) + 1,
-                speaker="copilot",
-                message_vi=done_msg,
-                citation="Quy trình hoàn tất",
-                checkpoint_verified=True,
-            )
-            self.telemetry.transcript.append(turn)
-            self.telemetry.total_turns = len(self.telemetry.transcript)
-            return turn
-
-        # 4. Handle metric verification checkpoint if current step requires one
-        if current_step.target_threshold is not None:
-            # Check if metric was supplied in parameter or in message text
-            extracted_val = measured_metric
-            if extracted_val is None:
-                extracted_val = parse_metric_from_text(message_vi)
-
-            if extracted_val is not None:
-                passed, metric_feedback = validate_metric_measurement(current_step, extracted_val)
-                if passed:
-                    current_step.is_verified = True
-                    current_step.measured_value = extracted_val
-                    self.telemetry.checkpoints_passed += 1
-                    metric_key = current_step.metric_name or f"step_{current_step.step_number}"
-                    self.telemetry.verified_metrics[metric_key] = extracted_val
-
-                    self.current_step_index += 1
-                    next_step = self.get_current_checkpoint()
-                    if next_step:
-                        reply = (
-                            f"{metric_feedback}\n\n"
-                            f"Bước {next_step.step_number}: {next_step.title_vi}\n"
-                            f"{next_step.instruction_vi}\n\n"
-                            f"Vui lòng báo 'Đã xong' sau khi hoàn thành."
-                        )
-                        next_cit = next_step.citation
-                        next_num = next_step.step_number
-                    else:
-                        reply = (
-                            f"{metric_feedback}\n\n"
-                            f"Xuất sắc! Tất cả các bước sửa chữa cho máy {self.machine_id} "
-                            f"đã hoàn thành đúng tiêu chuẩn OEM. Báo cáo hoàn tất đã sẵn sàng."
-                        )
-                        next_cit = current_step.citation
-                        next_num = current_step.step_number
-                        self.telemetry.repair_done = True
-
-                    turn = CopilotTurn(
-                        turn_id=len(self.telemetry.transcript) + 1,
-                        speaker="copilot",
-                        message_vi=reply,
-                        citation=next_cit,
-                        step_number=next_num,
-                        checkpoint_verified=True,
-                        metric_value=extracted_val,
-                    )
-                    self.telemetry.transcript.append(turn)
-                    self.telemetry.total_turns = len(self.telemetry.transcript)
-                    return turn
-                else:
-                    # Metric failed threshold: prompt technician to fix and re-measure
-                    turn = CopilotTurn(
-                        turn_id=len(self.telemetry.transcript) + 1,
-                        speaker="copilot",
-                        message_vi=metric_feedback,
-                        citation=current_step.citation,
-                        step_number=current_step.step_number,
-                        checkpoint_verified=False,
-                        metric_value=extracted_val,
-                    )
-                    self.telemetry.transcript.append(turn)
-                    self.telemetry.total_turns = len(self.telemetry.transcript)
-                    return turn
-            else:
-                # Prompt technician for metric measurement
-                prompt_metric = (
-                    f"Bước {current_step.step_number} yêu cầu đo kiểm: "
-                    f"Vui lòng dùng {current_step.title_vi.lower()} và đọc số đo cụ thể "
-                    f"(tiêu chuẩn {current_step.comparator} {current_step.target_threshold} {current_step.unit or ''}). "
-                    f"[{current_step.citation}]"
-                )
-                turn = CopilotTurn(
-                    turn_id=len(self.telemetry.transcript) + 1,
-                    speaker="copilot",
-                    message_vi=prompt_metric,
-                    citation=current_step.citation,
-                    step_number=current_step.step_number,
-                    checkpoint_verified=False,
-                )
-                self.telemetry.transcript.append(turn)
-                self.telemetry.total_turns = len(self.telemetry.transcript)
-                return turn
-
-        # 5. Handle standard confirmation checkpoint (e.g. "Đã xong", "OK", "Xong bước 1", "Đã mở nắp", "Đã tháo")
-        question_words = [
-            "?",
-            "sao",
-            "thế nào",
-            "như thế nào",
-            "làm gì",
-            "ở đâu",
-            "bao nhiêu",
-            "có phải",
-        ]
-        is_question = any(q in lower_msg for q in question_words)
-
-        confirmation_phrases = [
-            "xong",
-            "đã xong",
-            "da xong",
-            "ok",
-            "đã hoàn thành",
-            "da hoan thanh",
-            "done",
-            "rồi",
-            "roi",
-            "đã ngắt",
-            "đã tháo",
-            "đã lắp",
-            "đã mở",
-            "đã đóng",
-            "đã kiểm tra",
-            "đã cài",
-            "đã vệ sinh",
-            "đã sấy",
-            "đã ",
-            "da ",
-            "thấy mòn",
-            "bị mòn",
-            "mẻ",
-        ]
-        is_confirmed = not is_question and any(
-            phrase in lower_msg for phrase in confirmation_phrases
-        )
-
-        if is_confirmed:
-            current_step.is_verified = True
-            self.telemetry.checkpoints_passed += 1
-            self.current_step_index += 1
-
-            next_step = self.get_current_checkpoint()
-            if next_step:
-                reply = (
-                    f"Đã ghi nhận hoàn tất bước {current_step.step_number}. [{current_step.citation}]\n\n"
-                    f"Bước {next_step.step_number}: {next_step.title_vi}\n"
-                    f"{next_step.instruction_vi}\n\n"
-                )
-                if next_step.target_threshold is not None:
-                    reply += (
-                        f"Bước này yêu cầu đo lường cụ thể ({next_step.metric_name}). "
-                        f"Hãy báo kết quả đo bằng đồng hồ so."
-                    )
-                else:
-                    reply += "Vui lòng báo 'Đã xong' sau khi hoàn thành."
-
-                turn = CopilotTurn(
-                    turn_id=len(self.telemetry.transcript) + 1,
-                    speaker="copilot",
-                    message_vi=reply,
-                    citation=next_step.citation,
-                    step_number=next_step.step_number,
-                    checkpoint_verified=True,
-                )
-            else:
-                self.telemetry.repair_done = True
-                reply = (
-                    f"Đã hoàn tất toàn bộ quy trình bảo trì cho máy {self.machine_id}. "
-                    f"Cảm ơn kỹ thuật viên. Đang gửi tín hiệu hoàn tất sửa chữa lên hệ thống."
-                )
-                turn = CopilotTurn(
-                    turn_id=len(self.telemetry.transcript) + 1,
-                    speaker="copilot",
-                    message_vi=reply,
-                    citation=current_step.citation,
-                    step_number=current_step.step_number,
-                    checkpoint_verified=True,
-                )
-
-            self.telemetry.transcript.append(turn)
-            self.telemetry.total_turns = len(self.telemetry.transcript)
-            return turn
-
-        # 6. General question or clarification
-        clarification = (
-            f"Tôi đã nghe rõ. Hiện tại chúng ta đang ở Bước {current_step.step_number}: "
-            f"{current_step.title_vi}. Hướng dẫn chi tiết: {current_step.instruction_vi} "
-            f"[{current_step.citation}]. Khi hoàn thành hãy báo 'Đã xong' hoặc gửi số đo kiểm tra."
-        )
-        turn = CopilotTurn(
-            turn_id=len(self.telemetry.transcript) + 1,
-            speaker="copilot",
-            message_vi=clarification,
-            citation=current_step.citation,
-            step_number=current_step.step_number,
-            checkpoint_verified=False,
-        )
-        self.telemetry.transcript.append(turn)
-        self.telemetry.total_turns = len(self.telemetry.transcript)
-        return turn
-
-    async def emit_repair_completion(self) -> AgentFinding:
-        """Emits completed repair status and AgentFinding to the Blackboard."""
-        now_str = datetime.datetime.now().strftime("%H:%M:%S")
-        self.telemetry.completed_at = now_str
-        self.telemetry.repair_done = True
-
-        metric_details = []
-        for k, v in self.telemetry.verified_metrics.items():
-            metric_details.append(f"{k}: {v}")
-        metric_str = ", ".join(metric_details) if metric_details else "Thông số đạt tiêu chuẩn OEM"
-
-        finding = AgentFinding(
-            agent_id="COPILOT",
-            agent_name="Technician Copilot",
-            phase="Phase C - Resolution",
-            finding=(
-                f"Hoàn tất quy trình sửa chữa máy {self.machine_id} bằng tiếng Việt. "
-                f"Đã xác minh toàn bộ {self.telemetry.checkpoints_passed}/{self.telemetry.checkpoints_total} "
-                f"bước chuẩn OEM."
-            ),
-            evidence=(
-                f"Kỹ thuật viên đã hoàn thành thay thế và đo kiểm ({metric_str}). "
-                f"Tổng số lượt đối thoại: {self.telemetry.total_turns}. "
-                f"Không có vi phạm an toàn."
-            ),
-            confidence=0.96,
-            citation=OEM_REPAIR_MANUALS.get(self.machine_id, {}).get(
-                "primary_citation", "OEM Manual 2024"
-            ),
-            timestamp=now_str,
-        )
-
-        # Update Blackboard state
-        blackboard.set_repair_done(True)
-        blackboard.update_status(
-            "verifying",
-            repair_done=True,
-            suspect_machine=self.machine_id,
-            suspect_tool=self.tool_id,
-            root_cause=self.root_cause,
-        )
-        blackboard.add_finding(finding)
-
-        logger.info(
-            "Technician Copilot session %s completed. repair_done=True emitted to Blackboard.",
-            self.session_id,
-        )
-        return finding
-
-    def get_session_telemetry(self) -> CopilotSessionTelemetry:
-        return self.telemetry
-
-
-# =============================================================================
-# High-Level Simulation & Execution Function
-# =============================================================================
-
-
-async def run_technician_repair(
-    incident_id: str = "INC-0412",
-    machine_id: str = "CNC-02",
-    tool_id: str = "T07",
-    root_cause: str = "Tool T07 worn past 2,000 part limit",
-    simulated_inputs: list[dict[str, Any]] | None = None,
-) -> CopilotSessionTelemetry:
-    """Runs a complete interactive technician repair session and emits completion."""
-    session = TechnicianCopilot(
-        incident_id=incident_id,
-        machine_id=machine_id,
-        tool_id=tool_id,
-        root_cause=root_cause,
-    )
-
-    # Initial greeting turn
-    session.get_initial_greeting()
-
-    if simulated_inputs is None:
-        # Default realistic CNC-02 repair walkthrough
-        simulated_inputs = [
-            {"message": "Đã ngắt nguồn và gắn biển LOTO an toàn"},
-            {"message": "Đã mở nắp chắn và kiểm tra mảnh cắt T07 thấy mòn mặt sau"},
-            {"message": "Đã tháo dao mòn và lắp mảnh insert mới, siết lực 4.2 N.m"},
-            {"message": "Tôi dùng đồng hồ so đo độ đảo được 0.003 mm"},
-            {"message": "Đã đóng nắp chắn bảo vệ và chạy thử không tải 1500 RPM xong"},
-        ]
-
-    for user_input in simulated_inputs:
-        msg = user_input.get("message", "")
-        metric = user_input.get("metric")
-        await session.process_technician_input(msg, measured_metric=metric)
-
-    if session.is_repair_completed():
-        await session.emit_repair_completion()
-
-    return session.get_session_telemetry()
-
-
-# =============================================================================
 # ADK Workflow Agents & Grounded Finding Builders
 # =============================================================================
 
@@ -852,22 +369,19 @@ async def query_repair_procedure(
 
 INSTRUCTION = (
     "You are the Technician Copilot of the Kaizen Agent manufacturing incident team. "
-    "Your objective is to report on the interactive multimodal repair guidance delivered in Vietnamese to the frontline technician, "
+    "Your objective is to report on the interactive repair guidance given to the frontline technician, "
     "grounded strictly in OEM equipment manuals and verified mechanical checkpoints. "
     "The user message is the current incident board as JSON. "
     "Follow these steps: "
-    "1. Read the incident board to extract suspect_machine, suspect_tool, and root_cause. "
-    "2. If tools are available, you can call query_repair_procedure to look up OEM specs and torque tolerances. "
-    "3. If suspect_machine is CNC-02: the technician was guided in Vietnamese through LOTO safety disconnect, "
-    "safety enclosure removal, replacement of worn insert T07 with new insert WNMG-080408 at 4.2 N·m torque, "
-    "verifying dial indicator spindle runout to 0.003 mm (within 0.005 mm tolerance), and running a 1500 RPM test spin, "
-    "citing Sổ tay hướng dẫn CNC-02 trang 112. "
-    "4. If suspect_machine is IM-05: the technician was guided in Vietnamese through heating de-energization, "
-    "replacing saturated dryer filter FLT-ABS-04 with new O-ring, verifying dew point to -35.0 °C (within -30.0 °C tolerance), "
-    "and resuming drying at 85 °C for 4 hours, citing SOP-MOLD-02 trang 45. "
-    "5. Return a FindingDraft with one concise sentence for finding summarizing completed repair guidance, "
-    "2-3 sentences for evidence citing the 5 verified checkpoints and measured tolerances, "
-    "confidence set to 0.94, and citation citing the OEM manual. Respond in English."
+    "1. Read the incident board to extract suspect_machine, suspect_tool, defect_type, and root_cause. "
+    "2. If tools are available, call query_repair_procedure with the board's suspect_machine and defect_type to look up the OEM repair procedure, "
+    "part numbers, torque values, and measurement tolerances. "
+    "3. Ground EVERY part number, torque value, tolerance, measurement, speed, and page or section reference in the tool results or the board evidence. "
+    "Do not state any value that is not present there; if the lookup returns no matching procedure, say so and lower the confidence instead of inventing steps. "
+    "4. Return a FindingDraft with one concise sentence for finding summarizing the repair guidance for this machine and tool, "
+    "2-3 sentences for evidence citing the verified checkpoints and the tolerances taken from the retrieved procedure, "
+    "a confidence score that reflects how fully the retrieved procedure covers the repair, "
+    "and a citation naming the OEM manual sections actually retrieved. Respond in English."
 )
 
 agent = Agent(
@@ -878,24 +392,26 @@ agent = Agent(
     before_model_callback=limit_tool_calls(query_repair_procedure),
     on_tool_error_callback=return_argument_errors,
     output_schema=FindingDraft,
-    generate_content_config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=2048),
+    generate_content_config=types.GenerateContentConfig(
+        temperature=0.1, max_output_tokens=AGENT_MAX_OUTPUT_TOKENS
+    ),
 )
 
 DIAGNOSTIC_INSTRUCTION = (
     "You are the Technician Copilot of the Kaizen Agent manufacturing incident team acting as the field diagnostic probe. "
     "The Root Cause Agent's confidence is below threshold, so you collect physical field evidence "
-    "from the frontline technician at the machine via Gemini Live multimodal mobile stream. "
+    "from the frontline technician at the machine via the mobile camera stream. "
     "The user message is the current incident board as JSON. "
     "Follow these steps: "
-    "1. Read the incident board to extract suspect_machine, suspect_tool, and any diagnostic_request from Root Cause Agent. "
-    "2. If tools are available, call query_repair_procedure to cross-reference diagnostic criteria with OEM manuals. "
-    "3. If suspect_machine is CNC-02: macro camera photo and inspection of insert T07 confirms abrasive flank wear "
-    "exceeding 0.3mm (VB > 0.3mm) and micro-chipped cutting edge, corroborating workpiece vertical scratches. "
-    "4. If suspect_machine is IM-05: close-up photo and inspection of Dryer-03 confirms saturated desiccant beads and oil fouling, "
-    "corroborating moisture-induced short fill in cavity 3. "
-    "5. Return a FindingDraft with one concise sentence for finding confirming the physical inspection, "
-    "2-3 sentences of visual evidence from the mobile camera feed confirming wear patterns, "
-    "confidence set to 0.92, and citation 'Technician diagnostic camera stream via Gemini Live'. "
+    "1. Read the incident board to extract suspect_machine, suspect_tool, defect_type, and any diagnostic_request from the Root Cause Agent. "
+    "2. If tools are available, call query_repair_procedure with the board's suspect_machine and defect_type to cross-reference diagnostic criteria with OEM manuals. "
+    "3. Report only what the technician's field evidence on the board shows (inspection findings, photo analysis) and the criteria returned by the tool; "
+    "never assume the physical condition of the equipment, wear measurements, or inspection outcomes that are not recorded there. "
+    "If no field evidence is present, state that the inspection is still pending and set a low confidence. "
+    "4. Return a FindingDraft with one concise sentence for finding stating what the physical inspection established, "
+    "2-3 sentences of evidence tied to the recorded observations and the retrieved criteria, "
+    "a confidence score that reflects how conclusive the recorded evidence is, "
+    "and a citation naming the field evidence source and the manual sections actually retrieved. "
     "Respond in English."
 )
 
@@ -907,5 +423,7 @@ diagnostic_agent = Agent(
     before_model_callback=limit_tool_calls(query_repair_procedure),
     on_tool_error_callback=return_argument_errors,
     output_schema=FindingDraft,
-    generate_content_config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=2048),
+    generate_content_config=types.GenerateContentConfig(
+        temperature=0.1, max_output_tokens=AGENT_MAX_OUTPUT_TOKENS
+    ),
 )

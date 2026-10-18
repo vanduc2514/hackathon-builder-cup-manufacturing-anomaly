@@ -10,6 +10,14 @@ from pydantic_settings import BaseSettings
 
 from backend.core.models import AuthAccount
 
+# Mock/local-data fallbacks that default to off when APP_ENV=production.
+PRODUCTION_FALLBACK_FLAGS = (
+    "bigquery_fallback_to_mock",
+    "rag_fallback_to_local",
+    "gemini_vision_fallback_to_mock",
+    "firestore_fallback_to_memory",
+)
+
 
 class Settings(BaseSettings):
     """Reads each field from the same-named env var (case-insensitive)."""
@@ -18,6 +26,10 @@ class Settings(BaseSettings):
     version: str = "0.1.0"
     log_level: str = "INFO"
     app_env: str = "development"
+    # Scripted demo mode: real Gemini calls, but results that miss the curated expectation
+    # (preset catalog / scenario script) are retried once and then replaced by the expected
+    # result, marked source="fallback". Off: model output is shown as returned.
+    demo_scripted: bool = False
     host: str = "0.0.0.0"
     port: int = 8000
     # Comma-separated browser origins allowed to call the API cross-origin (the Firebase
@@ -66,20 +78,23 @@ class Settings(BaseSettings):
     vertex_search_collection: str = "default_collection"
     vertex_search_serving_config: str = "default_search"
     rag_fallback_to_local: bool = True
+    # Knowledge-base staging bucket (terraform output kb_bucket). The Continuous
+    # Learning approval hook (#334) uploads learned__<incident_id>.txt blobs here and
+    # incrementally imports them into the Vertex AI Search datastore.
+    kb_gcs_bucket: str = "kaizen-lab-kb"
 
     # Google Drive API v3 settings
     gdrive_folder_id: str | None = None
     gdrive_base_folder: str = "💻 Competition | AI Builder Cup"
     gdrive_service_account_path: str | None = None
     gdrive_cache_dir: str = ".cache/gdrive"
+    # Document export (#333): GCS bucket receiving the approved incident documents
+    # (work order, 8D report, SOP proposal, impact card) as Markdown under
+    # incidents/<incident_id>/. Non-production runs write artifacts/documents/ instead.
+    documents_bucket: str = "kaizen-lab-kb"
 
-    # Gemini Live settings
-    gemini_live_model: str = "gemini-2.0-flash-exp"
-    gemini_live_endpoint: str | None = None
+    # Gemini API key (Technician Copilot and vision calls use `gemini_model` / `gemini_vision_model`)
     gemini_api_key: str | None = None
-    gemini_live_voice: str = "Aoede"
-    gemini_live_language: str = "vi-VN"
-    gemini_live_simulation_mode: bool = True
 
     # Gemini Vision settings
     gemini_vision_model: str = "gemini-3.5-flash"
@@ -104,8 +119,12 @@ class Settings(BaseSettings):
 
     # Pause between simulated conveyor verification batches (seconds)
     simulation_step_delay: float = 0.4
+    # Post-repair verification parts classified from real catalog images (Gemini Vision),
+    # spread over the first `verification_target` parts; the rest come from the conveyor model.
+    streak_gemini_samples: int = 3
     # Maximum seconds to await physical/preset visual evidence before timeout
     evidence_wait_seconds: float = 90.0
+    repair_wait_seconds: float = 900.0
 
     # Factory Simulator service integration.
     # TKT-073 / #288: backend -> factory auth switched from shared X-API-Key to
@@ -184,6 +203,19 @@ class Settings(BaseSettings):
                 os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
             ):
                 raise ValueError("AI_PROVIDER=gemini requires GOOGLE_API_KEY")
+        return self
+
+    @model_validator(mode="after")
+    def _disable_mock_fallbacks_in_production(self) -> Settings:
+        """APP_ENV=production never substitutes mock/local data unless the flag is set explicitly.
+
+        The fallback flags default to True for offline dev/CI. In production a missing backend
+        must surface as an error, so any flag the operator did not set via env/kwargs becomes False.
+        """
+        if self.is_production:
+            for name in PRODUCTION_FALLBACK_FLAGS:
+                if name not in self.model_fields_set:
+                    setattr(self, name, False)
         return self
 
 

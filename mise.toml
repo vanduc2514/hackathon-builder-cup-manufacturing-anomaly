@@ -378,6 +378,10 @@ run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && ter
 description = "Create BigQuery tables (data/schemas/bigquery_tables.sql) and baseline rows in the real project"
 run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && env -u BIGQUERY_EMULATOR_HOST GCP_PROJECT_ID="$TF_VAR_project_id" BIGQUERY_DATASET="$(terraform -chdir=infra/terraform output -raw bigquery_dataset)" python scripts/seed_bigquery.py'
 
+[tasks."infra:seed:competition"]
+description = "Create BigQuery tables and load competition_telemetry into the real project (skips when already loaded)"
+run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && env -u BIGQUERY_EMULATOR_HOST GCP_PROJECT_ID="$TF_VAR_project_id" BIGQUERY_DATASET="$(terraform -chdir=infra/terraform output -raw bigquery_dataset)" python scripts/seed_bigquery.py --competition-only'
+
 [tasks."kb:import"]
 description = "Upload data/knowledge_base to GCS and import it into the Vertex AI Search datastore"
 run = ': "${TF_VAR_project_id:?set TF_VAR_project_id in mise.local.toml}" && python scripts/import_knowledge_base.py --project "$TF_VAR_project_id" --bucket "$(terraform -chdir=infra/terraform output -raw kb_bucket)"'

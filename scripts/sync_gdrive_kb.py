@@ -1,11 +1,11 @@
 """Sync the Google Drive Knowledge Base (.cache/gdrive/knowledge_base/) into the local RAG corpus.
 
 This script (TKT-069 / Issue #267) bridges the Google Drive ``knowledge_base/`` folder
-(XLSX, PDF, image directories) and the curated local Markdown tree under
+(XLSX, PDF) and the curated local Markdown tree under
 ``data/knowledge_base/``. It is idempotent: re-running it overwrites the synthesised
 Markdown / JSON artefacts but never deletes curated content.
 
-Pipeline (sub-tasks S1-S5 from the Tech Lead plan):
+Pipeline (sub-tasks S1-S4 from the Tech Lead plan):
 
 1. **S1 — 8D XLSX -> Markdown**: parse ``8D_Report_Historical_Checklist_for_AI_Development.xlsx``
    ``8D_Cases`` sheet, redact PII / brand identifiers, emit one Markdown file per record
@@ -20,19 +20,12 @@ Pipeline (sub-tasks S1-S5 from the Tech Lead plan):
 4. **S4 — Alarm-code mapping**: enrich ``SYMPTOM_SYNONYMS`` with alarm codes 45, 46, 50,
    51, 52, 53 in the RAG tool (the RAG update is done by the calling PR) and extend
    ``data/knowledge_base/index.json`` with one entry per redacted 8D row.
-5. **S5 — Image ingest**: copy competition defect images from
-   ``Original Image/`` and ``image error/Error_part_*/`` into
-   ``apps/{web,mobile}/public/presets/evidence/competition/`` and append entries to
-   ``data/datasets/preset_evidence/catalog.json``.
 
 PII / brand redaction is delegated to the :class:`Redactor` class so the substitution list
 stays in one place. The redactor logs every substitution it makes so the user can spot-check
 the output before the index is pushed to Vertex AI Search (Tech Lead plan §5 item 5).
 
-The script is intentionally pure-Python / no GCP. The image staging is local-only; the
-Tech Lead plan calls out that GCS upload is gated on already-configured credentials
-(Plan §2.1 D6, §5 item 1). When those credentials are missing we leave a TODO stub rather
-than uploading anything.
+The script is intentionally pure-Python / no GCP.
 """
 
 from __future__ import annotations
@@ -42,7 +35,6 @@ import json
 import logging
 import os
 import re
-import shutil
 import sys
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -62,11 +54,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_GDRIVE_KB = REPO_ROOT / ".cache" / "gdrive" / "knowledge_base"
 DEFAULT_KB_ROOT = REPO_ROOT / "data" / "knowledge_base"
 DEFAULT_DRIVE_OUTPUT = DEFAULT_KB_ROOT / "drive"
-DEFAULT_CATALOG = REPO_ROOT / "data" / "datasets" / "preset_evidence" / "catalog.json"
-DEFAULT_PRESET_DESTINATIONS = (
-    REPO_ROOT / "apps" / "web" / "public" / "presets" / "evidence" / "competition",
-    REPO_ROOT / "apps" / "mobile" / "public" / "presets" / "evidence" / "competition",
-)
 
 
 # =============================================================================
@@ -826,243 +813,6 @@ def update_index_json(
 
 
 # =============================================================================
-# S5 — Image ingest
-# =============================================================================
-
-
-_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif"}
-
-# PNG signature bytes: 89 50 4E 47 0D 0A 1A 0A. The competition Drive cache ships
-# some images without a filename extension, so we fall back to a signature sniff.
-_PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
-
-
-def _is_image_file(path: Path) -> bool:
-    """Return True when the file has a known image suffix or PNG signature."""
-
-    if not path.is_file():
-        return False
-    if path.suffix.lower() in _IMAGE_EXTENSIONS:
-        return True
-    try:
-        with path.open("rb") as fh:
-            return fh.read(8).startswith(_PNG_SIGNATURE)
-    except OSError:
-        return False
-
-
-def _classify_image(
-    rel_path: Path,
-    *,
-    error_part_index: int | None,
-) -> tuple[str, str]:
-    """Return (category, severity) heuristics for a competition image."""
-
-    parts_lower = [p.lower() for p in rel_path.parts]
-    if "original image" in parts_lower or "original" in parts_lower:
-        return ("normal", "nominal")
-    # image error/Error_part_<n>/... — assume defect
-    if error_part_index is not None:
-        # Spread severities across the 65 buckets for diversity.
-        if error_part_index <= 5:
-            severity = "low"
-        elif error_part_index <= 25:
-            severity = "medium"
-        else:
-            severity = "high"
-        # Heuristic category rotation.
-        cycle = error_part_index % 4
-        category = (
-            "surface_scratch",
-            "crack",
-            "fracture",
-            "assembly_gap",
-        )[cycle]
-        return (category, severity)
-    return ("surface_scratch", "medium")
-
-
-def ingest_competition_images(
-    gdrive_kb: Path,
-    *,
-    catalog_path: Path,
-    destinations: tuple[Path, ...] = DEFAULT_PRESET_DESTINATIONS,
-    max_error_parts: int = 65,
-    max_originals: int = 10,
-) -> list[dict[str, object]]:
-    """Copy competition defect images into the apps' public dirs and update the catalog.
-
-    The Tech Lead plan §2.1 D5 calls out that we copy the files into both
-    ``apps/web/public/presets/evidence/competition/`` and
-    ``apps/mobile/public/presets/evidence/competition/`` so Vite serves them under
-    ``/presets/evidence/competition/<file>`` at dev time.
-
-    GCS upload is intentionally a stub (TODO) per Tech Lead plan §5 item 1 — credentials
-    are not configured for this script run.
-    """
-
-    original_dir = gdrive_kb / "Original Image"
-    error_dir = gdrive_kb / "image error"
-
-    new_entries: list[dict[str, object]] = []
-
-    # Ensure destinations exist.
-    for dest in destinations:
-        dest.mkdir(parents=True, exist_ok=True)
-
-    # --- Original Image/ — nominal baseline (Tech Lead S5 AC: 10 originals) --------
-    if original_dir.is_dir():
-        originals = sorted(
-            p for p in original_dir.iterdir() if _is_image_file(p)
-        )[:max_originals]
-        for index, src in enumerate(originals, start=1):
-            target_filename = f"competition_original_{index:02d}_{src.name}"
-            web_url = f"/presets/evidence/competition/{target_filename}"
-            for dest in destinations:
-                target = dest / target_filename
-                shutil.copy2(src, target)
-            category, severity = _classify_image(src.relative_to(gdrive_kb), error_part_index=None)
-            new_entries.append(
-                {
-                    "id": f"preset-competition-original-{index:02d}",
-                    "title": f"Competition Original Frame {index:02d}",
-                    "category": category,
-                    "machine_id": "CNC-SIM-02",
-                    "tool_id": "T07",
-                    "severity": severity,
-                    "description": (
-                        "Nominal baseline workpiece frame captured during the competition "
-                        "data acquisition run; used for visual-metrology parity checks."
-                    ),
-                    "analysis": (
-                        "Visual metrology confirms a baseline appearance consistent with "
-                        "the planned nominal process; no defect signature detected."
-                    ),
-                    "thumbnail_url": web_url,
-                    "image_url": web_url,
-                    "expected_defect_detected": False,
-                    "expected_wear_mm": None,
-                    "suggested_sop_code": None,
-                    "source": "drive:knowledge_base/Original Image",
-                }
-            )
-            logger.info("Original image -> %s", target_filename)
-
-    # --- image error/Error_part_<n>/ — defect presets (Tech Lead S5 AC: >= 5) ------
-    # The competition data actually ships as flat files ``Error_part_<N>.png`` rather
-    # than per-error subdirectories (the Tech Lead plan §1.1 expected a directory
-    # tree but the cache has 7 standalone PNGs). We handle both layouts.
-    if error_dir.is_dir():
-        image_files: list[tuple[str, Path, int | None, bool]] = []
-        # Walk every entry: a flat image (with or without extension) becomes one
-        # entry; a subdirectory contributes one entry per image inside it. We track
-        # whether each entry came from a directory so the ``source`` field in the
-        # catalog can be unambiguous.
-        for entry in sorted(error_dir.iterdir(), key=lambda p: _safe_str(p.name)):
-            if entry.is_dir():
-                match = re.search(r"Error_part_(\d+)", entry.name)
-                idx = int(match.group(1)) if match else None
-                for src in sorted(
-                    (p for p in entry.iterdir() if _is_image_file(p)),
-                    key=lambda p: _safe_str(p.name),
-                ):
-                    image_files.append((entry.name, src, idx, True))
-            elif _is_image_file(entry):
-                match = re.search(r"Error_part_(\d+)", entry.stem)
-                idx = int(match.group(1)) if match else None
-                image_files.append((entry.stem, entry, idx, False))
-
-        # Cap after merge so direct + nested are both considered.
-        image_files = image_files[:max_error_parts]
-
-        for name, src, error_part_index, _from_dir in image_files:
-            images = [src]
-            for offset, src in enumerate(images, start=1):
-                # Re-add .png when the source ships without a suffix.
-                ext = src.suffix.lower() or ".png"
-                target_filename = f"competition_{name}_{src.stem}{ext}"
-                web_url = f"/presets/evidence/competition/{target_filename}"
-                for dest in destinations:
-                    shutil.copy2(src, dest / target_filename)
-                category, severity = _classify_image(
-                    src.relative_to(gdrive_kb),
-                    error_part_index=error_part_index,
-                )
-                new_entries.append(
-                    {
-                        "id": f"preset-competition-{name.lower()}-{offset:02d}",
-                        "title": f"Competition Defect Frame — {name} ({offset})",
-                        "category": category,
-                        "machine_id": "CNC-SIM-02",
-                        "tool_id": "T07",
-                        "severity": severity,
-                        "description": (
-                            f"Defect frame pulled from the competition Drive folder "
-                            f"``image error/{name}/``; reference baseline for visual "
-                            f"metrology parity checks."
-                        ),
-                        "analysis": (
-                            "Visual metrology identifies an anomaly signature consistent "
-                            f"with the ``{category}`` category at ``{severity}`` severity. "
-                            "Use as ground-truth evidence when no physical hardware is "
-                            "available during technician training."
-                        ),
-                        "thumbnail_url": web_url,
-                        "image_url": web_url,
-                        "expected_defect_detected": True,
-                        "expected_wear_mm": None,
-                        "suggested_sop_code": 209,
-                        "source": (
-                            f"drive:knowledge_base/image error/{src.name}"
-                            if not _from_dir
-                            else f"drive:knowledge_base/image error/{name}/{src.name}"
-                        ),
-                    }
-                )
-                logger.info("Defect image -> %s", target_filename)
-
-    # ---- Update catalog.json ---------------------------------------------------
-    if catalog_path.exists():
-        existing = json.loads(catalog_path.read_text(encoding="utf-8"))
-    else:
-        existing = []
-
-    # Idempotency: drop prior entries that share our id prefix.
-    existing = [
-        entry for entry in existing
-        if not (
-            isinstance(entry, dict)
-            and isinstance(entry.get("id"), str)
-            and entry["id"].startswith("preset-competition-")
-        )
-    ]
-    existing.extend(new_entries)
-
-    catalog_path.parent.mkdir(parents=True, exist_ok=True)
-    catalog_path.write_text(
-        json.dumps(existing, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-    logger.info(
-        "catalog.json updated with %d new competition entries (total now %d)",
-        len(new_entries),
-        len(existing),
-    )
-
-    # ---- TODO stub for GCS upload (Tech Lead plan §5 item 1) -------------------
-    if os.environ.get("GCS_KB_BUCKET") and os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
-        logger.info("GCS upload would target gs://%s/visual_evidence/", os.environ["GCS_KB_BUCKET"])
-        # TODO(competition-kb): enable real upload when credentials are wired into CI.
-    else:
-        logger.info(
-            "Skipping GCS upload (no GCS_KB_BUCKET / GOOGLE_APPLICATION_CREDENTIALS). "
-            "TODO: enable gs://<prefix>-kb/visual_evidence/ upload once credentials are wired.",
-        )
-
-    return new_entries
-
-
-# =============================================================================
 # CLI
 # =============================================================================
 
@@ -1072,10 +822,8 @@ def run_sync(
     gdrive_kb: Path,
     kb_root: Path,
     drive_output: Path,
-    catalog_path: Path,
-    destinations: tuple[Path, ...] = DEFAULT_PRESET_DESTINATIONS,
 ) -> dict[str, object]:
-    """Execute S1..S5 in order; return a summary dict for the CLI to print."""
+    """Execute S1..S4 in order; return a summary dict for the CLI to print."""
 
     redactor = Redactor()
 
@@ -1129,14 +877,6 @@ def run_sync(
         )
         summary["outputs"]["index_entries_added"] = added
 
-    # S5
-    image_entries = ingest_competition_images(
-        gdrive_kb,
-        catalog_path=catalog_path,
-        destinations=destinations,
-    )
-    summary["outputs"]["competition_presets"] = len(image_entries)
-
     summary["redaction_substitutions"] = redactor.report.to_dict()
     return summary
 
@@ -1161,12 +901,6 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         default=DEFAULT_DRIVE_OUTPUT,
         help="Directory under kb-root where drive-ingested Markdown is written.",
     )
-    parser.add_argument(
-        "--catalog",
-        type=Path,
-        default=DEFAULT_CATALOG,
-        help="Path to preset_evidence/catalog.json.",
-    )
     return parser
 
 
@@ -1179,7 +913,6 @@ def main(argv: list[str] | None = None) -> int:
         gdrive_kb=args.gdrive_kb,
         kb_root=args.kb_root,
         drive_output=args.drive_output,
-        catalog_path=args.catalog,
     )
 
     print(json.dumps(summary, indent=2, default=str))

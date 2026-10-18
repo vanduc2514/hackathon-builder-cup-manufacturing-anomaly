@@ -52,7 +52,7 @@ def test_zero_credential_orchestrator_mock_workflow():
         state = asyncio.run(orch.run_incident(req))
 
         # Confirm workflow advanced through all stages without credential errors
-        assert state.status == "closed"
+        assert state.status == "pending_approval"
         assert state.suspect_machine == "CNC-02"
         assert state.repair_done is True
         assert len(state.findings) >= 5
@@ -129,4 +129,3 @@ def test_zero_credential_config_defaults():
     s = Settings()
     assert s.bigquery_fallback_to_mock is True
     assert s.rag_fallback_to_local is True
-    assert s.gemini_live_simulation_mode is True

@@ -27,6 +27,7 @@ from backend.core.config import settings
 from backend.core.models import (
     AgentFinding,
     DefectInjectionRequest,
+    ImpactMetrics,
     IncidentState,
     VerificationResult,
 )
@@ -108,7 +109,7 @@ async def test_e2e_incident_simulation_lifecycle():
             pass
 
     # Assert incident is closed and verified
-    assert final_state.status == "closed", f"Expected closed status, got {final_state.status}"
+    assert final_state.status == "pending_approval", f"Expected pending approval, got {final_state.status}"
     assert final_state.verification_count >= final_state.verification_target
     assert final_state.verification_target == 50
     assert final_state.repair_done is True
@@ -150,6 +151,7 @@ async def test_e2e_incident_simulation_lifecycle():
         "repairing",
         "verifying",
         "closed",
+        "pending_approval",
     ]
     for expected_status in expected_sequence:
         assert expected_status in observed_statuses, (
@@ -161,6 +163,8 @@ async def test_e2e_incident_simulation_lifecycle():
     assert approved_state is not None
     assert approved_state.status == "closed"
     assert approved_state.approved is True
+    assert approved_state.approved_by == "lead-supervisor-01"
+    assert approved_state.approved_at is not None
 
     # Validate simulation reset restores baseline
     reset_state = await orchestrator.reset()
@@ -216,11 +220,20 @@ async def test_verification_gatekeeper_invariant():
     assert closed_state.status == "closed"
     assert closed_state.verification_count == 50
 
-    # 4. Shift-leader approval now succeeds on closed incident
+    # 4. Approval is rejected until learning completes (pending_approval)
+    assert orchestrator.approve("supervisor-01") is None
+    blackboard.update_status("pending_approval", impact=ImpactMetrics())
+
+    # 5. Shift-leader approval now succeeds on the learning-complete incident
     approved_state = orchestrator.approve("supervisor-01")
     assert approved_state is not None
     assert approved_state.status == "closed"
     assert approved_state.approved is True
+    assert approved_state.approved_by == "supervisor-01"
+    assert approved_state.approved_at is not None
+
+    # 6. A second approval is rejected
+    assert orchestrator.approve("supervisor-01") is None
 
 
 @pytest.mark.asyncio
@@ -341,8 +354,8 @@ async def test_zero_credential_offline_mock_parity(monkeypatch):
     finally:
         orchestrator._step_delay = None
 
-    # Must reach closed status with zero failures or unhandled exceptions
-    assert state.status == "closed", f"Expected closed status offline, got {state.status}"
+    # Must reach pending-approval status with zero failures or unhandled exceptions
+    assert state.status == "pending_approval", f"Expected pending approval offline, got {state.status}"
     assert state.verification_count >= state.verification_target
     assert len(state.findings) >= 7, (
         f"Expected all agent findings in mock mode, got {len(state.findings)}"

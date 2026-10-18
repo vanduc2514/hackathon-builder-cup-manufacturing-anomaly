@@ -8,7 +8,7 @@ import type {
   WorkStage,
 } from '../../types/mobile';
 import { logout, useSession } from '../../api/auth';
-import { dataUrlToBlob, fetchIncidentHistory, postHandoverNote, uploadIncidentEvidence } from '../../api/kaizenApi';
+import { dataUrlToBlob, fetchIncidentHistory, postHandoverNote, postRepairDone, uploadIncidentEvidence } from '../../api/kaizenApi';
 import { useTelemetry } from '../../hooks/useTelemetry';
 import MobileNav, { type MobileTab } from './MobileNav';
 import MobileWorkList from './MobileWorkList';
@@ -91,6 +91,7 @@ function statusNotification(incident: IncidentState): NewNotification | null {
         workId,
       };
     case 'closed':
+    case 'pending_approval':
       return incident.approved
         ? null
         : {
@@ -412,13 +413,15 @@ export default function MobileApp({ incident, history }: MobileAppProps): React.
         console.error('Failed to post handover note:', err);
       }
     }
-    setStack([]);
-    if (target.live.repairDone) {
-      setWorkTab('processing');
-      showToast('Repair recorded · inline camera is verifying parts');
-    } else {
-      showToast('Steps done · the AI records the repair when the copilot finishes');
+    try {
+      await postRepairDone();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Repair confirmation failed', 'error');
+      return;
     }
+    setStack([]);
+    setWorkTab('processing');
+    showToast('Repair confirmed · inline camera is verifying parts');
   };
 
   const handleAddLiveHandoverNote = async (noteText: string) => {

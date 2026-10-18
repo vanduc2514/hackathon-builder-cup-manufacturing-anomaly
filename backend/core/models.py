@@ -1,4 +1,4 @@
-"""Core Models: Pydantic schemas for findings, evidence, confidence, citations, incident state, and Gemini Live streaming."""
+"""Core Models: Pydantic schemas for findings, evidence, confidence, citations, incident state, and Copilot streaming."""
 
 from __future__ import annotations
 
@@ -262,6 +262,9 @@ class AgentFinding(BaseModel):
     timestamp: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
     five_whys: Optional[List[FiveWhysStep]] = None
     ishikawa: Optional[Dict[str, List[str]]] = None
+    # Where the finding came from: "gemini" (model output), "fallback" (scripted result
+    # used after a model miss/failure in DEMO_SCRIPTED mode) or "mock" (no model configured).
+    source: Optional[Literal["gemini", "fallback", "mock"]] = None
 
 
 class ManufacturingBenchmark(BaseModel):
@@ -408,6 +411,14 @@ class VerificationResult(BaseModel):
 
     good_streak: int
     defect_rate: float
+    samples: List["QaFrameInspection"] = Field(
+        default_factory=list,
+        description="Parts classified from real catalog images (Gemini Vision or guarded/mock) so far",
+    )
+    recurrence: bool = Field(
+        default=False,
+        description="True when an image-classified part was a defect and verification stopped",
+    )
 
 
 class ImpactMetrics(BaseModel):
@@ -636,6 +647,49 @@ class VisualEvidencePayload(BaseModel):
         default="Technician diagnostic camera stream via Gemini Live",
         description="Audit trail citation source",
     )
+    source: Optional[Literal["gemini", "fallback", "mock"]] = Field(
+        default=None, description="Origin of the analysis: model, scripted fallback or mock"
+    )
+    confidence: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Model self-assessed confidence; scripted expectation value for fallback/mock",
+    )
+
+
+class PartInspectionResult(BaseModel):
+    """Closed-schema Gemini Vision result for an end-of-line part photo."""
+
+    defect_class: Literal["scratch_vertical", "chipping", "none"]
+    severity: int = Field(ge=1, le=5)
+    region: Literal["top", "center", "bottom", "left edge", "right edge"]
+    confidence: float = Field(
+        ge=0.0, le=1.0, description="Model self-assessed confidence in this classification"
+    )
+
+
+class InsertInspectionResult(BaseModel):
+    """Closed-schema Gemini Vision result for a removed cutting-insert photo."""
+
+    flank_wear: Literal["none", "light", "severe"]
+    edge_chipping: bool
+    replace_insert: bool
+    confidence: float = Field(
+        ge=0.0, le=1.0, description="Model self-assessed confidence in this assessment"
+    )
+
+
+class GuardedInspection(BaseModel):
+    """Outcome of a vision call after the DEMO_SCRIPTED expected-result guard."""
+
+    kind: Literal["part", "insert"]
+    part: Optional[PartInspectionResult] = None
+    insert: Optional[InsertInspectionResult] = None
+    source: Literal["gemini", "fallback", "mock"]
+    model: str
+    attempts: int = 0
+    summary: str = Field(description="Template-rendered display text, never model free text")
 
 
 class VisualInspectionResult(BaseModel):
@@ -653,7 +707,6 @@ class VisualInspectionResult(BaseModel):
         description="Quantitative measurement of tool flank wear (VB), chip width, or defect size in mm if visible.",
     )
     confidence: float = Field(
-        default=0.92,
         ge=0.0,
         le=1.0,
         description="Confidence score between 0.0 and 1.0 of the visual analysis.",
@@ -665,9 +718,16 @@ class VisualEvidencePreset(BaseModel):
 
     id: str = Field(description="Unique alphanumeric preset identifier")
     title: str = Field(description="Human-readable title of the sample")
-    category: Literal["surface_scratch", "crack", "fracture", "assembly_gap", "normal"] = Field(
-        description="Defect archetype category"
-    )
+    category: Literal[
+        "surface_scratch",
+        "crack",
+        "fracture",
+        "assembly_gap",
+        "normal",
+        "scratch_vertical",
+        "chipping",
+        "tool_wear",
+    ] = Field(description="Defect archetype category")
     machine_id: str = Field(default="IM-05", description="Applicable equipment bay")
     tool_id: Optional[str] = Field(default="MOLD-03", description="Suspect tool slot")
     description: str = Field(description="Detailed visual & metrology description")
@@ -679,6 +739,22 @@ class VisualEvidencePreset(BaseModel):
         default=None, description="Flank wear dimension in mm"
     )
     suggested_sop_code: Optional[int] = Field(default=None, description="Linked SOP reference")
+    role: Literal["qa_defect", "streak_good", "tool_worn", "tool_new", "reference", "im05"] = Field(
+        default="im05", description="Demo role the image plays (QA defect, streak good part, ...)"
+    )
+    expected_class: Optional[str] = Field(
+        default=None,
+        description=(
+            "Expected vision class: part = scratch_vertical|chipping|none; insert = replace|ok"
+        ),
+    )
+    image_file: Optional[str] = Field(
+        default=None,
+        description="Backend image path relative to data/datasets/preset_evidence/",
+    )
+    source_url: Optional[str] = Field(default=None, description="Original image source URL")
+    author: Optional[str] = Field(default=None, description="Image author / rights holder")
+    licence: Optional[str] = Field(default=None, description="Image licence identifier")
 
 
 class VisualEvidencePresetListResponse(BaseModel):
@@ -723,8 +799,11 @@ class HandoverNoteRequest(BaseModel):
 
 class IncidentState(BaseModel):
     incident_id: str = "INC-0412"
+    # Monotonic per-incident write counter set by the Blackboard on every persisted write;
+    # Firestore snapshot echoes with revision <= the local one are stale and ignored.
+    revision: int = 0
     # normal, detecting, tracing, investigating, analyzing, awaiting_evidence, repairing,
-    # verifying, closed, dismissed, escalated, error
+    # verifying, pending_approval, closed, dismissed, escalated, error
     status: str = "normal"
     status_reason: Optional[str] = None  # escalation or error reason
     defect_type: Optional[str] = None
@@ -736,7 +815,23 @@ class IncidentState(BaseModel):
     verification_count: int = 0
     verification_target: int = 50
     repair_done: bool = False
-    approved: bool = False  # shift-leader sign-off, recorded by the Orchestrator after close
+    approved: bool = False  # shift-leader sign-off, recorded by the Orchestrator after learning
+    approved_by: Optional[str] = Field(
+        default=None,
+        description="Username of the shift leader who signed off the incident",
+    )
+    approved_at: Optional[str] = Field(
+        default=None,
+        description="ISO 8601 UTC timestamp of the shift-leader sign-off",
+    )
+    documents_exported: bool = Field(
+        default=False,
+        description="#333: approved documents rendered to Markdown and uploaded to GCS",
+    )
+    documents_export_error: Optional[str] = Field(
+        default=None,
+        description="Reason the document export failed; approval itself still succeeded",
+    )
     findings: List[AgentFinding] = Field(default_factory=list)
     impact: Optional[ImpactMetrics] = None
     documents: Dict[str, Any] = Field(default_factory=dict)
@@ -871,6 +966,12 @@ class EsgLedgerResponse(BaseModel):
         default="aluminum_cnc",
         description="Factory type of the newest entry, or aluminum_cnc if empty",
     )
+    basis: Literal["benchmark", "measured"] = Field(
+        default="benchmark",
+        description=(
+            "Origin of impact inputs: benchmark estimates or measured production data"
+        ),
+    )
 
 
 class DefectInjectionRequest(BaseModel):
@@ -955,6 +1056,52 @@ class SimulationResetResponse(BaseModel):
     state: dict[str, Any] = Field(default_factory=dict)
     bigquery: dict[str, Any] = Field(default_factory=dict)
     factory_sync: Optional[FactorySyncResult] = None
+
+# ---------------------------------------------------------------------------
+# Issue #333 — approved incident document export (Markdown to GCS)
+#
+# On shift-leader approval the four documents (work order, 8D report, SOP
+# proposal, impact card) are rendered to Markdown and written to
+# gs://<documents_bucket>/incidents/<incident_id>/ (artifacts/documents/
+# outside production). The blobs are private, so the dashboard links to the
+# Cloud Console browser path instead.
+# ---------------------------------------------------------------------------
+
+
+class IncidentDocumentsExportResult(BaseModel):
+    """Outcome of exporting one approved incident's documents as Markdown."""
+
+    incident_id: str
+    destination: Literal["gcs", "local"]
+    bucket: Optional[str] = None
+    prefix: str = Field(description="Object/folder prefix, e.g. incidents/INC-0412/")
+    uris: List[str] = Field(
+        default_factory=list, description="gs:// object URIs or local file paths"
+    )
+    console_url: Optional[str] = None
+    note: str = Field(
+        default="", description="Human-readable detail, e.g. the local fallback reason"
+    )
+
+
+class IncidentDocumentLink(BaseModel):
+    """One exported Markdown document with its storage URI."""
+
+    name: str = Field(description="Markdown file name, e.g. work_order.md")
+    title: str = Field(description="Display title, e.g. Work Order")
+    uri: str = Field(description="gs:// object URI (GCS) or local file path (dev)")
+
+
+class IncidentDocumentsResponse(BaseModel):
+    """GET /api/incidents/documents payload for the current incident (#333)."""
+
+    incident_id: str
+    exported: bool
+    export_error: Optional[str] = None
+    destination: Literal["gcs", "local"]
+    bucket: Optional[str] = None
+    console_url: Optional[str] = None
+    documents: List[IncidentDocumentLink] = Field(default_factory=list)
 
 
 class SuspectCorrelation(BaseModel):
@@ -1264,12 +1411,55 @@ class FilteredFramePacket(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
+class QaFrameInspection(BaseModel):
+    """One end-of-line camera frame classified by Gemini Vision (or guarded/mock) in Phase A."""
+
+    preset_id: str = Field(description="Catalog preset id of the camera image")
+    title: str
+    image_url: str
+    camera_id: str = "CAM-EOL-01"
+    machine_id: str
+    tool_id: str
+    kind: Literal["part", "visual"] = Field(
+        description="'part' = closed-schema part classification; 'visual' = free-form visual evidence"
+    )
+    expected_class: Optional[str] = Field(
+        default=None, description="Catalog expected result used by the DEMO_SCRIPTED guard"
+    )
+    defect_class: Optional[str] = Field(
+        default=None, description="Part classification (kind='part' only)"
+    )
+    severity: Optional[int] = Field(default=None, ge=1, le=5)
+    region: Optional[str] = None
+    confidence: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Model self-assessed confidence (real calls only)"
+    )
+    is_defect: bool
+    source: Literal["gemini", "fallback", "mock"]
+    model: str
+    summary: str = Field(description="Template-rendered display text, never model free text")
+
+
+VerificationResult.model_rebuild()
+
+
 class QualityInspectionReport(BaseModel):
-    """Quality Inspector Phase A evidence: SPC on the latest conveyor window plus edge-classified defect frames."""
+    """Quality Inspector Phase A evidence: SPC on the latest conveyor window plus vision-classified frames."""
 
     spc: SpcEvaluationResult
-    defect_type_counts: Dict[str, int] = Field(default_factory=dict)
-    defect_frames: List[FilteredFramePacket] = Field(default_factory=list)
+    defect_type_counts: Dict[str, int] = Field(
+        default_factory=dict,
+        description="SPC defect count from the trigger, labelled with the trigger defect type",
+    )
+    defect_type_counts_basis: str = Field(
+        default="spc_trigger",
+        description="Origin of defect_type_counts: the SPC window count, not a per-part census",
+    )
+    frame_class_counts: Dict[str, int] = Field(
+        default_factory=dict,
+        description="Class counts over the vision-classified sample frames only",
+    )
+    defect_frames: List[QaFrameInspection] = Field(default_factory=list)
 
 
 class EdgeFilterStatistics(BaseModel):
@@ -1286,67 +1476,37 @@ class EdgeFilterStatistics(BaseModel):
     estimated_bandwidth_saved_mb: float = 0.0
 
 
-class GeminiLiveModality(str, Enum):
-    AUDIO = "AUDIO"
-    TEXT = "TEXT"
+class CopilotTurnRequest(BaseModel):
+    """Technician turn sent over `WS /api/gemini-live/ws` (typed text, optionally with a preset photo)."""
 
-
-class GeminiLiveBlob(BaseModel):
-    mime_type: str = "audio/pcm;rate=16000"
-    data: str  # Base64 encoded payload
-
-
-class GeminiLiveRealtimeInput(BaseModel):
-    media_chunks: List[GeminiLiveBlob] = Field(default_factory=list)
-
-
-class GeminiLiveClientContent(BaseModel):
-    text: Optional[str] = None
-    end_of_turn: bool = True
-
-
-class GeminiLiveSetup(BaseModel):
-    model: str = "gemini-2.0-flash-exp"
-    voice_name: str = "Aoede"
-    language_code: str = "vi-VN"
-    system_instruction: Optional[str] = None
-    session_id: Optional[str] = None
-    mode: str = "live"  # "live" or "simulation"
-    session_resumption_handle: Optional[str] = None
-
-
-class GeminiLiveClientMessage(BaseModel):
-    setup: Optional[GeminiLiveSetup] = None
-    realtime_input: Optional[GeminiLiveRealtimeInput] = None
-    client_content: Optional[GeminiLiveClientContent] = None
-    interrupt: bool = False
-    message_index: Optional[int] = None
-
-
-class GeminiLiveServerContent(BaseModel):
-    text: Optional[str] = None
-    audio_pcm_base64: Optional[str] = None
-    input_transcription: Optional[str] = None
-    output_transcription: Optional[str] = None
-    interrupted: bool = False
-    turn_complete: bool = False
-    generation_complete: bool = False
+    type: Literal["user_turn"] = "user_turn"
+    text: str = Field(min_length=1, max_length=2000)
+    preset_id: Optional[str] = Field(
+        default=None, description="Catalog preset whose image is attached to the turn"
+    )
 
 
 class GeminiLiveServerMessage(BaseModel):
-    type: str  # "setup_complete", "server_content", "session_resumption_update", "go_away", "error", "pong"
+    """Server -> client message of the Technician Copilot WebSocket.
+
+    `type`: setup_complete, text_delta (one streamed text chunk in `text`), turn_complete
+    (`interrupted` set when the technician cut the reply), offline / error (terminal for the
+    turn, reason in `error_message`) and pong.
+    """
+
+    type: str
     session_id: Optional[str] = None
-    server_content: Optional[GeminiLiveServerContent] = None
+    text: Optional[str] = None
+    model: Optional[str] = None
+    interrupted: bool = False
     resumption_handle: Optional[str] = None
-    last_consumed_client_message_index: Optional[int] = None
     error_message: Optional[str] = None
     timestamp: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
 
 
 class GeminiLiveSessionStatus(BaseModel):
     session_id: str
-    status: str  # "active", "resumed", "closed", "simulated"
-    mode: str  # "live", "simulation"
+    status: str  # "active"
     client_messages_received: int = 0
     server_messages_sent: int = 0
     created_at: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
@@ -1678,17 +1838,6 @@ class FleetRegistryResponse(BaseModel):
 # ingestion time and must surface as a ValidationError rather than silently
 # pass through to BigQuery and corrupt downstream SPC calculations.
 COMPETITION_OPERATING_STATUSES: tuple[str, ...] = ("RUNNING", "FAULT")
-
-
-# Safe-default text used by the orchestrator when an LLM agent's JSON output
-# cannot be parsed into a FindingDraft (e.g. truncated stream, malformed JSON).
-# Referenced from ``backend.agents.orchestrator._safe_validate_finding_draft``
-# so the wording lives next to the schema definition it replaces.
-FINDING_SAFE_DEFAULT_TEXT = (
-    "LLM output could not be parsed; deferring to operator review"
-)
-FINDING_SAFE_DEFAULT_EVIDENCE = ""
-FINDING_SAFE_DEFAULT_CONFIDENCE = 0.0
 
 
 def _coerce_competition_timestamp(raw: Any) -> Any:

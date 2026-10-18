@@ -23,6 +23,8 @@ from backend.core.models import (
 )
 from backend.core.pubsub_manager import PubSubManager, pubsub_manager
 from backend.tools.bigquery_tool import (
+    build_sensor_telemetry_row,
+    build_traceability_row,
     clear_mock_sensor_telemetry,
     clear_mock_traceability_records,
     get_mock_sensor_telemetry,
@@ -209,7 +211,7 @@ def test_pubsub_manager_telemetry_and_traceability_pipeline():
         rpm=11500,
         operating_status="WARNING",
     )
-    msg_tel = _make_pubsub_message(tel_payload.model_dump_json().encode("utf-8"))
+    msg_tel = _make_pubsub_message(json.dumps(build_sensor_telemetry_row(tel_payload)).encode("utf-8"))
     manager._handle_telemetry_message(msg_tel)
     msg_tel.ack.assert_called_once()
 
@@ -224,7 +226,7 @@ def test_pubsub_manager_telemetry_and_traceability_pipeline():
         lot_id="AL-5083-B1",
         status="PASS",
     )
-    msg_trace = _make_pubsub_message(trace_payload.model_dump_json().encode("utf-8"))
+    msg_trace = _make_pubsub_message(json.dumps(build_traceability_row(trace_payload)).encode("utf-8"))
     manager._handle_traceability_message(msg_trace)
     msg_trace.ack.assert_called_once()
 

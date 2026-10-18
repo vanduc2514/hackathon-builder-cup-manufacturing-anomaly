@@ -232,3 +232,42 @@ def test_async_connector_methods(mock_connector: GoogleDriveConnector):
             assert text == "async text"
 
     asyncio.run(_run())
+
+
+def test_production_never_serves_mock_documents(
+    mock_connector: GoogleDriveConnector, monkeypatch: pytest.MonkeyPatch
+):
+    """APP_ENV=production: no Drive client means no documents, never MOCK_DOC_TEXTS."""
+    from backend.core.config import settings
+
+    monkeypatch.setattr(settings, "app_env", "production")
+    with patch.object(mock_connector, "_get_service", return_value=None):
+        assert mock_connector.list_documents() == []
+        assert mock_connector.search_exact_documents(["T07", "scratch_vertical"]) == []
+        assert mock_connector.export_google_doc_text("mock-doc-cnc-01", MIME_GOOGLE_SHEET) == ""
+        with pytest.raises(RuntimeError, match="no mock documents in production"):
+            mock_connector.stream_document_bytes("mock-doc-cnc-01")
+
+
+def test_production_drive_api_error_does_not_fall_back_to_mock_text(
+    mock_connector: GoogleDriveConnector, monkeypatch: pytest.MonkeyPatch
+):
+    from backend.core.config import settings
+
+    monkeypatch.setattr(settings, "app_env", "production")
+    service = MagicMock()
+    service.files().get_media().execute.side_effect = OSError("drive down")
+    with patch.object(mock_connector, "_get_service", return_value=service):
+        with pytest.raises(OSError, match="drive down"):
+            mock_connector.stream_document_bytes("mock-doc-cnc-01")
+
+
+def test_development_still_serves_mock_documents(
+    mock_connector: GoogleDriveConnector, monkeypatch: pytest.MonkeyPatch
+):
+    from backend.core.config import settings
+
+    monkeypatch.setattr(settings, "app_env", "development")
+    with patch.object(mock_connector, "_get_service", return_value=None):
+        assert len(mock_connector.list_documents()) > 0
+        assert b"WNMG-080408" in mock_connector.stream_document_bytes("mock-doc-cnc-01")

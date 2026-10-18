@@ -19,6 +19,8 @@ from backend.core.models import (
 from backend.core.pubsub_manager import PubSubManager, pubsub_manager
 from backend.edge.gateway.mqtt_bridge import MQTTBridge
 from backend.tools.bigquery_tool import (
+    build_sensor_telemetry_row,
+    build_traceability_row,
     clear_mock_sensor_telemetry,
     clear_mock_traceability_records,
     get_mock_sensor_telemetry,
@@ -154,7 +156,8 @@ def test_start_subscribers_provisions_only_on_emulator(
     ):
         assert manager.start_subscribers() is True
     assert ensure.called is provisions
-    assert subscriber.subscribe.call_count == 3
+    # quality-events always; telemetry/traceability ingestion only on the emulator (#331)
+    assert subscriber.subscribe.call_count == (3 if provisions else 1)
 
 
 def test_pubsub_telemetry_message_handler():
@@ -166,7 +169,7 @@ def test_pubsub_telemetry_message_handler():
         operating_status="WARNING",
     )
     mock_msg = MagicMock()
-    mock_msg.data = telemetry.model_dump_json().encode("utf-8")
+    mock_msg.data = json.dumps(build_sensor_telemetry_row(telemetry)).encode("utf-8")
 
     manager._handle_telemetry_message(mock_msg)
     mock_msg.ack.assert_called_once()
@@ -186,7 +189,7 @@ def test_pubsub_traceability_message_handler():
         status="DEFECT_SCRATCH",
     )
     mock_msg = MagicMock()
-    mock_msg.data = trace.model_dump_json().encode("utf-8")
+    mock_msg.data = json.dumps(build_traceability_row(trace)).encode("utf-8")
 
     manager._handle_traceability_message(mock_msg)
     mock_msg.ack.assert_called_once()

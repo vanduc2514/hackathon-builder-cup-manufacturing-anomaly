@@ -232,6 +232,49 @@ def test_seed_bigquery_dry_run_skips_inserts(tmp_path):
     assert manifest.exists()
 
 
+def _count_result(n: int) -> MagicMock:
+    job = MagicMock()
+    job.result.return_value = [{"n": n}]
+    return job
+
+
+def test_seed_competition_only_skips_legacy_rows_and_loads_empty_table(tmp_path):
+    """``competition_only`` loads competition rows but never the legacy seed tables."""
+    from scripts.seed_bigquery import seed_bigquery as cli_seed
+
+    mock_client = _mock_bq_client()
+    mock_client.query.return_value = _count_result(0)
+
+    summary = cli_seed(
+        staging_csv=tmp_path / "staging.csv",
+        manifest_path=tmp_path / "manifest.json",
+        client=mock_client,
+        competition_only=True,
+    )
+
+    assert summary is not None and summary.rows_loaded == 2000
+    table_refs = {call.args[0] for call in mock_client.insert_rows_json.call_args_list}
+    assert all(ref.endswith("competition_telemetry") for ref in table_refs)
+
+
+def test_seed_competition_only_does_not_duplicate_loaded_table(tmp_path):
+    """A re-run against an already loaded table inserts nothing."""
+    from scripts.seed_bigquery import seed_bigquery as cli_seed
+
+    mock_client = _mock_bq_client()
+    mock_client.query.return_value = _count_result(2000)
+
+    summary = cli_seed(
+        staging_csv=tmp_path / "staging.csv",
+        manifest_path=tmp_path / "manifest.json",
+        client=mock_client,
+        competition_only=True,
+    )
+
+    assert summary is None
+    mock_client.insert_rows_json.assert_not_called()
+
+
 def test_load_competition_csv_idempotent_on_re_run(tmp_path):
     """Re-running the loader produces the same row count + sha256."""
     from scripts.seed_bigquery import seed_bigquery as cli_seed

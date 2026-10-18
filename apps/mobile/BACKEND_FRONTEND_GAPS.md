@@ -18,9 +18,9 @@ Compares the technician mobile app (`apps/mobile/src`) with the FastAPI backend 
 | `POST /api/incidents/handover` (`{"note": string}`) | Records technician shift handover note on the active incident | `MobileApp.tsx` `submitRepair()`, `MobileWorkStatus.tsx` `handleAddNote()` |
 | `GET /api/telemetry/baseline` | Alert thresholds (`vibration_warning_threshold`, `current_warning_threshold`) and trend vs. baseline | `hooks/useTelemetry.ts` |
 | `GET /api/telemetry/history?machine_id=` | Sensor tiles when `latest_telemetry` is null; vibration bars on the evidence screen | `hooks/useTelemetry.ts` |
-| `GET /api/gemini-live/status` | Copilot availability, language (`default_language`), SIM/LIVE tag | `hooks/useGeminiLive.ts` |
+| `GET /api/gemini-live/status` | Copilot availability (`copilot_available`) and speech language (`language`, en-US) | `hooks/useGeminiLive.ts` |
 | `POST /api/gemini-live/session` | Pre-allocates the session before opening the socket | `hooks/useGeminiLive.ts` |
-| `WS /api/gemini-live/ws` | Live Fix copilot: sends one text turn per step, shows `input_transcription` / `output_transcription`, plays `audio_pcm_base64` (24 kHz PCM), handles `interrupted`, `turn_complete`, `resumption_handle` | `hooks/useGeminiLive.ts`, `MobileFixLive.tsx` |
+| `WS /api/gemini-live/ws` | Live Fix copilot: sends a scripted `user_turn` (tapped prompt chip, optionally with a `preset_id` photo), renders streamed `text_delta` captions, speaks each completed sentence with browser `speechSynthesis`, handles `turn_complete` (`interrupted`), `offline`, `error`; Stop sends `interrupt` | `hooks/useGeminiLive.ts`, `MobileFixLive.tsx` |
 | `GET /api/gemini-live/sessions` | On a dropped socket: resume the same session with the last `resumption_handle`, or create a new one | `hooks/useGeminiLive.ts` |
 
 Vite proxies `/api` with `ws: true`, so the WebSocket goes through the same relative URL.
@@ -73,7 +73,7 @@ Status → work order mapping:
 | Closes only after the verification target | `verification_gate` | Status screen: "N more good parts in a row before your lead can approve" |
 | Lead (shift leader) approves, not the technician | `POST /api/incidents/approve` | No approve button; `closed` without `approved` stays in Processing |
 | Relative API URLs only | Vite proxy `/api` → `:8000` (HTTP, SSE, WS) | No hardcoded hostnames |
-| Copilot language | `gemini_live_language = "vi-VN"` | Taken from `/api/gemini-live/status` |
+| Copilot language | `COPILOT_LANGUAGE = "en-US"` | Taken from `/api/gemini-live/status` |
 | Technician input enters through the API | `POST /api/incidents/evidence` → `blackboard.attach_field_evidence()` | Only the evidence upload writes; repair completion is left to the workflow |
 | Evidence resets the workflow status | `attach_field_evidence()` always sets `status = analyzing` | Upload only while `awaiting_evidence`; never post repair results to the evidence endpoint |
 | Image frames on the copilot socket count as evidence | `WS /api/gemini-live/ws` runs `attach_field_evidence()` on image frames | Live Fix sends text turns only; the camera stays local |

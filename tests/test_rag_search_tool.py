@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -644,3 +645,50 @@ def test_compute_asset_score_does_not_drop_drive_8d_for_cnc_queries():
         f"cross-family incompatibility must still return 0.0 (got {im_score}) "
         "so CNC queries never pick up IM-05 manuals"
     )
+
+
+class _ProtoMap(Mapping):
+    """Stands in for proto-plus MapComposite (a Mapping that is not a dict)."""
+
+    def __init__(self, data: dict) -> None:
+        self._data = data
+
+    def __getitem__(self, key):
+        return self._data[key]
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+
+def test_vertex_search_reads_proto_struct_data_and_cleans_snippets():
+    """Live Discovery Engine returns Struct maps, not dicts; title/link/snippet must survive."""
+    from backend.tools.rag_search_tool import VertexAISearchClient
+
+    derived = _ProtoMap(
+        {
+            "title": "drive__maint_logs__ML-SYN-0007",
+            "link": "gs://kaizen-lab-kb/kb/drive__maint_logs__ML-SYN-0007.txt",
+            "snippets": [_ProtoMap({"snippet": "Excessive <b>error</b> &quot;2&quot;"})],
+        }
+    )
+    result = MagicMock()
+    result.document.derived_struct_data = derived
+    result.document.struct_data = None
+    result.document.id = "eaca0d42"
+    result.relevance_score = None
+    client = MagicMock()
+    client.serving_config_path.return_value = (
+        "projects/p/locations/global/dataStores/d/servingConfigs/default_search"
+    )
+    client.search.return_value.results = [result]
+
+    vertex = VertexAISearchClient()
+    vertex._client = client
+    citations = vertex.search("error", "CNC-02")
+
+    assert citations[0].title == "drive__maint_logs__ML-SYN-0007"
+    assert citations[0].document_id.endswith("drive__maint_logs__ML-SYN-0007.txt")
+    assert citations[0].snippet == 'Excessive error "2"'

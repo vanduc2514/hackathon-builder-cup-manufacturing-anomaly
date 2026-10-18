@@ -232,6 +232,7 @@ def seed_bigquery(
     staging_csv: Optional[Path] = None,
     manifest_path: Optional[Path] = None,
     client: Optional[object] = None,
+    competition_only: bool = False,
 ) -> Optional[BigQueryIngestionSummary]:
     """Creates dataset, tables, and inserts initial development rows.
 
@@ -245,6 +246,10 @@ def seed_bigquery(
     ``client`` is an injection seam for tests: callers can pass a mock
     BigQuery client (with the same shape as ``google.cloud.bigquery.Client``)
     instead of relying on ``get_bigquery_client()``.
+
+    ``competition_only`` (production backfill) creates the tables, skips the legacy
+    traceability / sensor_telemetry seed rows, and loads ``competition_telemetry`` only
+    when that table is still empty, so re-running it never duplicates rows.
     """
     from google.api_core.exceptions import NotFound
     from google.cloud import bigquery
@@ -275,25 +280,43 @@ def seed_bigquery(
                         except Exception as exc:
                             logger.debug("DDL note: %s", exc)
 
-        traceability_ref = f"{dataset_id}.traceability"
-        errs_traceability = bq_client.insert_rows_json(traceability_ref, SEED_TRACEABILITY_ROWS)
-        if errs_traceability:
-            logger.warning("Errors inserting traceability seed rows: %s", errs_traceability)
-        else:
-            logger.info(
-                "Successfully seeded %d rows into %s",
-                len(SEED_TRACEABILITY_ROWS),
-                traceability_ref,
+        if not competition_only:
+            traceability_ref = f"{dataset_id}.traceability"
+            errs_traceability = bq_client.insert_rows_json(
+                traceability_ref, SEED_TRACEABILITY_ROWS
             )
+            if errs_traceability:
+                logger.warning("Errors inserting traceability seed rows: %s", errs_traceability)
+            else:
+                logger.info(
+                    "Successfully seeded %d rows into %s",
+                    len(SEED_TRACEABILITY_ROWS),
+                    traceability_ref,
+                )
 
-        telemetry_ref = f"{dataset_id}.sensor_telemetry"
-        errs_telemetry = bq_client.insert_rows_json(telemetry_ref, SEED_TELEMETRY_ROWS)
-        if errs_telemetry:
-            logger.warning("Errors inserting telemetry seed rows: %s", errs_telemetry)
+            telemetry_ref = f"{dataset_id}.sensor_telemetry"
+            errs_telemetry = bq_client.insert_rows_json(telemetry_ref, SEED_TELEMETRY_ROWS)
+            if errs_telemetry:
+                logger.warning("Errors inserting telemetry seed rows: %s", errs_telemetry)
+            else:
+                logger.info(
+                    "Successfully seeded %d rows into %s",
+                    len(SEED_TELEMETRY_ROWS),
+                    telemetry_ref,
+                )
         else:
-            logger.info(
-                "Successfully seeded %d rows into %s", len(SEED_TELEMETRY_ROWS), telemetry_ref
-            )
+            existing = list(
+                bq_client.query(
+                    f"SELECT COUNT(*) AS n FROM `{dataset_id}.competition_telemetry`"
+                ).result()
+            )[0]["n"]
+            if existing:
+                logger.info(
+                    "%s.competition_telemetry already holds %d rows; skipping load",
+                    dataset_id,
+                    existing,
+                )
+                return None
 
     # TKT-070 S9 — competition CSV telemetry ingestion (idempotent re-seed).
     return load_competition_csv(
@@ -442,6 +465,11 @@ def _parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         default=None,
         help="Override the default seed manifest output path (artifacts/BQ_seed_manifest.json).",
     )
+    parser.add_argument(
+        "--competition-only",
+        action="store_true",
+        help="Create tables and load competition_telemetry only if empty (no legacy seed rows).",
+    )
     return parser.parse_args(argv)
 
 
@@ -451,9 +479,10 @@ def _main(argv: Optional[List[str]] = None) -> int:
         dry_run=args.dry_run,
         staging_csv=args.staging_csv,
         manifest_path=args.manifest,
+        competition_only=args.competition_only,
     )
     if args.dry_run or summary is None:
-        logger.info("Dry-run complete; no BigQuery writes performed.")
+        logger.info("No BigQuery rows written (dry run, or competition_telemetry already loaded).")
     else:
         # Print the summary as a single JSON line so CI can grep it.
         logger.info(

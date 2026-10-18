@@ -15,6 +15,9 @@ from google.adk.tools.tool_context import ToolContext
 logger = logging.getLogger(__name__)
 
 MAX_TOOL_CALLS = 3
+# Output-token cap for JSON-producing agents. Gemini 3.x thinking tokens count against it; at
+# 2048 the Root Cause draft was cut off mid-string (invalid JSON) on gemini-3.5-flash.
+AGENT_MAX_OUTPUT_TOKENS = 8192
 BUDGET_SPENT_INSTRUCTION = (
     "Your tool-call budget for this turn is spent. Do not call any tool again; "
     "answer now with the final JSON built from the tool results you already have."

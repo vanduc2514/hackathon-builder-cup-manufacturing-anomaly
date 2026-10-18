@@ -4,14 +4,24 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import io
 import logging
 import os
-from typing import Any
+from typing import Any, Callable, Literal
 
 from backend.core.config import settings
-from backend.core.models import VisualEvidencePayload, VisualInspectionResult
+from backend.core.models import (
+    GuardedInspection,
+    InsertInspectionResult,
+    PartInspectionResult,
+    VisualEvidencePayload,
+    VisualInspectionResult,
+)
 
 logger = logging.getLogger(__name__)
+
+# Confidence reported for scripted-expectation results (source fallback/mock).
+SCRIPTED_CONFIDENCE = 0.9
 
 DEFAULT_DIAGNOSTIC_IM_CITATION = (
     "Technician diagnostic camera stream via Gemini Live (Dryer-03 desiccant canister inspection)"
@@ -72,6 +82,11 @@ def get_gemini_client() -> Any:
     return genai.Client(vertexai=True, project=project_id, location=region)
 
 
+def payload_confidence(payload: VisualEvidencePayload) -> float:
+    """Confidence of an evidence payload: model self-assessment, else the scripted expectation."""
+    return payload.confidence if payload.confidence is not None else SCRIPTED_CONFIDENCE
+
+
 def mock_visual_evidence_analysis(
     image_bytes: bytes,
     machine_id: str = "CNC-02",
@@ -119,6 +134,8 @@ def mock_visual_evidence_analysis(
         defect_detected=True,
         wear_measurement_mm=wear_mm,
         citation=citation,
+        source="mock",
+        confidence=SCRIPTED_CONFIDENCE,
     )
 
 
@@ -199,6 +216,8 @@ def analyze_visual_evidence_frame(
                 defect_detected=result.defect_detected,
                 wear_measurement_mm=result.wear_measurement_mm,
                 citation=citation,
+                source="gemini",
+                confidence=result.confidence,
             )
         except Exception as exc:
             if not settings.gemini_vision_fallback_to_mock:
@@ -236,3 +255,211 @@ async def analyze_visual_evidence_frame_async(
         defect_type=defect_type,
         client=client,
     )
+
+
+# ---------------------------------------------------------------------------
+# Closed-schema inspections + DEMO_SCRIPTED expected-result guard
+# ---------------------------------------------------------------------------
+
+MAX_IMAGE_EDGE = 1024
+GUARD_MAX_ATTEMPTS = 2
+
+PART_PROMPT = (
+    "You are the end-of-line vision inspector for {machine_id} (Cell 1) machining aluminum "
+    "AL-5083 housing parts with tool {tool_id}. Classify the part surface. Linear marks/scuffs "
+    "= scratch_vertical; broken edges = chipping; otherwise none."
+)
+INSERT_PROMPT = (
+    "The technician on {machine_id} sent a phone photo of the {tool_id} carbide insert removed "
+    "from the tool. Assess cutting-edge condition. Replace the insert if flank wear is severe "
+    "or the edge is chipped."
+)
+
+
+def normalize_image(image_bytes: bytes) -> bytes:
+    """EXIF-transpose, convert to RGB, cap the long edge at 1024 px (no upscale), JPEG q90."""
+    from PIL import Image, ImageOps
+
+    with Image.open(io.BytesIO(image_bytes)) as img:
+        img = ImageOps.exif_transpose(img).convert("RGB")
+        if max(img.size) > MAX_IMAGE_EDGE:
+            img.thumbnail((MAX_IMAGE_EDGE, MAX_IMAGE_EDGE), Image.Resampling.LANCZOS)
+        out = io.BytesIO()
+        img.save(out, format="JPEG", quality=90)
+        return out.getvalue()
+
+
+def _inspect(
+    kind: Literal["part", "insert"],
+    schema: Any,
+    prompt: str,
+    image_bytes: bytes,
+    client: Any | None,
+) -> Any:
+    from google.genai import types
+
+    gemini_client = client or get_gemini_client()
+    logger.info("gemini_call kind=%s model=%s", kind, settings.gemini_vision_model)
+    response = gemini_client.models.generate_content(
+        model=settings.gemini_vision_model,
+        contents=[prompt, types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")],
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=schema,
+            temperature=0,
+        ),
+    )
+    parsed = getattr(response, "parsed", None)
+    if isinstance(parsed, schema):
+        return parsed
+    if getattr(response, "text", None):
+        return schema.model_validate_json(response.text)
+    raise ValueError("Gemini Vision returned empty or unparseable response")
+
+
+def inspect_part_image(
+    image_bytes: bytes, *, machine_id: str, tool_id: str, client: Any | None = None
+) -> PartInspectionResult:
+    """One real Gemini call classifying a part photo. Raises on failure."""
+    prompt = PART_PROMPT.format(machine_id=machine_id, tool_id=tool_id)
+    return _inspect("part", PartInspectionResult, prompt, image_bytes, client)
+
+
+def inspect_insert_image(
+    image_bytes: bytes, *, machine_id: str, tool_id: str, client: Any | None = None
+) -> InsertInspectionResult:
+    """One real Gemini call assessing a removed cutting insert photo. Raises on failure."""
+    prompt = INSERT_PROMPT.format(machine_id=machine_id, tool_id=tool_id)
+    return _inspect("insert", InsertInspectionResult, prompt, image_bytes, client)
+
+
+def _part_for(expected: str | None) -> PartInspectionResult:
+    cls = expected if expected in ("scratch_vertical", "chipping") else "none"
+    return PartInspectionResult(
+        defect_class=cls,
+        severity=3 if cls != "none" else 1,
+        region="center",
+        confidence=SCRIPTED_CONFIDENCE,
+    )
+
+
+def _insert_for(expected: str | None) -> InsertInspectionResult:
+    if expected == "replace":
+        return InsertInspectionResult(
+            flank_wear="severe",
+            edge_chipping=True,
+            replace_insert=True,
+            confidence=SCRIPTED_CONFIDENCE,
+        )
+    return InsertInspectionResult(
+        flank_wear="none", edge_chipping=False, replace_insert=False, confidence=SCRIPTED_CONFIDENCE
+    )
+
+
+def _part_label(result: PartInspectionResult) -> str:
+    return result.defect_class
+
+
+def _insert_label(result: InsertInspectionResult) -> str:
+    return "replace" if result.replace_insert else "ok"
+
+
+def _part_summary(result: PartInspectionResult, machine_id: str, tool_id: str) -> str:
+    if result.defect_class == "none":
+        return f"{machine_id} {tool_id}: part surface clean, no defect detected."
+    label = result.defect_class.replace("_", " ")
+    return (
+        f"{machine_id} {tool_id}: {label} detected, severity {result.severity}/5, "
+        f"region {result.region}."
+    )
+
+
+def _insert_summary(result: InsertInspectionResult, machine_id: str, tool_id: str) -> str:
+    chip = "edge chipping present" if result.edge_chipping else "no edge chipping"
+    action = "replace the insert" if result.replace_insert else "insert can stay in service"
+    return f"{machine_id} {tool_id}: flank wear {result.flank_wear}, {chip}; {action}."
+
+
+def _guarded(
+    kind: Literal["part", "insert"],
+    inspect_fn: Callable[..., Any],
+    make_expected: Callable[[str | None], Any],
+    label_fn: Callable[[Any], str],
+    summary_fn: Callable[[Any, str, str], str],
+    image_bytes: bytes,
+    expected: str | None,
+    machine_id: str,
+    tool_id: str,
+    client: Any | None,
+) -> GuardedInspection:
+    model = settings.gemini_vision_model
+
+    def build(result: Any, source: str, attempts: int) -> GuardedInspection:
+        logger.info(
+            "vision_guard kind=%s expected=%s got=%s source=%s attempts=%d",
+            kind,
+            expected,
+            label_fn(result),
+            source,
+            attempts,
+        )
+        return GuardedInspection(
+            kind=kind,
+            part=result if kind == "part" else None,
+            insert=result if kind == "insert" else None,
+            source=source,  # type: ignore[arg-type]
+            model=model,
+            attempts=attempts,
+            summary=summary_fn(result, machine_id, tool_id),
+        )
+
+    if client is None and not is_gemini_vision_available():
+        return build(make_expected(expected), "mock", 0)
+
+    scripted = settings.demo_scripted and expected is not None
+    max_attempts = GUARD_MAX_ATTEMPTS if scripted else 1
+    attempts = 0
+    while attempts < max_attempts:
+        attempts += 1
+        try:
+            result = inspect_fn(
+                image_bytes, machine_id=machine_id, tool_id=tool_id, client=client
+            )
+        except Exception:
+            if not scripted:
+                raise
+            logger.warning("vision_guard model call failed kind=%s", kind, exc_info=True)
+            continue
+        if not scripted or label_fn(result) == expected:
+            return build(result, "gemini", attempts)
+    return build(make_expected(expected), "fallback", attempts)
+
+
+def guarded_part_inspection(
+    image_bytes: bytes,
+    *,
+    expected: str | None,
+    machine_id: str,
+    tool_id: str,
+    client: Any | None = None,
+) -> GuardedInspection:
+    """Inspect a part photo; with DEMO_SCRIPTED, force the catalog-expected class."""
+    return _guarded(
+        "part", inspect_part_image, _part_for, _part_label, _part_summary,
+        image_bytes, expected, machine_id, tool_id, client,
+    )  # fmt: skip
+
+
+def guarded_insert_inspection(
+    image_bytes: bytes,
+    *,
+    expected: str | None,
+    machine_id: str,
+    tool_id: str,
+    client: Any | None = None,
+) -> GuardedInspection:
+    """Inspect an insert photo; with DEMO_SCRIPTED, force the catalog-expected verdict."""
+    return _guarded(
+        "insert", inspect_insert_image, _insert_for, _insert_label, _insert_summary,
+        image_bytes, expected, machine_id, tool_id, client,
+    )  # fmt: skip

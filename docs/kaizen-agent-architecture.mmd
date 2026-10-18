@@ -28,7 +28,7 @@ flowchart TB
         BQ[("BigQuery<br/>traceability table / sensor time-series / SPC")]
         FS[("Firestore<br/>shared incident state - blackboard")]
         RAG[("Vertex AI Search / RAG<br/>manuals / maint. logs / 8D reports<br/>expert videos / defect-cause-fix library")]
-        GEMINI["Gemini on Vertex AI<br/>Vision / Live API / Video"]
+        GEMINI["Gemini on Vertex AI<br/>Vision / Multimodal Streaming"]
     end
 
     %% ---------- Layer 4: Agent team (ADK) ----------
@@ -44,7 +44,7 @@ flowchart TB
             RCA["Root Cause Agent<br/>5-Whys + Ishikawa + RAG tool"]
         end
         subgraph PHASE_C["Phase C - Resolution"]
-            COPILOT["Technician Copilot<br/>live voice + camera (diagnostics & repair)"]
+            COPILOT["Technician Copilot<br/>real Gemini streaming + speech synthesis (diagnostics & repair)"]
             DOC["Incident Scribe<br/>8D report / work order / SOP proposal"]
         end
         subgraph PHASE_D["Phase D - Learning"]
@@ -54,7 +54,7 @@ flowchart TB
 
     %% ---------- Layer 5: Humans and outputs ----------
     subgraph HUMAN["5. Human-in-the-loop"]
-        TECH["Technician<br/>phone voice + camera (Vietnamese)"]
+        TECH["Technician<br/>phone voice (speechSynthesis) + camera (English)"]
         DASH["Incident board dashboard"]
         LEAD["Shift leader / manager<br/>final approval"]
     end
@@ -71,7 +71,7 @@ flowchart TB
 
     %% ---------- Data plane ----------
     PUBSUB --> BQ
-    PUBSUB -->|"defect / SPC event"| ORCH
+    PUBSUB -->|"defect / SPC event (manual / edge)"| ORCH
     BQ <-->|"query discrete topology"| TRA
     BQ <-->|"query sensor window"| PA
     RAG <-->|"query knowledge RAG"| RCA
@@ -93,7 +93,7 @@ flowchart TB
     ORCH -->|"4. parallel / outcome"| COPILOT
     ORCH -->|"4. parallel / draft"| DOC
     ORCH -->|"verify repair"| QA
-    ORCH -->|"5. close + learn / draft"| LEARN
+    ORCH -->|"5. learn -> pending_approval"| LEARN
 
     %% ---------- Evidence-gathering loop ----------
     RCA -.->|"confidence < 0.7: need field evidence"| ORCH
@@ -103,16 +103,15 @@ flowchart TB
     QA -.->|"N consecutive good products -> verified"| ORCH
 
     %% ---------- Human interaction ----------
-    COPILOT <-->|"live voice + camera stream (only direct human channel)"| TECH
-    COPILOT -.->|"repair done / diagnostic evidence"| ORCH
+    COPILOT <-->|"streaming guidance + camera / preset evidence"| TECH
+    TECH -.->|"repair done (POST /api/incidents/repair-done)"| ORCH
     FS -->|"live incident board (read-only)"| DASH
-    ORCH -->|"draft for approval"| LEAD
-    LEAD -->|"approval"| ORCH
-    ORCH -->|"approved documents"| OUT
+    ORCH -->|"pending approval (board)"| LEAD
+    LEAD -->|"approval (POST /api/incidents/approve)"| ORCH
+    ORCH -->|"export markdown to GCS"| OUT
+    ORCH -->|"write-back learned entry"| RAG
 
     %% ---------- Learning feedback loop ----------
-    ORCH -->|"new knowledge entry"| RAG
-
     %% ---------- Styling ----------
     classDef floor fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20
     classDef edge fill:#FFF3E0,stroke:#EF6C00,color:#E65100

@@ -54,7 +54,7 @@ def test_fullstack_scenario_1_fast_lifecycle():
 
         state = await orchestrator.run_incident(trigger)
 
-        assert state.status == "closed", f"Expected closed, got {state.status}"
+        assert state.status == "pending_approval", f"Expected pending approval, got {state.status}"
         assert state.verification_count >= state.verification_target
         assert state.verification_target == 50
         assert state.repair_done is True
@@ -100,7 +100,7 @@ def test_fullstack_scenario_2_fast_lifecycle():
 
         state = await orchestrator.run_incident(trigger)
 
-        assert state.status == "closed", f"Expected closed, got {state.status}"
+        assert state.status == "pending_approval", f"Expected pending approval, got {state.status}"
         assert state.verification_count >= state.verification_target
         assert state.documents is not None
         assert "WO-2026-1005" in state.documents.get("work_order", "")
@@ -162,7 +162,7 @@ def test_fullstack_api_endpoints():
             assert resp_inject.status_code == 200
             assert resp_inject.json()["status"] in ("triggered", "injected", "detecting")
 
-            # 4. Wait for incident workflow completion to 'closed'
+            # 4. Wait for incident workflow completion to 'pending_approval'
             timeout = 10.0
             start = asyncio.get_event_loop().time()
             final_state = None
@@ -170,20 +170,22 @@ def test_fullstack_api_endpoints():
                 resp_poll = await client.get("/api/incidents/current")
                 assert resp_poll.status_code == 200
                 data = resp_poll.json()
-                if data["status"] == "closed":
+                if data["status"] == "pending_approval":
                     final_state = data
                     break
                 await asyncio.sleep(0.1)
 
-            assert final_state is not None, "Workflow did not transition to closed within timeout"
+            assert final_state is not None, "Workflow did not reach pending approval within timeout"
             assert final_state["verification_count"] >= 50
 
-            # 5. Shift leader approval
+            # 5. Shift leader approval records the authenticated user
             resp_approve = await client.post("/api/incidents/approve")
             assert resp_approve.status_code == 200
             approved_data = resp_approve.json()
             assert approved_data["state"]["status"] == "closed"
             assert approved_data["state"]["approved"] is True
+            assert approved_data["state"]["approved_by"] == "test"
+            assert approved_data["state"]["approved_at"] is not None
 
             # 6. Reset simulation
             resp_reset = await client.post("/api/simulation/reset")

@@ -11,6 +11,7 @@ import DocumentsPanel from '../incident/DocumentsPanel';
 import TelemetryAlertsPanel from '../incident/TelemetryAlertsPanel';
 import LiveTelemetryStrip from '../incident/LiveTelemetryStrip';
 import StatusReasonBanner from '../incident/StatusReasonBanner';
+import ExportedDocuments from '../incident/ExportedDocuments';
 import StreakGate from '../incident/StreakGate';
 import CausalTreeTabs from '../incident/CausalTreeTabs';
 import EightDReportCard from '../incident/EightDReportCard';
@@ -68,7 +69,7 @@ export default function IncidentCommandView({
 
   const id = incident.incident_id;
   const status = incident.status;
-  const closed = status === 'closed';
+  const closed = status === 'closed' || status === 'pending_approval';
   const approved = incident.approved || released;
   const machine = incident.suspect_machine;
   const tool = incident.suspect_tool;
@@ -216,11 +217,19 @@ export default function IncidentCommandView({
       ? `Locked: streak ${count}/${target}`
       : '';
   const approveButton = approved ? (
-    <span className="chip chip-green" style={{ padding: '6px 12px' }}>
+    <span
+      className="chip chip-green"
+      style={{ padding: '6px 12px' }}
+      title={
+        incident.approved_at
+          ? `Signed off by ${incident.approved_by ?? 'shift leader'} at ${incident.approved_at}`
+          : undefined
+      }
+    >
       <span className="material-symbols-outlined icon-fill" style={{ fontSize: 16 }}>
         task_alt
       </span>
-      8D approved · line released
+      8D approved{incident.approved_by ? ` · ${incident.approved_by}` : ''} · line released
     </span>
   ) : (
     <button
@@ -604,6 +613,7 @@ export default function IncidentCommandView({
               </span>
             </span>
           </div>
+          <ExportedDocuments incident={incident} />
           <AgentAttribution findings={[learning]} />
         </StepSection>
       </div>

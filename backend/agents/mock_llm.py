@@ -176,8 +176,8 @@ class MockLlm(BaseLlm):
             else:
                 payload = {
                     "finding": (
-                        "Carbide insert T07 exceeded rated tool life (2,400 parts vs "
-                        "2,000 spec), causing cutting flank chipping and workpiece scratching."
+                        "Carbide insert T07 exceeded its rated tool life, "
+                        "causing cutting flank chipping and workpiece scratching."
                     ),
                     "evidence": (
                         "5-Whys: flank wear chipped -> exceeded 2,000-part life -> "

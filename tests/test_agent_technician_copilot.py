@@ -10,16 +10,26 @@ from backend.agents import agent_technician_copilot
 from backend.agents.agent_technician_copilot import (
     AGENT_ID,
     AGENT_NAME,
-    DEFAULT_CNC_CITATION,
-    DEFAULT_DIAGNOSTIC_CNC_CITATION,
-    DEFAULT_DIAGNOSTIC_IM_CITATION,
-    DEFAULT_IM_CITATION,
+    DIAGNOSTIC_INSTRUCTION,
     DIAGNOSTIC_PHASE,
+    INSTRUCTION,
     PHASE,
 )
 from backend.agents.workflow_nodes import record_field_evidence, record_resolution
 from backend.core.blackboard import blackboard
 from backend.core.models import FindingDraft, IncidentState, ScribeDraft
+
+# Scripted citations used by this module's deterministic finding builders.
+DEFAULT_CNC_CITATION = (
+    "Gemini Live API multimodal voice session (CNC-02 OEM Manual p.112, section 4.2)"
+)
+DEFAULT_IM_CITATION = "Gemini Live API multimodal voice session (IM-05 SOP-MOLD-02 p.45, section 3)"
+DEFAULT_DIAGNOSTIC_CNC_CITATION = (
+    "Technician diagnostic camera stream via Gemini Live (CNC-02 T07 macro inspection)"
+)
+DEFAULT_DIAGNOSTIC_IM_CITATION = (
+    "Technician diagnostic camera stream via Gemini Live (IM-05 dryer inspection)"
+)
 
 
 def build_copilot_finding(board_data: dict | IncidentState | None = None) -> FindingDraft:
@@ -123,15 +133,11 @@ def test_agent_technician_copilot_adk_definition():
     assert agent_technician_copilot.agent.name == "technician_copilot"
     assert agent_technician_copilot.agent.output_schema == FindingDraft
     assert agent_technician_copilot.agent.generate_content_config is not None
-    assert agent_technician_copilot.agent.generate_content_config.max_output_tokens == 2048
 
     # Diagnostic probe agent
     assert agent_technician_copilot.diagnostic_agent.name == "technician_copilot_diagnostic"
     assert agent_technician_copilot.diagnostic_agent.output_schema == FindingDraft
     assert agent_technician_copilot.diagnostic_agent.generate_content_config is not None
-    assert (
-        agent_technician_copilot.diagnostic_agent.generate_content_config.max_output_tokens == 2048
-    )
 
     # Module constants
     assert AGENT_ID == "COPILOT"
@@ -247,7 +253,7 @@ def test_record_field_evidence_workflow_node():
 
 
 def test_record_resolution_workflow_node_emits_repair_done():
-    """Verifies that record_resolution sets repair_done=True, records COPILOT and DOC findings, and transitions to verifying."""
+    """Verifies that record_resolution keeps repair_done=False, records COPILOT and DOC findings, and waits in repairing."""
     copilot_draft = FindingDraft(
         finding="Guided technician through CNC-02 tool insert swap.",
         evidence="Completed 5/5 checkpoints; runout 0.003 mm.",
@@ -271,11 +277,41 @@ def test_record_resolution_workflow_node_emits_repair_done():
 
     state = asyncio.run(record_resolution(node_input))
 
-    assert state.repair_done is True
-    assert state.status == "verifying"
+    assert state.repair_done is False
+    assert state.status == "repairing"
     assert len(state.findings) == 2
     assert state.findings[0].agent_id == "COPILOT"
     assert state.findings[0].phase == "Phase C - Resolution"
     assert state.findings[0].confidence == 0.94
     assert state.findings[1].agent_id == "DOC"
     assert set(state.documents.keys()) == {"work_order", "report_8d", "sop_proposal"}
+
+
+@pytest.mark.parametrize("prompt", [INSTRUCTION, DIAGNOSTIC_INSTRUCTION])
+@pytest.mark.parametrize(
+    "scenario_fact",
+    [
+        "WNMG-080408",
+        "4.2",
+        "0.003",
+        "0.005",
+        "1500",
+        "0.3mm",
+        "FLT-ABS-04",
+        "-35.0",
+        "trang",
+        "0.94",
+        "0.92",
+        "Vietnamese",
+    ],
+)
+def test_instructions_carry_no_scenario_facts(prompt: str, scenario_fact: str):
+    """Prompts must not assert a repair/diagnosis outcome; values come from RAG and board evidence."""
+    assert scenario_fact not in prompt
+
+
+def test_instructions_require_grounding_in_tool_results():
+    assert "query_repair_procedure" in INSTRUCTION
+    assert "tool results or the board evidence" in INSTRUCTION
+    assert "query_repair_procedure" in DIAGNOSTIC_INSTRUCTION
+    assert "never assume" in DIAGNOSTIC_INSTRUCTION

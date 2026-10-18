@@ -11,8 +11,9 @@ This file is the authoritative reference for AI coding agents and human contribu
 ├── backend/                    # Python — FastAPI server, AI agents, tools
 │   ├── agents/                 # orchestrator.py + one agent_<name>.py per LLM agent node
 │   │   ├── agent.py            # ADK CLI entry (root_agent) for `mise run adk-web` / `adk run`
-│   │   ├── orchestrator.py     # ADK graph Workflow (no LLM) + Orchestrator runner; routes the agent_* nodes
+│   │   ├── orchestrator.py     # ADK graph Workflow (no LLM) + Orchestrator runner; routes the agent_* nodes, each wrapped by `guarded_agent` (1 retry, then scripted fallback under DEMO_SCRIPTED or `error` naming the agent)
 │   │   ├── workflow_nodes.py   # Workflow function nodes: Blackboard writes + routing gates
+│   │   ├── scenario_fallbacks.py # Scripted per-scenario drafts for every agent (used when an LLM step fails with DEMO_SCRIPTED; findings carry source="fallback")
 │   │   ├── tool_guards.py      # Callbacks every tool-using agent sets: 3 tool calls/turn, ValueError → tool result
 │   │   ├── agent_quality_inspector.py
 │   │   ├── agent_traceability.py
@@ -324,7 +325,7 @@ Agents should never violate these:
    - Read-only output transport: `GET /api/incidents/current`, `GET /api/incidents/history`, `GET /api/impact/ledger`, and the SSE stream read the Blackboard directly.
    - Read-only agent tool lookups (BigQuery, RAG, Gemini) are data queries, not incident I/O.
    - Data-plane ingestion: Pub/Sub → BigQuery raw telemetry/traceability storage.
-   - Technician Copilot ↔ technician live voice/camera stream (Gemini Live); the Orchestrator starts/ends the session and receives its outcome.
+   - Technician Copilot ↔ technician chat (`/api/gemini-live/ws`): each tapped prompt gets a real streamed Gemini reply, spoken by the phone browser; camera frames still reach the board only through `Orchestrator.attach_evidence`.
    - `adk web` / `adk run` run `incident_workflow` without the `Orchestrator` runner (no single-flight/cancel); dev only, separate process and Blackboard.
 3. **Incidents close on product evidence only.** The orchestrator transitions to `closed` only after `verification_count >= verification_target`. Shift-leader approval (`approved`) is accepted only on a `closed` incident. Do not shortcut this.
 4. **Development parity & mock fallback.** `backend/tools/bigquery_tool.py` connects to `goccy/bigquery-emulator` (via `BIGQUERY_EMULATOR_HOST`) for high-fidelity SQL testing in dev, or falls back to local mock data when no emulator or GCP credentials are present. Neither local dev nor automated CI should ever fail due to missing cloud credentials.

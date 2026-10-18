@@ -105,7 +105,8 @@ function classify(incident: IncidentState): { kind: WorkKind; stage: WorkStage }
     case 'verifying':
       return { kind: 'fix', stage: 'processing' };
     case 'closed':
-      // Closed = product evidence passed; the lead still has to sign off before it is done.
+    case 'pending_approval':
+      // Learning done = product evidence passed; the lead still has to sign off before it is done.
       return { kind: 'fix', stage: incident.approved ? 'completed' : 'processing' };
     case 'dismissed':
       return { kind: 'evidence', stage: 'completed' };
@@ -337,7 +338,7 @@ export function buildLiveOrder(
     let aiNote: string;
     if (status === 'escalated' || status === 'error') {
       aiNote = `Escalated: ${incident.status_reason ?? 'see the incident board'}`;
-    } else if (status === 'closed') {
+    } else if (status === 'closed' || status === 'pending_approval') {
       aiNote = quality?.finding ?? `${incident.verification_count} consecutive good parts verified.`;
     } else {
       aiNote = copilot?.finding ?? 'Inline camera is checking parts after the repair.';
@@ -432,14 +433,14 @@ export function summaryToWorkOrder(summary: IncidentSummary, leadName: string): 
   let stage: WorkStage;
   if (summary.approved || status === 'closed' || status === 'dismissed') {
     stage = 'completed';
-  } else if (summary.repair_done || status === 'verifying') {
+  } else if (summary.repair_done || status === 'verifying' || status === 'pending_approval') {
     stage = 'processing';
   } else {
     stage = 'active';
   }
 
   const kind: WorkKind =
-    summary.repair_done || status === 'repairing' || status === 'verifying' || status === 'closed' || Boolean(summary.root_cause)
+    summary.repair_done || status === 'repairing' || status === 'verifying' || status === 'closed' || status === 'pending_approval' || Boolean(summary.root_cause)
       ? 'fix'
       : 'evidence';
 
@@ -520,6 +521,11 @@ export function buildHistoryNotifications(history: IncidentSummary[]): MobileNot
       tone = 'green';
       title = `Approved · ${inc.suspect_machine ?? 'Equipment'}`;
       body = `Verification completed (${inc.verification_count}/${inc.verification_target} parts). Closed.`;
+    } else if (inc.status === 'pending_approval') {
+      icon = 'task_alt';
+      tone = 'blue';
+      title = `Awaiting sign-off · ${inc.suspect_machine ?? 'Equipment'}`;
+      body = `Verification completed (${inc.verification_count}/${inc.verification_target} parts). Waiting for the shift leader.`;
     } else if (inc.status === 'awaiting_evidence') {
       icon = 'photo_camera';
       tone = 'red';

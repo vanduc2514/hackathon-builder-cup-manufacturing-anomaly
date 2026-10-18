@@ -77,6 +77,12 @@ export function postHandoverNote(note: string): Promise<HandoverNote> {
   });
 }
 
+/** `POST /api/incidents/repair-done`: technician confirms the repair so verification can start. */
+export function postRepairDone(): Promise<IncidentState> {
+  return getJson<{ state: IncidentState }>('/api/incidents/repair-done', { method: 'POST' }).then(
+    (body) => body.state,
+  );
+}
 
 export function fetchTelemetryBaseline(): Promise<TelemetryBaselineResponse> {
   return getJson<TelemetryBaselineResponse>('/api/telemetry/baseline');

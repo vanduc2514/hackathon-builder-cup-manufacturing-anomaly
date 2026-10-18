@@ -232,7 +232,7 @@ async def test_full_workflow_fast_mode_with_low_confidence_rca_does_not_hang():
         elapsed = time.monotonic() - t0
 
         assert elapsed < 3.0
-        assert final_state.status in ("escalated", "repairing", "closed")
+        assert final_state.status in ("escalated", "repairing", "closed", "pending_approval")
     finally:
         if prev_model is not None:
             LlmAgent.set_default_model(prev_model)
@@ -329,4 +329,4 @@ async def test_require_evidence_false_preserves_standard_behavior():
     )
 
     final_state = await orch.run_incident(trigger)
-    assert final_state.status in ("repairing", "verifying", "closed")
+    assert final_state.status in ("repairing", "verifying", "closed", "pending_approval")

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple
 
 from backend.core.models import (
     EsgLedgerEntryResponse,
@@ -294,6 +294,7 @@ def build_esg_ledger(incidents: Iterable[IncidentState]) -> EsgLedgerResponse:
     - Orders entries newest-first by closed_at (fallback updated_at)
     - Sums 7 numeric metrics into EsgLedgerTotals with floats rounded to 2 decimal places
     - Resolves factory_type from the newest entry (default "aluminum_cnc")
+    - Labels the ledger basis "benchmark" (no incident carries measured inputs today)
     """
     candidates = [
         inc
@@ -337,15 +338,66 @@ def build_esg_ledger(incidents: Iterable[IncidentState]) -> EsgLedgerResponse:
         material_co2_kg=material_co2_kg,
         cost_savings_usd=cost_savings_usd,
     )
-
     factory_type = (
         entries[0].impact.factory_type or "aluminum_cnc"
         if entries
         else "aluminum_cnc"
     )
 
+    # Impact inputs (line speed, part cost, detection lead time) come from the
+    # manufacturing benchmarks; no incident currently carries measured production
+    # inputs, so every ledger figure is labelled as a benchmark-based estimate.
+    basis: Literal["benchmark", "measured"] = "benchmark"
+
     return EsgLedgerResponse(
         totals=totals,
         entries=entries,
         factory_type=factory_type,
+        basis=basis,
     )
+
+
+def build_esg_ledger_from_rows(
+    rows: Iterable[Dict[str, Any]],
+    incidents: Iterable[IncidentState] = (),
+) -> EsgLedgerResponse:
+    """Builds the ESG ledger from persisted BigQuery ``sustainability_impact`` rows (issue #335).
+
+    The warehouse rows carry only the DDL columns (scrap, downtime, energy,
+    CO2). When the matching incident is still on the Blackboard, its full
+    ``ImpactMetrics`` card (cost, energy/material CO2 split) wins so the
+    ledger totals stay complete; otherwise a partial card is booked from the
+    persisted columns with the non-persisted fields at 0. Delegates ordering,
+    de-duplication, and summation to ``build_esg_ledger``.
+    """
+    by_id = {inc.incident_id: inc for inc in incidents if inc.incident_id}
+    states: List[IncidentState] = []
+    for row in rows:
+        incident_id = str(row.get("incident_id") or "")
+        if not incident_id:
+            continue
+        board = by_id.get(incident_id)
+        if board is not None and board.impact is not None:
+            states.append(board)
+            continue
+        ts = row.get("timestamp")
+        closed_at = ts.isoformat() if hasattr(ts, "isoformat") else (str(ts) if ts else None)
+        impact = ImpactMetrics(
+            scrap_avoided=int(row.get("scrap_pieces_avoided") or 0),
+            downtime_minutes=int(round(float(row.get("downtime_minutes_saved") or 0.0))),
+            energy_kwh=round(float(row.get("energy_kwh_saved") or 0.0), 2),
+            co2_kg=round(float(row.get("co2_kg_saved") or 0.0), 2),
+            cost_savings_usd=0.0,
+            energy_co2_kg=0.0,
+            material_co2_kg=0.0,
+        )
+        states.append(
+            IncidentState(
+                incident_id=incident_id,
+                status="closed",
+                approved=True,
+                closed_at=closed_at,
+                impact=impact,
+            )
+        )
+    return build_esg_ledger(states)

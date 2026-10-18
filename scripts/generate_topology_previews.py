@@ -1,4 +1,5 @@
-import os, math
+import math
+import os
 
 out_dir = '.stitch/previews/topology'
 os.makedirs(out_dir, exist_ok=True)
@@ -230,7 +231,7 @@ def build_orchestrator():
       'danger': ('var(--danger)', '#c9343a')
     }
     spokes = ''
-    for l, name, sub, rgb, x, y, kind, label in phases:
+    for phase_code, name, sub, rgb, x, y, kind, label in phases:
         line, txt = tone[kind]
         ex = x + 158 if x < 200 else x
         ey = y + 32
@@ -243,7 +244,7 @@ def build_orchestrator():
           {svg_arrow(path_d, stroke=line, sw=2.4, dash='6 4', cls='pv-flow')}
           <rect x="{x}" y="{y}" width="158" height="64" rx="12" fill="rgba({rgb},.07)" stroke="rgba({rgb},.7)" stroke-width="1.4" stroke-dasharray="6 4"/>
           <circle cx="{x + 20}" cy="{y + 20}" r="11" fill="rgba({rgb},1)"/>
-          {svg_text(x + 20, y + 24, l, anchor='middle', fill='#fff', weight=700, size=12)}
+          {svg_text(x + 20, y + 24, phase_code, anchor='middle', fill='#fff', weight=700, size=12)}
           {svg_text(x + 38, y + 24, name, fill='var(--ink)', weight=650, size=11)}
           {svg_text(x + 12, y + 42, sub, size=10)}
           {svg_text(x + 12, y + 57, f"● {label}", size=10.5, fill=txt, weight=700, mono=True)}'''
@@ -349,7 +350,8 @@ def build_bridge():
 # 13. SPC Defect Rate Chart
 def build_spc():
     vals = [1.8, 2.1, 1.6, 2.3, 1.9, 2.4, 2.0, 2.6, 2.2, 2.8, 3.4, 4.42]
-    y = lambda v: 130 - v * 22
+    def y(v):
+        return 130 - v * 22
     pts = ' '.join([f"{30 + i * 40},{y(v):.1f}" for i, v in enumerate(vals)])
     circles = ''.join([
         f'<circle cx="{30 + i * 40}" cy="{y(v):.1f}" r="{5 if v > 3 else 3.5}" fill="{"var(--danger)" if v > 3 else "var(--accent)"}" stroke="#fff" stroke-width="1.5"/>'

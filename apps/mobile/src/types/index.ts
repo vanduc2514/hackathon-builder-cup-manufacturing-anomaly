@@ -12,6 +12,7 @@ export type IncidentStatus =
   | 'awaiting_evidence'
   | 'repairing'
   | 'verifying'
+  | 'pending_approval'
   | 'closed'
   | 'dismissed'
   | 'escalated'
@@ -266,11 +267,12 @@ export interface TelemetryBaselineResponse {
 export interface GeminiLiveServiceStatus {
   status: string;
   service: string;
-  simulation_mode: boolean;
+  /** False when the backend has no Gemini credentials: the Copilot answers "offline". */
+  copilot_available: boolean;
   active_sessions: number;
-  default_model: string;
-  default_voice: string;
-  default_language: string;
+  model: string;
+  /** BCP-47 tag the browser speaks replies in (e.g. en-US). */
+  language: string;
   timestamp: string;
 }
 
@@ -278,30 +280,24 @@ export interface GeminiLiveServiceStatus {
 export interface GeminiLiveSessionStatus {
   session_id: string;
   status: string;
-  mode: string;
   client_messages_received: number;
   server_messages_sent: number;
   created_at: string;
   last_active_at: string;
 }
 
-export interface GeminiLiveServerContent {
-  text?: string | null;
-  audio_pcm_base64?: string | null;
-  input_transcription?: string | null;
-  output_transcription?: string | null;
-  interrupted: boolean;
-  turn_complete: boolean;
-  generation_complete: boolean;
-}
-
-/** Mirrors `GeminiLiveServerMessage` sent over `WS /api/gemini-live/ws`. */
+/**
+ * Mirrors `GeminiLiveServerMessage` sent over `WS /api/gemini-live/ws`: `setup_complete`,
+ * `text_delta` (a streamed chunk in `text`), `turn_complete` (`interrupted` when cut off),
+ * `offline` / `error` (terminal for the turn, reason in `error_message`) and `pong`.
+ */
 export interface GeminiLiveServerMessage {
   type: string;
   session_id?: string | null;
-  server_content?: GeminiLiveServerContent | null;
+  text?: string | null;
+  model?: string | null;
+  interrupted: boolean;
   resumption_handle?: string | null;
-  last_consumed_client_message_index?: number | null;
   error_message?: string | null;
   timestamp: string;
 }

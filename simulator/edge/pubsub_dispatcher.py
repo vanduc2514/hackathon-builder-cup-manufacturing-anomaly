@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import time
@@ -202,7 +203,17 @@ class EdgePubSubDispatcher:
             )
         else:
             payload = telemetry
-        payload_data = payload.model_dump_json().encode("utf-8")
+        # The message is the flat sensor_telemetry row so the Pub/Sub BigQuery
+        # subscription can write it without a backend subscriber (#331).
+        row = {
+            "timestamp": payload.timestamp,
+            "machine_id": payload.machine_id,
+            "vibration_mm_s": float(payload.spindle_vibration),
+            "temperature_c": float(payload.spindle_temp),
+            "current_a": float(payload.motor_current),
+            "spindle_speed_rpm": int(payload.rpm),
+        }
+        payload_data = json.dumps(row).encode("utf-8")
         return await self._publish(
             topic, payload_data, payload.model_dump(), payload_type="telemetry"
         )
@@ -212,7 +223,17 @@ class EdgePubSubDispatcher:
     ) -> bool:
         """Publishes a TraceabilityEventPayload to kaizen-traceability topic."""
         topic = topic_name or settings.pubsub_traceability_topic
-        payload_data = traceability.model_dump_json().encode("utf-8")
+        # The message is the flat traceability row for the Pub/Sub BigQuery subscription (#331).
+        row = {
+            "product_id": traceability.product_id,
+            "timestamp": traceability.timestamp,
+            "machine_id": traceability.machine_id,
+            "tool_id": traceability.tool_id,
+            "lot_id": traceability.lot_id,
+            "operator_id": traceability.operator_id,
+            "status": traceability.status,
+        }
+        payload_data = json.dumps(row).encode("utf-8")
         return await self._publish(
             topic, payload_data, traceability.model_dump(), payload_type="traceability"
         )

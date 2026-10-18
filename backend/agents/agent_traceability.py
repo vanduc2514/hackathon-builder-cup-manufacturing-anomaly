@@ -48,7 +48,7 @@ def _supports_tools() -> bool:
 
 
 async def trace_line_topology(
-    time_window: str | None = "09:30-10:00",
+    time_window: str | None = "60 MINUTE",
     start_time: str | None = None,
     end_time: str | None = None,
     product_ids: list[str] | None = None,

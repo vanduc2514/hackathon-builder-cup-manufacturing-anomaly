@@ -77,6 +77,29 @@ MOCK_DOC_TEXTS: Dict[str, str] = {
 }
 
 
+def _mock_documents() -> List[GoogleDriveDocument]:
+    """Offline mock documents; always empty in production (APP_ENV=production)."""
+    return [] if settings.is_production else list(MOCK_GDRIVE_DOCUMENTS)
+
+
+def _mock_text(file_id: str, default: str) -> str:
+    """Offline mock document text; always empty in production."""
+    return "" if settings.is_production else MOCK_DOC_TEXTS.get(file_id, default)
+
+
+def _mock_search(query_terms: List[str]) -> List[GoogleDriveDocument]:
+    """Mock-document term search; always empty in production."""
+    matches: List[GoogleDriveDocument] = []
+    for doc in _mock_documents():
+        content = MOCK_DOC_TEXTS.get(doc.file_id or "", "")
+        if any(
+            term.lower() in content.lower() or term.lower() in doc.name.lower()
+            for term in query_terms
+        ):
+            matches.append(doc)
+    return matches
+
+
 class GoogleDriveConnector:
     """Cloud-native Google Drive API v3 connector.
 
@@ -143,7 +166,7 @@ class GoogleDriveConnector:
 
         if not service or not target_folder:
             logger.debug("Listing Google Drive documents from local mock fallback")
-            return list(MOCK_GDRIVE_DOCUMENTS)
+            return _mock_documents()
 
         try:
             query = f"'{target_folder}' in parents and trashed = false"
@@ -178,32 +201,36 @@ class GoogleDriveConnector:
             return documents
         except Exception as exc:
             logger.warning("Failed to list Google Drive files via v3 API: %s", exc)
-            return list(MOCK_GDRIVE_DOCUMENTS)
+            return _mock_documents()
 
     def stream_document_bytes(self, file_id: str) -> bytes:
         """Download raw binary content of a file from Google Drive into memory."""
         service = self._get_service()
         if not service:
-            text = MOCK_DOC_TEXTS.get(file_id, "Mock document content for offline parity.")
-            return text.encode("utf-8")
+            if settings.is_production:
+                raise RuntimeError(
+                    "Google Drive client unavailable; no mock documents in production"
+                )
+            return _mock_text(file_id, "Mock document content for offline parity.").encode("utf-8")
 
         try:
             request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
             return request.execute()
         except Exception as exc:
+            if settings.is_production:
+                raise
             logger.warning(
                 "Error streaming document bytes for file_id '%s' (%s); falling back to mock text",
                 file_id,
                 exc,
             )
-            text = MOCK_DOC_TEXTS.get(file_id, "Mock document content for offline parity.")
-            return text.encode("utf-8")
+            return _mock_text(file_id, "Mock document content for offline parity.").encode("utf-8")
 
     def export_google_doc_text(self, file_id: str, mime_type: str) -> str:
         """Export native Google Docs or Sheets to text / CSV format."""
         service = self._get_service()
         if not service:
-            return MOCK_DOC_TEXTS.get(file_id, "")
+            return _mock_text(file_id, "")
 
         export_mime = "text/plain"
         if mime_type == MIME_GOOGLE_SHEET:
@@ -219,7 +246,7 @@ class GoogleDriveConnector:
                 file_id,
                 exc,
             )
-            return MOCK_DOC_TEXTS.get(file_id, "")
+            return _mock_text(file_id, "")
 
     def extract_document_text(
         self,
@@ -349,16 +376,7 @@ class GoogleDriveConnector:
         target_folder = folder_id or self.folder_id
 
         if not service or not target_folder:
-            # Local mock search
-            matches: List[GoogleDriveDocument] = []
-            for doc in MOCK_GDRIVE_DOCUMENTS:
-                content = MOCK_DOC_TEXTS.get(doc.file_id or "", "")
-                if any(
-                    term.lower() in content.lower() or term.lower() in doc.name.lower()
-                    for term in query_terms
-                ):
-                    matches.append(doc)
-            return matches
+            return _mock_search(query_terms)
 
         try:
             # Build fullText contains query
@@ -401,16 +419,10 @@ class GoogleDriveConnector:
                 )
             return matched
         except Exception as exc:
-            logger.warning("Google Drive exact fullText search failed (%s); falling back to mock search", exc)
-            matches: List[GoogleDriveDocument] = []
-            for doc in MOCK_GDRIVE_DOCUMENTS:
-                content = MOCK_DOC_TEXTS.get(doc.file_id or "", "")
-                if any(
-                    term.lower() in content.lower() or term.lower() in doc.name.lower()
-                    for term in query_terms
-                ):
-                    matches.append(doc)
-            return matches
+            logger.warning(
+                "Google Drive exact fullText search failed (%s); falling back to mock search", exc
+            )
+            return _mock_search(query_terms)
 
     def fetch_to_cache(self, file_id: str, filename: str, force_refresh: bool = False) -> Path:
         """Optionally fetch remote document to local cache directory (.cache/gdrive)."""

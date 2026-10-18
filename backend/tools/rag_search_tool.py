@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import html
 import json
 import logging
 import math
 import os
 import re
 from collections import Counter
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -529,6 +531,16 @@ class LocalBM25Retriever:
             self.avg_doc_len,
         )
 
+    def reindex(self) -> None:
+        """Forces a full rebuild so new or changed documents are indexed without a restart.
+
+        Used after an approved incident's learned entry lands under
+        ``data/knowledge_base/learned/`` (which ``index_corpus``'s ``rglob("*.md")``
+        already covers) so subsequent searches see it immediately.
+        """
+        self._indexed = False
+        self.index_corpus()
+
     def search(
         self,
         defect_symptom: str,
@@ -875,14 +887,18 @@ class VertexAISearchClient:
 
         for rank, result in enumerate(response.results):
             doc = result.document
-            raw_doc_data = getattr(doc, "derived_struct_data", {})
-            doc_data = raw_doc_data if isinstance(raw_doc_data, dict) else {}
-            raw_struct_data = getattr(doc, "struct_data", {})
-            struct_data = raw_struct_data if isinstance(raw_struct_data, dict) else {}
+            doc_data = _plain(getattr(doc, "derived_struct_data", None))
+            struct_data = _plain(getattr(doc, "struct_data", None))
+            if not isinstance(doc_data, dict):
+                doc_data = {}
+            if not isinstance(struct_data, dict):
+                struct_data = {}
 
             title = (
                 doc_data.get("title")
                 or struct_data.get("title")
+                or getattr(doc, "id", f"doc-{rank}")
+                or _title_from_link(doc_data.get("link") or struct_data.get("link"))
                 or getattr(doc, "id", f"doc-{rank}")
             )
             link = (
@@ -948,7 +964,7 @@ class VertexAISearchClient:
                     title=str(title),
                     page_number=page_num,
                     section=str(section) if section else None,
-                    snippet=snippet_text.strip(),
+                    snippet=html.unescape(re.sub(r"</?b>", "", snippet_text)).strip(),
                     relevance_score=relevance_score,
                     last_revised=str(last_revised) if last_revised else None,
                 )
@@ -958,9 +974,38 @@ class VertexAISearchClient:
         return citations
 
 
+def _plain(value: Any) -> Any:
+    """Converts proto-plus Struct maps / repeated composites into plain dicts and lists."""
+    if isinstance(value, (str, bytes)) or value is None:
+        return value
+    if isinstance(value, Mapping):
+        return {str(k): _plain(v) for k, v in value.items()}
+    if isinstance(value, Iterable):
+        return [_plain(v) for v in value]
+    return value
+
+
+def _title_from_link(link: Any) -> Optional[str]:
+    """Derives a readable title from a gs://.../kb/<folders>__<stem>.txt document link."""
+    if not isinstance(link, str) or not link:
+        return None
+    stem = link.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+    return stem.split("__")[-1].replace("_", " ") or None
+
+
 # Module-level singletons
 _local_retriever = LocalBM25Retriever()
 _vertex_client = VertexAISearchClient()
+
+
+def reindex_local_knowledge() -> int:
+    """Rebuilds the shared local BM25 index in place; returns the new chunk count.
+
+    Called after a learned entry is appended under ``data/knowledge_base/learned/``
+    so subsequent searches see it without a process restart.
+    """
+    _local_retriever.reindex()
+    return len(_local_retriever.chunks)
 
 
 def _resolve_dual_keys(

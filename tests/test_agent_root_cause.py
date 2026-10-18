@@ -10,12 +10,12 @@ import pytest
 
 from backend.agents import agent_root_cause
 from backend.agents.agent_root_cause import (
-    DEFAULT_CITATION,
-    DEFAULT_IM_CITATION,
-    DIAGNOSTIC_REQUEST_TEXT,
+    INSTRUCTION,
     has_field_evidence,
     query_domain_knowledge,
 )
+from backend.agents.scenario_fallbacks import RCA_CNC_CITATION as DEFAULT_CITATION
+from backend.agents.scenario_fallbacks import RCA_IM_CITATION as DEFAULT_IM_CITATION
 from backend.agents.workflow_nodes import MAX_EVIDENCE_ROUNDS, rca_gate
 from backend.core.blackboard import blackboard
 from backend.core.models import (
@@ -25,6 +25,11 @@ from backend.core.models import (
     IncidentState,
     RAGSearchResult,
     RootCauseFindingDraft,
+)
+
+DIAGNOSTIC_REQUEST_TEXT = (
+    "Confidence is currently below 70%. Please take a close-up photo of the T07 insert "
+    "to confirm flank wear or edge chipping."
 )
 
 
@@ -612,3 +617,23 @@ def test_agent_root_cause_adk_definition():
         assert agent.tools[0] is query_domain_knowledge
     else:
         assert len(agent.tools) == 0
+
+
+@pytest.mark.parametrize(
+    "scenario_fact",
+    ["2,400", "2,000", "0.87", "0.90", "SOP-MNT-CNC-04", "flank wear", "T07", "CNC-02"],
+)
+def test_instruction_carries_no_scenario_facts(scenario_fact: str):
+    """The prompt describes how to reason; conclusions and numbers come from board + RAG."""
+    assert scenario_fact not in INSTRUCTION
+
+
+def test_instruction_grounds_chain_in_board_and_rag():
+    assert "grounded in a board finding or a retrieved document" in INSTRUCTION
+    assert "defect_type" in INSTRUCTION and "suspect_machine" in INSTRUCTION
+
+
+def test_query_domain_knowledge_has_no_hardcoded_scenario_defaults():
+    """Missing keys surface as an argument error instead of silently searching CNC-02."""
+    with pytest.raises(ValueError, match="Dual query keys required"):
+        asyncio.run(query_domain_knowledge())

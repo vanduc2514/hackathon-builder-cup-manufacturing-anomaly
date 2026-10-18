@@ -15,7 +15,6 @@ from backend.agents.agent_technician_copilot import (
     AGENT_ID,
     AGENT_NAME,
     DIAGNOSTIC_PHASE,
-    TechnicianCopilot,
     analyze_visual_evidence_frame,
     build_contextual_diagnostic_probe_vi,
 )
@@ -138,37 +137,8 @@ def test_build_contextual_diagnostic_probe_vi_im():
     assert "thiếu liệu" in probe
 
 
-def test_copilot_get_diagnostic_probe_turn():
-    """TechnicianCopilot session verbalizes the probe and records turn in telemetry."""
-    copilot = TechnicianCopilot(
-        incident_id="INC-0412",
-        machine_id="CNC-02",
-        tool_id="T07",
-    )
-    turn = copilot.get_diagnostic_probe(confidence=0.65)
-
-    assert turn.speaker == "copilot"
-    assert "65%" in turn.message_vi
-    assert "T07" in turn.message_vi
-    assert len(copilot.telemetry.transcript) == 1
-    assert not turn.checkpoint_verified
 
 
-@pytest.mark.asyncio
-async def test_copilot_process_technician_input_diagnostic_mode():
-    """TechnicianCopilot in awaiting_evidence mode responds to technician questions with the probe."""
-    blackboard.update_status(
-        "awaiting_evidence",
-        diagnostic_request="Độ tin cậy hiện là 65%. Anh vui lòng chụp ảnh cận cảnh mũi dao T07.",
-    )
-    copilot = TechnicianCopilot(
-        incident_id="INC-0412",
-        machine_id="CNC-02",
-        tool_id="T07",
-    )
-    turn = await copilot.process_technician_input("Máy bị gì thế Copilot?")
-    assert "65%" in turn.message_vi
-    assert "T07" in turn.message_vi
 
 
 # =============================================================================
@@ -267,6 +237,35 @@ def test_upload_evidence_gemini_live_rest_endpoint():
     assert state.visual_evidence.filename == "insert_t07.jpg"
 
 
+def test_upload_evidence_gemini_live_rest_endpoint_outside_awaiting_evidence_returns_409():
+    """POST /api/gemini-live/evidence outside awaiting_evidence is rejected and attaches nothing."""
+    client = TestClient(app)
+
+    dummy_image = io.BytesIO(b"\xff\xd8\xff\xe0" + b"dummypixels" * 50)
+    response = client.post(
+        "/api/gemini-live/evidence",
+        files={"file": ("insert_t07.jpg", dummy_image, "image/jpeg")},
+    )
+
+    assert response.status_code == 409
+    assert blackboard.get_state().status == "analyzing"
+    assert blackboard.get_state().visual_evidence is None
+
+
+def test_gemini_live_websocket_binary_image_frame_outside_awaiting_evidence_errors():
+    """WebSocket image frame outside awaiting_evidence yields an error message, no attach."""
+    client = TestClient(app)
+    jpeg_bytes = b"\xff\xd8\xff\xe0" + b"\x00" * 128
+
+    with client.websocket_connect("/api/gemini-live/ws?session_id=VN-COPILOT-409") as ws:
+        assert ws.receive_json()["type"] == "setup_complete"
+        ws.send_bytes(jpeg_bytes)
+        resp = ws.receive_json()
+        assert resp["type"] == "error"
+        assert resp["error_message"]
+    assert blackboard.get_state().visual_evidence is None
+
+
 def test_upload_evidence_incidents_rest_endpoint():
     """POST /api/incidents/evidence uploads photo evidence directly to the incident board."""
     client = TestClient(app)
@@ -289,8 +288,11 @@ def test_upload_evidence_incidents_rest_endpoint():
     assert state.visual_evidence is not None
 
 
-def test_gemini_live_websocket_binary_image_frame():
-    """WebSocket binary image frame triggers visual evidence attachment to blackboard."""
+def test_gemini_live_websocket_binary_image_frame(monkeypatch):
+    """WebSocket binary image frame attaches visual evidence to the blackboard (Copilot offline)."""
+    import backend.api.routes_gemini_live as live_mod
+
+    monkeypatch.setattr(live_mod, "is_gemini_vision_available", lambda: False)
     client = TestClient(app)
     blackboard.update_status("awaiting_evidence", diagnostic_request="Cần chụp ảnh.")
 
@@ -304,9 +306,9 @@ def test_gemini_live_websocket_binary_image_frame():
         # Send binary JPEG frame
         ws.send_bytes(jpeg_bytes)
 
-        # Server content stream response
+        # Evidence is attached; with Gemini unavailable the Copilot reports it is offline
         resp = ws.receive_json()
-        assert resp["type"] == "server_content"
+        assert resp["type"] == "offline"
 
         # Check that visual evidence was attached to blackboard
         state = blackboard.get_state()
@@ -315,8 +317,11 @@ def test_gemini_live_websocket_binary_image_frame():
         assert state.visual_evidence.filename == "mobile_camera_frame.jpg"
 
 
-def test_gemini_live_websocket_realtime_media_chunks():
+def test_gemini_live_websocket_realtime_media_chunks(monkeypatch):
     """WebSocket JSON realtime_input with base64 image triggers visual evidence attachment."""
+    import backend.api.routes_gemini_live as live_mod
+
+    monkeypatch.setattr(live_mod, "is_gemini_vision_available", lambda: False)
     client = TestClient(app)
     blackboard.update_status("awaiting_evidence", diagnostic_request="Cần chụp ảnh.")
 
@@ -334,10 +339,8 @@ def test_gemini_live_websocket_realtime_media_chunks():
         }
         ws.send_text(json.dumps(payload))
 
-        # Input echo
-        echo = ws.receive_json()
-        assert echo["type"] == "server_content"
-        assert echo["server_content"]["input_transcription"] == "ảnh camera kiểm định"
+        # Evidence is attached; with Gemini unavailable the Copilot reports it is offline
+        assert ws.receive_json()["type"] == "offline"
 
         # Blackboard updated
         state = blackboard.get_state()

@@ -42,9 +42,6 @@ export interface RepairStep {
   target: string;
   tolerance?: string;
   reference: string;
-  /** Scripted copilot lines, only on demo work orders. Live orders use Gemini Live. */
-  copilotVi?: string;
-  copilotEn?: string;
 }
 
 export interface SensorReading {

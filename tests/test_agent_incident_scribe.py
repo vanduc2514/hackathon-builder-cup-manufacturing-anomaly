@@ -328,7 +328,6 @@ def test_agent_incident_scribe_adk_definition():
     assert agent_incident_scribe.agent.name == "incident_scribe"
     assert agent_incident_scribe.agent.output_schema == ScribeDraft
     assert agent_incident_scribe.agent.generate_content_config is not None
-    assert agent_incident_scribe.agent.generate_content_config.max_output_tokens == 2048
 
     assert AGENT_ID == "DOC"
     assert AGENT_NAME == "Incident Scribe"
@@ -520,8 +519,8 @@ def test_record_resolution_workflow_node_integration():
 
     state = asyncio.run(record_resolution(node_input))
 
-    assert state.repair_done is True
-    assert state.status == "verifying"
+    assert state.repair_done is False
+    assert state.status == "repairing"
     assert set(state.documents.keys()) == {"work_order", "report_8d", "sop_proposal"}
 
     # Ensure documents have pending_approval

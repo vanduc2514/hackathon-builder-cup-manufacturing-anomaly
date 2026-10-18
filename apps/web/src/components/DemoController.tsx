@@ -442,9 +442,9 @@ export default function DemoController({
             <br />
             GCP project: {health.data?.gcp_project || 'unset (mock data)'}
             <br />
-            Gemini Live:{' '}
+            Copilot:{' '}
             {live.data
-              ? `${live.data.status} · ${live.data.simulation_mode ? 'simulation' : 'live'} · ${live.data.active_sessions} session(s)`
+              ? `${live.data.status} · ${live.data.copilot_available ? 'Gemini streaming' : 'offline'} · ${live.data.active_sessions} session(s)`
               : live.error
                 ? 'unreachable'
                 : '…'}

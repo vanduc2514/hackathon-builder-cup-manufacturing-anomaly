@@ -41,6 +41,11 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers", "emulator: requires a reachable local emulator; not isolated from it"
     )
+    config.addinivalue_line(
+        "markers",
+        "approval_hooks: run with the real approve() side hooks (#333 document export, "
+        "#334 learning RAG write-back); they are no-op'd for every other test",
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -55,6 +60,7 @@ def _emulator_env_isolation(
     monkeypatch.setattr(settings, "pubsub_emulator_host", None)
     monkeypatch.setattr(settings, "firestore_emulator_host", None)
     monkeypatch.setattr(settings, "evidence_wait_seconds", 0.0)
+    monkeypatch.setattr(settings, "repair_wait_seconds", 0.0)
     pubsub_manager.reset_availability_cache()
     reset_firestore_adapter()
     blackboard.set_storage(get_firestore_adapter())
@@ -101,3 +107,27 @@ def _signed_in_user(request: pytest.FixtureRequest) -> Iterator[None]:
     yield
     for app in apps:
         app.dependency_overrides.pop(require_user, None)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_approval_writebacks(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No-ops the approve() side hooks so unrelated approval tests stay hermetic.
+
+    #333's documents export writes artifacts/documents/<incident_id>/ (GCS in
+    production) and #334's learning write-back appends data/knowledge_base/learned/
+    and reindexes the local BM25, so tests that merely call approve() must not
+    trigger them. Tests of the hooks themselves opt in via the `approval_hooks`
+    marker.
+    """
+    if request.node.get_closest_marker("approval_hooks"):
+        return
+    from backend.agents import orchestrator as _orchestrator_module
+
+    monkeypatch.setattr(
+        _orchestrator_module, "schedule_documents_export", lambda state: None, raising=False
+    )
+    monkeypatch.setattr(
+        _orchestrator_module, "schedule_learning_writeback", lambda state: None, raising=False
+    )

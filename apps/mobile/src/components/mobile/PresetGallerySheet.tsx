@@ -1,40 +1,25 @@
 import React, { useEffect, useState } from "react";
 import { authFetch } from "../../api/auth";
-import type { IncidentStatus, VisualEvidencePreset, VisualEvidencePresetListResponse } from "../../types";
+import type { VisualEvidencePreset, VisualEvidencePresetListResponse } from "../../types";
 
 export interface PresetGallerySheetProps {
   open: boolean;
-  status?: IncidentStatus | string;
-  isLive?: boolean;
-  canSubmitEvidence?: boolean;
   onClose: () => void;
-  onSelectSuccess: (preset: VisualEvidencePreset) => void;
+  /** The picked sample goes through the same review and submit flow as a camera shot. */
+  onSelect: (preset: VisualEvidencePreset) => void;
 }
 
 export default function PresetGallerySheet({
   open,
-  status = "normal",
-  isLive = true,
-  canSubmitEvidence,
   onClose,
-  onSelectSuccess,
+  onSelect,
 }: PresetGallerySheetProps): React.ReactElement | null {
   const [presets, setPresets] = useState<VisualEvidencePreset[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [submittingId, setSubmittingId] = useState<string | null>(null);
-  const [notes, setNotes] = useState("");
-
-  const isAwaitingEvidence = isLive
-    ? (canSubmitEvidence !== undefined ? canSubmitEvidence : status === "awaiting_evidence")
-    : true;
 
   useEffect(() => {
-    if (!open) {
-      setActionError(null);
-      return;
-    }
+    if (!open) return;
 
     let active = true;
     setLoading(true);
@@ -66,56 +51,6 @@ export default function PresetGallerySheet({
   }, [open]);
 
   if (!open) return null;
-
-  const handleSelectPreset = async (preset: VisualEvidencePreset) => {
-    if (!isLive) {
-      onSelectSuccess(preset);
-      onClose();
-      return;
-    }
-
-    if (!isAwaitingEvidence) {
-      setActionError("Sample images can only be sent while the system is awaiting evidence (awaiting_evidence).");
-      return;
-    }
-
-    setSubmittingId(preset.id);
-    setActionError(null);
-
-    try {
-      const res = await authFetch("/api/incidents/evidence/preset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          preset_id: preset.id,
-          notes: notes.trim() ? notes.trim() : undefined,
-        }),
-      });
-
-      if (res.status === 409) {
-        setActionError("Conflict: the AI is no longer awaiting evidence or has already finished analysing (HTTP 409).");
-        return;
-      }
-
-      if (res.status === 404) {
-        setActionError("The selected sample image was not found (HTTP 404).");
-        return;
-      }
-
-      if (!res.ok) {
-        setActionError(`Sending the sample image failed (HTTP ${res.status}). Please try again.`);
-        return;
-      }
-
-      onSelectSuccess(preset);
-      onClose();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Network error while sending the sample image";
-      setActionError(`Connection error: ${msg}`);
-    } finally {
-      setSubmittingId(null);
-    }
-  };
 
   return (
     <>
@@ -168,79 +103,6 @@ export default function PresetGallerySheet({
           Collection of 5 IM-05 injection-molded reference samples for automated visual verification.
         </div>
 
-        <div style={{ margin: "4px 0" }}>
-          <input
-            type="text"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Technician notes (optional)..."
-            style={{
-              width: "100%",
-              padding: "8px 12px",
-              borderRadius: 12,
-              border: "1px solid rgba(15, 23, 42, 0.15)",
-              fontSize: 12.5,
-              background: "rgba(255, 255, 255, 0.9)",
-              minHeight: 44,
-              boxSizing: "border-box",
-            }}
-            data-testid="preset-notes-input"
-          />
-        </div>
-
-        {isLive && !isAwaitingEvidence && (
-          <div
-            className="m-alert-box"
-            style={{
-              padding: "10px 12px",
-              borderRadius: 12,
-              background: "rgba(255, 149, 0, 0.12)",
-              color: "var(--ink)",
-              border: "1px solid rgba(255, 149, 0, 0.4)",
-              fontSize: 12,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-            data-testid="preset-status-warning"
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ color: "var(--orange)", fontSize: 18 }}
-            >
-              warning
-            </span>
-            <span>
-              The system is currently in status <b>{status}</b>. Sample images can only be sent while in status{" "}
-              <b>awaiting_evidence</b>.
-            </span>
-          </div>
-        )}
-
-        {actionError && (
-          <div
-            className="m-error-box"
-            role="alert"
-            style={{
-              padding: "10px 12px",
-              borderRadius: 12,
-              background: "rgba(255, 59, 48, 0.12)",
-              color: "var(--red)",
-              border: "1px solid rgba(255, 59, 48, 0.4)",
-              fontSize: 12,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-            data-testid="preset-action-error"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-              error
-            </span>
-            <span>{actionError}</span>
-          </div>
-        )}
-
         {loading && (
           <div
             style={{
@@ -285,9 +147,7 @@ export default function PresetGallerySheet({
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
-          {presets.map((preset) => {
-            const isSubmitting = submittingId === preset.id;
-            return (
+          {presets.map((preset) => (
               <div
                 key={preset.id}
                 style={{
@@ -366,8 +226,7 @@ export default function PresetGallerySheet({
                   <button
                     type="button"
                     className="m-btn accent"
-                    onClick={() => void handleSelectPreset(preset)}
-                    disabled={!isAwaitingEvidence || isSubmitting || Boolean(submittingId)}
+                    onClick={() => onSelect(preset)}
                     style={{
                       minHeight: 44,
                       minWidth: 44,
@@ -384,14 +243,13 @@ export default function PresetGallerySheet({
                     data-testid={`preset-select-btn-${preset.id}`}
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                      {isSubmitting ? "hourglass_empty" : "check"}
+                      check
                     </span>
-                    {isSubmitting ? "Sending..." : "Load this image"}
+                    Use this image
                   </button>
                 </div>
               </div>
-            );
-          })}
+          ))}
         </div>
       </div>
     </>

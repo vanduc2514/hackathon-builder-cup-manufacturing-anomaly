@@ -1249,6 +1249,20 @@
   padding: 0 26px;
 }
 
+/* Sample-image picker beside the shutter (right column of the shutter row). */
+.m-shutter-side {
+  justify-self: end;
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  cursor: pointer;
+}
+.m-shutter-side .material-symbols-outlined { font-size: 24px; }
+
 .m-shutter {
   width: 74px;
   height: 74px;

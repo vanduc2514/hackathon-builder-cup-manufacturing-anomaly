@@ -43,7 +43,7 @@ const mockPresets: VisualEvidencePreset[] = [
 
 describe("PresetGallerySheet", () => {
   const onClose = vi.fn();
-  const onSelectSuccess = vi.fn();
+  const onSelect = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -64,26 +64,12 @@ describe("PresetGallerySheet", () => {
   });
 
   it("does not render when open is false", () => {
-    const { container } = render(
-      <PresetGallerySheet
-        open={false}
-        status="awaiting_evidence"
-        onClose={onClose}
-        onSelectSuccess={onSelectSuccess}
-      />
-    );
+    const { container } = render(<PresetGallerySheet open={false} onClose={onClose} onSelect={onSelect} />);
     expect(container.firstChild).toBeNull();
   });
 
   it("fetches and renders presets with thumbnails and metadata", async () => {
-    render(
-      <PresetGallerySheet
-        open={true}
-        status="awaiting_evidence"
-        onClose={onClose}
-        onSelectSuccess={onSelectSuccess}
-      />
-    );
+    render(<PresetGallerySheet open={true} onClose={onClose} onSelect={onSelect} />);
 
     await waitFor(() => {
       expect(screen.getByText("IM-05 Molded Tray Nominal Baseline")).toBeDefined();
@@ -96,217 +82,24 @@ describe("PresetGallerySheet", () => {
     expect(screen.getByText("Defect")).toBeDefined();
   });
 
-  it("submits selected preset to /api/incidents/evidence/preset with notes and triggers onSelectSuccess", async () => {
-    mockAuthFetch.mockImplementation(async (url: string, init?: RequestInit) => {
-      if (url === "/api/presets/evidence") {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ presets: mockPresets }),
-        } as unknown as Response;
-      }
-      if (url === "/api/incidents/evidence/preset" && init?.method === "POST") {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({
-            status: "success",
-            incident_status: "analyzing",
-          }),
-        } as unknown as Response;
-      }
-      return { ok: false, status: 400 } as unknown as Response;
-    });
-
-    render(
-      <PresetGallerySheet
-        open={true}
-        status="awaiting_evidence"
-        onClose={onClose}
-        onSelectSuccess={onSelectSuccess}
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByTestId("preset-select-btn-preset-im05-crack")).toBeDefined();
-    });
-
-    const notesInput = screen.getByTestId("preset-notes-input");
-    fireEvent.change(notesInput, { target: { value: "Close-up of mold 3 shell crack" } });
-
-    const selectBtn = screen.getByTestId("preset-select-btn-preset-im05-crack");
-    fireEvent.click(selectBtn);
-
-    await waitFor(() => {
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        "/api/incidents/evidence/preset",
-        expect.objectContaining({
-          method: "POST",
-          body: JSON.stringify({
-            preset_id: "preset-im05-crack",
-            notes: "Close-up of mold 3 shell crack",
-          }),
-        })
-      );
-      expect(onSelectSuccess).toHaveBeenCalledWith(mockPresets[1]);
-      expect(onClose).toHaveBeenCalled();
-    });
-  });
-
-  it("disables selection and displays warning when status is not awaiting_evidence", async () => {
-    render(
-      <PresetGallerySheet
-        open={true}
-        status="normal"
-        onClose={onClose}
-        onSelectSuccess={onSelectSuccess}
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByTestId("preset-status-warning")).toBeDefined();
-    });
-
-    const selectBtn = screen.getByTestId("preset-select-btn-preset-im05-crack") as HTMLButtonElement;
-    expect(selectBtn.disabled).toBe(true);
-
-    fireEvent.click(selectBtn);
-    expect(mockAuthFetch).not.toHaveBeenCalledWith(
-      "/api/incidents/evidence/preset",
-      expect.anything()
-    );
-  });
-
-  it("handles HTTP 409 conflict gracefully with user-friendly message", async () => {
-    mockAuthFetch.mockImplementation(async (url: string) => {
-      if (url === "/api/presets/evidence") {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ presets: mockPresets }),
-        } as unknown as Response;
-      }
-      if (url === "/api/incidents/evidence/preset") {
-        return {
-          ok: false,
-          status: 409,
-          json: async () => ({ detail: "The AI is not waiting for evidence right now" }),
-        } as unknown as Response;
-      }
-      return { ok: false, status: 500 } as unknown as Response;
-    });
-
-    render(
-      <PresetGallerySheet
-        open={true}
-        status="awaiting_evidence"
-        onClose={onClose}
-        onSelectSuccess={onSelectSuccess}
-      />
-    );
-
+  it("hands the picked preset to onSelect without sending anything", async () => {
+    render(<PresetGallerySheet open={true} onClose={onClose} onSelect={onSelect} />);
     await waitFor(() => {
       expect(screen.getByTestId("preset-select-btn-preset-im05-crack")).toBeDefined();
     });
 
     fireEvent.click(screen.getByTestId("preset-select-btn-preset-im05-crack"));
 
-    await waitFor(() => {
-      expect(screen.getByTestId("preset-action-error")).toBeDefined();
-      expect(screen.getByText(/409/)).toBeDefined();
-    });
-    expect(onSelectSuccess).not.toHaveBeenCalled();
-    expect(onClose).not.toHaveBeenCalled();
+    expect(onSelect).toHaveBeenCalledWith(mockPresets[1]);
+    expect(mockAuthFetch).toHaveBeenCalledTimes(1);
+    expect(mockAuthFetch).toHaveBeenCalledWith("/api/presets/evidence");
   });
 
-  it("handles HTTP 404 not found error gracefully", async () => {
-    mockAuthFetch.mockImplementation(async (url: string) => {
-      if (url === "/api/presets/evidence") {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ presets: mockPresets }),
-        } as unknown as Response;
-      }
-      if (url === "/api/incidents/evidence/preset") {
-        return {
-          ok: false,
-          status: 404,
-          json: async () => ({ detail: "Preset not found" }),
-        } as unknown as Response;
-      }
-      return { ok: false, status: 500 } as unknown as Response;
-    });
-
-    render(
-      <PresetGallerySheet
-        open={true}
-        status="awaiting_evidence"
-        onClose={onClose}
-        onSelectSuccess={onSelectSuccess}
-      />
-    );
-
+  it("shows the load error when the sample list cannot be fetched", async () => {
+    mockAuthFetch.mockResolvedValue({ ok: false, status: 500 } as unknown as Response);
+    render(<PresetGallerySheet open={true} onClose={onClose} onSelect={onSelect} />);
     await waitFor(() => {
-      expect(screen.getByTestId("preset-select-btn-preset-im05-crack")).toBeDefined();
+      expect(screen.getByTestId("preset-fetch-error").textContent).toContain("HTTP 500");
     });
-
-    fireEvent.click(screen.getByTestId("preset-select-btn-preset-im05-crack"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("preset-action-error")).toBeDefined();
-      expect(screen.getByText(/404/)).toBeDefined();
-    });
-    expect(onSelectSuccess).not.toHaveBeenCalled();
-    expect(onClose).not.toHaveBeenCalled();
-  });
-
-  it("in demo mode (isLive=false), selecting preset triggers onSelectSuccess without calling POST API", async () => {
-    render(
-      <PresetGallerySheet
-        open={true}
-        isLive={false}
-        status="normal"
-        onClose={onClose}
-        onSelectSuccess={onSelectSuccess}
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByTestId("preset-select-btn-preset-im05-crack")).toBeDefined();
-    });
-
-    // Warning should NOT be present in demo mode
-    expect(screen.queryByTestId("preset-status-warning")).toBeNull();
-
-    fireEvent.click(screen.getByTestId("preset-select-btn-preset-im05-crack"));
-
-    // Verify authFetch POST was never called
-    expect(mockAuthFetch).not.toHaveBeenCalledWith(
-      "/api/incidents/evidence/preset",
-      expect.anything()
-    );
-    expect(onSelectSuccess).toHaveBeenCalledWith(mockPresets[1]);
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it("in live mode, when canSubmitEvidence is false, selection is disabled even if status is awaiting_evidence", async () => {
-    render(
-      <PresetGallerySheet
-        open={true}
-        isLive={true}
-        canSubmitEvidence={false}
-        status="awaiting_evidence"
-        onClose={onClose}
-        onSelectSuccess={onSelectSuccess}
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByTestId("preset-status-warning")).toBeDefined();
-    });
-
-    const selectBtn = screen.getByTestId("preset-select-btn-preset-im05-crack") as HTMLButtonElement;
-    expect(selectBtn.disabled).toBe(true);
   });
 });

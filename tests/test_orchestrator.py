@@ -25,7 +25,7 @@ from backend.agents.orchestrator import (
     _build_gemini_model,
 )
 from backend.agents.tool_guards import MAX_TOOL_CALLS
-from backend.core.blackboard import blackboard
+from backend.core.blackboard import UNFINISHED_STATUSES, WORKFLOW_LOST_MESSAGE, blackboard
 from backend.core.models import (
     DefectInjectionRequest,
     IncidentState,
@@ -339,3 +339,20 @@ def test_single_flight_and_abort_cancel():
         assert orch.is_running is False
 
     asyncio.run(scenario())
+
+
+def test_cancelled_workflow_marks_incident_error():
+    """An aborted workflow (shutdown/cancel) must not leave the incident in-flight forever."""
+    LlmAgent.set_default_model(FakeLlm())
+
+    async def scenario() -> None:
+        orch = Orchestrator(step_delay=1)
+        assert orch.start_incident(DefectInjectionRequest()) is True
+        await asyncio.sleep(0.2)
+        assert blackboard.get_state().status in UNFINISHED_STATUSES
+        await orch.cancel()
+
+    asyncio.run(scenario())
+    state = blackboard.get_state()
+    assert state.status == "error"
+    assert state.status_reason == WORKFLOW_LOST_MESSAGE

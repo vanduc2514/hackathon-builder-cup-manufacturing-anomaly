@@ -34,6 +34,8 @@ export interface TopologyEdge {
   label: string;
   /** Corner choice of the L-shaped route: x-first by default, `'zx'` goes z-first. */
   route?: 'zx';
+  /** If true, the edge is hidden when idle and only appears/highlights when active or hovered. */
+  dynamic?: boolean;
 }
 
 /** One beat of the looping incident scenario. */

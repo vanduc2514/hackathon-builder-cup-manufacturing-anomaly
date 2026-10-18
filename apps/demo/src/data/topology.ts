@@ -197,7 +197,6 @@ export const EDGES: TopologyEdge[] = [
   { from: 'edge-gateway', to: 'pubsub', label: 'Defective images + anomalies' },
   { from: 'pubsub', to: 'bigquery', label: 'Raw telemetry storage' },
   { from: 'pubsub', to: 'orchestrator', label: 'Defect / SPC event', route: 'zx' },
-  { from: 'orchestrator', to: 'firestore', label: 'Sole writer' },
   { from: 'orchestrator', to: 'qa', label: 'Dispatch' },
   { from: 'qa', to: 'tra', label: 'Defect confirmed', route: 'zx' },
   { from: 'tra', to: 'pa', label: 'Suspect lots' },
@@ -206,10 +205,13 @@ export const EDGES: TopologyEdge[] = [
   { from: 'rca', to: 'doc', label: 'Findings', route: 'zx' },
   { from: 'copilot', to: 'qa', label: 'Repair done -> verify', route: 'zx' },
   { from: 'qa', to: 'learn', label: 'Verified -> learn', route: 'zx' },
-  { from: 'orchestrator', to: 'rag', label: 'RAG knowledge search' },
-  { from: 'orchestrator', to: 'gemini', label: 'Multimodal foundation model' },
-  { from: 'copilot', to: 'technician-app', label: 'Live voice + camera' },
+  // Dynamic connections to cloud resources (invisible when idle, highlights during active step)
+  { from: 'tra', to: 'bigquery', label: 'Lot genealogy', dynamic: true },
+  { from: 'rca', to: 'rag', label: 'RAG knowledge search', dynamic: true },
+  { from: 'copilot', to: 'gemini', label: 'Multimodal foundation model', dynamic: true },
+  // External apps
   { from: 'firestore', to: 'plant-ops', label: 'Live incident board' },
+  { from: 'copilot', to: 'technician-app', label: 'Live voice + camera' },
 ];
 
 export const edgeKey = (e: TopologyEdge): string => `${e.from}->${e.to}`;
@@ -241,28 +243,24 @@ export const SCENARIO: ScenarioStep[] = [
   move('Orchestrator dispatches the agent team', ['orchestrator->qa'], ['orchestrator']),
   work('Quality Inspector confirms the defect', ['qa']),
   move('Defect confirmed, passed to Traceability', ['qa->tra']),
-  work('Traceability queries lot genealogy', ['tra']),
+  work('Traceability queries lot genealogy from BigQuery', ['tra'], ['tra->bigquery']),
   move('Suspect lots passed to Process Analyst', ['tra->pa']),
   work('Process Analyst reads sensor data', ['pa']),
   move('Sensor evidence passed to Root Cause', ['pa->rca']),
-  work('Root Cause searches 8D archives via Orchestrator', ['rca'], ['orchestrator->rag']),
+  work('Root Cause searches 8D archives in Vertex AI', ['rca'], ['rca->rag']),
   move('Findings go to Copilot and Scribe', ['rca->copilot', 'rca->doc']),
   work(
     'Copilot guides technician with Gemini live model',
     ['copilot', 'doc'],
-    ['orchestrator->gemini', 'copilot->technician-app'],
+    ['copilot->gemini', 'copilot->technician-app'],
   ),
   work('Technician performs physical repair on bay', ['copilot']),
   move('Repair done, sent for verification', ['copilot->qa']),
   work('Quality Inspector verifies on product evidence', ['qa']),
   move('Verified result goes to Learning', ['qa->learn']),
   work('Learning captures the knowledge', ['learn']),
-  move(
-    'Incident closed and broadcast to dashboard',
-    ['orchestrator->firestore', 'firestore->plant-ops'],
-    ['orchestrator'],
-  ),
-  work('Shift leader reviews and approves on dashboard', ['orchestrator']),
+  move('Incident closed and broadcast to dashboard', ['firestore->plant-ops'], []),
+  work('Shift leader reviews and approves on dashboard', []),
   { caption: 'Incident resolved, restarting', seconds: 1.5, edges: [], working: [] },
 ];
 
@@ -294,6 +292,13 @@ export function scenarioAt(seconds: number): ScenarioState {
 /** Whether agent `id` is working (processing data) `seconds` into the scenario. */
 export function isAgentWorking(id: string, seconds: number): boolean {
   return scenarioAt(seconds).step.working.includes(id);
+}
+
+/** Whether node `id` is active or working in the scenario `seconds` into the loop. */
+export function isNodeActive(id: string, seconds: number): boolean {
+  const { step } = scenarioAt(seconds);
+  if (step.working.includes(id)) return true;
+  return step.edges.some((key) => key.startsWith(`${id}->`) || key.endsWith(`->${id}`));
 }
 
 const NODE_BY_ID = new Map(NODES.map((n) => [n.id, n]));

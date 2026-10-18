@@ -4,7 +4,7 @@ import React, { Suspense, useRef } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Edges, Html, Outlines } from '@react-three/drei';
 import type { Group, Mesh, MeshStandardMaterial } from 'three';
-import { APP_LINKS, isAgentWorking, scenarioNow } from '../data/topology';
+import { APP_LINKS, isNodeActive, scenarioNow } from '../data/topology';
 import type { NodeShape, TopologyNode } from '../types/topology';
 import AgentRobot from './AgentRobot';
 
@@ -65,6 +65,8 @@ interface NodeMeshProps {
 export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshProps): React.ReactElement {
   const group = useRef<Group>(null);
   const ring = useRef<Mesh>(null);
+  const downTime = useRef<number>(0);
+  const downPos = useRef<{ x: number; y: number } | null>(null);
   const [x, z] = node.position;
   const isRobot = node.shape === 'agent' || node.shape === 'hub';
   const robotSize = node.shape === 'hub' ? 1.4 : 1;
@@ -72,11 +74,15 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
 
   useFrame(() => {
     if (!group.current) return;
+    const active = isNodeActive(node.id, scenarioNow());
+    const isLit = hovered || active;
+    const targetY = hovered ? HOVER_LIFT : (active ? 0.2 : 0);
     const y = group.current.position.y;
-    group.current.position.y = y + ((hovered ? HOVER_LIFT : 0) - y) * 0.15;
+    group.current.position.y = y + (targetY - y) * 0.15;
     if (ring.current) {
       const m = ring.current.material as MeshStandardMaterial;
-      m.opacity += ((isAgentWorking(node.id, scenarioNow()) ? 0.95 : 0.15) - m.opacity) * 0.2;
+      const targetOpacity = isLit ? 0.95 : (isRobot ? 0.15 : 0.0);
+      m.opacity += (targetOpacity - m.opacity) * 0.2;
     }
   });
 
@@ -88,6 +94,21 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
     e.stopPropagation();
     onOpen(node);
   };
+  const handlePointerDown = (e: ThreeEvent<PointerEvent>): void => {
+    downTime.current = Date.now();
+    downPos.current = { x: e.clientX, y: e.clientY };
+  };
+  const handlePointerUp = (e: ThreeEvent<PointerEvent>): void => {
+    if (!downPos.current) return;
+    const dt = Date.now() - downTime.current;
+    const dx = Math.abs(e.clientX - downPos.current.x);
+    const dy = Math.abs(e.clientY - downPos.current.y);
+    downPos.current = null;
+    if (dt < 600 && dx < 12 && dy < 12) {
+      e.stopPropagation();
+      onOpen(node);
+    }
+  };
 
   return (
     <group
@@ -95,6 +116,8 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
       position={[x, 0, z]}
       onPointerOver={handleOver}
       onPointerOut={() => onHover(null)}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
       onClick={handleClick}
     >
       {shapeParts(node.shape).map((part, i) => (
@@ -117,23 +140,38 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
           <AgentRobot agentId={node.id} hovered={hovered} size={robotSize} />
         </Suspense>
       )}
-      {isRobot && (
-        <mesh ref={ring} position={[0, 0.03, 0]}>
-          <cylinderGeometry args={[0.75 * robotSize, 0.75 * robotSize, 0.04, 32]} />
-          <meshStandardMaterial
-            color="#5b5bf0"
-            emissive="#5b5bf0"
-            emissiveIntensity={0.8}
-            transparent
-            opacity={0.15}
-          />
-        </mesh>
-      )}
+      <mesh ref={ring} position={[0, 0.03, 0]}>
+        <cylinderGeometry
+          args={[
+            isRobot ? 0.75 * robotSize : 1.3,
+            isRobot ? 0.75 * robotSize : 1.3,
+            0.04,
+            32,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#5b5bf0"
+          emissive="#5b5bf0"
+          emissiveIntensity={0.8}
+          transparent
+          opacity={isRobot ? 0.15 : 0.0}
+        />
+      </mesh>
       <Html
         position={[0, isRobot ? ROBOT_LABEL_BOTTOM * robotSize : LABEL_BOTTOM, 0]}
-        style={{ pointerEvents: 'none' }}
+        style={{ pointerEvents: 'auto' }}
       >
-        <div className={hovered ? 'node-label is-hovered' : 'node-label'}>
+        <a
+          href={APP_LINKS[node.target].url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={hovered ? 'node-label is-hovered' : 'node-label'}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+        >
           <span className="node-label__head">
             <span className="material-symbols-outlined" aria-hidden="true">
               {node.icon}
@@ -146,7 +184,7 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
               <span className="node-label__open">Open {APP_LINKS[node.target].title} ↗</span>
             </>
           )}
-        </div>
+        </a>
       </Html>
     </group>
   );

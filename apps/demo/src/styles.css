@@ -295,10 +295,13 @@ img.brand-tile {
   font-size: 11px;
   color: var(--ink);
   white-space: nowrap;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
+  text-decoration: none;
   user-select: none;
   transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
 }
+.node-label:hover,
 .node-label.is-hovered {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-ring), var(--glass-shadow);

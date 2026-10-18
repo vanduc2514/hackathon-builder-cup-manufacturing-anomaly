@@ -85,13 +85,13 @@ export default function EdgeFlow({ edge, from, to, hoveredId }: EdgeFlowProps): 
     }
     let color = active ? ACTIVE : IDLE;
     let width = active ? 3 : 1.4;
-    let opacity = active ? 1 : 0.45;
+    let opacity = active ? 1 : (edge.dynamic ? 0 : 0.45);
     if (hover.current.highlighted) {
       color = ACTIVE;
       width = 2.6;
       opacity = 1;
     } else if (hover.current.dimmed) {
-      opacity = 0.2;
+      opacity = edge.dynamic ? 0 : 0.2;
     }
     if (line.current) {
       const m = line.current.material as LineMaterial;

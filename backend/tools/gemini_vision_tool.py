@@ -20,6 +20,9 @@ from backend.core.models import (
 
 logger = logging.getLogger(__name__)
 
+# Confidence reported for scripted-expectation results (source fallback/mock).
+SCRIPTED_CONFIDENCE = 0.9
+
 DEFAULT_DIAGNOSTIC_IM_CITATION = (
     "Technician diagnostic camera stream via Gemini Live (Dryer-03 desiccant canister inspection)"
 )
@@ -79,6 +82,11 @@ def get_gemini_client() -> Any:
     return genai.Client(vertexai=True, project=project_id, location=region)
 
 
+def payload_confidence(payload: VisualEvidencePayload) -> float:
+    """Confidence of an evidence payload: model self-assessment, else the scripted expectation."""
+    return payload.confidence if payload.confidence is not None else SCRIPTED_CONFIDENCE
+
+
 def mock_visual_evidence_analysis(
     image_bytes: bytes,
     machine_id: str = "CNC-02",
@@ -126,6 +134,8 @@ def mock_visual_evidence_analysis(
         defect_detected=True,
         wear_measurement_mm=wear_mm,
         citation=citation,
+        source="mock",
+        confidence=SCRIPTED_CONFIDENCE,
     )
 
 
@@ -206,6 +216,8 @@ def analyze_visual_evidence_frame(
                 defect_detected=result.defect_detected,
                 wear_measurement_mm=result.wear_measurement_mm,
                 citation=citation,
+                source="gemini",
+                confidence=result.confidence,
             )
         except Exception as exc:
             if not settings.gemini_vision_fallback_to_mock:
@@ -324,14 +336,24 @@ def inspect_insert_image(
 def _part_for(expected: str | None) -> PartInspectionResult:
     cls = expected if expected in ("scratch_vertical", "chipping") else "none"
     return PartInspectionResult(
-        defect_class=cls, severity=3 if cls != "none" else 1, region="center"
+        defect_class=cls,
+        severity=3 if cls != "none" else 1,
+        region="center",
+        confidence=SCRIPTED_CONFIDENCE,
     )
 
 
 def _insert_for(expected: str | None) -> InsertInspectionResult:
     if expected == "replace":
-        return InsertInspectionResult(flank_wear="severe", edge_chipping=True, replace_insert=True)
-    return InsertInspectionResult(flank_wear="none", edge_chipping=False, replace_insert=False)
+        return InsertInspectionResult(
+            flank_wear="severe",
+            edge_chipping=True,
+            replace_insert=True,
+            confidence=SCRIPTED_CONFIDENCE,
+        )
+    return InsertInspectionResult(
+        flank_wear="none", edge_chipping=False, replace_insert=False, confidence=SCRIPTED_CONFIDENCE
+    )
 
 
 def _part_label(result: PartInspectionResult) -> str:

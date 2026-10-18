@@ -44,6 +44,7 @@ from backend.core.models import (
 from backend.tools.gemini_vision_tool import (
     get_gemini_client,
     is_gemini_vision_available,
+    payload_confidence,
 )
 
 logger = logging.getLogger(__name__)
@@ -458,7 +459,7 @@ async def gemini_live_websocket(
                         phase=DIAGNOSTIC_PHASE,
                         finding=f"Frontline technician camera frame confirms defect root cause on {cur_st.suspect_machine or 'CNC-02'}.",
                         evidence=ev_payload.analysis,
-                        confidence=0.92,
+                        confidence=payload_confidence(ev_payload),
                         citation=ev_payload.citation,
                     )
                     try:
@@ -576,7 +577,7 @@ async def gemini_live_websocket(
                                     phase=DIAGNOSTIC_PHASE,
                                     finding=f"Frontline technician camera frame confirms defect root cause on {cur_st.suspect_machine or 'CNC-02'}.",
                                     evidence=ev_payload.analysis,
-                                    confidence=0.92,
+                                    confidence=payload_confidence(ev_payload),
                                     citation=ev_payload.citation,
                                 )
                                 try:
@@ -664,7 +665,7 @@ async def upload_gemini_live_evidence(
         phase=DIAGNOSTIC_PHASE,
         finding=f"Frontline technician submitted close-up photo confirming defect root cause on {cur_st.suspect_machine or 'CNC-02'}.",
         evidence=ev_payload.analysis + (f" Ghi chú: {notes}" if notes else ""),
-        confidence=0.92,
+        confidence=payload_confidence(ev_payload),
         citation=ev_payload.citation,
     )
     try:

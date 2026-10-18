@@ -23,12 +23,13 @@ KW = {"machine_id": "CNC-02", "tool_id": "T07"}
 
 
 def _part(cls: str) -> PartInspectionResult:
-    return PartInspectionResult(defect_class=cls, severity=3, region="center")
+    return PartInspectionResult(defect_class=cls, severity=3, region="center", confidence=0.8)
 
 
 def _insert(replace: bool) -> InsertInspectionResult:
     return InsertInspectionResult(
-        flank_wear="severe" if replace else "none", edge_chipping=replace, replace_insert=replace
+        flank_wear="severe" if replace else "none", edge_chipping=replace, replace_insert=replace,
+        confidence=0.8,
     )
 
 

@@ -47,15 +47,15 @@ export default function TopologyScene({
       orthographic
       gl={{ alpha: true, antialias: true }}
       dpr={[1, 2]}
-      camera={{ position: [12, 20, 12], zoom: 20, near: -100, far: 200 }}
+      camera={{ position: [20, 20, 13], zoom: 18, near: -100, far: 200 }}
     >
       <ambientLight intensity={0.9} />
       <directionalLight position={[10, 20, 8]} intensity={0.8} />
       <OrbitControls
         makeDefault
         enableDamping
-        target={[-8, 0, -8]}
-        minZoom={18}
+        target={[0, 0, -7]}
+        minZoom={14}
         maxZoom={90}
         minPolarAngle={0.6}
         maxPolarAngle={1.1}

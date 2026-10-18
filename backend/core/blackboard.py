@@ -215,6 +215,9 @@ class Blackboard:
         """Saves current state to Firestore and attaches live listener if enabled."""
         if not self.is_firestore_enabled:
             return
+        # Each local write gets a higher revision, so the listener can tell this process's own
+        # (possibly out-of-order) snapshot echoes from genuinely newer remote writes.
+        self._state.revision += 1
         try:
             self._storage.save_incident(self._state)
             self._attach_listener(self._state.incident_id)
@@ -246,9 +249,14 @@ class Blackboard:
         self._current_listening_incident_id = None
 
     def _on_remote_update(self, new_state: IncidentState) -> None:
-        if new_state.model_dump() != self._state.model_dump():
-            self._state = new_state
-            self._notify()
+        stale = (
+            new_state.incident_id == self._state.incident_id
+            and new_state.revision <= self._state.revision
+        )
+        if stale or new_state.model_dump() == self._state.model_dump():
+            return
+        self._state = new_state
+        self._notify()
 
     def _notify(self) -> None:
         data = self._state.model_dump_json()

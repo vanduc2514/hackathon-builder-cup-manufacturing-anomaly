@@ -319,6 +319,7 @@ def test_blackboard_live_snapshot_update(fake_adapter: FirestoreAdapter) -> None
         status="repairing",
         suspect_machine="CNC-02",
         repair_done=False,
+        revision=bb.get_state().revision + 1,
     )
     # Trigger snapshot listener
     listener = fake_adapter._client.collection("incidents")._listeners.get("INC-SNAPSHOT-01")
@@ -330,6 +331,29 @@ def test_blackboard_live_snapshot_update(fake_adapter: FirestoreAdapter) -> None
     # Local state updated
     assert bb.get_state().status == "repairing"
     assert bb.get_state().suspect_machine == "CNC-02"
+
+
+def test_blackboard_ignores_stale_snapshot_echo(fake_adapter: FirestoreAdapter) -> None:
+    """An out-of-order echo of this process's own earlier write must not clobber newer state."""
+    bb = Blackboard(storage=fake_adapter)
+    bb.update_status("detecting", incident_id="INC-ECHO-01")
+    earlier = bb.get_state().model_dump(mode="json")
+    bb.add_finding(
+        AgentFinding(
+            agent_id="doc",
+            agent_name="Incident Scribe",
+            phase="Phase C",
+            finding="8D drafted",
+            evidence="e",
+            confidence=0.9,
+            citation="c",
+        )
+    )
+
+    listener = fake_adapter._client.collection("incidents")._listeners["INC-ECHO-01"]
+    listener([FakeDocumentSnapshot("INC-ECHO-01", earlier)], changes=None, read_time=None)
+
+    assert [f.agent_name for f in bb.get_state().findings] == ["Incident Scribe"]
 
 
 @pytest.mark.asyncio

@@ -780,6 +780,9 @@ class HandoverNoteRequest(BaseModel):
 
 class IncidentState(BaseModel):
     incident_id: str = "INC-0412"
+    # Monotonic per-incident write counter set by the Blackboard on every persisted write;
+    # Firestore snapshot echoes with revision <= the local one are stale and ignored.
+    revision: int = 0
     # normal, detecting, tracing, investigating, analyzing, awaiting_evidence, repairing,
     # verifying, closed, dismissed, escalated, error
     status: str = "normal"

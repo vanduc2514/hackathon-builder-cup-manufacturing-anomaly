@@ -1,6 +1,6 @@
 """Unit tests for ``scripts/sync_gdrive_kb.py`` (TKT-069 / Issue #267).
 
-Each test exercises one slice of the S1..S5 pipeline with hermetic fixtures written
+Each test exercises one slice of the S1..S4 pipeline with hermetic fixtures written
 into a ``tmp_path`` directory so we never touch the real competition cache. The
 test file never imports GCP / Vertex SDKs, so it runs on the regular local
 pytest configuration (no ``emulator`` marker needed).
@@ -30,11 +30,8 @@ from scripts.sync_gdrive_kb import (  # noqa: E402  (path-based import after sys
     EightDRecord,
     MaintenanceRecord,
     Redactor,
-    _classify_image,
-    _is_image_file,
     build_alarm_token_set,
     ingest_8d_xlsx,
-    ingest_competition_images,
     ingest_maintenance_xlsx,
     ingest_oem_pdf,
     parse_8d_workbook,
@@ -248,34 +245,6 @@ def minimal_index_json(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return path
-
-
-@pytest.fixture()
-def image_gdrive_layout(tmp_path: Path) -> Path:
-    """Build a tiny ``Original Image/`` + ``image error/`` directory layout."""
-
-    gdrive = tmp_path / "gdrive"
-    original_dir = gdrive / "Original Image"
-    error_dir = gdrive / "image error"
-    original_dir.mkdir(parents=True)
-    error_dir.mkdir(parents=True)
-
-    # Two originals (jpg with valid header).
-    for i in (1, 2):
-        (original_dir / f"orig_{i}.jpg").write_bytes(
-            b"\xff\xd8\xff\xe0\x00\x10JFIF" + b"\x00" * 8
-        )
-
-    # One error_part file (PNG signature, no extension).
-    (error_dir / "Error_part_3").write_bytes(
-        b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
-    )
-    # One nested-subdir layout with a single jpg.
-    nested = error_dir / "Error_part_9"
-    nested.mkdir()
-    (nested / "frame.jpg").write_bytes(b"\xff\xd8\xff\xe0\x00\x10JFIF" + b"\x00" * 8)
-
-    return gdrive
 
 
 # =============================================================================
@@ -586,99 +555,6 @@ def test_update_index_json_is_idempotent(
 
 
 # =============================================================================
-# S5 — image ingest
-# =============================================================================
-
-
-def test__is_image_file_accepts_png_signature_without_extension(tmp_path: Path):
-    png_path = tmp_path / "Error_part_99"
-    png_path.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 16)
-    assert _is_image_file(png_path)
-
-
-def test__is_image_file_accepts_jpg_extension(tmp_path: Path):
-    jpg = tmp_path / "orig.jpg"
-    jpg.write_bytes(b"\xff\xd8\xff\xe0\x00\x10JFIF")
-    assert _is_image_file(jpg)
-
-
-def test__is_image_file_rejects_text(tmp_path: Path):
-    txt = tmp_path / "readme.txt"
-    txt.write_text("hello")
-    assert not _is_image_file(txt)
-
-
-def test__classify_image_returns_normal_for_originals():
-    category, severity = _classify_image(
-        Path("Original Image/20261012_224035.jpg"), error_part_index=None
-    )
-    assert category == "normal"
-    assert severity == "nominal"
-
-
-def test__classify_image_returns_defect_for_error_parts():
-    category, severity = _classify_image(
-        Path("image error/Error_part_3"), error_part_index=3
-    )
-    assert severity in {"low", "medium", "high"}
-    assert category in {"surface_scratch", "crack", "fracture", "assembly_gap"}
-
-
-def test_ingest_competition_images_copies_and_appends(
-    image_gdrive_layout: Path,
-    tmp_path: Path,
-):
-    catalog_path = tmp_path / "catalog.json"
-    catalog_path.write_text(json.dumps([{"id": "preset-im05-normal", "stays": True}]))
-
-    destinations = (tmp_path / "web_pub", tmp_path / "mobile_pub")
-    new_entries = ingest_competition_images(
-        image_gdrive_layout,
-        catalog_path=catalog_path,
-        destinations=destinations,
-    )
-
-    # 2 originals + 2 defect images (one flat PNG + one nested jpg) = 4 new entries.
-    assert len(new_entries) == 4
-
-    # Files copied to both destinations.
-    for dest in destinations:
-        copied = list(dest.glob("competition_*"))
-        assert len(copied) == 4
-
-    # Catalog preserved the pre-existing preset and now has the new ones.
-    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
-    assert catalog[0]["id"] == "preset-im05-normal"
-    competition_ids = [e["id"] for e in catalog if e["id"].startswith("preset-competition-")]
-    assert len(competition_ids) == 4
-
-
-def test_ingest_competition_images_is_idempotent(
-    image_gdrive_layout: Path,
-    tmp_path: Path,
-):
-    catalog_path = tmp_path / "catalog.json"
-    catalog_path.write_text("[]")
-
-    destinations = (tmp_path / "web_pub",)
-    ingest_competition_images(
-        image_gdrive_layout,
-        catalog_path=catalog_path,
-        destinations=destinations,
-    )
-    first = json.loads(catalog_path.read_text(encoding="utf-8"))
-    ingest_competition_images(
-        image_gdrive_layout,
-        catalog_path=catalog_path,
-        destinations=destinations,
-    )
-    second = json.loads(catalog_path.read_text(encoding="utf-8"))
-
-    # Re-running must not double-insert; same total entry count.
-    assert len(first) == len(second) == 4
-
-
-# =============================================================================
 # End-to-end pipeline (no fixtures -> minimal run_sync over a temp layout)
 # =============================================================================
 
@@ -703,16 +579,11 @@ def test_run_sync_end_to_end_over_tmp_layout(tmp_path: Path, monkeypatch):
     real_index = _REPO_ROOT / "data" / "knowledge_base" / "index.json"
     if real_index.exists():
         shutil.copy(real_index, kb_root / "index.json")
-    catalog = tmp_path / "catalog.json"
-    catalog.write_text("[]")
-    destinations = (tmp_path / "web_pub", tmp_path / "mobile_pub")
 
     summary = sync_gdrive_kb.run_sync(
         gdrive_kb=tmp_drive,
         kb_root=kb_root,
         drive_output=drive_output,
-        catalog_path=catalog,
-        destinations=destinations,
     )
 
     outputs = summary["outputs"]
@@ -720,15 +591,8 @@ def test_run_sync_end_to_end_over_tmp_layout(tmp_path: Path, monkeypatch):
     assert outputs["maintenance_markdown"], "maintenance markdown list should be non-empty"
     # The OEM PDF is 554 pages; we expect several sections.
     assert len(outputs["pdf_markdown"]) >= 1
-    # 10 originals + 7 Error_part files (flat PNGs) = 17 competition presets.
-    assert outputs["competition_presets"] == 17
     # Redaction actually fired.
     assert summary["redaction_substitutions"].get("Mitsubishi", 0) > 0
-
-    # Files copied to both web + mobile public dirs.
-    for dest in destinations:
-        copied = list(dest.glob("competition_*"))
-        assert len(copied) == 17
 
     # index.json now contains at least one drive/* entry.
     index_raw = json.loads((kb_root / "index.json").read_text(encoding="utf-8"))

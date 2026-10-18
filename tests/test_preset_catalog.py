@@ -68,3 +68,27 @@ def test_list_presets_missing_file_graceful():
         "backend.tools.preset_catalog.CATALOG_FILE", CATALOG_FILE.parent / "nonexistent.json"
     ):
         assert list_presets() == []
+
+
+def test_cnc02_catalog_integrity():
+    """Every cnc02 entry has an existing image file, licence, source URL and expected class."""
+    from backend.tools.preset_catalog import load_preset_image
+
+    cnc02 = [p for p in list_presets() if p.machine_id == "CNC-02"]
+    image_dir = CATALOG_FILE.parent / "cnc02"
+    assert {p.image_file for p in cnc02} == {f"cnc02/{f.name}" for f in image_dir.glob("*.jpg")}
+    assert not any("competition" in p.id for p in list_presets())
+    for p in cnc02:
+        assert p.image_file and p.image_file.startswith("cnc02/"), p.id
+        assert (CATALOG_FILE.parent / p.image_file).is_file(), p.id
+        assert load_preset_image(p)
+        assert p.licence and p.source_url and p.author and p.expected_class, p.id
+        assert p.tool_id == "T07"
+        assert p.image_url == f"/presets/evidence/{p.image_file}"
+
+
+def test_list_presets_role_filter():
+    for role in ("qa_defect", "streak_good", "tool_worn", "tool_new", "im05"):
+        presets = list_presets(role)
+        assert presets, role
+        assert {p.role for p in presets} == {role}

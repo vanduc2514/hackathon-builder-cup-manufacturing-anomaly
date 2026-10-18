@@ -19,7 +19,7 @@ TECH = AuthAccount(
 
 
 def test_get_preset_evidence_gallery_success():
-    """GET /api/presets/evidence returns the benchmark presets + competition extras."""
+    """GET /api/presets/evidence returns the benchmark presets."""
     client = TestClient(app)
     response = client.get("/api/presets/evidence")
     assert response.status_code == 200

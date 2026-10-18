@@ -15,8 +15,15 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 CATALOG_FILE = PROJECT_ROOT / "data" / "datasets" / "preset_evidence" / "catalog.json"
 
 
-def list_presets() -> list[VisualEvidencePreset]:
-    """Loads all benchmark visual evidence presets from catalog.json."""
+def list_presets(role: Optional[str] = None) -> list[VisualEvidencePreset]:
+    """Loads benchmark visual evidence presets from catalog.json, optionally filtered by role."""
+    presets = _load_all()
+    if role is None:
+        return presets
+    return [p for p in presets if p.role == role]
+
+
+def _load_all() -> list[VisualEvidencePreset]:
     if not CATALOG_FILE.exists():
         logger.warning("Preset evidence catalog not found at %s", CATALOG_FILE)
         return []
@@ -43,3 +50,10 @@ def get_preset(preset_id: str) -> Optional[VisualEvidencePreset]:
         if preset.id == preset_id:
             return preset
     return None
+
+
+def load_preset_image(preset: VisualEvidencePreset) -> bytes:
+    """Reads the backend image file of a preset (raises if the preset has no image_file)."""
+    if not preset.image_file:
+        raise ValueError(f"Preset {preset.id} has no image_file")
+    return (CATALOG_FILE.parent / preset.image_file).read_bytes()

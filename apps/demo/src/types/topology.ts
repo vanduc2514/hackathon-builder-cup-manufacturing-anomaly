@@ -23,7 +23,8 @@ export interface TopologyNode {
   zone: ZoneId;
   /** Grid `[x, z]` on the floor plane. */
   position: [number, number];
-  target: AppTarget;
+  /** Deployed app target if clickable; omitted for internal architecture nodes. */
+  target?: AppTarget;
   /** Material Symbols icon name. */
   icon: string;
 }

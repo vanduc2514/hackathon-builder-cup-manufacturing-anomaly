@@ -72,6 +72,9 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
   const robotSize = node.shape === 'hub' ? 1.4 : 1;
   const lineColor = hovered ? ACCENT : LINE;
 
+  const isClickable = Boolean(node.target && APP_LINKS[node.target]);
+  const appLink = node.target ? APP_LINKS[node.target] : null;
+
   useFrame(() => {
     if (!group.current) return;
     const active = isNodeActive(node.id, scenarioNow());
@@ -85,7 +88,7 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
     group.current.scale.set(nextScale, nextScale, nextScale);
     if (ring.current) {
       const m = ring.current.material as MeshStandardMaterial;
-      const targetOpacity = isLit ? 0.95 : (isRobot ? 0.15 : 0.0);
+      const targetOpacity = isLit ? 0.95 : (isClickable ? 0.25 : (isRobot ? 0.15 : 0.0));
       m.opacity += (targetOpacity - m.opacity) * 0.2;
     }
   });
@@ -96,7 +99,9 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
   };
   const handleClick = (e: ThreeEvent<MouseEvent>): void => {
     e.stopPropagation();
-    onOpen(node);
+    if (isClickable) {
+      onOpen(node);
+    }
   };
   const handlePointerDown = (e: ThreeEvent<PointerEvent>): void => {
     downTime.current = Date.now();
@@ -110,7 +115,9 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
     downPos.current = null;
     if (dt < 600 && dx < 12 && dy < 12) {
       e.stopPropagation();
-      onOpen(node);
+      if (isClickable) {
+        onOpen(node);
+      }
     }
   };
 
@@ -163,32 +170,49 @@ export default function NodeMesh({ node, hovered, onHover, onOpen }: NodeMeshPro
       </mesh>
       <Html
         position={[0, isRobot ? ROBOT_LABEL_BOTTOM * robotSize : LABEL_BOTTOM, 0]}
-        style={{ pointerEvents: 'auto' }}
+        style={{ pointerEvents: isClickable ? 'auto' : 'none' }}
       >
-        <a
-          href={APP_LINKS[node.target].url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={hovered ? 'node-label is-hovered' : 'node-label'}
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerUp={(e) => e.stopPropagation()}
-        >
-          <span className="node-label__head">
-            <span className="material-symbols-outlined" aria-hidden="true">
-              {node.icon}
+        {isClickable && appLink ? (
+          <a
+            href={appLink.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`node-label is-clickable${hovered ? ' is-hovered' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+          >
+            <span className="node-label__head">
+              <span className="material-symbols-outlined" aria-hidden="true">
+                {node.icon}
+              </span>
+              <span className="node-label__title">{node.label}</span>
+              <span className="material-symbols-outlined node-label__ext-icon" aria-hidden="true">
+                open_in_new
+              </span>
             </span>
-            <span className="node-label__title">{node.label}</span>
-          </span>
-          {hovered && (
-            <>
+            {hovered && (
+              <>
+                <span className="node-label__sub">{node.sublabel}</span>
+                <span className="node-label__open">Open {appLink.title} ↗</span>
+              </>
+            )}
+          </a>
+        ) : (
+          <div className={`node-label${hovered ? ' is-hovered' : ''}`}>
+            <span className="node-label__head">
+              <span className="material-symbols-outlined" aria-hidden="true">
+                {node.icon}
+              </span>
+              <span className="node-label__title">{node.label}</span>
+            </span>
+            {hovered && (
               <span className="node-label__sub">{node.sublabel}</span>
-              <span className="node-label__open">Open {APP_LINKS[node.target].title} ↗</span>
-            </>
-          )}
-        </a>
+            )}
+          </div>
+        )}
       </Html>
     </group>
   );

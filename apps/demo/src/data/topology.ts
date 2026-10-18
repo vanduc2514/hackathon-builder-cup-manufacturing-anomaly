@@ -37,7 +37,6 @@ export const NODES: TopologyNode[] = [
     shape: 'gateway',
     zone: 'onprem',
     position: [12, 21],
-    target: 'factory',
     icon: 'memory',
   },
   {
@@ -47,7 +46,6 @@ export const NODES: TopologyNode[] = [
     shape: 'router',
     zone: 'cloud',
     position: [12, 9],
-    target: 'web',
     icon: 'alt_route',
   },
   {
@@ -57,7 +55,6 @@ export const NODES: TopologyNode[] = [
     shape: 'database',
     zone: 'cloud',
     position: [4, 9],
-    target: 'web',
     icon: 'database',
   },
   {
@@ -67,7 +64,6 @@ export const NODES: TopologyNode[] = [
     shape: 'cloud',
     zone: 'cloud',
     position: [-4, 9],
-    target: 'web',
     icon: 'menu_book',
   },
   {
@@ -77,7 +73,6 @@ export const NODES: TopologyNode[] = [
     shape: 'cloud',
     zone: 'cloud',
     position: [-12, 9],
-    target: 'web',
     icon: 'smart_toy',
   },
   // Inside ADK Agent Swarm Blackbox
@@ -88,7 +83,6 @@ export const NODES: TopologyNode[] = [
     shape: 'hub',
     zone: 'team',
     position: [11, -3],
-    target: 'web',
     icon: 'account_tree',
   },
   {
@@ -98,7 +92,6 @@ export const NODES: TopologyNode[] = [
     shape: 'agent',
     zone: 'team',
     position: [4, -3],
-    target: 'web',
     icon: 'fact_check',
   },
   {
@@ -108,7 +101,6 @@ export const NODES: TopologyNode[] = [
     shape: 'agent',
     zone: 'team',
     position: [-4, -3],
-    target: 'web',
     icon: 'route',
   },
   {
@@ -118,7 +110,6 @@ export const NODES: TopologyNode[] = [
     shape: 'agent',
     zone: 'team',
     position: [-11, -3],
-    target: 'web',
     icon: 'monitoring',
   },
   {
@@ -128,7 +119,6 @@ export const NODES: TopologyNode[] = [
     shape: 'agent',
     zone: 'team',
     position: [-11, -8.5],
-    target: 'web',
     icon: 'troubleshoot',
   },
   {
@@ -138,7 +128,6 @@ export const NODES: TopologyNode[] = [
     shape: 'agent',
     zone: 'team',
     position: [-4, -8.5],
-    target: 'web',
     icon: 'support_agent',
   },
   {
@@ -148,7 +137,6 @@ export const NODES: TopologyNode[] = [
     shape: 'agent',
     zone: 'team',
     position: [4, -8.5],
-    target: 'web',
     icon: 'edit_note',
   },
   {
@@ -158,7 +146,6 @@ export const NODES: TopologyNode[] = [
     shape: 'agent',
     zone: 'team',
     position: [11, -8.5],
-    target: 'web',
     icon: 'school',
   },
   // External Apps

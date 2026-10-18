@@ -177,3 +177,6 @@ worktrees/
 .adk/
 
 .stitch.json
+# Continuous Learning approval write-back entries (#334): runtime-generated per
+# approved incident; production copies live in gs://<kb bucket>/kb/learned__*.txt.
+data/knowledge_base/learned/

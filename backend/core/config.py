@@ -78,12 +78,20 @@ class Settings(BaseSettings):
     vertex_search_collection: str = "default_collection"
     vertex_search_serving_config: str = "default_search"
     rag_fallback_to_local: bool = True
+    # Knowledge-base staging bucket (terraform output kb_bucket). The Continuous
+    # Learning approval hook (#334) uploads learned__<incident_id>.txt blobs here and
+    # incrementally imports them into the Vertex AI Search datastore.
+    kb_gcs_bucket: str = "kaizen-lab-kb"
 
     # Google Drive API v3 settings
     gdrive_folder_id: str | None = None
     gdrive_base_folder: str = "💻 Competition | AI Builder Cup"
     gdrive_service_account_path: str | None = None
     gdrive_cache_dir: str = ".cache/gdrive"
+    # Document export (#333): GCS bucket receiving the approved incident documents
+    # (work order, 8D report, SOP proposal, impact card) as Markdown under
+    # incidents/<incident_id>/. Non-production runs write artifacts/documents/ instead.
+    documents_bucket: str = "kaizen-lab-kb"
 
     # Gemini API key (Technician Copilot and vision calls use `gemini_model` / `gemini_vision_model`)
     gemini_api_key: str | None = None

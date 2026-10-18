@@ -250,21 +250,18 @@ export default function IncidentListView({
                       </td>
                       <td style={{ padding: '0.75rem' }}>
                         {inc.archived ? (
-                          <div className="row" style={{ gap: 8, alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.82rem', color: 'var(--text)' }}>{inc.archived_by ?? '—'}</span>
-                            <button
-                              id={`unarchive-btn-${inc.incident_id}`}
-                              type="button"
-                              className="btn btn-sm"
-                              disabled={busyId === inc.incident_id}
-                              onClick={() => void setArchived(inc.incident_id, false)}
-                            >
-                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                                unarchive
-                              </span>
-                              Unarchive
-                            </button>
-                          </div>
+                          <button
+                            id={`unarchive-btn-${inc.incident_id}`}
+                            type="button"
+                            className="btn btn-sm"
+                            disabled={busyId === inc.incident_id}
+                            onClick={() => void setArchived(inc.incident_id, false)}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                              unarchive
+                            </span>
+                            Unarchive
+                          </button>
                         ) : (
                           <div className="row" style={{ gap: 8 }}>
                             {isLive && (

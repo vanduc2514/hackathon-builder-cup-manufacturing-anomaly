@@ -699,7 +699,9 @@ def query_sensor_telemetry_window(
                 "BigQuery client unavailable (%s); falling back to mock sensor telemetry fixtures.",
                 exc,
             )
-            return get_mock_sensor_telemetry_window(machine_id=machine_id, time_window=time_window)
+            return get_mock_sensor_telemetry_window(
+                machine_id=machine_id, time_window=time_window or "custom"
+            )
         raise
 
     from google.cloud import bigquery

@@ -52,8 +52,8 @@ def compute_sustainability_impact(
 
 def calculate_impact_metrics(board_data: dict | IncidentState | None = None) -> ImpactMetrics:
     """Calculates auditable sustainability impact metrics using domain formulas."""
-    suspect_machine = "CNC-02"
-    defect_type = "scratch_vertical"
+    suspect_machine = ""
+    defect_type = ""
 
     if isinstance(board_data, IncidentState):
         suspect_machine = board_data.suspect_machine or suspect_machine
@@ -77,14 +77,16 @@ INSTRUCTION = (
     "Your objective is to turn resolved incidents into permanent institutional memory and quantify sustainability impact: "
     "1. Calculate the Sustainability Impact Card using the standard manufacturing formulas: "
     "avoided scrap pieces, preserved machine downtime minutes, conserved energy in kWh, and Scope 1 & 2 CO2e reductions in kg. "
-    "If tools are available, you can call compute_sustainability_impact to compute precise impact metrics. "
+    "If tools are available, call compute_sustainability_impact with the factory_type matching the board's suspect_machine "
+    "('abs_injection_molding' for injection molding machines, 'aluminum_cnc' for CNC machines) to compute precise impact metrics. "
     "2. Ingest the verified resolution into the Defect -> Cause -> Fix knowledge base library, capturing equipment ID, tool ID, "
     "5-Whys root cause, procedural repair steps, and preventive SOP updates. "
     "3. Support expert repair video walkthrough analysis by parsing sequential repair actions and tolerance checkpoints. "
     "The user message is the current incident board as JSON. "
     "Return a FindingDraft with: finding (one concise sentence summarizing avoided scrap, downtime, kWh, CO2, and knowledge entry), "
-    "evidence (2-3 sentences providing exact metric breakdowns and environmental accounting), confidence 0.99, "
-    "and citation 'Vertex AI Search Vector Index + BigQuery Sustainability Accounting'. Respond in English."
+    "evidence (2-3 sentences providing exact metric breakdowns and environmental accounting, using only numbers returned by the tools or present on the board), "
+    "a confidence score that reflects how complete the board resolution and impact inputs are, "
+    f"and citation '{DEFAULT_CITATION}'. Respond in English."
 )
 
 agent = Agent(

@@ -167,7 +167,7 @@ async def test_process_analyst_telemetry_tool():
     """Tests Process Analyst continuous sensor telemetry query tool."""
     response = await agent_process_analyst.analyze_machine_telemetry(
         machine_id="CNC-02",
-        time_window="09:00-10:00",
+        opened_at="2026-10-18T14:30:00Z",
     )
     assert isinstance(response, SensorTelemetryWindowResponse)
     assert response.machine_id == "CNC-02"

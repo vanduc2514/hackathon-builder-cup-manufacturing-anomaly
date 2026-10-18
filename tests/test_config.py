@@ -46,3 +46,28 @@ def test_fallback_settings_default_true():
 def test_rate_limit_max_streams_default():
     settings = Settings()
     assert settings.rate_limit_max_streams == 100
+
+
+MOCK_FALLBACK_FLAGS = (
+    "bigquery_fallback_to_mock",
+    "rag_fallback_to_local",
+    "gemini_vision_fallback_to_mock",
+    "firestore_fallback_to_memory",
+)
+
+
+def test_production_disables_mock_fallbacks_by_default():
+    settings = Settings(app_env="production")
+    assert all(getattr(settings, flag) is False for flag in MOCK_FALLBACK_FLAGS)
+
+
+def test_development_keeps_mock_fallbacks_enabled():
+    settings = Settings(app_env="development")
+    assert all(getattr(settings, flag) is True for flag in MOCK_FALLBACK_FLAGS)
+
+
+def test_production_fallback_can_be_enabled_explicitly(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("RAG_FALLBACK_TO_LOCAL", "true")
+    settings = Settings(app_env="production")
+    assert settings.rag_fallback_to_local is True
+    assert settings.bigquery_fallback_to_mock is False

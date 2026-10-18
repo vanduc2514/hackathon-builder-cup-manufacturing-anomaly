@@ -367,6 +367,25 @@ def test_query_sensor_telemetry_window_mock_fallback():
                 query_sensor_telemetry_window(machine_id="CNC-02")
 
 
+def test_production_bigquery_failure_surfaces_instead_of_mock_topology():
+    """APP_ENV=production disables the mock fallback by default: failures raise, no mock topology."""
+    from backend.core.config import Settings
+
+    production = Settings(app_env="production")
+    assert production.bigquery_fallback_to_mock is False
+    with (
+        patch("backend.tools.bigquery_tool.settings", production),
+        patch(
+            "backend.tools.bigquery_tool.get_bigquery_client",
+            side_effect=RuntimeError("No BigQuery client available"),
+        ),
+    ):
+        with pytest.raises(RuntimeError, match="No BigQuery client available"):
+            query_traceability_topology(time_window="09:30-10:00")
+        with pytest.raises(RuntimeError, match="No BigQuery client available"):
+            query_sensor_telemetry_window(machine_id="CNC-02")
+
+
 # ---------------------------------------------------------------------------
 # TKT-070 S10 — competition telemetry ingestion helper + distribution query
 # ---------------------------------------------------------------------------
@@ -389,7 +408,8 @@ def test_load_competition_telemetry_happy_path_emulator():
     assert summary.target_table.endswith("manufacturing.competition_telemetry")
 
     competition_calls = [
-        call for call in mock_client.insert_rows_json.call_args_list
+        call
+        for call in mock_client.insert_rows_json.call_args_list
         if call.args[0].endswith("competition_telemetry")
     ]
     # 2000 rows / 500 batch size = 4 batches.

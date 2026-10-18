@@ -9,10 +9,15 @@ flow proceeds to repair, verification and closure.
 
 from __future__ import annotations
 
-from backend.agents import agent_incident_scribe, agent_root_cause
+from backend.agents import agent_incident_scribe
 from backend.core.models import FindingDraft, FiveWhysStep, RootCauseFindingDraft, ScribeDraft
 
 DEFAULT_SCENARIO = "cnc_tool_wear"
+
+# Scripted citations live here (not in the agent modules) so demo facts exist only behind
+# DEMO_SCRIPTED.
+RCA_CNC_CITATION = "Vertex AI Search: CNC Manual p.112 + Maintenance Log T07 + 8D-2026-03-12"
+RCA_IM_CITATION = "Vertex AI Search: IM-05 Manual p.78 + Maintenance Log Dryer-03 + 8D-2026-02-14"
 
 _CNC_ROOT_CAUSE = RootCauseFindingDraft(
     finding=(
@@ -26,7 +31,7 @@ _CNC_ROOT_CAUSE = RootCauseFindingDraft(
         "Method (calendar-based SOP) are the causal 6M factors."
     ),
     confidence=0.87,
-    citation=agent_root_cause.DEFAULT_CITATION,
+    citation=RCA_CNC_CITATION,
     five_whys=[
         FiveWhysStep(
             level=1,
@@ -68,11 +73,17 @@ _CNC_ROOT_CAUSE = RootCauseFindingDraft(
         ),
     ],
     ishikawa={
-        "Machine": ["T07 insert flank wear (VB > 0.3 mm) after 2,400 cuts; spindle vibration up 35%."],
+        "Machine": [
+            "T07 insert flank wear (VB > 0.3 mm) after 2,400 cuts; spindle vibration up 35%."
+        ],
         "Method": ["SOP-MNT-CNC-04 is calendar-based, with no usage-based tool-life limit."],
-        "Material": ["Aluminum lot AL-5083-B4 ruled out: no defects on CNC-01 or CNC-03 from the same lot."],
+        "Material": [
+            "Aluminum lot AL-5083-B4 ruled out: no defects on CNC-01 or CNC-03 from the same lot."
+        ],
         "Man": ["Operator followed standard feeds and speeds; human error ruled out."],
-        "Measurement": ["End-of-line vision inspection correctly flagged the scratches and the SPC breach."],
+        "Measurement": [
+            "End-of-line vision inspection correctly flagged the scratches and the SPC breach."
+        ],
         "Milieu": ["Spindle temperature and coolant flow were normal; environment ruled out."],
     },
 )
@@ -88,7 +99,7 @@ _IM_ROOT_CAUSE = RootCauseFindingDraft(
         "viscosity loss. Machine (dryer) and Method (no interlock) are the causal 6M factors."
     ),
     confidence=0.87,
-    citation=agent_root_cause.DEFAULT_IM_CITATION,
+    citation=RCA_IM_CITATION,
     five_whys=[
         FiveWhysStep(
             level=1,
@@ -129,7 +140,9 @@ _IM_ROOT_CAUSE = RootCauseFindingDraft(
     ishikawa={
         "Machine": ["Dryer-03 desiccant bed saturated; dew point degraded to about -18 C."],
         "Method": ["No dew-point interlock pauses injection when drying fails."],
-        "Material": ["ABS resin moisture elevated by the failed drying; polymer degrades under heat."],
+        "Material": [
+            "ABS resin moisture elevated by the failed drying; polymer degrades under heat."
+        ],
         "Man": ["Shift log shows no manual dew-point check before the run."],
         "Measurement": ["Inline vision correctly detected the short fill and the SPC breach."],
         "Milieu": ["High ambient humidity accelerated desiccant saturation."],
@@ -342,6 +355,7 @@ _SCRIBE: dict[str, ScribeDraft] = {
         ),
     ),
 }
+
 
 def fallback_draft(agent_name: str, scenario: str | None) -> FindingDraft:
     """Returns a fresh scripted draft for the ADK agent `agent_name` in `scenario`.

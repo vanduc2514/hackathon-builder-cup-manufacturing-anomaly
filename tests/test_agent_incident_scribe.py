@@ -519,8 +519,8 @@ def test_record_resolution_workflow_node_integration():
 
     state = asyncio.run(record_resolution(node_input))
 
-    assert state.repair_done is True
-    assert state.status == "verifying"
+    assert state.repair_done is False
+    assert state.status == "repairing"
     assert set(state.documents.keys()) == {"work_order", "report_8d", "sop_proposal"}
 
     # Ensure documents have pending_approval

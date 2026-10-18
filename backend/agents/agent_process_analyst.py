@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime, timedelta, timezone
 
 from google.adk import Agent
 
@@ -21,7 +22,23 @@ AGENT_ID = "PA"
 AGENT_NAME = "Process Analyst Agent"
 PHASE = "Phase B - Sensor Analysis"
 
-CITATION = "BigQuery machine_telemetry_5s 09:00-10:00"
+CITATION = "BigQuery sensor_telemetry pre-incident window"
+
+PRE_INCIDENT_WINDOW_MINUTES = 60
+
+
+def pre_incident_window(opened_at: str) -> tuple[str, str]:
+    """Returns ISO 8601 UTC (start, end) bounds of the window ending when the incident opened.
+
+    Raises:
+        ValueError: If opened_at is not an ISO 8601 timestamp.
+    """
+    end = datetime.fromisoformat(opened_at.strip().replace("Z", "+00:00"))
+    if end.tzinfo is None:
+        end = end.replace(tzinfo=timezone.utc)
+    end = end.astimezone(timezone.utc)
+    start = end - timedelta(minutes=PRE_INCIDENT_WINDOW_MINUTES)
+    return start.isoformat(), end.isoformat()
 
 
 def _supports_tools() -> bool:
@@ -35,11 +52,23 @@ def _supports_tools() -> bool:
 
 async def analyze_machine_telemetry(
     machine_id: str,
-    time_window: str | None = "09:00-10:00",
+    opened_at: str | None = None,
     start_time: str | None = None,
     end_time: str | None = None,
 ) -> SensorTelemetryWindowResponse:
-    """ADK Tool: Queries continuous sensor telemetry directly from BigQuery."""
+    """ADK Tool: Queries continuous sensor telemetry directly from BigQuery.
+
+    Args:
+        machine_id: Board suspect_machine.
+        opened_at: Board opened_at (ISO 8601 UTC). Selects the 60 minutes before the incident
+            opened. Ignored when start_time / end_time are given.
+        start_time: Optional explicit ISO 8601 lower bound.
+        end_time: Optional explicit ISO 8601 upper bound.
+    """
+    time_window: str | None = f"{PRE_INCIDENT_WINDOW_MINUTES} MINUTE"
+    if not (start_time or end_time) and opened_at:
+        start_time, end_time = pre_incident_window(opened_at)
+        time_window = None
     return await asyncio.to_thread(
         query_sensor_telemetry_window,
         machine_id=machine_id,
@@ -54,13 +83,15 @@ INSTRUCTION = (
     "Your role is to analyze continuous sensor telemetry for machines suspected of causing defects. "
     "The user message is the current incident board as JSON. "
     "Look at the board findings or suspect_machine field to identify the primary suspect machine. "
-    "Call the analyze_machine_telemetry tool once for that machine with time_window '09:00-10:00', "
-    "the pre-incident window. Its result already carries the nominal line baseline, so do not "
+    "Call the analyze_machine_telemetry tool once for that machine, passing the board's opened_at value as opened_at "
+    "so the tool queries the pre-incident window (the 60 minutes before the incident opened). "
+    "Its result already carries the nominal line baseline, so do not "
     "query other windows. "
     "Compare the suspected machine's sensor readings against that baseline: calculate the "
     "percentage increase for vibration and motor current and note whether temperature is steady. "
-    "Return a FindingDraft containing the percentage shifts, a high confidence score (e.g. 0.89), "
-    f"and cite the table/window queried as your citation (e.g. '{CITATION}')."
+    "Return a FindingDraft containing the percentage shifts, a confidence score that reflects how clear the deviation is "
+    "(low when the window has no samples or the readings stay near baseline), "
+    "and cite the table and window actually queried as your citation."
 )
 
 agent = Agent(

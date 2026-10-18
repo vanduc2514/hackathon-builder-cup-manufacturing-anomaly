@@ -26,23 +26,19 @@ AGENT_ID = "RCA"
 AGENT_NAME = "Root Cause Agent"
 PHASE = "Phase B - Root Cause"
 
-DEFAULT_CITATION = "Vertex AI Search: CNC Manual p.112 + Maintenance Log T07 + 8D-2026-03-12"
-DEFAULT_IM_CITATION = (
-    "Vertex AI Search: IM-05 Manual p.78 + Maintenance Log Dryer-03 + 8D-2026-02-14"
-)
-
-DIAGNOSTIC_REQUEST_TEXT = (
-    "Độ tin cậy hiện dưới 70%. Đề nghị kỹ thuật viên chụp ảnh cận cảnh mũi dao T07 "
-    "để xác nhận mòn lưỡi (flank wear) hay mẻ hạt dao (chipping)."
-)
-
 
 async def query_domain_knowledge(
-    defect_symptom: Optional[str] = "scratch_vertical",
-    suspect_asset: Optional[str] = "CNC-02",
+    defect_symptom: Optional[str] = None,
+    suspect_asset: Optional[str] = None,
     query: Optional[str] = None,
 ) -> RAGSearchResult:
-    """ADK Tool: Queries domain manuals, maintenance logs, and past 8D reports via Vertex AI Search."""
+    """ADK Tool: Queries domain manuals, maintenance logs, and past 8D reports via Vertex AI Search.
+
+    Args:
+        defect_symptom: The board defect_type (required).
+        suspect_asset: The board suspect_machine (required).
+        query: Optional free-text refinement.
+    """
     return await search_knowledge_base(
         defect_symptom=defect_symptom,
         suspect_asset=suspect_asset,
@@ -70,13 +66,13 @@ INSTRUCTION = (
     "6M Ishikawa (fishbone) classification, and domain knowledge retrieved via RAG. "
     "The user message is the current incident board as JSON. "
     "Follow these steps: "
-    "1. Read the incident board to extract the suspect_machine, suspect_tool, and findings from Quality Inspector, Traceability, and Process Analyst. "
-    "2. If tools are available, call query_domain_knowledge with the defect_symptom and suspect_asset to retrieve OEM manuals, maintenance logs, and historical 8D reports. "
-    "3. Construct a 5-Whys causal deduction chain stepping from the observed surface defect, to tool flank wear, to cutting life exceedance (2,400 cuts vs 2,000 limit), to calendar-based SOP-MNT-CNC-04, to lack of automated piece-counter interlock. "
-    "4. Classify factors across the 6M Ishikawa dimensions (Machine, Method, Material, Man, Measurement, Milieu), highlighting Machine and Method as causal while documenting ruled-out factors (Material lot, Operator, Milieu). "
-    "5. Check whether the board contains technician diagnostic field evidence (in findings with phase 'Phase B - Field Evidence' or from agent COPILOT). If field evidence is present, refine hypotheses and raise confidence to 0.90+. "
-    "6. If evidence is conclusive (e.g. tool life exceedance confirmed in manual and log), set confidence to 0.87. If evidence is inconclusive or confidence is below 0.70, output a diagnostic_request asking the technician to inspect the tool edge. "
-    "7. Return a RootCauseFindingDraft. Keep all text concise: one sentence for finding, 2-3 sentences for evidence synthesizing the 5-Whys and Ishikawa without repeating raw frame hashes, concise one-sentence entries for each of the five_whys and ishikawa dimensions, and the citation. Respond in English."
+    "1. Read the incident board to extract the defect_type, suspect_machine, suspect_tool, and the findings from Quality Inspector, Traceability, and Process Analyst. "
+    "2. If tools are available, call query_domain_knowledge with the board's defect_type as defect_symptom and the board's suspect_machine as suspect_asset to retrieve OEM manuals, maintenance logs, and historical 8D reports. "
+    "3. Construct a 5-Whys causal deduction chain from the observed defect down to the underlying process or systemic cause. Every link MUST be grounded in a board finding or a retrieved document; quote numbers (cycle counts, limits, procedure IDs, page numbers) only if they appear in those sources. "
+    "4. Classify factors across the 6M Ishikawa dimensions (Machine, Method, Material, Man, Measurement, Milieu), marking as causal only the dimensions the evidence supports and documenting the ruled-out factors the Traceability and Process Analyst findings exclude. "
+    "5. Check whether the board contains technician diagnostic field evidence (in findings with phase 'Phase B - Field Evidence' or from agent COPILOT). If field evidence is present, refine the hypotheses with it and raise confidence accordingly. "
+    "6. Set confidence to reflect the strength of the evidence: higher when the retrieved documents and board findings corroborate each other, lower when they conflict or are missing. If evidence is inconclusive or confidence is below 0.70, output a diagnostic_request asking the technician for the specific physical inspection that would discriminate between the remaining hypotheses. "
+    "7. Return a RootCauseFindingDraft. Keep all text concise: one sentence for finding, 2-3 sentences for evidence synthesizing the 5-Whys and Ishikawa without repeating raw frame hashes, concise one-sentence entries for each of the five_whys and ishikawa dimensions, and the citation naming the documents actually retrieved. Respond in English."
 )
 
 

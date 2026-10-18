@@ -357,3 +357,17 @@ def test_record_learning_workflow_node_integration():
     assert len(learn_findings) == 1
     assert learn_findings[0].phase == "Phase D - Learning"
     assert learn_findings[0].confidence == 0.99
+
+
+def test_instruction_has_no_fixed_confidence():
+    assert "0.99" not in agent_continuous_learning.INSTRUCTION
+    assert "confidence score that reflects" in agent_continuous_learning.INSTRUCTION
+
+
+def test_calculate_impact_metrics_without_board_has_no_scenario_defaults():
+    """With no board data there is no suspect machine/defect to infer an IM scenario from."""
+    assert calculate_impact_metrics(None).factory_type == "aluminum_cnc"
+    assert (
+        calculate_impact_metrics({"suspect_machine": "IM-05"}).factory_type
+        == "abs_injection_molding"
+    )

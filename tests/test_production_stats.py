@@ -313,3 +313,37 @@ def test_get_inspection_window_wrapper():
     records = get_inspection_window(limit=5)
     assert isinstance(records, list)
     assert len(records) == 5
+
+
+def test_production_inspection_window_excludes_seed_rows(monkeypatch):
+    """APP_ENV=production: a BigQuery failure never mixes scripts.seed_bigquery rows into SPC data."""
+    from unittest.mock import patch
+
+    from backend.tools.bigquery_tool import (
+        MOCK_TRACEABILITY_RECORDS,
+        clear_mock_traceability_records,
+    )
+
+    monkeypatch.setattr(settings, "app_env", "production")
+    clear_mock_traceability_records()
+    try:
+        with patch(
+            "backend.tools.production_stats.get_bigquery_client",
+            side_effect=RuntimeError("BigQuery unavailable"),
+        ):
+            records, source = get_inspection_window_with_source(limit=5, machine_id="CNC-02")
+            assert records == []
+            assert source == "mock_buffer"
+
+            MOCK_TRACEABILITY_RECORDS.append(
+                {
+                    "product_id": "PRD-LIVE-1",
+                    "timestamp": "2026-10-05T12:00:00Z",
+                    "machine_id": "CNC-02",
+                    "status": "PASS",
+                }
+            )
+            records, source = get_inspection_window_with_source(limit=5, machine_id="CNC-02")
+            assert [r["product_id"] for r in records] == ["PRD-LIVE-1"]
+    finally:
+        clear_mock_traceability_records()

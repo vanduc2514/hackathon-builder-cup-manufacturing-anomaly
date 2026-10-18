@@ -863,14 +863,15 @@ def get_inspection_window_with_source(
             )
         return records, "bigquery"
     except Exception as exc:
-        logger.debug(
-            "BigQuery traceability query failed or unavailable (%s); falling back to mock buffer/seed",
+        (logger.warning if settings.is_production else logger.debug)(
+            "BigQuery traceability query failed or unavailable (%s); falling back to in-process buffer",
             exc,
         )
 
-    # 2. Fallback to mock buffer + seed
+    # 2. Fallback: in-process buffer of records streamed by this process. Seed rows
+    # (scripts.seed_bigquery) are development fixtures and are mixed in only when the
+    # mock fallback is enabled (never in production).
     mock_records = get_mock_traceability_records()
-    from scripts.seed_bigquery import SEED_TRACEABILITY_ROWS
 
     def _normalize(r: Dict[str, Any]) -> Dict[str, Any]:
         ts = r.get("timestamp", "")
@@ -890,6 +891,13 @@ def get_inspection_window_with_source(
     mock_filtered = [
         _normalize(r) for r in mock_records if not machine_id or r.get("machine_id") == machine_id
     ]
+
+    if settings.is_production or not settings.bigquery_fallback_to_mock:
+        mock_filtered.sort(key=lambda r: str(r.get("timestamp", "")))
+        return (mock_filtered[-limit:] if limit > 0 else []), "mock_buffer"
+
+    from scripts.seed_bigquery import SEED_TRACEABILITY_ROWS
+
     seed_filtered = [
         _normalize(r)
         for r in SEED_TRACEABILITY_ROWS

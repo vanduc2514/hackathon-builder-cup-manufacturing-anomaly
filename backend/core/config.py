@@ -10,6 +10,14 @@ from pydantic_settings import BaseSettings
 
 from backend.core.models import AuthAccount
 
+# Mock/local-data fallbacks that default to off when APP_ENV=production.
+PRODUCTION_FALLBACK_FLAGS = (
+    "bigquery_fallback_to_mock",
+    "rag_fallback_to_local",
+    "gemini_vision_fallback_to_mock",
+    "firestore_fallback_to_memory",
+)
+
 
 class Settings(BaseSettings):
     """Reads each field from the same-named env var (case-insensitive)."""
@@ -110,6 +118,7 @@ class Settings(BaseSettings):
     simulation_step_delay: float = 0.4
     # Maximum seconds to await physical/preset visual evidence before timeout
     evidence_wait_seconds: float = 90.0
+    repair_wait_seconds: float = 900.0
 
     # Factory Simulator service integration.
     # TKT-073 / #288: backend -> factory auth switched from shared X-API-Key to
@@ -188,6 +197,19 @@ class Settings(BaseSettings):
                 os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
             ):
                 raise ValueError("AI_PROVIDER=gemini requires GOOGLE_API_KEY")
+        return self
+
+    @model_validator(mode="after")
+    def _disable_mock_fallbacks_in_production(self) -> Settings:
+        """APP_ENV=production never substitutes mock/local data unless the flag is set explicitly.
+
+        The fallback flags default to True for offline dev/CI. In production a missing backend
+        must surface as an error, so any flag the operator did not set via env/kwargs becomes False.
+        """
+        if self.is_production:
+            for name in PRODUCTION_FALLBACK_FLAGS:
+                if name not in self.model_fields_set:
+                    setattr(self, name, False)
         return self
 
 

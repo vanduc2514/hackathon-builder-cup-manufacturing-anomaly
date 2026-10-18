@@ -78,6 +78,7 @@ export default function MobileEvidenceDetail({
   let cta: string;
   if (submitting) cta = 'Sending to AI…';
   else if (waitingForAi) cta = live?.visualEvidence ? 'AI is re-analysing your photo' : 'Waiting for the AI to ask';
+  else if (required.length === 0) cta = 'Waiting for the AI to ask';
   else if (remaining > 0) cta = `Capture ${remaining} more to submit`;
   else cta = 'Submit evidence to AI';
 
@@ -107,7 +108,7 @@ export default function MobileEvidenceDetail({
               <span className="m-sub" style={{ fontSize: 10.5 }}>confidence</span>
             </div>
           </div>
-          <p className="m-body" style={{ marginTop: 10 }}>“{order.aiRequest}”</p>
+          {order.aiRequest && <p className="m-body" style={{ marginTop: 10 }}>"{order.aiRequest}"</p>}
           <div className="m-row" style={{ marginTop: 12, flexWrap: 'wrap', gap: 6 }}>
             <span className="m-chip plain">
               <span className="material-symbols-outlined">location_on</span>
@@ -130,6 +131,17 @@ export default function MobileEvidenceDetail({
 
         {live?.visualEvidence && <VisualEvidenceCard evidence={live.visualEvidence} />}
         {live?.reason && <AiReasonCard title="Why the AI flagged this" reason={live.reason} />}
+
+        {/* Empty state: AI still working or history order with no evidence data */}
+        {have.length === 0 && required.length === 0 && (
+          <section className="m-glass m-card m-col" style={{ alignItems: 'center', gap: 12, padding: '32px 20px', textAlign: 'center' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--muted)' }}>hourglass_top</span>
+            <div className="m-h3">AI is still analysing</div>
+            <p className="m-body" style={{ color: 'var(--muted)' }}>
+              The AI agents are investigating this anomaly. You will receive a notification when a photo is needed.
+            </p>
+          </section>
+        )}
 
         {/* Already have */}
         {have.length > 0 && (
@@ -213,7 +225,7 @@ export default function MobileEvidenceDetail({
             onClick={onSubmit}
             id="m-submit-evidence"
           >
-            <span className="material-symbols-outlined">{waitingForAi ? 'hourglass_top' : 'send'}</span>
+            <span className="material-symbols-outlined">{waitingForAi || required.length === 0 ? 'hourglass_top' : 'send'}</span>
             {cta}
           </button>
         </div>

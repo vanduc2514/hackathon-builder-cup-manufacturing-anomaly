@@ -285,6 +285,17 @@ function buildEvidence(
       capturedAt: capture?.capturedAt,
       guidance: PHOTO_GUIDANCE,
     });
+  } else if (items.length === 0) {
+    // Early stages (detecting/tracing/investigating/analyzing) with no telemetry:
+    // show a placeholder so the evidence screen is not blank.
+    items.push({
+      id: 'waiting-for-ai',
+      label: 'Waiting for AI analysis',
+      hint: 'The AI is still analysing the anomaly. You will be notified when a photo is needed.',
+      mediaType: 'photo',
+      captured: false,
+      source: 'sensor',
+    });
   }
   return items;
 }
@@ -495,6 +506,7 @@ export function summaryToWorkOrder(summary: IncidentSummary, leadName: string): 
     createdAt: summary.opened_at ?? summary.updated_at ?? 'Today',
     rootCause: summary.root_cause ?? undefined,
     suspectTool: summary.suspect_tool ?? undefined,
+    aiRequest: kind === 'evidence' ? summaryText : undefined,
     sensors: [],
     evidence: [],
     steps: [],

@@ -4,6 +4,7 @@ import { useOemManual } from '../../hooks/useOemManual';
 import MobileNavBar from './MobileNavBar';
 import ConfidenceRing from './ConfidenceRing';
 import AiReasonCard from './AiReasonCard';
+import MobileMarkdown from './MobileMarkdown';
 
 interface MobileFixDetailProps {
   order: WorkOrder;
@@ -97,7 +98,7 @@ export default function MobileFixDetail({ order, onBack, onStart }: MobileFixDet
               </span>
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>expand_more</span>
             </summary>
-            <pre>{order.live.workOrderText}</pre>
+            <MobileMarkdown source={order.live.workOrderText} />
           </details>
         )}
 

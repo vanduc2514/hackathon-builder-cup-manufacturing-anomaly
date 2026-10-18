@@ -15,6 +15,11 @@ describe('MarkdownViewer', () => {
     expect(container.querySelector('td:last-child')?.textContent).toBe('1');
   });
 
+  it('renders single newlines as line breaks', () => {
+    const { container } = render(<MarkdownViewer source={'line1\nline2'} />);
+    expect(container.querySelector('br')).not.toBeNull();
+  });
+
   it('does not render raw script tags', () => {
     const { container } = render(<MarkdownViewer source={'hello <script>alert(1)</script>'} />);
     expect(container.querySelector('script')).toBeNull();

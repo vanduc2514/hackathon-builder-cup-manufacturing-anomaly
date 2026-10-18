@@ -66,7 +66,9 @@ INSTRUCTION = (
     "Mark all generated documents with pending_approval: 'shift_leader'. "
     "Return a ScribeDraft with: finding (one concise sentence), evidence (2-3 sentences summarizing D1-D8, work order, and SOP), "
     "confidence 0.95, citation 'Firestore incident board state compiler + OEM Manuals & 8D Archive', "
-    "and work_order, report_8d, sop_proposal as detailed structured documents. Respond in English."
+    "and work_order, report_8d, sop_proposal as detailed documents formatted as structured Markdown: "
+    "bold section labels each on their own line, blank lines between sections, and '- ' bullet lists "
+    "for parts, torque specs, and verification steps. Respond in English."
 )
 
 agent = Agent(

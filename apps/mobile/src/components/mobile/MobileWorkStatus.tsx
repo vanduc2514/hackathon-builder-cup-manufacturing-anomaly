@@ -5,6 +5,7 @@ import MobileNavBar from './MobileNavBar';
 import ConfidenceRing from './ConfidenceRing';
 import AiReasonCard from './AiReasonCard';
 import VisualEvidenceCard from './VisualEvidenceCard';
+import MobileMarkdown from './MobileMarkdown';
 import { formatOrderTimestamp } from './mobileData';
 
 interface MobileWorkStatusProps {
@@ -330,7 +331,7 @@ export default function MobileWorkStatus({
               <span>8D report</span>
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>expand_more</span>
             </summary>
-            <pre>{live.report8d}</pre>
+            <MobileMarkdown source={live.report8d} />
           </details>
         )}
         {live?.sopProposal && (
@@ -339,7 +340,7 @@ export default function MobileWorkStatus({
               <span>SOP proposal</span>
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>expand_more</span>
             </summary>
-            <pre>{live.sopProposal}</pre>
+            <MobileMarkdown source={live.sopProposal} />
           </details>
         )}
 

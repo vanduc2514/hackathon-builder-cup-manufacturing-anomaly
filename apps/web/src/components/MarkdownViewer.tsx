@@ -2,6 +2,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 
 interface MarkdownViewerProps {
   source: string;
@@ -12,7 +13,7 @@ export default function MarkdownViewer({ source, className }: MarkdownViewerProp
   return (
     <div className={`md-viewer ${className ?? ''}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{
           a: ({ href, children }) => (
             <a href={href} target="_blank" rel="noreferrer">

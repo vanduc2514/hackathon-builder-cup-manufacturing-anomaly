@@ -46,15 +46,17 @@ function chunk(text: string): string[] {
 /**
  * Lays narration lines end to end: each slot is lead silence + measured speech + hold.
  * `pacing` gives [lead, hold] seconds per line id; durations come from the voiceover generator.
+ * `startFrame` reserves the opening frames for a shot without narration (e.g. an intro film).
  */
 export function buildTimeline<Id extends string>(
   narration: { lines: { id: string; text: string }[] },
   durations: Record<Id, number>,
   pacing: Record<Id, [lead: number, hold: number]>,
+  startFrame = 0,
 ): Timeline<Id> {
   const sec = (s: number): number => Math.round(s * FPS);
   const lines = {} as Record<Id, Line>;
-  let cursor = 0;
+  let cursor = startFrame;
   for (const { id, text } of narration.lines) {
     const key = id as Id;
     const [lead, hold] = pacing[key];

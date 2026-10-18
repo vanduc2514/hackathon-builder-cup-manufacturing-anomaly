@@ -1,11 +1,9 @@
 import React from 'react';
 import { Track } from 'remotion';
-import { ProblemScene } from '../scenes/ProblemScene';
 import { BrowserShot } from './BrowserShot';
 import { DEMO } from './demoTimeline';
 import { EndScene } from './EndScene';
-import { ImpactScene } from './ImpactScene';
-import { InsightScene } from './InsightScene';
+import { IntroScene, INTRO_SECONDS } from './IntroScene';
 import { LearnScene } from './LearnScene';
 import { PhoneShot } from './PhoneShot';
 import Voiceover from './Voiceover';
@@ -17,7 +15,7 @@ const MOBILE = { src: 'C-mobile.mp4', sourceWidth: 860, sourceHeight: 1864 };
 const MOBILE_CLOSE = { src: 'C2-mobile.mp4', sourceWidth: 860, sourceHeight: 1864 };
 const S = 30; // fps: seconds → frames for callout timing
 
-/** ~3:38 product demo: prod screen recordings of one real incident, Gemini TTS voiceover, burned-in subtitles. */
+/** Product demo: intro film, then prod screen recordings of one real incident with Gemini TTS voiceover and subtitles. */
 export default function KaizenDemo(): React.ReactElement {
   const { lines: l, span, captionsFor } = DEMO;
   const topo = span('topo-1', 'topo-2');
@@ -27,14 +25,7 @@ export default function KaizenDemo(): React.ReactElement {
   return (
     <>
       <Track name="Shots">
-        <ProblemScene name="Hook" from={l['hook-1'].from} durationInFrames={l['hook-1'].duration} caption={l['hook-1'].text} />
-        <InsightScene
-          name="Insight"
-          from={l['hook-2'].from}
-          durationInFrames={l['hook-2'].duration}
-          caption={l['hook-2'].text}
-          captionFrom={l['hook-2'].speechAt}
-        />
+        <IntroScene name="Intro" durationInFrames={Math.round(INTRO_SECONDS * S)} />
         <BrowserShot
           name="Topology"
           from={topo.from}
@@ -240,12 +231,6 @@ export default function KaizenDemo(): React.ReactElement {
             ],
           }}
           captions={captionsFor(['learn-2', 'learn-3'], learn.from)}
-        />
-        <ImpactScene
-          name="Impact"
-          from={l['close-1'].from}
-          durationInFrames={l['close-1'].duration}
-          captions={captionsFor(['close-1'], l['close-1'].from)}
         />
         <EndScene
           name="End"

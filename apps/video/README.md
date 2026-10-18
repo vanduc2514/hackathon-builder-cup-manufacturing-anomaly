@@ -4,7 +4,7 @@ Programmatic videos for the AI Builder Cup submission, styled with the Lumina Sl
 
 | Composition | Length | What it is |
 |---|---|---|
-| `KaizenDemo` | ~3:38 | Submission video: prod screen recordings of one real incident (INC-1028C4) from detection to sign-off and the knowledge loop, Gemini TTS voiceover, burned-in English subtitles, Google service badges per shot |
+| `KaizenDemo` | ~3:39 | Submission video: the 31 s intro film (its title card replaced by the kAIzen logo card), then prod screen recordings of one real incident (INC-1028C4) from detection to sign-off and the knowledge loop, Gemini TTS voiceover, burned-in English subtitles, Google service badges per shot |
 | `KaizenEvidence` | ~1:02 | Supplement: the evidence loop — the Root Cause agent pauses for a photo, the technician picks it from the evidence library, Gemini re-checks (90% → 98%) before repair |
 | `KaizenTeaser` | 0:30 | Fully animated teaser (no footage) |
 
@@ -31,8 +31,8 @@ mise run video:typecheck
 | `src/demo/demoTimeline.ts` | KaizenDemo pacing |
 | `src/demo/KaizenDemo.tsx`, `src/evidence/KaizenEvidence.tsx` | Shot lists: footage file, source in/out seconds, camera zoom keys, callouts, services |
 | `scripts/generate_voiceover.py` | Gemini TTS (`gemini-2.5-flash-tts`, Vertex AI, ADC) → `public/voiceover/<line>.mp3` |
-| `public/voiceover/` | Generated narration (committed) |
-| `public/footage/clips/` | H.264 screen recordings (not in git, ~150 MB) |
+| `public/footage/clips/` | H.264 screen recordings and `intro.mp4` (first 31.5 s of the team's intro film, with its audio); not in git, ~150 MB |
+| `public/brand/logo.png` | App logo (copy of `apps/web/public/logo.png`) for the title card |
 
 Changing a line: edit the narration file, run `video:voiceover -- --only <id>`; the timeline re-flows from the new duration.
 Footage is retimed to fill each shot; shots played faster than 1.3× show an "N× speed" tag.

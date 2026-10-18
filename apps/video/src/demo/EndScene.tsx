@@ -54,7 +54,7 @@ const EndSceneInner = ({ caption, captionFrom }: { caption: string; captionFrom:
             </div>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: 48, marginTop: 44, ...fadeUp(frame, 50) }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, marginTop: 40, ...fadeUp(frame, 50) }}>
           {[
             ['Live demo', 'kaizen-lab-demo.web.app'],
             ['Source', 'github.com/vanduc2514/hackathon-builder-cup-manufacturing-anomaly'],

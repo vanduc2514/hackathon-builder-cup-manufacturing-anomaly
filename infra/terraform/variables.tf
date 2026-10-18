@@ -74,6 +74,12 @@ variable "gemini_live_simulation_mode" {
   default     = false
 }
 
+variable "demo_scripted" {
+  description = "Scripted demo mode: Gemini results that miss the curated expectation are retried once, then replaced by the expected result (source=fallback)."
+  type        = bool
+  default     = true
+}
+
 variable "gdrive_folder_id" {
   description = "Google Drive folder ID for hybrid RAG; GDRIVE_FOLDER_ID is omitted when null."
   type        = string

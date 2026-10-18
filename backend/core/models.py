@@ -262,6 +262,9 @@ class AgentFinding(BaseModel):
     timestamp: str = Field(default_factory=lambda: datetime.now().strftime("%H:%M:%S"))
     five_whys: Optional[List[FiveWhysStep]] = None
     ishikawa: Optional[Dict[str, List[str]]] = None
+    # Where the finding came from: "gemini" (model output), "fallback" (scripted result
+    # used after a model miss/failure in DEMO_SCRIPTED mode) or "mock" (no model configured).
+    source: Optional[Literal["gemini", "fallback", "mock"]] = None
 
 
 class ManufacturingBenchmark(BaseModel):
@@ -636,6 +639,37 @@ class VisualEvidencePayload(BaseModel):
         default="Technician diagnostic camera stream via Gemini Live",
         description="Audit trail citation source",
     )
+    source: Optional[Literal["gemini", "fallback", "mock"]] = Field(
+        default=None, description="Origin of the analysis: model, scripted fallback or mock"
+    )
+
+
+class PartInspectionResult(BaseModel):
+    """Closed-schema Gemini Vision result for an end-of-line part photo."""
+
+    defect_class: Literal["scratch_vertical", "chipping", "none"]
+    severity: int = Field(ge=1, le=5)
+    region: Literal["top", "center", "bottom", "left edge", "right edge"]
+
+
+class InsertInspectionResult(BaseModel):
+    """Closed-schema Gemini Vision result for a removed cutting-insert photo."""
+
+    flank_wear: Literal["none", "light", "severe"]
+    edge_chipping: bool
+    replace_insert: bool
+
+
+class GuardedInspection(BaseModel):
+    """Outcome of a vision call after the DEMO_SCRIPTED expected-result guard."""
+
+    kind: Literal["part", "insert"]
+    part: Optional[PartInspectionResult] = None
+    insert: Optional[InsertInspectionResult] = None
+    source: Literal["gemini", "fallback", "mock"]
+    model: str
+    attempts: int = 0
+    summary: str = Field(description="Template-rendered display text, never model free text")
 
 
 class VisualInspectionResult(BaseModel):
@@ -665,9 +699,16 @@ class VisualEvidencePreset(BaseModel):
 
     id: str = Field(description="Unique alphanumeric preset identifier")
     title: str = Field(description="Human-readable title of the sample")
-    category: Literal["surface_scratch", "crack", "fracture", "assembly_gap", "normal"] = Field(
-        description="Defect archetype category"
-    )
+    category: Literal[
+        "surface_scratch",
+        "crack",
+        "fracture",
+        "assembly_gap",
+        "normal",
+        "scratch_vertical",
+        "chipping",
+        "tool_wear",
+    ] = Field(description="Defect archetype category")
     machine_id: str = Field(default="IM-05", description="Applicable equipment bay")
     tool_id: Optional[str] = Field(default="MOLD-03", description="Suspect tool slot")
     description: str = Field(description="Detailed visual & metrology description")
@@ -679,6 +720,22 @@ class VisualEvidencePreset(BaseModel):
         default=None, description="Flank wear dimension in mm"
     )
     suggested_sop_code: Optional[int] = Field(default=None, description="Linked SOP reference")
+    role: Literal["qa_defect", "streak_good", "tool_worn", "tool_new", "reference", "im05"] = Field(
+        default="im05", description="Demo role the image plays (QA defect, streak good part, ...)"
+    )
+    expected_class: Optional[str] = Field(
+        default=None,
+        description=(
+            "Expected vision class: part = scratch_vertical|chipping|none; insert = replace|ok"
+        ),
+    )
+    image_file: Optional[str] = Field(
+        default=None,
+        description="Backend image path relative to data/datasets/preset_evidence/",
+    )
+    source_url: Optional[str] = Field(default=None, description="Original image source URL")
+    author: Optional[str] = Field(default=None, description="Image author / rights holder")
+    licence: Optional[str] = Field(default=None, description="Image licence identifier")
 
 
 class VisualEvidencePresetListResponse(BaseModel):

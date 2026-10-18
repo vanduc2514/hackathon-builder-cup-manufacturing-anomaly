@@ -10,6 +10,7 @@ locals {
     GEMINI_MODEL                = var.gemini_model
     GEMINI_LIVE_MODEL           = var.gemini_live_model
     GEMINI_LIVE_SIMULATION_MODE = tostring(var.gemini_live_simulation_mode)
+    DEMO_SCRIPTED               = tostring(var.demo_scripted)
     GOOGLE_GENAI_USE_VERTEXAI   = "true"
     GOOGLE_CLOUD_PROJECT        = var.project_id
     GOOGLE_CLOUD_LOCATION       = var.vertex_ai_location

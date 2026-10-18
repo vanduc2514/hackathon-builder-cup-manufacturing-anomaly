@@ -8,6 +8,7 @@ python-dotenv>=1.0.0
 httpx>=0.27.0
 jinja2>=3.1.4
 PyJWT>=2.9.0
+Pillow>=11.0.0
 
 # Google Cloud & Agent SDKs
 google-cloud-aiplatform>=1.60.0

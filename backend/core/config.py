@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     version: str = "0.1.0"
     log_level: str = "INFO"
     app_env: str = "development"
+    # Scripted demo mode: real Gemini calls, but results that miss the curated expectation
+    # (preset catalog / scenario script) are retried once and then replaced by the expected
+    # result, marked source="fallback". Off: model output is shown as returned.
+    demo_scripted: bool = False
     host: str = "0.0.0.0"
     port: int = 8000
     # Comma-separated browser origins allowed to call the API cross-origin (the Firebase

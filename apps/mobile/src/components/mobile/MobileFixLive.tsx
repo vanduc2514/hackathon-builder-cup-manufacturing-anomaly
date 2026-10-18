@@ -242,6 +242,9 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
           onClick={() => setChatOpen(true)}
         >
           <span className="material-symbols-outlined">forum</span>
+          <span className="spark" aria-hidden="true">
+            <span className="material-symbols-outlined ms-fill">auto_awesome</span>
+          </span>
           {(copilot.streaming || copilot.speaking) && <span className="dot" />}
         </button>
       )}
@@ -265,7 +268,7 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
           id="m-live-mic"
           style={voiceOn ? undefined : { background: '#3a3d4a', boxShadow: 'none' }}
         >
-          <span className="material-symbols-outlined ms-fill">{voiceOn ? 'auto_awesome' : 'volume_off'}</span>
+          <span className="material-symbols-outlined ms-fill">{voiceOn ? 'volume_up' : 'volume_off'}</span>
         </button>
         <button className="m-next" onClick={next} id="m-live-next">
           {isLast ? 'Finish' : `Done · next (${idx + 2}/${steps.length})`}

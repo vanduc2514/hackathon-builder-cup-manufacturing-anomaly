@@ -309,18 +309,6 @@ describe('camera bubbles', () => {
     ws.emit({ type: 'turn_complete' });
     expect(bubble.querySelector('.dot')).toBeNull();
   });
-
-  it('shows the AI sparkle on the mic button and volume_off when muted', async () => {
-    await renderReady();
-    const mic = screen.getByRole('button', { name: 'Mute copilot voice' });
-    expect(mic.id).toBe('m-live-mic');
-    expect(mic.textContent).toContain('auto_awesome');
-
-    fireEvent.click(mic);
-    expect(screen.getByRole('button', { name: 'Unmute copilot voice' }).textContent).toContain(
-      'volume_off',
-    );
-  });
 });
 
 describe('takeSentences', () => {

@@ -10,7 +10,7 @@ import type { TopologyEdge, TopologyNode } from '../types/topology';
 
 const FLOOR_Y = 0.05;
 const PACKET_Y = 0.16;
-const ACTIVE = '#4338ca';
+const ACTIVE = '#2563eb';
 const IDLE = '#64748b';
 
 type Point = [number, number, number];
@@ -29,17 +29,31 @@ interface Route {
   total: number;
 }
 
-function buildRoute(from: TopologyNode, to: TopologyNode, via: TopologyEdge['route']): Route {
+function buildRoute(
+  from: TopologyNode,
+  to: TopologyNode,
+  via: TopologyEdge['route'],
+  waypoints?: [number, number][],
+): Route {
   const [fx, fz] = from.position;
   const [tx, tz] = to.position;
-  const corner: Point = via === 'zx' ? [fx, FLOOR_Y, tz] : [tx, FLOOR_Y, fz];
-  const points: Point[] =
-    fx === tx || fz === tz
-      ? [
-          [fx, FLOOR_Y, fz],
-          [tx, FLOOR_Y, tz],
-        ]
-      : [[fx, FLOOR_Y, fz], corner, [tx, FLOOR_Y, tz]];
+  let points: Point[];
+  if (waypoints && waypoints.length > 0) {
+    points = [
+      [fx, FLOOR_Y, fz],
+      ...waypoints.map(([wx, wz]) => [wx, FLOOR_Y, wz] as Point),
+      [tx, FLOOR_Y, tz],
+    ];
+  } else {
+    const corner: Point = via === 'zx' ? [fx, FLOOR_Y, tz] : [tx, FLOOR_Y, fz];
+    points =
+      fx === tx || fz === tz
+        ? [
+            [fx, FLOOR_Y, fz],
+            [tx, FLOOR_Y, tz],
+          ]
+        : [[fx, FLOOR_Y, fz], corner, [tx, FLOOR_Y, tz]];
+  }
   const cumulative = [0];
   for (let i = 1; i < points.length; i += 1) {
     const [ax, , az] = points[i - 1];
@@ -63,7 +77,10 @@ function placeAt(mesh: Mesh, route: Route, distance: number): void {
 const easeInOut = (p: number): number => p * p * (3 - 2 * p);
 
 export default function EdgeFlow({ edge, from, to, hoveredId }: EdgeFlowProps): React.ReactElement {
-  const route = useMemo(() => buildRoute(from, to, edge.route), [from, to, edge.route]);
+  const route = useMemo(
+    () => buildRoute(from, to, edge.route, edge.waypoints),
+    [from, to, edge.route, edge.waypoints],
+  );
   const steps = useMemo(
     () => SCENARIO.flatMap((s, i) => (s.edges.includes(edgeKey(edge)) ? [i] : [])),
     [edge],
@@ -84,11 +101,11 @@ export default function EdgeFlow({ edge, from, to, hoveredId }: EdgeFlowProps): 
       if (active) placeAt(packet.current, route, route.total * easeInOut(progress));
     }
     let color = active ? ACTIVE : IDLE;
-    let width = active ? 3 : 1.4;
+    let width = active ? 3.6 : 1.4;
     let opacity = active ? 1 : (edge.dynamic ? 0 : 0.45);
     if (hover.current.highlighted) {
       color = ACTIVE;
-      width = 2.6;
+      width = 3.2;
       opacity = 1;
     } else if (hover.current.dimmed) {
       opacity = edge.dynamic ? 0 : 0.2;
@@ -105,8 +122,8 @@ export default function EdgeFlow({ edge, from, to, hoveredId }: EdgeFlowProps): 
     <group>
       <Line ref={line} points={route.points} transparent />
       <mesh ref={packet} visible={false} raycast={() => null}>
-        <sphereGeometry args={[0.14, 16, 12]} />
-        <meshStandardMaterial color="#5b5bf0" emissive="#5b5bf0" emissiveIntensity={0.6} />
+        <sphereGeometry args={[0.2, 16, 12]} />
+        <meshStandardMaterial color="#2563eb" emissive="#3b82f6" emissiveIntensity={0.9} />
       </mesh>
     </group>
   );

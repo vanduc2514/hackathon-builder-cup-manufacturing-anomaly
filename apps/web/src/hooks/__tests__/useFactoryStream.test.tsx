@@ -276,6 +276,59 @@ describe("useFactoryStream hook", () => {
   });
 });
 
+describe("useFactoryStream auth token (TKT-073/#288)", () => {
+  const originalEventSource = globalThis.EventSource;
+
+  beforeEach(() => {
+    MockEventSource.instances = [];
+    globalThis.EventSource = MockEventSource as unknown as typeof EventSource;
+  });
+
+  afterEach(() => {
+    globalThis.EventSource = originalEventSource;
+    localStorage.removeItem("kaizen.auth");
+    vi.restoreAllMocks();
+  });
+
+  it("appends the login token to the stream URL when a session exists", async () => {
+    localStorage.setItem(
+      "kaizen.auth",
+      JSON.stringify({
+        token: "test-jwt-token",
+        expires_at: new Date(Date.now() + 60_000).toISOString(),
+        user: { username: "shift_leader", display_name: "Shift Leader", role: "shift_leader" },
+      }),
+    );
+    // Dynamic import is intentional (module-loading test): the auth module
+    // reads localStorage once at import time, so a static import could never
+    // see the session seeded above.
+    vi.resetModules();
+    const { useFactoryStream: authedUseFactoryStream } = await import("../useFactoryStream");
+
+    const { unmount } = renderHook(() => authedUseFactoryStream());
+
+    expect(MockEventSource.instances.length).toBe(1);
+    expect(MockEventSource.instances[0].url).toContain(
+      "/api/factory/stream?token=test-jwt-token",
+    );
+    unmount();
+  });
+
+  it("omits the token when no session exists", async () => {
+    // Dynamic import is intentional (module-loading test): force a fresh auth
+    // module instance so it observes the empty localStorage state.
+    vi.resetModules();
+    const { useFactoryStream: anonUseFactoryStream } = await import("../useFactoryStream");
+
+    const { unmount } = renderHook(() => anonUseFactoryStream());
+
+    expect(MockEventSource.instances.length).toBe(1);
+    expect(MockEventSource.instances[0].url).toContain("/api/factory/stream");
+    expect(MockEventSource.instances[0].url).not.toContain("token=");
+    unmount();
+  });
+});
+
 describe("useFactoryStream jittered backoff (#265)", () => {
   const originalEventSource = globalThis.EventSource;
   const originalRandom = Math.random;

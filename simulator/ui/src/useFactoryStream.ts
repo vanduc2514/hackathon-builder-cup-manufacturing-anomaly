@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { FactoryTickPacket, InjectionResponse, MachineTelemetry, PubSubDeliveryReport } from './types';
-import { authFetch } from './lib/auth';
+import { authFetch, withToken } from './lib/auth';
 
 const BASE_MACHINES: MachineTelemetry[] = [
   { machine_id: 'CNC-01', tool_id: 'T01', spindle_vibration: 1.18, motor_current: 13.8, spindle_temp: 41.5, rpm: 8000, operating_status: 'NORMAL' },
@@ -27,7 +27,9 @@ export function useFactoryStream() {
     let es: EventSource | null = null;
     let timer: number;
     const connect = () => {
-      const streamUrl = `${streamOrigin}/api/factory/stream`;
+      // SSE cannot send an Authorization header; the login JWT goes via ?token=
+      // (production factory service returns 401 "Missing token" without it).
+      const streamUrl = withToken(`${streamOrigin}/api/factory/stream`);
       es = new EventSource(streamUrl);
       es.onopen = () => setConnected(true);
       const handlePacket = (e: MessageEvent) => {

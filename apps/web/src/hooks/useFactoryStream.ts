@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { FactoryTickPacket, FactoryMachineTelemetry } from "../types";
+import { withToken } from "../lib/auth";
 
 export const DEFAULT_MACHINES: FactoryMachineTelemetry[] = [];
 
@@ -141,7 +142,9 @@ export function useFactoryStream(options: UseFactoryStreamOptions = {}): UseFact
     if (!enabledRef.current || isUnmountedRef.current) return;
 
     const factoryOrigin = import.meta.env.VITE_FACTORY_STREAM_ORIGIN ?? "";
-    const streamUrl = `${factoryOrigin}/api/factory/stream`;
+    // SSE cannot send an Authorization header; the login JWT goes via ?token=
+    // (production factory service returns 401 "Missing token" without it).
+    const streamUrl = withToken(`${factoryOrigin}/api/factory/stream`);
 
     setState((s) => (s === "open" ? "reconnecting" : s));
 

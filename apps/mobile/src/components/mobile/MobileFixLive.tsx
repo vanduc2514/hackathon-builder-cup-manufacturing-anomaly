@@ -32,12 +32,11 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
   const steps = order.steps.length > 0 ? order.steps : dynamicSteps;
   const isLiveOrder = Boolean(order.live);
   const [idx, setIdx] = useState(0);
-  const [voiceOn, setVoiceOn] = useState(voiceGuidance);
   const [showSheet, setShowSheet] = useState(false);
   const [notes, setNotes] = useState('');
-  const [stepOpen, setStepOpen] = useState(true);
-  const [chatOpen, setChatOpen] = useState(false);
-  const copilot = useGeminiLive(isLiveOrder, voiceOn);
+  const [stepOpen, setStepOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
+  const copilot = useGeminiLive(isLiveOrder, voiceGuidance);
 
   // The offline caption must never stay hidden behind the chat bubble.
   useEffect(() => {
@@ -168,6 +167,14 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
       {/* Transcript: streamed Copilot captions, the Stop button and the scripted prompt chips */}
       {chatOpen ? (
         <div className="m-transcript m-glass-light-on-dark" style={{ animation: 'm-enter .45s var(--ease) both' }}>
+        <button
+          className="m-cam-min corner"
+          id="m-live-min-chat"
+          aria-label="Minimize Copilot chat"
+          onClick={() => setChatOpen(false)}
+        >
+          <span className="material-symbols-outlined">remove</span>
+        </button>
         <div className="m-tline">
           <span className="ic">
             <span className="material-symbols-outlined">person</span>
@@ -192,7 +199,7 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
             <div className="who ai m-between" style={{ gap: 6 }}>
               <span className="m-row" style={{ gap: 6 }}>
                 Copilot
-                {copilot.speaking && voiceOn && (
+                {copilot.speaking && voiceGuidance && (
                   <span className="m-wave" data-testid="copilot-wave" aria-label="Copilot is speaking">
                     <i />
                     <i />
@@ -207,14 +214,6 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
                   Stop
                 </button>
               )}
-              <button
-                className="m-cam-min"
-                id="m-live-min-chat"
-                aria-label="Minimize Copilot chat"
-                onClick={() => setChatOpen(false)}
-              >
-                <span className="material-symbols-outlined">remove</span>
-              </button>
             </div>
             <div className="txt m-caption" aria-live="polite">{copilotCaption}</div>
           </div>
@@ -241,10 +240,7 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
           aria-label="Open Copilot chat"
           onClick={() => setChatOpen(true)}
         >
-          <span className="material-symbols-outlined">forum</span>
-          <span className="spark" aria-hidden="true">
-            <span className="material-symbols-outlined ms-fill">auto_awesome</span>
-          </span>
+          <span className="material-symbols-outlined ms-fill">auto_awesome</span>
           {(copilot.streaming || copilot.speaking) && <span className="dot" />}
         </button>
       )}
@@ -261,15 +257,6 @@ export default function MobileFixLive({ order, voiceGuidance, onExit, onSubmit }
             <span className="material-symbols-outlined">undo</span>
           </button>
         </div>
-        <button
-          className={`m-mic ${voiceOn ? 'live' : ''}`}
-          onClick={() => setVoiceOn((v) => !v)}
-          aria-label={voiceOn ? 'Mute copilot voice' : 'Unmute copilot voice'}
-          id="m-live-mic"
-          style={voiceOn ? undefined : { background: '#3a3d4a', boxShadow: 'none' }}
-        >
-          <span className="material-symbols-outlined ms-fill">{voiceOn ? 'volume_up' : 'volume_off'}</span>
-        </button>
         <button className="m-next" onClick={next} id="m-live-next">
           {isLast ? 'Finish' : `Done · next (${idx + 2}/${steps.length})`}
           <span className="material-symbols-outlined">{isLast ? 'flag' : 'arrow_forward'}</span>

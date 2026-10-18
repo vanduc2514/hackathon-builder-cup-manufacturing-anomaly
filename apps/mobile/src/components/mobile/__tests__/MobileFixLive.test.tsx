@@ -107,10 +107,8 @@ function chip(name: RegExp): HTMLButtonElement {
   return screen.getByRole('button', { name }) as HTMLButtonElement;
 }
 
-async function renderReady(): Promise<FakeWebSocket> {
-  render(<MobileFixLive order={order} voiceGuidance onExit={vi.fn()} onSubmit={vi.fn()} />);
-  // The chat starts collapsed to a bubble; open it so the prompt chips render.
-  fireEvent.click(screen.getByRole('button', { name: /Open Copilot chat/ }));
+async function renderReady(voiceGuidance = true): Promise<FakeWebSocket> {
+  render(<MobileFixLive order={order} voiceGuidance={voiceGuidance} onExit={vi.fn()} onSubmit={vi.fn()} />);
   await waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
   const ws = FakeWebSocket.instances[0];
   ws.emit({ type: 'setup_complete', session_id: 's1', resumption_handle: 'h1' });
@@ -227,9 +225,8 @@ describe('MobileFixLive Copilot', () => {
     expect(screen.getByText(/\(stopped\)/)).toBeTruthy();
   });
 
-  it('does not speak when the voice is muted', async () => {
-    const ws = await renderReady();
-    fireEvent.click(screen.getByRole('button', { name: 'Mute copilot voice' }));
+  it('does not speak when voice guidance is off', async () => {
+    const ws = await renderReady(false);
     fireEvent.click(screen.getByRole('button', { name: /What is wrong/ }));
     ws.emit({ type: 'text_delta', text: 'First sentence. ' });
     ws.emit({ type: 'turn_complete' });
@@ -271,21 +268,9 @@ describe('camera bubbles', () => {
     vi.unstubAllGlobals();
   });
 
-  it('starts with the step card expanded and the chat collapsed to a bubble', () => {
+  it('starts with the chat open and the step card collapsed to a bubble', () => {
     render(<MobileFixLive order={order} voiceGuidance onExit={vi.fn()} onSubmit={vi.fn()} />);
-    expect(screen.getByText('Stop the spindle')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /What is wrong/ })).toBeNull();
-    const bubble = screen.getByRole('button', { name: 'Open Copilot chat' });
-    expect(bubble.id).toBe('m-live-chat-bubble');
-
-    fireEvent.click(bubble);
-    expect(screen.getByRole('button', { name: 'Minimize Copilot chat' }).id).toBe('m-live-min-chat');
     expect(screen.getByRole('button', { name: /What is wrong/ })).toBeTruthy();
-  });
-
-  it('collapses the step card into a bubble and restores it', () => {
-    render(<MobileFixLive order={order} voiceGuidance onExit={vi.fn()} onSubmit={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Minimize step card' }));
     expect(screen.queryByText('Stop the spindle')).toBeNull();
     const bubble = screen.getByRole('button', { name: 'Show step card: Stop the spindle' });
     expect(bubble.id).toBe('m-live-step-bubble');
@@ -293,12 +278,22 @@ describe('camera bubbles', () => {
 
     fireEvent.click(bubble);
     expect(screen.getByText('Stop the spindle')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Minimize step card' }));
+    expect(screen.queryByText('Stop the spindle')).toBeNull();
+  });
+
+  it('collapses the chat into a bubble and restores it', () => {
+    render(<MobileFixLive order={order} voiceGuidance onExit={vi.fn()} onSubmit={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Minimize Copilot chat' }));
+    expect(screen.queryByRole('button', { name: /What is wrong/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Copilot chat' }));
+    expect(screen.getByRole('button', { name: /What is wrong/ })).toBeTruthy();
   });
 
   it('shows an unread dot on the chat bubble while a reply streams', async () => {
-    const ws = await renderReady();
-    // Mute so the dot tracks streaming only (fake utterances never end).
-    fireEvent.click(screen.getByRole('button', { name: 'Mute copilot voice' }));
+    // Voice off so the dot tracks streaming only (fake utterances never end).
+    const ws = await renderReady(false);
     fireEvent.click(screen.getByRole('button', { name: /What is wrong/ }));
     ws.emit({ type: 'text_delta', text: 'T07 shows flank wear.' });
 

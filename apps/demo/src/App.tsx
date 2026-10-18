@@ -9,6 +9,7 @@ import type { TopologyNode } from './types/topology';
 
 export default function App(): React.ReactElement {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [resetToken, setResetToken] = useState(0);
 
   const openNode = useCallback((node: TopologyNode): void => {
@@ -19,18 +20,36 @@ export default function App(): React.ReactElement {
     }
   }, []);
 
+  const selectNode = useCallback((node: TopologyNode | null): void => {
+    if (!node) {
+      setSelectedId(null);
+      return;
+    }
+    setSelectedId((prev) => (prev === node.id ? null : node.id));
+  }, []);
+
+  const activeHighlightId = hoveredId ?? selectedId;
+
   return (
     <>
       <div className="app-backdrop" />
       <main className="scene-root" aria-label="kAIzen system topology, 3D view">
         <TopologyScene
           hoveredId={hoveredId}
+          selectedId={selectedId}
+          highlightedId={activeHighlightId}
           onHover={setHoveredId}
+          onSelect={selectNode}
           onOpen={openNode}
           resetToken={resetToken}
         />
       </main>
-      <SceneToolbar onReset={() => setResetToken((t) => t + 1)} />
+      <SceneToolbar
+        onReset={() => {
+          setSelectedId(null);
+          setResetToken((t) => t + 1);
+        }}
+      />
       <NodeLegend />
       <SceneCaption />
     </>

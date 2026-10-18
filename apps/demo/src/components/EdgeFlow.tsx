@@ -5,7 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import { Line } from '@react-three/drei';
 import type { Mesh } from 'three';
 import type { Line2, LineMaterial, LineSegments2 } from 'three-stdlib';
-import { SCENARIO, edgeKey, scenarioAt, scenarioNow } from '../data/topology';
+import { AGENT_IDS, SCENARIO, edgeKey, isAgentId, scenarioAt, scenarioNow } from '../data/topology';
 import type { TopologyEdge, TopologyNode } from '../types/topology';
 
 const FLOOR_Y = 0.05;
@@ -19,7 +19,7 @@ interface EdgeFlowProps {
   edge: TopologyEdge;
   from: TopologyNode;
   to: TopologyNode;
-  hoveredId: string | null;
+  highlightedId: string | null;
 }
 
 interface Route {
@@ -80,17 +80,27 @@ function placeAt(mesh: Mesh, route: Route, distance: number): void {
 
 const easeInOut = (p: number): number => p * p * (3 - 2 * p);
 
-export default function EdgeFlow({ edge, from, to, hoveredId }: EdgeFlowProps): React.ReactElement {
+export default function EdgeFlow({ edge, from, to, highlightedId }: EdgeFlowProps): React.ReactElement {
   const route = useMemo(() => buildRoute(from, to, edge), [from, to, edge]);
+  const isGeminiEdge = edge.to === 'gemini';
   const steps = useMemo(
-    () => SCENARIO.flatMap((s, i) => (s.edges.includes(edgeKey(edge)) ? [i] : [])),
-    [edge],
+    () =>
+      SCENARIO.flatMap((s, i) =>
+        s.edges.includes(edgeKey(edge)) || (isGeminiEdge && s.working.some((w) => AGENT_IDS.has(w)))
+          ? [i]
+          : [],
+      ),
+    [edge, isGeminiEdge],
   );
   const line = useRef<Line2 | LineSegments2>(null);
   const packet = useRef<Mesh>(null);
 
-  const highlighted = hoveredId !== null && (hoveredId === edge.from || hoveredId === edge.to);
-  const dimmed = hoveredId !== null && !highlighted;
+  const highlighted =
+    highlightedId !== null &&
+    (highlightedId === edge.from ||
+      highlightedId === edge.to ||
+      (isGeminiEdge && (isAgentId(highlightedId) || highlightedId === 'gemini')));
+  const dimmed = highlightedId !== null && !highlighted;
   const hover = useRef({ highlighted, dimmed });
   hover.current = { highlighted, dimmed };
 

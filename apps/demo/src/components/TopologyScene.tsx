@@ -23,14 +23,20 @@ for (const step of SCENARIO) {
 
 interface TopologySceneProps {
   hoveredId: string | null;
+  selectedId: string | null;
+  highlightedId: string | null;
   onHover: (id: string | null) => void;
+  onSelect: (node: TopologyNode | null) => void;
   onOpen: (node: TopologyNode) => void;
   resetToken: number;
 }
 
 export default function TopologyScene({
   hoveredId,
+  selectedId,
+  highlightedId,
   onHover,
+  onSelect,
   onOpen,
   resetToken,
 }: TopologySceneProps): React.ReactElement {
@@ -46,6 +52,7 @@ export default function TopologyScene({
       gl={{ alpha: true, antialias: true }}
       dpr={[1, 2]}
       camera={{ position: [20, 20, 15], zoom: 15, near: -100, far: 200 }}
+      onPointerMissed={() => onSelect(null)}
     >
       <ambientLight intensity={0.9} />
       <directionalLight position={[10, 20, 8]} intensity={0.8} />
@@ -67,7 +74,13 @@ export default function TopologyScene({
         const to = nodeById.get(edge.to);
         if (!from || !to) throw new Error(`Edge ${edge.from}->${edge.to} references an unknown node`);
         return (
-          <EdgeFlow key={edgeKey(edge)} edge={edge} from={from} to={to} hoveredId={hoveredId} />
+          <EdgeFlow
+            key={edgeKey(edge)}
+            edge={edge}
+            from={from}
+            to={to}
+            highlightedId={highlightedId}
+          />
         );
       })}
       {NODES.map((node) => (
@@ -75,7 +88,10 @@ export default function TopologyScene({
           key={node.id}
           node={node}
           hovered={hoveredId === node.id}
+          selected={selectedId === node.id}
+          highlightedId={highlightedId}
           onHover={onHover}
+          onSelect={onSelect}
           onOpen={onOpen}
         />
       ))}
